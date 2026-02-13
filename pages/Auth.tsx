@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { useBetStore, supabase } from '../store/useBetStore';
+import { useBetStore, supabase, isSupabaseConfigured } from '../store/useBetStore';
 import { Eye, EyeOff, Mail, Lock, ArrowLeft, ChevronRight, AlertCircle, ShieldCheck } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Logo } from '../components/Logo';
@@ -29,6 +29,10 @@ const Auth: React.FC = () => {
     setError('');
     
     try {
+      if (!isSupabaseConfigured) {
+        throw new Error('Credenciais do Supabase não configuradas na Vercel (.env).');
+      }
+
       const { error: authError } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
@@ -58,9 +62,8 @@ const Auth: React.FC = () => {
     setError('');
 
     try {
-      // Check for valid Supabase config before attempting request
-      if (!import.meta.env?.VITE_SUPABASE_URL && !supabase.supabaseUrl.includes('supabase.co')) {
-          throw new Error("Credenciais do Supabase não configuradas.");
+      if (!isSupabaseConfigured) {
+        throw new Error('Credenciais do Supabase não configuradas na Vercel (.env).');
       }
 
       if (view === 'login') {

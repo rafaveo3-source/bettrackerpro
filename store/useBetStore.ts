@@ -3,11 +3,14 @@ import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import { createClient } from '@supabase/supabase-js';
 
-// Configuration: Best practice is to use Environment Variables
-// If running locally without .env, you can temporarily paste keys here, but DO NOT commit real keys to git.
-// Using optional chaining to prevent runtime crash if import.meta.env is undefined
-const supabaseUrl = import.meta.env?.VITE_SUPABASE_URL || 'https://placeholder-url.supabase.co';
-const supabaseAnonKey = import.meta.env?.VITE_SUPABASE_ANON_KEY || 'placeholder-key';
+// Accepts both legacy and current key names to reduce deployment mistakes.
+const env = import.meta.env;
+const supabaseUrl = env.VITE_SUPABASE_URL || 'https://invalid-project.supabase.co';
+const supabaseAnonKey = env.VITE_SUPABASE_ANON_KEY || env.VITE_SUPABASE_PUBLISHABLE_KEY || 'invalid-key';
+export const isSupabaseConfigured =
+  supabaseUrl.startsWith('https://') &&
+  supabaseUrl.includes('.supabase.co') &&
+  supabaseAnonKey.length > 20;
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {
