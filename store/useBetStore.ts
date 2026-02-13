@@ -5,8 +5,9 @@ import { createClient } from '@supabase/supabase-js';
 
 // Configuration: Best practice is to use Environment Variables
 // If running locally without .env, you can temporarily paste keys here, but DO NOT commit real keys to git.
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://placeholder-url.supabase.co';
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || 'placeholder-key';
+// Using optional chaining to prevent runtime crash if import.meta.env is undefined
+const supabaseUrl = import.meta.env?.VITE_SUPABASE_URL || 'https://placeholder-url.supabase.co';
+const supabaseAnonKey = import.meta.env?.VITE_SUPABASE_ANON_KEY || 'placeholder-key';
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {
@@ -140,7 +141,7 @@ export const useBetStore = create<BetState>()(
       user: null,
       isAuthenticated: false,
       isDarkMode: true,
-      primaryColor: 'emerald',
+      primaryColor: 'gold',
       currency: 'BRL',
       bankrolls: [],
       activeBankrollId: '',
