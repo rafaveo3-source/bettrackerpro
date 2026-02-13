@@ -1,6 +1,7 @@
+
 import React, { useState } from 'react';
 import { useBetStore } from '../store/useBetStore';
-import { ChevronLeft, ChevronRight, TrendingUp, Target, Trophy, Activity, Volleyball, CircleDollarSign } from 'lucide-react';
+import { ChevronLeft, ChevronRight, TrendingUp, Target, Trophy, Activity, CircleDollarSign } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 const PerformanceCalendar: React.FC = () => {
@@ -207,7 +208,7 @@ const PerformanceCalendar: React.FC = () => {
                         <div key={bet.id} className="bg-slate-900 rounded-lg p-3 border border-slate-700 flex justify-between items-center">
                             <div className="flex items-center gap-3">
                                 <div className="w-8 h-8 rounded-full bg-slate-800 flex items-center justify-center text-slate-400">
-                                    <Volleyball size={14} />
+                                    <Trophy size={14} />
                                 </div>
                                 <div>
                                     <p className="font-bold text-sm text-slate-200">{bet.event}</p>
