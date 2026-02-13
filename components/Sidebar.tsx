@@ -27,7 +27,7 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, setView, isOpen, setIsOp
   ];
 
   const SidebarContent = () => (
-    <div className="flex flex-col h-full bg-white dark:bg-[#0f172a] border-r border-slate-200 dark:border-slate-800 transition-colors duration-300">
+    <div className="flex flex-col h-full bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 transition-colors duration-300">
       <div className="p-8 flex items-center gap-3">
         <Logo size={36} />
         <span className="text-xl font-black tracking-tighter text-slate-900 dark:text-white uppercase italic">
@@ -47,7 +47,7 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, setView, isOpen, setIsOp
               }}
               className={`w-full flex items-center gap-3 px-5 py-3 rounded-2xl text-sm font-bold transition-all duration-200 ${
                 isActive
-                  ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20'
+                  ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-500 border border-emerald-500/20'
                   : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-800 border border-transparent'
               }`}
             >
@@ -59,7 +59,7 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, setView, isOpen, setIsOp
       </nav>
 
       <div className="p-4 border-t border-slate-100 dark:border-slate-800 space-y-2">
-         <div className="bg-slate-900 dark:bg-slate-950/50 border border-slate-800 rounded-[1.5rem] p-5 mb-4 shadow-xl">
+         <div className="bg-slate-900 dark:bg-slate-950 border border-slate-800 rounded-[1.5rem] p-5 mb-4 shadow-xl">
             <p className="text-xs font-black text-white mb-1 uppercase tracking-widest">Premium Active</p>
             <p className="text-[10px] text-slate-500 mb-3 leading-relaxed font-bold uppercase">Acesso vitalício à rede neural de dados.</p>
             <button className="text-[10px] text-emerald-500 font-black hover:underline uppercase tracking-tighter">Explorar Tools</button>
@@ -95,7 +95,7 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, setView, isOpen, setIsOp
         <SidebarContent />
       </aside>
 
-      <div className="lg:hidden fixed top-0 left-0 w-full bg-white/90 dark:bg-[#020617]/90 backdrop-blur-md z-40 border-b border-slate-200 dark:border-slate-800 p-4 flex items-center justify-between">
+      <div className="lg:hidden fixed top-0 left-0 w-full bg-white/90 dark:bg-slate-950/90 backdrop-blur-md z-40 border-b border-slate-200 dark:border-slate-800 p-4 flex items-center justify-between">
          <div className="flex items-center gap-2">
             <Logo size={28} />
             <span className="font-black text-slate-900 dark:text-white uppercase tracking-tighter italic">BetTracker</span>
