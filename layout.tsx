@@ -16,7 +16,8 @@ const colorPalettes: Record<string, any> = {
   emerald: { 50: '236 253 245', 100: '209 250 229', 500: '16 185 129', 600: '5 150 105' },
   blue: { 50: '239 246 255', 100: '219 234 254', 500: '59 130 246', 600: '37 99 235' },
   purple: { 50: '250 245 255', 100: '243 232 255', 500: '168 85 247', 600: '147 51 234' },
-  orange: { 50: '255 247 237', 100: '255 237 213', 500: '249 115 22', 600: '234 88 12' }
+  orange: { 50: '255 247 237', 100: '255 237 213', 500: '249 115 22', 600: '234 88 12' },
+  gold: { 50: '255 251 235', 100: '254 243 199', 500: '245 158 11', 600: '217 119 6' }
 };
 
 const Layout: React.FC<LayoutProps> = ({ children, currentView, setView }) => {
@@ -33,7 +34,7 @@ const Layout: React.FC<LayoutProps> = ({ children, currentView, setView }) => {
 
   useEffect(() => {
     document.documentElement.classList.toggle('dark', isDarkMode);
-    const palette = colorPalettes[primaryColor] || colorPalettes.emerald;
+    const palette = colorPalettes[primaryColor] || colorPalettes.gold;
     const root = document.documentElement;
     Object.entries(palette).forEach(([key, val]) => {
       root.style.setProperty(`--color-primary-${key}`, val as string);
