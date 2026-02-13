@@ -15,11 +15,21 @@
               sans: ['Inter', 'sans-serif'],
             },
             colors: {
+              // Graphite Palette (Neutral/Zinc style) replacing standard Blue-ish Slate
               slate: {
-                850: '#1e293b',
-                900: '#0f172a',
-                950: '#020617',
+                50: '#fafafa',
+                100: '#f4f4f5',
+                200: '#e4e4e7',
+                300: '#d4d4d8',
+                400: '#a1a1aa',
+                500: '#71717a',
+                600: '#52525b',
+                700: '#3f3f46',
+                800: '#27272a',
+                900: '#18181b', // Card Background
+                950: '#09090b', // App Background
               },
+              // Mapping 'emerald' classes to CSS variables for dynamic theming (Defaults to Gold)
               emerald: {
                 50: 'rgb(var(--color-primary-50) / <alpha-value>)',
                 100: 'rgb(var(--color-primary-100) / <alpha-value>)',
@@ -33,7 +43,7 @@
     </script>
     <style>
       :root {
-        /* Default to Gold/Amber Palette */
+        /* Default to Gold/Amber Palette (Premium Gold) */
         --color-primary-50: 255 251 235;
         --color-primary-100: 254 243 199;
         --color-primary-500: 245 158 11;
@@ -50,30 +60,30 @@
       /* Premium Card Effects per Theme */
       .glass-card {
         background: rgba(255, 255, 255, 1);
-        border: 1px solid #e2e8f0;
+        border: 1px solid #e4e4e7;
         box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
       }
 
       .dark .glass-card {
-        background: rgba(15, 23, 42, 0.6);
+        background: rgba(24, 24, 27, 0.6); /* Slate-900 with opacity */
         backdrop-filter: blur(12px);
-        border: 1px solid rgba(255, 255, 255, 0.05);
-        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        box-shadow: 0 10px 20px -5px rgba(0, 0, 0, 0.5);
       }
 
-      /* Custom Scrollbar */
+      /* Custom Scrollbar - Graphite Style */
       ::-webkit-scrollbar { width: 6px; }
       ::-webkit-scrollbar-track { background: transparent; }
-      .dark ::-webkit-scrollbar-thumb { background: #1e293b; border-radius: 10px; }
-      ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+      .dark ::-webkit-scrollbar-thumb { background: #3f3f46; border-radius: 10px; }
+      ::-webkit-scrollbar-thumb { background: #d4d4d8; border-radius: 10px; }
       
       .text-gradient {
-        background: linear-gradient(135deg, #0f172a 0%, #475569 100%);
+        background: linear-gradient(135deg, #18181b 0%, #52525b 100%);
         -webkit-background-clip: text;
         -webkit-text-fill-color: transparent;
       }
       .dark .text-gradient {
-        background: linear-gradient(135deg, #fff 0%, #94a3b8 100%);
+        background: linear-gradient(135deg, #fff 0%, #a1a1aa 100%);
         -webkit-background-clip: text;
         -webkit-text-fill-color: transparent;
       }
@@ -96,7 +106,7 @@
 }
 </script>
 </head>
-  <body class="bg-slate-50 dark:bg-[#020617] text-slate-900 dark:text-slate-100">
+  <body class="bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100">
     <div id="root"></div>
     <script type="module" src="/index.tsx"></script>
   </body>
