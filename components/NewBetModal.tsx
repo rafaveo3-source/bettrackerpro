@@ -124,9 +124,9 @@ const NewBetModal: React.FC<NewBetModalProps> = ({ isOpen, onClose, betToEdit })
               animate={{ scale: 1, opacity: 1, y: 0 }}
               exit={{ scale: 0.95, opacity: 0, y: 20 }}
               onClick={(e) => e.stopPropagation()}
-              className="bg-[#0f172a] border border-slate-800 w-full max-w-2xl rounded-2xl shadow-2xl overflow-hidden my-8"
+              className="bg-slate-900 border border-slate-800 w-full max-w-2xl rounded-2xl shadow-2xl overflow-hidden my-8"
             >
-              <div className="p-6 border-b border-slate-800 flex justify-between items-center bg-[#020617]">
+              <div className="p-6 border-b border-slate-800 flex justify-between items-center bg-slate-950">
                 <div>
                   <h2 className="text-xl font-bold text-white">{betToEdit ? 'Editar Aposta' : 'Nova Aposta'}</h2>
                   <p className="text-slate-500 text-sm">{betToEdit ? 'Atualize os dados da entrada' : 'Registre sua entrada'}</p>
@@ -150,7 +150,7 @@ const NewBetModal: React.FC<NewBetModalProps> = ({ isOpen, onClose, betToEdit })
                         <select 
                             value={formData.sport}
                             onChange={(e) => setFormData({...formData, sport: e.target.value})}
-                            className="w-full bg-[#020617] border border-slate-700 text-slate-200 rounded-lg p-2.5 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 outline-none appearance-none"
+                            className="w-full bg-slate-950 border border-slate-700 text-slate-200 rounded-lg p-2.5 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 outline-none appearance-none"
                         >
                             <option>Futebol</option>
                             <option>Basquete</option>
@@ -168,7 +168,7 @@ const NewBetModal: React.FC<NewBetModalProps> = ({ isOpen, onClose, betToEdit })
                                 placeholder="Ex: Real Madrid vs City"
                                 value={formData.event}
                                 onChange={(e) => setFormData({...formData, event: e.target.value})}
-                                className="w-full bg-[#020617] border border-slate-700 text-slate-200 rounded-lg pl-10 pr-4 py-2.5 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 outline-none placeholder-slate-600"
+                                className="w-full bg-slate-950 border border-slate-700 text-slate-200 rounded-lg pl-10 pr-4 py-2.5 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 outline-none placeholder-slate-600"
                                 required
                             />
                         </div>
@@ -185,7 +185,7 @@ const NewBetModal: React.FC<NewBetModalProps> = ({ isOpen, onClose, betToEdit })
                                 placeholder="Ex: Over 2.5"
                                 value={formData.market}
                                 onChange={(e) => setFormData({...formData, market: e.target.value})}
-                                className="w-full bg-[#020617] border border-slate-700 text-slate-200 rounded-lg pl-10 pr-4 py-2.5 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 outline-none placeholder-slate-600"
+                                className="w-full bg-slate-950 border border-slate-700 text-slate-200 rounded-lg pl-10 pr-4 py-2.5 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 outline-none placeholder-slate-600"
                             />
                         </div>
                     </div>
@@ -196,7 +196,7 @@ const NewBetModal: React.FC<NewBetModalProps> = ({ isOpen, onClose, betToEdit })
                             placeholder="Ex: Sim"
                             value={formData.selection}
                             onChange={(e) => setFormData({...formData, selection: e.target.value})}
-                            className="w-full bg-[#020617] border border-slate-700 text-slate-200 rounded-lg px-4 py-2.5 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 outline-none placeholder-slate-600"
+                            className="w-full bg-slate-950 border border-slate-700 text-slate-200 rounded-lg px-4 py-2.5 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 outline-none placeholder-slate-600"
                         />
                     </div>
                     <div>
@@ -206,7 +206,7 @@ const NewBetModal: React.FC<NewBetModalProps> = ({ isOpen, onClose, betToEdit })
                             <select 
                                 value={formData.method}
                                 onChange={(e) => setFormData({...formData, method: e.target.value})}
-                                className="w-full bg-[#020617] border border-slate-700 text-slate-200 rounded-lg pl-10 pr-4 py-2.5 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 outline-none appearance-none"
+                                className="w-full bg-slate-950 border border-slate-700 text-slate-200 rounded-lg pl-10 pr-4 py-2.5 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 outline-none appearance-none"
                             >
                                 <option value="">Selecione...</option>
                                 {methods.map(m => (
@@ -226,7 +226,7 @@ const NewBetModal: React.FC<NewBetModalProps> = ({ isOpen, onClose, betToEdit })
                             placeholder="2.00"
                             value={formData.odds}
                             onChange={(e) => setFormData({...formData, odds: e.target.value})}
-                            className="w-full bg-[#020617] border border-slate-700 text-white font-mono rounded-lg px-4 py-2.5 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 outline-none"
+                            className="w-full bg-slate-950 border border-slate-700 text-white font-mono rounded-lg px-4 py-2.5 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 outline-none"
                             required
                         />
                     </div>
@@ -240,7 +240,7 @@ const NewBetModal: React.FC<NewBetModalProps> = ({ isOpen, onClose, betToEdit })
                                 placeholder="100"
                                 value={formData.stake}
                                 onChange={(e) => setFormData({...formData, stake: e.target.value})}
-                                className="w-full bg-[#020617] border border-slate-700 text-white font-mono rounded-lg pl-9 pr-4 py-2.5 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 outline-none"
+                                className="w-full bg-slate-950 border border-slate-700 text-white font-mono rounded-lg pl-9 pr-4 py-2.5 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 outline-none"
                                 required
                             />
                         </div>
@@ -254,7 +254,7 @@ const NewBetModal: React.FC<NewBetModalProps> = ({ isOpen, onClose, betToEdit })
                                 placeholder="0.00"
                                 value={formData.cashoutValue}
                                 onChange={(e) => setFormData({...formData, cashoutValue: e.target.value})}
-                                className="w-full bg-[#020617] border border-blue-500 text-white font-mono rounded-lg px-4 py-2.5 focus:ring-1 focus:ring-blue-500 outline-none"
+                                className="w-full bg-slate-950 border border-blue-500 text-white font-mono rounded-lg px-4 py-2.5 focus:ring-1 focus:ring-blue-500 outline-none"
                                 required
                             />
                         </motion.div>
@@ -288,7 +288,7 @@ const NewBetModal: React.FC<NewBetModalProps> = ({ isOpen, onClose, betToEdit })
                      </div>
                 </div>
 
-                <div className="bg-[#020617] rounded-xl p-4 border border-slate-800 flex justify-between items-center">
+                <div className="bg-slate-950 rounded-xl p-4 border border-slate-800 flex justify-between items-center">
                     <div>
                         <span className="text-slate-400 text-sm block">Resultado Estimado:</span>
                         <span className="text-xs text-slate-600">
