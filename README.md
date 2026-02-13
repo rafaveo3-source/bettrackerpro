@@ -258,3 +258,54 @@ git sync
 2. Em **Project Settings > Git**, mantenha Auto Deploy habilitado.
 3. Toda vez que você der `git push` para a branch configurada (ex: `main`), a Vercel faz build/deploy automático.
 4. Se usar `work` para desenvolvimento, abra PR para `main` e a Vercel publica ao merge.
+
+
+## 9) Correção do erro da Vercel: `vite: command not found`
+
+Esse erro acontece quando o ambiente instala dependências sem `devDependencies` (onde ficam `vite` e `typescript`) **ou** quando o Build Command está como `vite build` direto.
+
+### Correção aplicada no repositório
+Foi adicionado `vercel.json` com:
+- `installCommand`: `npm ci --include=dev`
+- `buildCommand`: `npm run build`
+- `outputDirectory`: `dist`
+
+### O que conferir no painel da Vercel
+1. Project Settings → Build and Deployment:
+   - **Install Command**: deixe vazio (para usar o `vercel.json`) ou coloque `npm ci --include=dev`
+   - **Build Command**: `npm run build`
+   - **Output Directory**: `dist`
+2. Project Settings → Environment Variables:
+   - `VITE_SUPABASE_URL`
+   - `VITE_SUPABASE_ANON_KEY` (ou `VITE_SUPABASE_PUBLISHABLE_KEY`)
+3. Faça **Redeploy** com **"Use existing Build Cache" desmarcado**.
+
+## 10) Ajustes importantes pelas telas que você enviou
+
+### Supabase
+- Em **Authentication → OAuth Server (BETA)**: isso **não é necessário** para login Google do seu app cliente.
+  - Pode deixar **desativado** para evitar confusão.
+- O que importa é:
+  - **Authentication → Sign In / Providers → Google** (ativado com Client ID/Secret corretos)
+  - **Authentication → URL Configuration** com Site URL e Redirect URLs corretos.
+
+### Google Cloud (OAuth Client)
+- Em **Authorized JavaScript origins** adicione:
+  - `https://SEU-PROJETO.supabase.co`
+  - `https://SEU-DOMINIO-VERCEL.vercel.app`
+- Em **Authorized redirect URIs**, use **somente**:
+  - `https://SEU-PROJETO.supabase.co/auth/v1/callback`
+- Remova `https://SEU-DOMINIO-VERCEL.vercel.app/` da lista de redirect URI do Google (não é callback do Supabase).
+
+## 11) Fluxo final (do zero ao deploy funcionando)
+
+1. Rodar SQL completo: `supabase/setup.sql` no SQL Editor.
+2. Configurar Google Provider no Supabase.
+3. Configurar URL Configuration no Supabase.
+4. Ajustar OAuth Client no Google Cloud (origins + callback correto).
+5. Confirmar envs na Vercel.
+6. Redeploy.
+7. Testar:
+   - login por e-mail/senha
+   - cadastro
+   - login com Google.
