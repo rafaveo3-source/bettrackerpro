@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useBetStore, supabase } from '../store/useBetStore';
-import { Eye, EyeOff, Mail, Lock, ArrowLeft, ChevronRight, AlertCircle, ShieldCheck, Globe } from 'lucide-react';
+import { Eye, EyeOff, Mail, Lock, ArrowLeft, ChevronRight, AlertCircle, ShieldCheck } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Logo } from '../components/Logo';
 
@@ -16,10 +16,10 @@ const Auth: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
-  // Limpa o erro automaticamente após 5 segundos
+  // Auto-clear error
   useEffect(() => {
     if (error) {
-      const timer = setTimeout(() => setError(''), 5000);
+      const timer = setTimeout(() => setError(''), 8000);
       return () => clearTimeout(timer);
     }
   }, [error]);
@@ -41,15 +41,12 @@ const Auth: React.FC = () => {
       });
       
       if (authError) throw authError;
-
-      // Nota: O redirecionamento acontece via navegador. 
-      // Se "nada acontece", o erro geralmente está no Console (F12) ou AdBlock.
     } catch (err: any) {
-      console.error("Erro Crítico Auth:", err);
-      if (err.message === "Failed to fetch") {
-        setError("Bloqueio de Rede: Desative seu AdBlocker ou verifique sua conexão.");
+      console.error("Critical Auth Error:", err);
+      if (err.message?.includes('Failed to fetch') || err.message?.includes('NetworkError')) {
+        setError("ERRO DE CONFIGURAÇÃO: O App não conseguiu conectar ao Supabase. Verifique se a URL do projeto (VITE_SUPABASE_URL) está correta e se o projeto existe.");
       } else {
-        setError(err.message || "Erro ao conectar com Google.");
+        setError(err.message || "Erro ao conectar com Google. Verifique o console.");
       }
       setLoading(false);
     }
@@ -60,17 +57,12 @@ const Auth: React.FC = () => {
     setLoading(true);
     setError('');
 
-    // Validação de Domínio (Frontend Guard)
-    const allowedDomains = ['@gmail.com', '@hotmail.com', '@outlook.com'];
-    const isAllowed = allowedDomains.some(domain => email.toLowerCase().endsWith(domain));
-    
-    if (!isAllowed) {
-        setError("Segurança: Use apenas e-mails @gmail.com ou @hotmail.com.");
-        setLoading(false);
-        return;
-    }
-
     try {
+      // Check for valid Supabase config before attempting request
+      if (!import.meta.env?.VITE_SUPABASE_URL && !supabase.supabaseUrl.includes('supabase.co')) {
+          throw new Error("Credenciais do Supabase não configuradas.");
+      }
+
       if (view === 'login') {
         const { data, error: authError } = await supabase.auth.signInWithPassword({ email, password });
         if (authError) throw authError;
@@ -87,20 +79,24 @@ const Auth: React.FC = () => {
         if (data.session) {
             setSession(data.session);
         } else {
-            setError("Confirmação: Conta criada! Tente logar (E-mail verificado via trigger).");
+            setError("Confirmação: Conta criada! Verifique seu e-mail para confirmar o cadastro antes de logar.");
             setView('login');
         }
       } else {
-        const { error: authError } = await supabase.auth.resetPasswordForEmail(email);
+        const { error: authError } = await supabase.auth.resetPasswordForEmail(email, {
+             redirectTo: window.location.origin,
+        });
         if (authError) throw authError;
-        setError("Sucesso: Link de recuperação enviado!");
+        setError("Sucesso: Link de recuperação enviado para o e-mail!");
       }
     } catch (err: any) {
       console.error("Auth Exception:", err);
-      if (err.message === "Failed to fetch") {
-        setError("Erro de Rede: Não foi possível alcançar o servidor Supabase.");
+      if (err.message === "Failed to fetch" || err.message?.includes('NetworkError')) {
+        setError("ERRO CRÍTICO: URL do Supabase inválida ou projeto inexistente. Configure o arquivo .env ou useBetStore.ts corretamente.");
       } else if (err.status === 429) {
         setError("Muitas tentativas. Aguarde alguns minutos.");
+      } else if (err.message.includes('Invalid login credentials')) {
+        setError("E-mail ou senha incorretos.");
       } else {
         setError(err.message || "Ocorreu um erro inesperado.");
       }
@@ -119,7 +115,7 @@ const Auth: React.FC = () => {
   );
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-[#020617] flex flex-col items-center justify-center p-6 relative overflow-hidden font-sans">
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex flex-col items-center justify-center p-6 relative overflow-hidden font-sans">
         <div className="absolute top-[-20%] left-[-10%] w-[60%] h-[60%] bg-emerald-500/10 dark:bg-emerald-500/5 rounded-full blur-[120px] pointer-events-none"></div>
 
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="w-full max-w-md relative z-10">
@@ -158,7 +154,7 @@ const Auth: React.FC = () => {
 
                             <div className="relative mb-8 text-center">
                                 <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-slate-200 dark:border-slate-800"></div></div>
-                                <span className="relative bg-white dark:bg-[#0f172a] px-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">ou credenciais</span>
+                                <span className="relative bg-white dark:bg-slate-900 px-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">ou credenciais</span>
                             </div>
 
                             <form onSubmit={handleSubmit} className="space-y-5">
@@ -166,7 +162,7 @@ const Auth: React.FC = () => {
                                     <label className="block text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-2 ml-1">E-mail Operacional</label>
                                     <div className="relative group">
                                         <Mail className="absolute left-4 top-4 text-slate-400 group-focus-within:text-emerald-500 transition-colors" size={18} />
-                                        <input type="email" value={email} onChange={e => setEmail(e.target.value)} required placeholder="exemplo@gmail.com" className="w-full bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white rounded-2xl pl-12 pr-4 py-4 outline-none focus:border-emerald-500 transition-all placeholder:text-slate-400" />
+                                        <input type="email" value={email} onChange={e => setEmail(e.target.value)} required placeholder="exemplo@gmail.com" className="w-full bg-slate-50 dark:bg-slate-950/50 border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white rounded-2xl pl-12 pr-4 py-4 outline-none focus:border-emerald-500 transition-all placeholder:text-slate-400" />
                                     </div>
                                 </div>
 
@@ -174,7 +170,7 @@ const Auth: React.FC = () => {
                                     <label className="block text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-2 ml-1">Chave de Acesso</label>
                                     <div className="relative group">
                                         <Lock className="absolute left-4 top-4 text-slate-400 group-focus-within:text-emerald-500 transition-colors" size={18} />
-                                        <input type={showPassword ? "text" : "password"} value={password} onChange={e => setPassword(e.target.value)} required placeholder="••••••••" className="w-full bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white rounded-2xl pl-12 pr-12 py-4 outline-none focus:border-emerald-500 transition-all placeholder:text-slate-400" />
+                                        <input type={showPassword ? "text" : "password"} value={password} onChange={e => setPassword(e.target.value)} required placeholder="••••••••" className="w-full bg-slate-50 dark:bg-slate-950/50 border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white rounded-2xl pl-12 pr-12 py-4 outline-none focus:border-emerald-500 transition-all placeholder:text-slate-400" />
                                         <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-4 top-4 text-slate-400 hover:text-emerald-500 transition-colors">
                                             {showPassword ? <EyeOff size={18}/> : <Eye size={18}/>}
                                         </button>
@@ -209,12 +205,12 @@ const Auth: React.FC = () => {
                             <form onSubmit={handleSubmit} className="space-y-5">
                                 <div>
                                     <label className="block text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-2 ml-1">E-mail Operacional</label>
-                                    <input type="email" placeholder="seu@gmail.com" value={email} onChange={e => setEmail(e.target.value)} className="w-full bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white rounded-2xl px-6 py-4 outline-none focus:border-emerald-500 transition-all placeholder:text-slate-400" required />
+                                    <input type="email" placeholder="seu@gmail.com" value={email} onChange={e => setEmail(e.target.value)} className="w-full bg-slate-50 dark:bg-slate-950/50 border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white rounded-2xl px-6 py-4 outline-none focus:border-emerald-500 transition-all placeholder:text-slate-400" required />
                                 </div>
                                 {view === 'register' && (
                                     <div>
                                         <label className="block text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-2 ml-1">Criar Senha (Mín. 6)</label>
-                                        <input type="password" placeholder="••••••••" value={password} onChange={e => setPassword(e.target.value)} className="w-full bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white rounded-2xl px-6 py-4 outline-none focus:border-emerald-500 transition-all placeholder:text-slate-400" required />
+                                        <input type="password" placeholder="••••••••" value={password} onChange={e => setPassword(e.target.value)} className="w-full bg-slate-50 dark:bg-slate-950/50 border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white rounded-2xl px-6 py-4 outline-none focus:border-emerald-500 transition-all placeholder:text-slate-400" required />
                                     </div>
                                 )}
                                 <button type="submit" disabled={loading} className="w-full bg-slate-900 dark:bg-white text-white dark:text-slate-950 font-black py-4 rounded-2xl transition-all shadow-xl active:scale-95 disabled:opacity-50">
