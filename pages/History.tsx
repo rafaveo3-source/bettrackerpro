@@ -44,6 +44,12 @@ const History: React.FC = () => {
   }).sort((a, b) => {
     const aValue = a[sortConfig.key];
     const bValue = b[sortConfig.key];
+
+    // Safety check for undefined values (TypeScript strict mode fix)
+    if (aValue === bValue) return 0;
+    if (aValue === undefined || aValue === null) return 1;
+    if (bValue === undefined || bValue === null) return -1;
+
     if (aValue < bValue) return sortConfig.direction === 'asc' ? -1 : 1;
     if (aValue > bValue) return sortConfig.direction === 'asc' ? 1 : -1;
     return 0;
