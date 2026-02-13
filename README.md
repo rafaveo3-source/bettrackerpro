@@ -204,3 +204,57 @@ FOR EACH ROW EXECUTE FUNCTION public.check_email_domain();
 ## Segurança
 
 Como as chaves foram compartilhadas em texto, gere novas chaves no Supabase e atualize no `.env`/Vercel.
+
+
+## 6) SQL pronto para copiar/colar
+
+Se preferir, use o arquivo versionado do projeto:
+
+```bash
+supabase/setup.sql
+```
+
+Cole todo o conteúdo no **Supabase > SQL Editor** e execute.
+
+## 7) Como atualizar GitHub automaticamente após meus ajustes
+
+Hoje seu repositório local está sem `remote`, então o push não acontece sozinho.
+Faça esse setup **uma vez**:
+
+1. Criar repo no GitHub (se ainda não criou).
+2. Conectar o remote:
+   ```bash
+   git remote add origin https://github.com/SEU_USUARIO/SEU_REPO.git
+   ```
+3. Definir branch padrão no GitHub como `main`.
+4. Subir branch atual:
+   ```bash
+   git push -u origin work
+   ```
+
+### Fluxo recomendado sempre que eu fizer ajustes
+
+```bash
+git add -A
+git commit -m "sua mensagem"
+git push
+```
+
+Se quiser tudo em um comando, crie um alias no seu terminal:
+
+```bash
+git config --global alias.sync '!git add -A && git commit -m "update" && git push'
+```
+
+Depois basta rodar:
+
+```bash
+git sync
+```
+
+## 8) Deploy automático na Vercel após push
+
+1. Na Vercel, conecte o projeto ao repositório GitHub.
+2. Em **Project Settings > Git**, mantenha Auto Deploy habilitado.
+3. Toda vez que você der `git push` para a branch configurada (ex: `main`), a Vercel faz build/deploy automático.
+4. Se usar `work` para desenvolvimento, abra PR para `main` e a Vercel publica ao merge.
