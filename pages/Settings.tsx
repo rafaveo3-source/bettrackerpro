@@ -150,7 +150,8 @@ const Settings: React.FC = () => {
                                 { id: 'emerald', color: '#10b981' },
                                 { id: 'blue', color: '#3b82f6' },
                                 { id: 'purple', color: '#a855f7' },
-                                { id: 'orange', color: '#f97316' }
+                                { id: 'orange', color: '#f97316' },
+                                { id: 'gold', color: '#f59e0b' }
                             ].map(c => (
                                 <button 
                                     key={c.id} 
