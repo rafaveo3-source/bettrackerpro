@@ -1,15 +1,18 @@
 
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
+import { persist, createJSONStorage } from 'zustand/middleware';
 import { createClient } from '@supabase/supabase-js';
 
-const supabaseUrl = 'https://qopahgzfprypkoniuft.supabase.co';
-const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFvcXBhaGd6ZnByeXBrb25pdWZ0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzA5NTMyNjAsImV4cCI6MjA4NjUyOTI2MH0.E_yHdJAtg0t0NHMDMcgEIzF58cImjxMxlefQ4IUHRVE';
+// Configuration: Best practice is to use Environment Variables
+// If running locally without .env, you can temporarily paste keys here, but DO NOT commit real keys to git.
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://placeholder-url.supabase.co';
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || 'placeholder-key';
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {
     persistSession: true,
     autoRefreshToken: true,
+    detectSessionInUrl: true,
   }
 });
 
@@ -369,6 +372,7 @@ export const useBetStore = create<BetState>()(
     }),
     {
       name: 'bettracker-storage-v5',
+      storage: createJSONStorage(() => localStorage),
     }
   )
 );
