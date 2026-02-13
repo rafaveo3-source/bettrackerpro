@@ -308,7 +308,7 @@ if (bankrollsData) {
         const activeBR = state.bankrolls.find(b => b.id === state.activeBankrollId);
         if (!activeBR) return;
         const betsProfit = state.history
-          .filter(b => b.bankrollId === state.activeBankrollId)
+          .filter(b => b.bankroll_id === state.activeBankrollId)
           .reduce((acc, b) => acc + b.profit, 0);
         const deposits = state.transactions
           .filter(t => t.bankrollId === state.activeBankrollId && t.type === 'deposit')
@@ -340,11 +340,11 @@ if (bankrollsData) {
   const { cashoutValue: _, ...cleanBetData } = newBetData;
 
   const betToInsert = {
-    ...cleanBetData,
-    bankrollId: get().activeBankrollId,
-    profit,
-    user_id: user.id
-  };
+  ...cleanBetData,
+  bankroll_id: get().activeBankrollId,
+  profit,
+  user_id: user.id
+};
 
   const { data, error } = await supabase
     .from('bets')
