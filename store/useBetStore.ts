@@ -105,7 +105,7 @@ interface BetState {
   goals: Goal[];
   tiltLockUntil: string | null;
 
-  setSession: (session: any) => void;
+  setSession: (session: any) => Promise<void>;
   logout: () => Promise<void>;
   updateProfile: (data: Partial<User>) => void;
   toggleTheme: () => void;
@@ -156,21 +156,45 @@ export const useBetStore = create<BetState>()(
       goals: [],
       tiltLockUntil: null,
 
-      setSession: (session) => {
-        if (session?.user) {
-          set({ 
-            isAuthenticated: true, 
-            user: { 
-              id: session.user.id,
-              email: session.user.email, 
-              name: session.user.user_metadata?.full_name || session.user.email?.split('@')[0] || 'Usuário',
-              avatar: session.user.user_metadata?.avatar_url
-            } 
-          });
-        } else {
-          set({ isAuthenticated: false, user: null });
-        }
+      setSession: async (session) => {
+  if (session?.user) {
+    set({
+      isAuthenticated: true,
+      user: {
+        id: session.user.id,
+        email: session.user.email,
+        name:
+          session.user.user_metadata?.full_name ||
+          session.user.email?.split('@')[0] ||
+          'Usuário',
+        avatar: session.user.user_metadata?.avatar_url,
       },
+    });
+
+    // 🔥 CARREGAR BETS DO SUPABASE
+    const { data, error } = await supabase
+      .from('bets')
+      .select('*')
+      .eq('user_id', session.user.id);
+
+    if (error) {
+      console.error(error);
+      return;
+    }
+
+    if (data) {
+      set({ history: data });
+    }
+
+  } else {
+    set({
+      isAuthenticated: false,
+      user: null,
+      history: []
+    });
+  }
+},
+
       logout: async () => {
         try {
           await supabase.auth.signOut();
@@ -222,31 +246,51 @@ export const useBetStore = create<BetState>()(
           .reduce((acc, t) => acc + t.amount, 0);
         set({ currentBankrollBalance: activeBR.initialBalance + betsProfit + deposits - withdrawals });
       },
-      addBet: (newBetData) => {
-        if (get().isTiltLocked()) return;
-        set((state) => {
-          let profit = 0;
-          const { status, stake, odds, cashoutValue } = newBetData;
-          switch (status) {
-            case 'won': profit = (stake * odds) - stake; break;
-            case 'lost': profit = -stake; break;
-            case 'half-won': profit = ((stake * odds) - stake) / 2; break;
-            case 'half-lost': profit = -stake / 2; break;
-            case 'void': profit = 0; break;
-            case 'cashout': profit = (cashoutValue || 0) - stake; break;
-            case 'pending': profit = 0; break;
-          }
-          const { cashoutValue: _, ...cleanBetData } = newBetData;
-          const newBet: Bet = {
-            ...cleanBetData,
-            id: Math.random().toString(36).substr(2, 9),
-            bankrollId: state.activeBankrollId,
-            profit,
-          };
-          return { history: [newBet, ...state.history] };
-        });
-        get().recalculateBankroll();
-      },
+      addBet: async (newBetData) => {
+  if (get().isTiltLocked()) return;
+
+  const user = get().user;
+  if (!user) return;
+
+  let profit = 0;
+  const { status, stake, odds, cashoutValue } = newBetData;
+
+  switch (status) {
+    case 'won': profit = (stake * odds) - stake; break;
+    case 'lost': profit = -stake; break;
+    case 'half-won': profit = ((stake * odds) - stake) / 2; break;
+    case 'half-lost': profit = -stake / 2; break;
+    case 'void': profit = 0; break;
+    case 'cashout': profit = (cashoutValue || 0) - stake; break;
+    case 'pending': profit = 0; break;
+  }
+
+  const { cashoutValue: _, ...cleanBetData } = newBetData;
+
+  const betToInsert = {
+    ...cleanBetData,
+    bankrollId: get().activeBankrollId,
+    profit,
+    user_id: user.id
+  };
+
+  const { data, error } = await supabase
+    .from('bets')
+    .insert([betToInsert])
+    .select()
+    .single();
+
+  if (error) {
+    console.error(error);
+    return;
+  }
+
+  set((state) => ({
+    history: [data, ...state.history]
+  }));
+
+  get().recalculateBankroll();
+},
       updateBet: (id, data) => {
         set((state) => {
           const newHistory = state.history.map(bet => {
