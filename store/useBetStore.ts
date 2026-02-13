@@ -119,7 +119,7 @@ interface BetState {
   removeBet: (id: string) => void;
   addTransaction: (transaction: Omit<Transaction, 'id' | 'bankrollId'>) => void;
   removeTransaction: (id: string) => void;
-  addMethod: (name: string) => void;
+  addMethod: (name: string) => Promise<void>;
   removeMethod: (id: string) => void;
   addMindsetEntry: (entry: Omit<MindsetEntry, 'id'>) => void;
   addGoal: (goal: Omit<Goal, 'id' | 'createdAt' | 'current' | 'status'>) => void;
@@ -184,6 +184,19 @@ export const useBetStore = create<BetState>()(
 
     if (data) {
       set({ history: data });
+    }
+
+        const { data: methodsData, error: methodsError } = await supabase
+      .from('methods')
+      .select('*')
+      .eq('user_id', session.user.id);
+
+    if (methodsError) {
+      console.error(methodsError);
+    }
+
+    if (methodsData) {
+      set({ methods: methodsData });
     }
 
   } else {
@@ -337,11 +350,30 @@ export const useBetStore = create<BetState>()(
         }));
         get().recalculateBankroll();
       },
-      addMethod: (name) => {
-        set((state) => ({
-          methods: [...state.methods, { id: Math.random().toString(36).substr(2, 9), name }]
-        }));
-      },
+      addMethod: async (name) => {
+  const user = get().user;
+  if (!user) return;
+
+  const { data, error } = await supabase
+    .from('methods')
+    .insert([
+      {
+        name,
+        user_id: user.id
+      }
+    ])
+    .select()
+    .single();
+
+  if (error) {
+    console.error(error);
+    return;
+  }
+
+  set((state) => ({
+    methods: [data, ...state.methods]
+  }));
+},
       removeMethod: (id) => {
         set((state) => ({
           methods: state.methods.filter(m => m.id !== id)
