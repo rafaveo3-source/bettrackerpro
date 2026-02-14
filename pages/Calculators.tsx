@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Share2, RefreshCw, Lock, ArrowRightLeft, Info, ChevronDown, Calculator, Sparkles } from 'lucide-react';
+import { Share2, RefreshCw, Lock, ArrowRightLeft, Info, ChevronDown, Calculator, Sparkles, Trash2, Plus } from 'lucide-react';
 import { useBetStore } from '../store/useBetStore';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -19,6 +19,10 @@ const Calculators: React.FC = () => {
 
   const addDutchSelection = () => {
     setDutchSelections([...dutchSelections, { id: Date.now(), name: `Seleção ${String.fromCharCode(65 + dutchSelections.length)}`, odds: '', stake: 0, profit: 0 }]);
+  };
+
+  const removeDutchSelection = (id: number) => {
+      setDutchSelections(dutchSelections.filter(s => s.id !== id));
   };
 
   const calculateDutching = () => {
@@ -72,7 +76,7 @@ const Calculators: React.FC = () => {
   };
 
   return (
-    <div className="space-y-6 pb-20">
+    <div className="space-y-6 pb-20 overflow-x-hidden">
        <div className="flex items-center gap-3">
         <div className="bg-emerald-500/10 p-3 rounded-xl border border-emerald-500/20 text-emerald-600 dark:text-emerald-500">
              <Calculator size={24} />
@@ -84,7 +88,7 @@ const Calculators: React.FC = () => {
       </div>
 
       {/* Tabs com Scroll Horizontal para Mobile */}
-      <div className="flex gap-3 mb-4 overflow-x-auto pb-4 scrollbar-hide">
+      <div className="flex gap-3 mb-4 overflow-x-auto pb-4 scrollbar-hide -mx-4 px-4 md:mx-0 md:px-0">
         <button onClick={() => setActiveTab('dutching')} className={`flex-shrink-0 px-6 py-3 rounded-xl font-black text-xs uppercase tracking-widest transition-all ${activeTab === 'dutching' ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/20 scale-105' : 'bg-white dark:bg-[#0f172a] text-slate-500 border border-slate-200 dark:border-slate-800'}`}>Dutching</button>
         <button onClick={() => setActiveTab('kelly')} className={`flex-shrink-0 px-6 py-3 rounded-xl font-black text-xs uppercase tracking-widest transition-all ${activeTab === 'kelly' ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/20 scale-105' : 'bg-white dark:bg-[#0f172a] text-slate-500 border border-slate-200 dark:border-slate-800'}`}>Critério de Kelly</button>
         <button onClick={() => setActiveTab('converter')} className={`flex-shrink-0 px-6 py-3 rounded-xl font-black text-xs uppercase tracking-widest transition-all ${activeTab === 'converter' ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/20 scale-105' : 'bg-white dark:bg-[#0f172a] text-slate-500 border border-slate-200 dark:border-slate-800'}`}>Conversor Odds</button>
@@ -94,7 +98,7 @@ const Calculators: React.FC = () => {
         <div className="lg:col-span-2 space-y-6">
             
             {activeTab === 'dutching' && (
-                <div className="bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-800 rounded-[2rem] p-6 md:p-8 shadow-sm overflow-hidden">
+                <div className="bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-800 rounded-[2rem] p-6 md:p-8 shadow-sm">
                     {/* ACCORDION INFO */}
                     <div className="bg-blue-50 dark:bg-blue-900/10 p-5 rounded-2xl border border-blue-100 dark:border-blue-500/10 mb-8">
                         <button onClick={() => toggleInfo('dutching')} className="flex justify-between items-center w-full text-left">
@@ -145,50 +149,98 @@ const Calculators: React.FC = () => {
                             <div className="col-span-3">Odds</div>
                             <div className="col-span-4 text-right">Stake Sugerida</div>
                         </div>
+
                         {dutchSelections.map((sel, idx) => (
-                            <div key={sel.id} className="grid grid-cols-1 md:grid-cols-12 gap-4 items-center bg-slate-50 dark:bg-slate-900/50 p-4 rounded-2xl border border-slate-100 dark:border-slate-800/50">
-                                <div className="hidden md:flex col-span-1 items-center justify-center w-8 h-8 bg-white dark:bg-slate-800 rounded-lg text-xs text-slate-400 font-bold border border-slate-200 dark:border-slate-700 shadow-sm">
-                                    {String.fromCharCode(65 + idx)}
+                            <div key={sel.id} className="bg-slate-50 dark:bg-slate-900/50 p-4 rounded-2xl border border-slate-100 dark:border-slate-800/50">
+                                {/* DESKTOP LAYOUT */}
+                                <div className="hidden md:grid grid-cols-12 gap-4 items-center">
+                                    <div className="col-span-1 flex items-center justify-center w-8 h-8 bg-white dark:bg-slate-800 rounded-lg text-xs text-slate-400 font-bold border border-slate-200 dark:border-slate-700 shadow-sm">
+                                        {String.fromCharCode(65 + idx)}
+                                    </div>
+                                    <div className="col-span-4">
+                                        <input 
+                                            type="text" 
+                                            value={sel.name}
+                                            onChange={(e) => {
+                                                const newSels = [...dutchSelections];
+                                                newSels[idx].name = e.target.value;
+                                                setDutchSelections(newSels);
+                                            }}
+                                            className="w-full bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-3 text-slate-900 dark:text-white outline-none text-sm font-bold focus:border-emerald-500 transition-colors"
+                                        />
+                                    </div>
+                                    <div className="col-span-3">
+                                        <input 
+                                            type="number" 
+                                            value={sel.odds}
+                                            onChange={(e) => {
+                                                const newSels = [...dutchSelections];
+                                                newSels[idx].odds = e.target.value;
+                                                setDutchSelections(newSels);
+                                            }}
+                                            className="w-full bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-3 text-slate-900 dark:text-white outline-none text-sm font-mono font-bold focus:border-emerald-500 transition-colors"
+                                            placeholder="0.00"
+                                        />
+                                    </div>
+                                    <div className="col-span-4 text-right">
+                                        <p className="text-emerald-600 dark:text-emerald-400 font-black font-mono text-lg">R$ {sel.stake.toFixed(2)}</p>
+                                        <p className="text-[10px] text-emerald-600/60 dark:text-emerald-500/60 font-bold uppercase tracking-wide">Lucro: R$ {sel.profit.toFixed(2)}</p>
+                                    </div>
                                 </div>
-                                <div className="col-span-1 md:col-span-4">
-                                    <label className="md:hidden text-[10px] font-bold text-slate-400 uppercase mb-1 block">Seleção</label>
-                                    <input 
-                                        type="text" 
-                                        value={sel.name}
-                                        onChange={(e) => {
-                                            const newSels = [...dutchSelections];
-                                            newSels[idx].name = e.target.value;
-                                            setDutchSelections(newSels);
-                                        }}
-                                        className="w-full bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-3 text-slate-900 dark:text-white outline-none text-sm font-bold focus:border-emerald-500 transition-colors"
-                                    />
-                                </div>
-                                <div className="col-span-1 md:col-span-3">
-                                    <label className="md:hidden text-[10px] font-bold text-slate-400 uppercase mb-1 block">Odds</label>
-                                    <input 
-                                        type="number" 
-                                        value={sel.odds}
-                                        onChange={(e) => {
-                                            const newSels = [...dutchSelections];
-                                            newSels[idx].odds = e.target.value;
-                                            setDutchSelections(newSels);
-                                        }}
-                                        className="w-full bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-3 text-slate-900 dark:text-white outline-none text-sm font-mono font-bold focus:border-emerald-500 transition-colors"
-                                        placeholder="0.00"
-                                    />
-                                </div>
-                                <div className="col-span-1 md:col-span-4 text-left md:text-right bg-emerald-50 dark:bg-emerald-900/10 p-3 rounded-xl border border-emerald-100 dark:border-emerald-500/10">
-                                    <p className="text-[10px] text-slate-400 md:hidden font-bold uppercase mb-1">Resultado</p>
-                                    <p className="text-emerald-600 dark:text-emerald-400 font-black font-mono text-lg">R$ {sel.stake.toFixed(2)}</p>
-                                    <p className="text-[10px] text-emerald-600/60 dark:text-emerald-500/60 font-bold uppercase tracking-wide">Lucro: R$ {sel.profit.toFixed(2)}</p>
+
+                                {/* MOBILE CARD LAYOUT */}
+                                <div className="md:hidden flex flex-col gap-4">
+                                    <div className="flex justify-between items-center">
+                                        <div className="flex items-center justify-center w-8 h-8 bg-white dark:bg-slate-800 rounded-lg text-xs text-slate-400 font-bold border border-slate-200 dark:border-slate-700 shadow-sm">
+                                            {String.fromCharCode(65 + idx)}
+                                        </div>
+                                        <button onClick={() => removeDutchSelection(sel.id)} className="text-red-400"><Trash2 size={16} /></button>
+                                    </div>
+                                    
+                                    <div>
+                                        <label className="text-[10px] font-bold text-slate-400 uppercase mb-1 block">Seleção</label>
+                                        <input 
+                                            type="text" 
+                                            value={sel.name}
+                                            onChange={(e) => {
+                                                const newSels = [...dutchSelections];
+                                                newSels[idx].name = e.target.value;
+                                                setDutchSelections(newSels);
+                                            }}
+                                            className="w-full bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-3 text-slate-900 dark:text-white outline-none text-sm font-bold focus:border-emerald-500 transition-colors"
+                                        />
+                                    </div>
+
+                                    <div>
+                                        <label className="text-[10px] font-bold text-slate-400 uppercase mb-1 block">Odds</label>
+                                        <input 
+                                            type="number" 
+                                            value={sel.odds}
+                                            onChange={(e) => {
+                                                const newSels = [...dutchSelections];
+                                                newSels[idx].odds = e.target.value;
+                                                setDutchSelections(newSels);
+                                            }}
+                                            className="w-full bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-3 text-slate-900 dark:text-white outline-none text-sm font-mono font-bold focus:border-emerald-500 transition-colors"
+                                            placeholder="0.00"
+                                        />
+                                    </div>
+
+                                    <div className="bg-emerald-50 dark:bg-emerald-900/10 p-3 rounded-xl border border-emerald-100 dark:border-emerald-500/10 flex justify-between items-center mt-2">
+                                        <span className="text-[10px] text-slate-500 font-bold uppercase">Resultado</span>
+                                        <div className="text-right">
+                                            <p className="text-emerald-600 dark:text-emerald-400 font-black font-mono text-lg">R$ {sel.stake.toFixed(2)}</p>
+                                            <p className="text-[10px] text-emerald-600/60 dark:text-emerald-500/60 font-bold uppercase tracking-wide">Lucro: R$ {sel.profit.toFixed(2)}</p>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                         ))}
                     </div>
 
                     <div className="mt-8 flex flex-col md:flex-row gap-4 pt-6 border-t border-slate-100 dark:border-slate-800">
-                        <button onClick={addDutchSelection} className="text-slate-500 hover:text-emerald-600 dark:text-slate-400 dark:hover:text-emerald-400 text-xs font-black uppercase tracking-widest flex items-center justify-center gap-2 py-4 rounded-xl border border-dashed border-slate-300 dark:border-slate-700 hover:border-emerald-500 hover:bg-emerald-50 dark:hover:bg-emerald-500/10 transition-all">
-                            + Nova Seleção
+                        <button onClick={addDutchSelection} className="text-slate-500 hover:text-emerald-600 dark:text-slate-400 dark:hover:text-emerald-400 text-xs font-black uppercase tracking-widest flex items-center justify-center gap-2 py-4 rounded-xl border border-dashed border-slate-300 dark:border-slate-700 hover:border-emerald-500 hover:bg-emerald-50 dark:hover:bg-emerald-500/10 transition-all w-full md:w-auto">
+                            <Plus size={16} /> Nova Seleção
                         </button>
                         <div className="flex-1"></div>
                         <button onClick={calculateDutching} className="bg-emerald-600 hover:bg-emerald-500 text-white font-black text-sm uppercase tracking-widest py-4 px-10 rounded-xl transition-all shadow-xl shadow-emerald-600/20 active:scale-95 w-full md:w-auto">
