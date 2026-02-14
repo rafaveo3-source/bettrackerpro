@@ -121,10 +121,17 @@ interface BetState {
   removeTransaction: (id: string) => void;
   addMethod: (name: string) => Promise<void>;
   removeMethod: (id: string) => void;
-  addMindsetEntry: (entry: Omit<MindsetEntry, 'id'>) => void;
-  addGoal: (goal: Omit<Goal, 'id' | 'createdAt' | 'current' | 'status'>) => void;
-  updateGoal: (id: string, data: Partial<Goal>) => void;
-  deleteGoal: (id: string) => void;
+  
+  // 🔥 Novos métodos Async para Mindset
+  addMindsetEntry: (entry: Omit<MindsetEntry, 'id'>) => Promise<void>;
+  deleteMindsetEntry: (id: string) => Promise<void>;
+  updateMindsetEntry: (id: string, data: Partial<MindsetEntry>) => Promise<void>;
+
+  // 🔥 Novos métodos Async para Goals
+  addGoal: (goal: Omit<Goal, 'id' | 'createdAt' | 'current' | 'status'>) => Promise<void>;
+  updateGoal: (id: string, data: Partial<Goal>) => Promise<void>;
+  deleteGoal: (id: string) => Promise<void>;
+
   activateTiltLock: (hours: number) => void;
   resetData: () => void;
   recalculateBankroll: () => void;
@@ -190,6 +197,7 @@ export const useBetStore = create<BetState>()(
             set({ history: formattedBets });
           }
 
+          // 🔥 CARREGAR METHODS
           const { data: methodsData, error: methodsError } = await supabase
             .from('methods')
             .select('*')
@@ -223,6 +231,45 @@ export const useBetStore = create<BetState>()(
             });
           }
 
+          // 🔥 CARREGAR MINDSET
+          const { data: mindsetData, error: mindsetError } = await supabase
+            .from('mindset_entries')
+            .select('*')
+            .eq('user_id', session.user.id)
+            .order('date', { ascending: false });
+
+          if (mindsetError) {
+            console.error("Erro ao carregar mindset:", mindsetError);
+          } else if (mindsetData) {
+            const formattedMindset = mindsetData.map((m: any) => ({
+              id: m.id,
+              date: m.date,
+              time: m.time,
+              mood: m.mood,
+              note: m.note,
+              tags: m.tags || []
+            }));
+            set({ mindsetHistory: formattedMindset });
+          }
+
+          // 🔥 CARREGAR GOALS
+          const { data: goalsData, error: goalsError } = await supabase
+            .from('goals')
+            .select('*')
+            .eq('user_id', session.user.id);
+
+          if (goalsError) {
+            console.error("Erro ao carregar goals:", goalsError);
+          } else if (goalsData) {
+            const formattedGoals = goalsData.map((g: any) => ({
+              ...g,
+              createdAt: g.created_at, // Mapping database snake_case to frontend camelCase
+              target: Number(g.target),
+              current: Number(g.current)
+            }));
+            set({ goals: formattedGoals });
+          }
+
           // Garante recálculo após carregar tudo
           get().recalculateBankroll();
 
@@ -230,7 +277,9 @@ export const useBetStore = create<BetState>()(
           set({
             isAuthenticated: false,
             user: null,
-            history: []
+            history: [],
+            mindsetHistory: [],
+            goals: []
           });
         }
       },
@@ -380,7 +429,7 @@ export const useBetStore = create<BetState>()(
           case 'pending': profit = 0; break;
         }
 
-        // Remove cashoutValue para não enviar campo undefined/extra para o Supabase se a tabela não tiver
+        // Remove cashoutValue para não enviar campo undefined/extra para o Supabase
         const { cashoutValue: _, ...cleanBetData } = newBetData;
 
         const betToInsert = {
@@ -528,7 +577,6 @@ export const useBetStore = create<BetState>()(
         const user = get().user;
         if (!user) return;
 
-        // Correção: addMethod estava usando variáveis inexistentes (currency, initialBalance)
         const { data, error } = await supabase
           .from('methods')
           .insert([
@@ -558,32 +606,153 @@ export const useBetStore = create<BetState>()(
         }));
       },
 
-      addMindsetEntry: (entry) => {
+      // 🔥 MINDSET ACTIONS
+      addMindsetEntry: async (entry) => {
+        const user = get().user;
+        if (!user) return;
+
+        const { data, error } = await supabase
+          .from('mindset_entries')
+          .insert([
+            {
+              ...entry,
+              user_id: user.id
+            }
+          ])
+          .select()
+          .single();
+
+        if (error) {
+          console.error("Erro ao adicionar mindset:", error);
+          return;
+        }
+
+        if (data) {
+          set((state) => ({
+            mindsetHistory: [data, ...state.mindsetHistory]
+          }));
+        }
+      },
+
+      deleteMindsetEntry: async (id) => {
+        const user = get().user;
+        if (!user) return;
+
+        const { error } = await supabase
+          .from('mindset_entries')
+          .delete()
+          .eq('id', id)
+          .eq('user_id', user.id);
+
+        if (error) {
+          console.error("Erro ao deletar mindset:", error);
+          return;
+        }
+
         set((state) => ({
-          mindsetHistory: [{ ...entry, id: Math.random().toString(36).substr(2, 9) }, ...state.mindsetHistory]
+          mindsetHistory: state.mindsetHistory.filter(m => m.id !== id)
         }));
       },
 
-      addGoal: (goalData) => {
-        const id = Math.random().toString(36).substr(2, 9);
-        const newGoal: Goal = {
-          ...goalData,
-          id,
-          target: Number(goalData.target),
-          current: 0,
-          status: 'active',
-          createdAt: new Date().toISOString()
-        };
-        set((state) => ({ goals: [...state.goals, newGoal] }));
-      },
+      updateMindsetEntry: async (id, data) => {
+        const user = get().user;
+        if (!user) return;
 
-      updateGoal: (id, data) => {
+        const { error } = await supabase
+          .from('mindset_entries')
+          .update(data)
+          .eq('id', id)
+          .eq('user_id', user.id);
+
+        if (error) {
+          console.error("Erro ao atualizar mindset:", error);
+          return;
+        }
+
         set((state) => ({
-          goals: state.goals.map(g => g.id === id ? { ...g, ...data } : g)
+          mindsetHistory: state.mindsetHistory.map(m =>
+            m.id === id ? { ...m, ...data } : m
+          )
         }));
       },
 
-      deleteGoal: (id) => {
+      // 🔥 GOALS ACTIONS
+      addGoal: async (goalData) => {
+        const user = get().user;
+        if (!user) return;
+
+        const { data, error } = await supabase
+          .from('goals')
+          .insert([
+            {
+              ...goalData,
+              target: Number(goalData.target),
+              current: 0,
+              status: 'active',
+              created_at: new Date().toISOString(),
+              user_id: user.id
+            }
+          ])
+          .select()
+          .single();
+
+        if (error) {
+          console.error("Erro ao adicionar goal:", error);
+          return;
+        }
+
+        if (data) {
+          // Normaliza retorno do Supabase para o Frontend
+          const newGoal: Goal = {
+             ...data,
+             createdAt: data.created_at,
+             target: Number(data.target),
+             current: Number(data.current)
+          };
+
+          set((state) => ({
+            goals: [...state.goals, newGoal]
+          }));
+        }
+      },
+
+      updateGoal: async (id, data) => {
+        const user = get().user;
+        if (!user) return;
+
+        const { error } = await supabase
+          .from('goals')
+          .update(data)
+          .eq('id', id)
+          .eq('user_id', user.id);
+
+        if (error) {
+          console.error("Erro ao atualizar goal:", error);
+          return;
+        }
+
+        set((state) => ({
+          goals: state.goals.map(g =>
+            g.id === id ? { ...g, ...data } : g
+          )
+        }));
+      },
+
+      deleteGoal: async (id) => {
+        const user = get().user;
+        if (!user) return;
+
+        const { error } = await supabase
+          .from('goals')
+          .delete()
+          .eq('id', id)
+          .eq('user_id', user.id);
+
+        if (error) {
+          console.error("Erro ao deletar goal:", error);
+          return;
+        }
+
         set((state) => ({
           goals: state.goals.filter(g => g.id !== id)
         }));
