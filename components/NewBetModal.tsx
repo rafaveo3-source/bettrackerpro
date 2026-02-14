@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Trophy, AlertCircle, Clock, DollarSign, Target, Activity, Divide, Ban, CornerDownRight, BookOpen, Save } from 'lucide-react';
@@ -101,6 +100,7 @@ const NewBetModal: React.FC<NewBetModalProps> = ({ isOpen, onClose, betToEdit })
         case 'half-won': return ((stake * odds) - stake) / 2;
         case 'half-lost': return -stake / 2;
         case 'void': return 0;
+        case 'refunded': return 0; // ✅ Cálculo para Reembolso
         case 'cashout': return cashout - stake;
         default: return (stake * odds) - stake;
     }
@@ -176,7 +176,7 @@ const NewBetModal: React.FC<NewBetModalProps> = ({ isOpen, onClose, betToEdit })
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                     <div>
+                      <div>
                         <label className="block text-xs font-medium text-slate-400 mb-1.5 uppercase">Mercado</label>
                         <div className="relative">
                             <Target className="absolute left-3 top-3 text-slate-600" size={16} />
@@ -262,8 +262,8 @@ const NewBetModal: React.FC<NewBetModalProps> = ({ isOpen, onClose, betToEdit })
                 </div>
 
                 <div>
-                     <label className="block text-xs font-medium text-slate-400 mb-2 uppercase">Status da Aposta</label>
-                     <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                      <label className="block text-xs font-medium text-slate-400 mb-2 uppercase">Status da Aposta</label>
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
                         <button type="button" onClick={() => setFormData({...formData, status: 'pending'})} className={`p-2 rounded border text-xs font-medium flex items-center justify-center gap-1 ${formData.status === 'pending' ? 'bg-yellow-500/20 border-yellow-500 text-yellow-500' : 'border-slate-700 text-slate-400'}`}>
                             <Clock size={14} /> Pendente
                         </button>
@@ -279,13 +279,13 @@ const NewBetModal: React.FC<NewBetModalProps> = ({ isOpen, onClose, betToEdit })
                          <button type="button" onClick={() => setFormData({...formData, status: 'half-lost'})} className={`p-2 rounded border text-xs font-medium flex items-center justify-center gap-1 ${formData.status === 'half-lost' ? 'bg-red-500/20 border-red-500 text-red-500' : 'border-slate-700 text-slate-400'}`}>
                             <Divide size={14} /> Meio Red
                         </button>
-                        <button type="button" onClick={() => setFormData({...formData, status: 'void'})} className={`p-2 rounded border text-xs font-medium flex items-center justify-center gap-1 ${formData.status === 'void' ? 'bg-slate-500/20 border-slate-500 text-slate-400' : 'border-slate-700 text-slate-400'}`}>
+                        <button type="button" onClick={() => setFormData({...formData, status: 'refunded'})} className={`p-2 rounded border text-xs font-medium flex items-center justify-center gap-1 ${formData.status === 'refunded' ? 'bg-slate-500/20 border-slate-500 text-slate-400' : 'border-slate-700 text-slate-400'}`}>
                             <Ban size={14} /> Reembolso
                         </button>
                         <button type="button" onClick={() => setFormData({...formData, status: 'cashout'})} className={`col-span-2 p-2 rounded border text-xs font-medium flex items-center justify-center gap-1 ${formData.status === 'cashout' ? 'bg-blue-500/20 border-blue-500 text-blue-500' : 'border-slate-700 text-slate-400'}`}>
                             <CornerDownRight size={14} /> Cashout
                         </button>
-                     </div>
+                      </div>
                 </div>
 
                 <div className="bg-slate-950 rounded-xl p-4 border border-slate-800 flex justify-between items-center">

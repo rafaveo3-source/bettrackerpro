@@ -5,7 +5,7 @@ import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContai
 
 const Dashboard: React.FC = () => {
   const { currentBankrollBalance, bankrolls, activeBankrollId, getMetrics, history, removeBet } = useBetStore();
-  const [period, setPeriod] = useState<'1S' | '1M' | '3M' | 'YTD' | 'ALL'>('ALL'); // ✅ Estado para filtro de período
+  const [period, setPeriod] = useState<'1S' | '1M' | '3M' | 'YTD' | 'ALL'>('ALL');
   
   const metrics = getMetrics();
   const activeBR = bankrolls.find(b => b.id === activeBankrollId);
@@ -21,26 +21,20 @@ const Dashboard: React.FC = () => {
   const bankrollHistory = history.filter(b => b.bankrollId === activeBankrollId && b.status !== 'void');
   const sortedHistory = [...bankrollHistory].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
   
-  // ✅ Filtro de Período Funcional
   const filteredHistory = useMemo(() => {
       if (period === 'ALL') return sortedHistory;
-      
       const now = new Date();
       let limitDate = new Date();
-      
       switch(period) {
           case '1S': limitDate.setDate(now.getDate() - 7); break;
           case '1M': limitDate.setMonth(now.getMonth() - 1); break;
           case '3M': limitDate.setMonth(now.getMonth() - 3); break;
           case 'YTD': limitDate = new Date(now.getFullYear(), 0, 1); break;
       }
-      
       return sortedHistory.filter(bet => new Date(bet.date) >= limitDate);
   }, [sortedHistory, period]);
 
-  // Chart Data Generation
   let runningBalance = activeBR?.initialBalance || 0;
-  // Ajuste do saldo inicial baseado no período para o gráfico começar do ponto correto
   if (period !== 'ALL' && filteredHistory.length > 0) {
       const betsBefore = sortedHistory.filter(bet => new Date(bet.date) < new Date(filteredHistory[0].date));
       runningBalance += betsBefore.reduce((acc, b) => acc + b.profit, 0);
@@ -53,19 +47,16 @@ const Dashboard: React.FC = () => {
 
   if (chartData.length === 0) chartData.push({ date: 'Start', balance: activeBR?.initialBalance || 0 });
 
-  // Heatmap Data Generation
   const heatmapData = useMemo(() => {
-    const days = 30; // Last 30 days
+    const days = 30;
     const data = [];
     for (let i = 0; i < days; i++) {
         const d = new Date();
         d.setDate(d.getDate() - (days - 1 - i));
         const dateStr = d.toISOString().split('T')[0];
-        
         const dayBets = bankrollHistory.filter(b => b.date.startsWith(dateStr));
         const dayProfit = dayBets.reduce((acc, b) => acc + b.profit, 0);
         const count = dayBets.length;
-        
         data.push({ date: dateStr, profit: dayProfit, count });
     }
     return data;
@@ -100,7 +91,6 @@ const Dashboard: React.FC = () => {
 
   return (
     <div className="space-y-6 pb-10">
-      {/* HEADER TERMINAL STYLE */}
       <header className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 border-b border-slate-200 dark:border-slate-800 pb-6">
         <div>
           <div className="flex items-center gap-2 text-emerald-500 text-[9px] font-mono font-bold uppercase tracking-widest mb-1">
@@ -123,7 +113,6 @@ const Dashboard: React.FC = () => {
         </div>
       </header>
 
-      {/* KPI GRID - HEDGE FUND LEVEL */}
       <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4">
         <KPICard title="Equity" value={formatCurrency(currentBankrollBalance)} subtext="Total Assets" icon={Wallet} color="text-emerald-500 dark:text-emerald-400" trend={growth} />
         <KPICard title="Sharpe Ratio" value={metrics.sharpeRatio.toFixed(2)} subtext="Risk-Adj Return" icon={Scale} color={metrics.sharpeRatio > 1 ? "text-emerald-500 dark:text-emerald-400" : "text-amber-500 dark:text-amber-400"} extraInfo={metrics.sharpeRatio > 2 ? 'Excellent' : 'Moderate'} />
@@ -133,7 +122,6 @@ const Dashboard: React.FC = () => {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 h-auto">
-        {/* CHART SECTION */}
         <div className="lg:col-span-2 glass-card rounded-[1.5rem] p-6 flex flex-col border border-slate-200 dark:border-slate-800 bg-white dark:bg-[#0f172a]/40 shadow-sm">
             <div className="flex justify-between items-center mb-6">
                 <h3 className="text-xs font-black text-slate-900 dark:text-white uppercase tracking-widest flex items-center gap-2">
@@ -173,7 +161,7 @@ const Dashboard: React.FC = () => {
                                 borderColor: 'var(--tooltip-border, #334155)', 
                                 borderRadius: '8px', 
                                 boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)',
-                                color: '#fff' // ✅ Força texto branco no tooltip sempre
+                                color: '#fff'
                             }} 
                             itemStyle={{ color: '#fff', fontSize: '11px', fontWeight: 'bold', fontFamily: 'monospace' }}
                             formatter={(value: number) => [formatCurrency(value), 'Equity']}
@@ -185,9 +173,7 @@ const Dashboard: React.FC = () => {
             </div>
         </div>
 
-        {/* SIDEBAR WIDGETS */}
         <div className="space-y-6 flex flex-col">
-            {/* HEATMAP */}
             <div className="glass-card rounded-[1.5rem] p-6 border border-slate-200 dark:border-slate-800 bg-white dark:bg-[#0f172a]/40 shadow-sm flex-1">
                 <h3 className="text-xs font-black text-slate-900 dark:text-white uppercase tracking-widest mb-4 flex items-center gap-2">
                     <BarChart4 size={14} className="text-slate-500" /> Market Consistency
@@ -209,7 +195,6 @@ const Dashboard: React.FC = () => {
                 </div>
             </div>
 
-            {/* RECENT FEED */}
             <div className="glass-card rounded-[1.5rem] p-0 overflow-hidden flex flex-col border border-slate-200 dark:border-slate-800 bg-white dark:bg-[#0f172a]/40 shadow-sm h-[300px]">
                 <div className="p-5 border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/30 flex justify-between items-center">
                     <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest">Order Flow</h3>
@@ -225,7 +210,7 @@ const Dashboard: React.FC = () => {
                         bankrollHistory.slice().reverse().slice(0, 15).map(bet => (
                             <div key={bet.id} className="group flex items-center justify-between p-3 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800/80 transition-all border border-transparent hover:border-slate-200 dark:hover:border-slate-700 cursor-default">
                                 <div className="flex items-center gap-3">
-                                    <div className={`w-1 h-6 rounded-full ${bet.status === 'won' ? 'bg-emerald-500' : bet.status === 'lost' ? 'bg-red-500' : bet.status === 'refunded' ? 'bg-slate-400' : 'bg-yellow-500'}`}></div>
+                                    <div className={`w-1 h-6 rounded-full ${bet.status === 'won' ? 'bg-emerald-500' : bet.status === 'lost' ? 'bg-red-500' : bet.status === 'refunded' ? 'bg-slate-400' : bet.status === 'cashout' ? 'bg-blue-500' : 'bg-yellow-500'}`}></div>
                                     <div className="overflow-hidden">
                                         <p className="text-slate-700 dark:text-slate-300 font-bold text-[10px] truncate max-w-[100px]">{bet.event}</p>
                                         <p className="text-[8px] text-slate-500 uppercase font-mono">{bet.market}</p>

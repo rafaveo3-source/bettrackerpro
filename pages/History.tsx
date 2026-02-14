@@ -23,18 +23,15 @@ const History: React.FC = () => {
     window.dispatchEvent(event);
   };
 
-  // 🔥 1. FILTRAGEM CORRETA COM USEMEMO
   const filteredHistory = useMemo(() => {
     return history
-      .filter(b => b.bankrollId === activeBankrollId) // Filtra pela banca ativa
+      .filter(b => b.bankrollId === activeBankrollId)
       .filter(bet => {
         const matchesSearch = bet.event.toLowerCase().includes(searchTerm.toLowerCase()) || 
                               bet.selection.toLowerCase().includes(searchTerm.toLowerCase());
         const matchesStatus = statusFilter === 'all' || bet.status === statusFilter;
         const matchesSport = sportFilter === 'all' || bet.sport === sportFilter;
 
-        const betDate = new Date(bet.date);
-        // Ajuste de fuso horário simples para comparação de datas string YYYY-MM-DD
         const betDateStr = bet.date; 
         
         const matchesDateStart = !dateStart || betDateStr >= dateStart;
@@ -72,7 +69,6 @@ const History: React.FC = () => {
       return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: curr }).format(val);
   };
 
-  // 🔥 EXPORTAR CSV
   const exportCSV = () => {
     if (filteredHistory.length === 0) return;
 
@@ -81,7 +77,7 @@ const History: React.FC = () => {
       headers.join(','),
       ...filteredHistory.map(bet => [
         bet.date,
-        `"${bet.event.replace(/"/g, '""')}"`, // Escape quotes
+        `"${bet.event.replace(/"/g, '""')}"`,
         `"${bet.selection.replace(/"/g, '""')}"`,
         bet.sport,
         bet.market,
@@ -122,7 +118,6 @@ const History: React.FC = () => {
         </div>
       </div>
 
-      {/* ADVANCED FILTERS */}
       <AnimatePresence>
         {showAdvanced && (
             <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
@@ -173,7 +168,7 @@ const History: React.FC = () => {
                         <option value="pending">Pendente</option>
                         <option value="half-won">Meio Green</option>
                         <option value="half-lost">Meio Red</option>
-                        <option value="refunded">Reembolsada</option> {/* ✅ Novo filtro */}
+                        <option value="refunded">Reembolsada</option>
                         <option value="cashout">Cashout</option>
                     </select>
                     <ChevronDown className="absolute right-3 top-3.5 text-slate-400 pointer-events-none" size={16} />
@@ -228,11 +223,13 @@ const History: React.FC = () => {
                         ['won', 'half-won'].includes(bet.status) ? 'bg-emerald-100 text-emerald-700 border-emerald-200 dark:bg-emerald-500/10 dark:text-emerald-500 dark:border-emerald-500/20' :
                         ['lost', 'half-lost'].includes(bet.status) ? 'bg-red-100 text-red-700 border-red-200 dark:bg-red-500/10 dark:text-red-500 dark:border-red-500/20' :
                         bet.status === 'refunded' ? 'bg-slate-100 text-slate-700 border-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700' :
+                        bet.status === 'cashout' ? 'bg-blue-100 text-blue-700 border-blue-200 dark:bg-blue-500/10 dark:text-blue-500 dark:border-blue-500/20' :
                         'bg-yellow-100 text-yellow-700 border-yellow-200 dark:bg-yellow-500/10 dark:text-yellow-500 dark:border-yellow-500/20'
                       }`}>
                         {['won', 'half-won'].includes(bet.status) ? 'Green' : 
                          ['lost', 'half-lost'].includes(bet.status) ? 'Red' : 
-                         bet.status === 'refunded' ? 'Reembolso' : // ✅ Label corrigida
+                         bet.status === 'refunded' ? 'Reembolso' : 
+                         bet.status === 'cashout' ? 'Cashout' :
                          'Pendente'}
                       </span>
                     </td>
