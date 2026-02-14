@@ -183,8 +183,13 @@ export const useBetStore = create<BetState>()(
     }
 
     if (data) {
-      set({ history: data });
-    }
+  const formattedBets = data.map((bet: any) => ({
+    ...bet,
+    bankrollId: bet.bankroll_id
+  }));
+
+  set({ history: formattedBets });
+}
 
         const { data: methodsData, error: methodsError } = await supabase
       .from('methods')
