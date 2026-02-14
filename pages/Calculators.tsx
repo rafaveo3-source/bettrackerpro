@@ -94,7 +94,7 @@ const Calculators: React.FC = () => {
         <div className="lg:col-span-2 space-y-6">
             
             {activeTab === 'dutching' && (
-                <div className="bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-800 rounded-[2rem] p-6 md:p-8 shadow-sm">
+                <div className="bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-800 rounded-[2rem] p-6 md:p-8 shadow-sm overflow-hidden">
                     {/* ACCORDION INFO */}
                     <div className="bg-blue-50 dark:bg-blue-900/10 p-5 rounded-2xl border border-blue-100 dark:border-blue-500/10 mb-8">
                         <button onClick={() => toggleInfo('dutching')} className="flex justify-between items-center w-full text-left">

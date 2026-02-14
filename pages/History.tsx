@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { useBetStore, Bet } from '../store/useBetStore';
-import { Search, Filter, Download, ArrowUpDown, ChevronDown, Calendar, Trash2, Pencil, RefreshCcw } from 'lucide-react';
+import { Search, Filter, Download, ArrowUpDown, ChevronDown, RefreshCcw, Trash2, Pencil } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 const History: React.FC = () => {
@@ -124,7 +124,7 @@ const History: React.FC = () => {
       }
 
       return (
-          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold border ${styles}`}>
+          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold border whitespace-nowrap ${styles}`}>
               {label}
           </span>
       );
@@ -220,14 +220,17 @@ const History: React.FC = () => {
             filteredHistory.map(bet => (
                 <div key={bet.id} className="bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-800 rounded-2xl p-5 shadow-sm relative overflow-hidden">
                     <div className="flex justify-between items-start mb-3">
-                        <div className="flex items-center gap-2">
-                             <div className={`w-1.5 h-1.5 rounded-full ${bet.profit > 0 ? 'bg-emerald-500' : bet.profit < 0 ? 'bg-red-500' : 'bg-slate-400'}`}></div>
-                             <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">{bet.sport}</span>
+                        <div className="flex flex-col gap-1">
+                             <div className="flex items-center gap-2">
+                                <div className={`w-1.5 h-1.5 rounded-full ${bet.profit > 0 ? 'bg-emerald-500' : bet.profit < 0 ? 'bg-red-500' : 'bg-slate-400'}`}></div>
+                                <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">{bet.sport}</span>
+                             </div>
+                             <span className="text-[10px] text-slate-500 font-mono">{bet.date.split('-').reverse().join('/')}</span>
                         </div>
                         <StatusBadge status={bet.status} />
                     </div>
                     
-                    <h3 className="text-sm font-bold text-slate-900 dark:text-white mb-1 line-clamp-1">{bet.event}</h3>
+                    <h3 className="text-sm font-bold text-slate-900 dark:text-white mb-1 line-clamp-2 pr-8">{bet.event}</h3>
                     <p className="text-xs text-slate-500 dark:text-slate-400 mb-4">{bet.market} • <span className="font-mono text-slate-700 dark:text-slate-300">@{bet.odds.toFixed(2)}</span></p>
                     
                     <div className="flex justify-between items-end border-t border-slate-100 dark:border-slate-800 pt-4">
@@ -243,12 +246,12 @@ const History: React.FC = () => {
                         </div>
                     </div>
 
-                    <div className="absolute top-4 right-14 flex gap-2">
-                         <button onClick={() => handleEdit(bet)} className="p-2 bg-slate-50 dark:bg-slate-900 rounded-lg text-slate-400 hover:text-emerald-500 transition-colors">
-                            <Pencil size={14} />
+                    <div className="flex justify-end gap-3 mt-4 border-t border-slate-100 dark:border-slate-800 pt-3">
+                         <button onClick={() => handleEdit(bet)} className="text-xs font-bold text-emerald-600 dark:text-emerald-400 flex items-center gap-1 uppercase tracking-wide">
+                            <Pencil size={12} /> Editar
                          </button>
-                         <button onClick={() => confirm('Excluir?') && removeBet(bet.id)} className="p-2 bg-slate-50 dark:bg-slate-900 rounded-lg text-slate-400 hover:text-red-500 transition-colors">
-                            <Trash2 size={14} />
+                         <button onClick={() => confirm('Excluir?') && removeBet(bet.id)} className="text-xs font-bold text-red-600 dark:text-red-400 flex items-center gap-1 uppercase tracking-wide">
+                            <Trash2 size={12} /> Excluir
                          </button>
                     </div>
                 </div>
