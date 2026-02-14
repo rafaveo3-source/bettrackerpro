@@ -51,7 +51,7 @@ export interface Goal {
 
 export interface Bet {
   id: string;
-  bankrollId: string;
+  bankroll_id: string;
   date: string;
   sport: string;
   market: string;
@@ -346,10 +346,12 @@ if (bankrollsData) {
 
   const betToInsert = {
   ...cleanBetData,
-  bankroll_id: get().activeBankrollId, // 🔥 nome correto da coluna
+  bankroll_id: get().activeBankrollId, // 🔥 CORRIGIDO
   profit,
   user_id: user.id
 };
+
+console.log("BET SENDO INSERIDA:", betToInsert);
 
   const { data, error } = await supabase
     .from('bets')
