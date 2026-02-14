@@ -38,7 +38,7 @@ export interface Bankroll {
 
 export interface Goal {
   id: string;
-  bankrollId: string;
+  bankroll_id: string;
   title: string;
   category: string;
   target: number;
@@ -346,7 +346,7 @@ if (bankrollsData) {
 
   const betToInsert = {
   ...cleanBetData,
-  bankroll_id: get().activeBankrollId,
+  bankroll_id: get().activeBankrollId, // 🔥 nome correto da coluna
   profit,
   user_id: user.id
 };
@@ -530,7 +530,7 @@ if (bankrollsData) {
       },
       getMetrics: () => {
         const state = get();
-        const activeBets = state.history.filter(b => b.bankrollId === state.activeBankrollId);
+        const activeBets = state.history.filter(b => b.bankroll_id === state.activeBankrollId);
         const settledBets = activeBets.filter(b => b.status !== 'pending' && b.status !== 'void');
         const totalBets = settledBets.length;
         const wins = settledBets.filter(b => b.status === 'won' || b.status === 'half-won').length;
