@@ -1,22 +1,22 @@
-
 import React, { useState, useMemo } from 'react';
 import { useBetStore, MoodType } from '../store/useBetStore';
-import { Book, Clock, Lightbulb, ShieldAlert, Search, Sparkles } from 'lucide-react';
+import { Book, Clock, Lightbulb, ShieldAlert, Search, Sparkles, BrainCircuit, TrendingUp, TrendingDown, AlertTriangle } from 'lucide-react';
 import TiltModal from '../components/TiltModal';
 import { motion, AnimatePresence } from 'framer-motion';
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 
 const Mindset: React.FC = () => {
-  const { addMindsetEntry, mindsetHistory } = useBetStore();
+  const { addMindsetEntry, mindsetHistory, history } = useBetStore();
   const [selectedMood, setSelectedMood] = useState<MoodType>('disciplined');
   const [note, setNote] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [showTiltModal, setShowTiltModal] = useState(false);
 
   const moods = [
-    { id: 'confident', label: 'Confiante', icon: '🦁', color: 'bg-yellow-500/10 text-yellow-600 dark:text-yellow-500 border-yellow-500/20 hover:bg-yellow-500/20' },
-    { id: 'disciplined', label: 'Disciplinado', icon: '🧘‍♂️', color: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-500 border-emerald-500/20 hover:bg-emerald-500/20' },
-    { id: 'anxious', label: 'Ansioso', icon: '😰', color: 'bg-blue-500/10 text-blue-600 dark:text-blue-500 border-blue-500/20 hover:bg-blue-500/20' },
-    { id: 'tilted', label: 'Tilted', icon: '🤬', color: 'bg-red-500/10 text-red-600 dark:text-red-500 border-red-500/20 hover:bg-red-500/20' },
+    { id: 'confident', label: 'Confiante', icon: '🦁', color: '#eab308' }, // Yellow
+    { id: 'disciplined', label: 'Disciplinado', icon: '🧘‍♂️', color: '#10b981' }, // Emerald
+    { id: 'anxious', label: 'Ansioso', icon: '😰', color: '#3b82f6' }, // Blue
+    { id: 'tilted', label: 'Tilted', icon: '🤬', color: '#ef4444' }, // Red
   ];
 
   const filteredHistory = useMemo(() => {
@@ -24,9 +24,51 @@ const Mindset: React.FC = () => {
     return mindsetHistory.filter(e => e.note.toLowerCase().includes(q) || e.mood.toLowerCase().includes(q));
   }, [mindsetHistory, searchQuery]);
 
+  // --- INTELLIGENCE: Cross-reference Mood vs Profit ---
+  const moodInsights = useMemo(() => {
+    const stats: Record<string, { count: number, totalProfit: number }> = {};
+    
+    // Inicializa
+    moods.forEach(m => stats[m.id] = { count: 0, totalProfit: 0 });
+
+    mindsetHistory.forEach(entry => {
+      // Conta frequência
+      if (stats[entry.mood]) stats[entry.mood].count++;
+
+      // Acha apostas feitas NESTE dia
+      const entryDate = entry.date; // YYYY-MM-DD
+      const betsOnDay = history.filter(bet => bet.date.startsWith(entryDate) && bet.status !== 'pending' && bet.status !== 'void');
+      
+      const dayProfit = betsOnDay.reduce((acc, bet) => acc + bet.profit, 0);
+      if (stats[entry.mood]) stats[entry.mood].totalProfit += dayProfit;
+    });
+
+    return moods.map(m => {
+      const data = stats[m.id];
+      const avgProfit = data.count > 0 ? data.totalProfit / data.count : 0;
+      return { ...m, ...data, avgProfit };
+    });
+  }, [mindsetHistory, history]);
+
+  const bestMood = [...moodInsights].sort((a, b) => b.avgProfit - a.avgProfit)[0];
+  const worstMood = [...moodInsights].sort((a, b) => a.avgProfit - b.avgProfit)[0];
+
+  const chartData = moodInsights.map(m => ({
+    name: m.label,
+    count: m.count,
+    profit: m.avgProfit,
+    color: m.color
+  }));
+
   const handleSave = () => {
     if (!note.trim()) return;
-    addMindsetEntry({ date: new Date().toISOString().split('T')[0], time: new Date().toLocaleTimeString('pt-BR', {hour: '2-digit', minute:'2-digit'}), mood: selectedMood, note, tags: [] });
+    addMindsetEntry({ 
+        date: new Date().toISOString().split('T')[0], 
+        time: new Date().toLocaleTimeString('pt-BR', {hour: '2-digit', minute:'2-digit'}), 
+        mood: selectedMood, 
+        note, 
+        tags: [] 
+    });
     setNote('');
     if (selectedMood === 'tilted') setShowTiltModal(true);
   };
@@ -35,95 +77,117 @@ const Mindset: React.FC = () => {
     <div className="space-y-8 pb-20 max-w-7xl mx-auto">
       <header className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
-            <h1 className="text-3xl font-black text-slate-900 dark:text-white uppercase tracking-tighter italic">Psicologia do Trader</h1>
-            <p className="text-slate-500 text-sm font-medium mt-1 uppercase tracking-widest">A mentalidade é 90% do resultado.</p>
+            <h1 className="text-3xl font-black text-white uppercase tracking-tighter italic flex items-center gap-3">
+               <BrainCircuit className="text-purple-500" size={32} /> Psicologia & Performance
+            </h1>
+            <p className="text-slate-500 text-xs font-bold mt-2 uppercase tracking-widest">
+                Análise de Correlação: Estado Mental x P&L
+            </p>
         </div>
-        <button onClick={() => setShowTiltModal(true)} className="bg-red-600/10 hover:bg-red-600/20 border border-red-500/30 text-red-600 dark:text-red-500 px-6 py-3 rounded-2xl flex items-center gap-3 text-xs font-black uppercase tracking-widest transition-all shadow-sm dark:shadow-xl shadow-red-500/5 active:scale-95 group">
-            <ShieldAlert size={18} className="group-hover:rotate-12 transition-transform" /> Protocolo de Emergência
+        <button onClick={() => setShowTiltModal(true)} className="bg-red-500/10 hover:bg-red-500/20 border border-red-500/30 text-red-500 px-6 py-3 rounded-xl flex items-center gap-3 text-xs font-black uppercase tracking-widest transition-all shadow-[0_0_15px_rgba(239,68,68,0.2)] active:scale-95 group">
+            <ShieldAlert size={18} className="group-hover:animate-pulse" /> Protocolo de Emergência
         </button>
       </header>
 
+      {/* --- INSIGHTS DASHBOARD --- */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="glass-card p-6 rounded-[2rem] border-l-4 border-l-emerald-500 relative overflow-hidden group">
+             <div className="relative z-10">
+                 <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2 flex items-center gap-2"><TrendingUp size={14} /> Zona de Performance</p>
+                 <h3 className="text-white text-lg font-bold">Você lucra mais quando está <span className="text-emerald-400 uppercase italic">{bestMood?.label}</span></h3>
+                 <p className="text-emerald-600/80 font-mono text-xs mt-2">Média: R$ {bestMood?.avgProfit.toFixed(2)} / dia</p>
+             </div>
+             <div className="absolute right-[-20px] bottom-[-20px] text-emerald-500/5 group-hover:text-emerald-500/10 transition-colors">
+                 <TrendingUp size={100} />
+             </div>
+          </div>
+
+          <div className="glass-card p-6 rounded-[2rem] border-l-4 border-l-red-500 relative overflow-hidden group">
+             <div className="relative z-10">
+                 <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2 flex items-center gap-2"><TrendingDown size={14} /> Zona de Perigo</p>
+                 <h3 className="text-white text-lg font-bold">Cuidado quando se sente <span className="text-red-400 uppercase italic">{worstMood?.label}</span></h3>
+                 <p className="text-red-600/80 font-mono text-xs mt-2">Média: R$ {worstMood?.avgProfit.toFixed(2)} / dia</p>
+             </div>
+             <div className="absolute right-[-20px] bottom-[-20px] text-red-500/5 group-hover:text-red-500/10 transition-colors">
+                 <AlertTriangle size={100} />
+             </div>
+          </div>
+
+          <div className="glass-card p-6 rounded-[2rem] relative flex items-center justify-center">
+             <ResponsiveContainer width="100%" height={100}>
+                <BarChart data={chartData}>
+                    <Tooltip cursor={{fill: 'transparent'}} contentStyle={{ background: '#0f172a', border: '1px solid #334155', borderRadius: '8px' }} />
+                    <Bar dataKey="count" radius={[4, 4, 0, 0]}>
+                        {chartData.map((entry, index) => (
+                            <Cell key={`cell-${index}`} fill={entry.color} fillOpacity={0.6} />
+                        ))}
+                    </Bar>
+                </BarChart>
+             </ResponsiveContainer>
+             <p className="absolute bottom-2 text-[9px] text-slate-600 font-bold uppercase tracking-widest">Frequência Emocional</p>
+          </div>
+      </div>
+
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         <div className="lg:col-span-2 space-y-8">
-            <section className="bg-white dark:bg-[#0f172a]/80 border border-slate-200 dark:border-slate-800 rounded-[2.5rem] p-10 shadow-sm dark:shadow-none">
-                <h3 className="text-lg font-black text-slate-900 dark:text-white mb-8 uppercase tracking-tighter italic">Estado Mental Atual</h3>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            {/* Input Area */}
+            <section className="glass-card p-8 rounded-[2.5rem]">
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
                     {moods.map(m => (
-                        <button key={m.id} onClick={() => setSelectedMood(m.id as MoodType)} className={`flex flex-col items-center justify-center p-6 rounded-3xl border-2 transition-all duration-500 ${selectedMood === m.id ? `${m.color} scale-105 shadow-lg border-current` : 'bg-slate-50 dark:bg-slate-900/50 border-transparent text-slate-400 dark:text-slate-500 opacity-60 hover:opacity-100'}`}>
-                            <span className="text-4xl mb-3">{m.icon}</span>
-                            <span className="text-[10px] font-black uppercase tracking-widest">{m.label}</span>
+                        <button key={m.id} onClick={() => setSelectedMood(m.id as MoodType)} className={`flex flex-col items-center justify-center p-4 rounded-2xl border-2 transition-all duration-300 ${selectedMood === m.id ? 'bg-slate-800 border-white/20 scale-105 shadow-xl' : 'bg-transparent border-transparent hover:bg-slate-800/50 grayscale opacity-50 hover:grayscale-0 hover:opacity-100'}`}>
+                            <span className="text-3xl mb-2 filter drop-shadow-lg">{m.icon}</span>
+                            <span className="text-[10px] font-black uppercase tracking-widest text-white">{m.label}</span>
                         </button>
                     ))}
                 </div>
-            </section>
 
-            <section className="bg-white dark:bg-[#0f172a]/80 border border-slate-200 dark:border-slate-800 rounded-[2.5rem] p-10 shadow-sm dark:shadow-none">
-                 <div className="flex items-center gap-3 mb-8">
-                    <Book size={20} className="text-emerald-500" />
-                    <h3 className="text-lg font-black text-slate-900 dark:text-white uppercase tracking-tighter italic">Registro Reflexivo</h3>
-                 </div>
-
-                 <div className="bg-slate-50 dark:bg-slate-950/50 p-6 rounded-3xl mb-8 border border-slate-200 dark:border-white/5 relative group">
-                    <div className="flex items-center gap-2 mb-3 text-[10px] font-black text-emerald-600 dark:text-emerald-500 uppercase tracking-[0.2em]">
-                        <Sparkles size={14} /> Insight sugerido
+                <div className="bg-slate-900/50 p-6 rounded-3xl mb-6 border border-slate-800 relative group">
+                    <div className="flex items-center gap-2 mb-3 text-[10px] font-black text-purple-400 uppercase tracking-[0.2em]">
+                        <Sparkles size={14} /> AI Insight Coach
                     </div>
-                    <p className="text-slate-600 dark:text-slate-300 italic text-sm font-medium leading-relaxed">"O que você aprendeu com o seu maior Red de hoje? Foi falta de gestão ou má leitura do mercado?"</p>
-                 </div>
+                    <p className="text-slate-300 text-sm font-medium leading-relaxed italic">"Analisei seus últimos registros: Você tende a forçar entradas após as 14h quando está ansioso. Que tal encerrar o dia mais cedo hoje?"</p>
+                </div>
 
-                 <textarea value={note} onChange={e => setNote(e.target.value)} placeholder="Hoje notei que as odds subiram rápido e eu entrei em pânico..." className="w-full bg-slate-50 dark:bg-[#020617] border border-slate-200 dark:border-slate-800 rounded-[2rem] p-8 text-slate-900 dark:text-white min-h-[250px] outline-none focus:border-emerald-500 transition-all placeholder:text-slate-400 dark:placeholder:text-slate-700 font-medium leading-relaxed shadow-inner" />
+                <textarea value={note} onChange={e => setNote(e.target.value)} placeholder="Diário de bordo: O que influenciou sua tomada de decisão hoje?" className="w-full bg-slate-950/30 border border-slate-800 rounded-[1.5rem] p-6 text-white min-h-[150px] outline-none focus:border-purple-500 transition-all placeholder:text-slate-600 font-medium leading-relaxed shadow-inner resize-none" />
 
-                 <div className="flex justify-end mt-6">
-                    <button onClick={handleSave} disabled={!note.trim()} className="bg-emerald-500 hover:bg-emerald-400 disabled:opacity-20 disabled:grayscale text-white dark:text-[#020617] font-black py-4 px-10 rounded-2xl transition-all shadow-xl shadow-emerald-500/10 active:scale-95 uppercase text-xs tracking-widest">
-                        Gravar Reflexão
+                <div className="flex justify-end mt-4">
+                    <button onClick={handleSave} disabled={!note.trim()} className="bg-white hover:bg-slate-200 disabled:opacity-20 disabled:cursor-not-allowed text-black font-black py-3 px-8 rounded-xl transition-all active:scale-95 uppercase text-[10px] tracking-widest flex items-center gap-2">
+                        <Book size={14} /> Registrar Sessão
                     </button>
-                 </div>
+                </div>
             </section>
         </div>
 
         <aside className="space-y-8">
-            <section className="bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-800 rounded-[2.5rem] p-8 max-h-[700px] flex flex-col shadow-sm dark:shadow-none">
-                <div className="flex justify-between items-center mb-8">
-                    <h3 className="font-black text-slate-900 dark:text-white uppercase tracking-widest text-[10px] italic">Flashbacks</h3>
-                    <button onClick={() => setSearchQuery('')} className="text-[10px] text-emerald-600 dark:text-emerald-500 hover:text-slate-900 dark:hover:text-white font-black uppercase tracking-widest">RESET</button>
+            <section className="glass-card p-6 rounded-[2.5rem] h-[600px] flex flex-col">
+                <div className="flex justify-between items-center mb-6">
+                    <h3 className="font-black text-white uppercase tracking-widest text-[10px]">Timeline</h3>
+                    <div className="relative">
+                        <input type="text" placeholder="Buscar..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="bg-slate-900/50 border border-slate-800 rounded-lg pl-8 pr-3 py-1.5 text-[10px] text-white focus:border-purple-500 outline-none w-28 transition-all focus:w-40" />
+                        <Search className="absolute left-2.5 top-2 text-slate-600" size={10} />
+                    </div>
                 </div>
 
-                <div className="relative mb-8">
-                    <Search className="absolute left-4 top-3.5 text-slate-400 dark:text-slate-600" size={16} />
-                    <input type="text" placeholder="Filtrar memórias..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="w-full bg-slate-50 dark:bg-[#020617] border border-slate-200 dark:border-slate-800 rounded-2xl pl-12 pr-4 py-3.5 text-xs text-slate-900 dark:text-white font-bold focus:border-emerald-500 outline-none transition-all placeholder:text-slate-400 dark:placeholder:text-slate-700 shadow-inner" />
-                </div>
-
-                <div className="space-y-5 overflow-y-auto pr-2 custom-scrollbar">
+                <div className="space-y-4 overflow-y-auto pr-2 custom-scrollbar flex-1">
                     <AnimatePresence initial={false}>
                         {filteredHistory.length === 0 ? (
-                            <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-slate-400 dark:text-slate-700 text-center py-10 text-[10px] font-black uppercase tracking-widest italic">Nenhum registro encontrado</motion.p>
+                            <p className="text-slate-600 text-center py-10 text-[10px] font-black uppercase tracking-widest">Vazio</p>
                         ) : (
                             filteredHistory.slice(0, 15).map(entry => (
-                                <motion.div key={entry.id} initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="bg-slate-50 dark:bg-slate-950/30 rounded-3xl p-5 border border-slate-200 dark:border-white/5 group hover:border-emerald-500/20 dark:hover:border-white/10 transition-all shadow-sm dark:shadow-none">
-                                    <div className="flex justify-between items-start mb-4">
-                                        <span className="text-[10px] bg-white dark:bg-[#020617] text-slate-400 dark:text-slate-500 px-3 py-1.5 rounded-full font-black flex items-center gap-1.5 uppercase tracking-tighter shadow-sm border border-slate-100 dark:border-transparent">
-                                            <Clock size={10} /> {entry.date.split('-').reverse().slice(0, 2).join('/')}, {entry.time}
-                                        </span>
-                                        <span className="text-xl" title={entry.mood}>{moods.find(m => m.id === entry.mood)?.icon}</span>
+                                <motion.div key={entry.id} initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} className="bg-slate-900/40 p-4 rounded-2xl border border-slate-800 hover:border-slate-600 transition-all group">
+                                    <div className="flex justify-between items-start mb-2">
+                                        <div className="flex items-center gap-2">
+                                            <span className="text-lg">{moods.find(m => m.id === entry.mood)?.icon}</span>
+                                            <span className="text-[9px] font-bold text-slate-500 uppercase flex items-center gap-1"><Clock size={8} /> {entry.date.split('-').slice(1).reverse().join('/')}</span>
+                                        </div>
                                     </div>
-                                    <p className="text-slate-600 dark:text-slate-400 text-sm leading-relaxed font-medium line-clamp-4 group-hover:text-slate-900 dark:group-hover:text-slate-200 transition-colors">
-                                        {entry.note}
-                                    </p>
+                                    <p className="text-slate-300 text-xs font-medium leading-relaxed line-clamp-3 group-hover:text-white transition-colors">{entry.note}</p>
                                 </motion.div>
                             ))
                         )}
                     </AnimatePresence>
                 </div>
             </section>
-
-            <div className="bg-blue-50 dark:bg-blue-500/5 rounded-[2.5rem] p-8 border border-blue-100 dark:border-blue-500/10 shadow-sm dark:shadow-none">
-                 <div className="flex items-center gap-3 mb-4">
-                    <Lightbulb className="text-blue-500" size={18} />
-                    <h4 className="font-black text-slate-900 dark:text-white uppercase tracking-widest text-[10px]">Dica Mental</h4>
-                </div>
-                <p className="text-[10px] text-slate-600 dark:text-slate-400 font-bold uppercase leading-relaxed tracking-tighter">
-                    "Escrever seus erros técnicos imediatamente reduz a carga emocional e evita que você tente 'recuperar' no susto."
-                </p>
-            </div>
         </aside>
       </div>
       <TiltModal isOpen={showTiltModal} onClose={() => setShowTiltModal(false)} />
