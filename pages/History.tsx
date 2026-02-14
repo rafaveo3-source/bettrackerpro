@@ -1,7 +1,6 @@
-
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useBetStore, Bet } from '../store/useBetStore';
-import { Search, Filter, Download, ArrowUpDown, ChevronDown, Check, Calendar, DollarSign, Trash2, TrendingUp, Percent, Activity, Pencil } from 'lucide-react';
+import { Search, Filter, Download, ArrowUpDown, ChevronDown, Check, Calendar, DollarSign, Trash2, TrendingUp, Percent, Activity, Pencil, RefreshCcw } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 const History: React.FC = () => {
@@ -24,36 +23,41 @@ const History: React.FC = () => {
     window.dispatchEvent(event);
   };
 
-  const bankrollBets = history.filter(b => b.bankrollId === activeBankrollId);
+  // 🔥 1. FILTRAGEM CORRETA COM USEMEMO
+  const filteredHistory = useMemo(() => {
+    return history
+      .filter(b => b.bankrollId === activeBankrollId) // Filtra pela banca ativa
+      .filter(bet => {
+        const matchesSearch = bet.event.toLowerCase().includes(searchTerm.toLowerCase()) || 
+                              bet.selection.toLowerCase().includes(searchTerm.toLowerCase());
+        const matchesStatus = statusFilter === 'all' || bet.status === statusFilter;
+        const matchesSport = sportFilter === 'all' || bet.sport === sportFilter;
 
-  const filteredBets = bankrollBets.filter(bet => {
-    const matchesSearch = bet.event.toLowerCase().includes(searchTerm.toLowerCase()) || 
-                          bet.selection.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesStatus = statusFilter === 'all' || bet.status === statusFilter;
-    const matchesSport = sportFilter === 'all' || bet.sport === sportFilter;
+        const betDate = new Date(bet.date);
+        // Ajuste de fuso horário simples para comparação de datas string YYYY-MM-DD
+        const betDateStr = bet.date; 
+        
+        const matchesDateStart = !dateStart || betDateStr >= dateStart;
+        const matchesDateEnd = !dateEnd || betDateStr <= dateEnd;
+        
+        const matchesOdd = !minOdd || bet.odds >= parseFloat(minOdd);
+        const matchesStake = !minStake || bet.stake >= parseFloat(minStake);
 
-    const betDate = new Date(bet.date);
-    const start = dateStart ? new Date(dateStart) : null;
-    const end = dateEnd ? new Date(dateEnd) : null;
-    
-    const matchesDate = (!start || betDate >= start) && (!end || betDate <= end);
-    const matchesOdd = !minOdd || bet.odds >= parseFloat(minOdd);
-    const matchesStake = !minStake || bet.stake >= parseFloat(minStake);
+        return matchesSearch && matchesStatus && matchesSport && matchesDateStart && matchesDateEnd && matchesOdd && matchesStake;
+      })
+      .sort((a, b) => {
+        const aValue = a[sortConfig.key];
+        const bValue = b[sortConfig.key];
 
-    return matchesSearch && matchesStatus && matchesSport && matchesDate && matchesOdd && matchesStake;
-  }).sort((a, b) => {
-    const aValue = a[sortConfig.key];
-    const bValue = b[sortConfig.key];
+        if (aValue === bValue) return 0;
+        if (aValue === undefined || aValue === null) return 1;
+        if (bValue === undefined || bValue === null) return -1;
 
-    // Safety check for undefined values (TypeScript strict mode fix)
-    if (aValue === bValue) return 0;
-    if (aValue === undefined || aValue === null) return 1;
-    if (bValue === undefined || bValue === null) return -1;
-
-    if (aValue < bValue) return sortConfig.direction === 'asc' ? -1 : 1;
-    if (aValue > bValue) return sortConfig.direction === 'asc' ? 1 : -1;
-    return 0;
-  });
+        if (aValue < bValue) return sortConfig.direction === 'asc' ? -1 : 1;
+        if (aValue > bValue) return sortConfig.direction === 'asc' ? 1 : -1;
+        return 0;
+      });
+  }, [history, activeBankrollId, searchTerm, statusFilter, sportFilter, dateStart, dateEnd, minOdd, minStake, sortConfig]);
 
   const handleSort = (key: keyof Bet) => {
     setSortConfig(current => ({
@@ -68,8 +72,38 @@ const History: React.FC = () => {
       return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: curr }).format(val);
   };
 
+  // 🔥 EXPORTAR CSV
+  const exportCSV = () => {
+    if (filteredHistory.length === 0) return;
+
+    const headers = ['Data', 'Evento', 'Seleção', 'Esporte', 'Mercado', 'Odd', 'Stake', 'Lucro', 'Status'];
+    const csvContent = [
+      headers.join(','),
+      ...filteredHistory.map(bet => [
+        bet.date,
+        `"${bet.event.replace(/"/g, '""')}"`, // Escape quotes
+        `"${bet.selection.replace(/"/g, '""')}"`,
+        bet.sport,
+        bet.market,
+        bet.odds,
+        bet.stake,
+        bet.profit,
+        bet.status
+      ].join(','))
+    ].join('\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', `historico_apostas_${new Date().toISOString().split('T')[0]}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 pb-20">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Histórico de Apostas</h1>
@@ -82,68 +116,37 @@ const History: React.FC = () => {
             >
                 <Filter size={18} /> Filtros
             </button>
-            <button className="flex items-center gap-2 bg-slate-900 hover:bg-slate-800 dark:bg-slate-800 dark:hover:bg-slate-700 text-white px-4 py-2.5 rounded-lg transition-colors text-sm font-medium shadow-sm">
+            <button onClick={exportCSV} className="flex items-center gap-2 bg-slate-900 hover:bg-slate-800 dark:bg-slate-800 dark:hover:bg-slate-700 text-white px-4 py-2.5 rounded-lg transition-colors text-sm font-medium shadow-sm">
                 <Download size={18} /> Exportar CSV
             </button>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        <div className="bg-[#0f172a] border border-slate-800 rounded-2xl p-6 relative overflow-hidden group">
-            <TrendingUp size={60} className="absolute -right-4 -top-4 text-emerald-500/5 group-hover:text-emerald-500/10 transition-colors" />
-            <p className="text-slate-400 text-sm font-medium mb-2">Lucro Líquido (Total)</p>
-            <h3 className={`text-3xl font-bold ${metrics.totalProfit >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
-                {metrics.totalProfit >= 0 ? '+' : ''}{formatCurrency(metrics.totalProfit)}
-            </h3>
-            <div className="mt-4 flex items-center gap-2">
-                <span className="text-xs bg-emerald-500/10 text-emerald-500 px-2 py-1 rounded-full font-bold flex items-center gap-1">
-                   <TrendingUp size={10} /> +12.5% este mês
-                </span>
-            </div>
-        </div>
-
-        <div className="bg-[#0f172a] border border-slate-800 rounded-2xl p-6 relative overflow-hidden group">
-            <Percent size={60} className="absolute -right-4 -top-4 text-slate-500/5 group-hover:text-slate-500/10 transition-colors" />
-            <p className="text-slate-400 text-sm font-medium mb-2">Taxa de Acerto</p>
-            <div className="flex items-baseline gap-2">
-                <h3 className="text-3xl font-bold text-white">{metrics.winRate.toFixed(1)}%</h3>
-                <span className="text-slate-500 text-xs">/ {metrics.totalBets} apostas</span>
-            </div>
-            <div className="mt-6 w-full bg-slate-800 h-1.5 rounded-full overflow-hidden">
-                <div className="bg-emerald-500 h-full rounded-full" style={{ width: `${metrics.winRate}%` }}></div>
-            </div>
-        </div>
-
-        <div className="bg-[#0f172a] border border-slate-800 rounded-2xl p-6 relative overflow-hidden group">
-            <Activity size={60} className="absolute -right-4 -top-4 text-slate-500/5 group-hover:text-slate-500/10 transition-colors" />
-            <p className="text-slate-400 text-sm font-medium mb-2">ROI / Yield</p>
-            <h3 className="text-3xl font-bold text-white">{metrics.roi.toFixed(1)}%</h3>
-            <div className="mt-4 flex items-center gap-2">
-                <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
-                <span className="text-xs text-slate-400">Faixa Saudável</span>
-            </div>
-        </div>
-
-        <div className="bg-[#0f172a] border border-slate-800 rounded-2xl p-6 relative overflow-hidden group">
-            <p className="text-slate-400 text-sm font-medium mb-4">Sequência Atual</p>
-            <div className="flex gap-2 mb-4">
-                {metrics.streak.length === 0 ? (
-                    <span className="text-slate-500 text-xs">Sem apostas recentes</span>
-                ) : (
-                    metrics.streak.map((status, i) => (
-                        <div key={i} className={`w-8 h-8 rounded-lg flex items-center justify-center font-bold text-sm ${
-                            ['won', 'half-won'].includes(status) ? 'bg-emerald-500 text-white' : 'bg-red-500 text-white'
-                        }`}>
-                            {['won', 'half-won'].includes(status) ? 'W' : 'L'}
-                        </div>
-                    ))
-                )}
-            </div>
-            <p className="text-xs text-slate-500">
-                {metrics.streak[0] === 'won' ? 'Ótima sequência recente' : 'Fase de ajuste'}
-            </p>
-        </div>
-      </div>
+      {/* ADVANCED FILTERS */}
+      <AnimatePresence>
+        {showAdvanced && (
+            <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
+                <div className="bg-white dark:bg-[#0f172a] p-6 rounded-xl border border-slate-200 dark:border-slate-800 grid grid-cols-1 md:grid-cols-4 gap-4 mb-6 shadow-sm">
+                    <div>
+                        <label className="text-xs font-bold text-slate-500 uppercase mb-1 block">Data Início</label>
+                        <input type="date" value={dateStart} onChange={e => setDateStart(e.target.value)} className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 text-sm outline-none focus:border-emerald-500 dark:text-white" />
+                    </div>
+                    <div>
+                        <label className="text-xs font-bold text-slate-500 uppercase mb-1 block">Data Fim</label>
+                        <input type="date" value={dateEnd} onChange={e => setDateEnd(e.target.value)} className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 text-sm outline-none focus:border-emerald-500 dark:text-white" />
+                    </div>
+                    <div>
+                        <label className="text-xs font-bold text-slate-500 uppercase mb-1 block">Odd Mínima</label>
+                        <input type="number" step="0.01" value={minOdd} onChange={e => setMinOdd(e.target.value)} className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 text-sm outline-none focus:border-emerald-500 dark:text-white" placeholder="1.50" />
+                    </div>
+                    <div>
+                        <label className="text-xs font-bold text-slate-500 uppercase mb-1 block">Stake Mínima</label>
+                        <input type="number" value={minStake} onChange={e => setMinStake(e.target.value)} className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 text-sm outline-none focus:border-emerald-500 dark:text-white" placeholder="100" />
+                    </div>
+                </div>
+            </motion.div>
+        )}
+      </AnimatePresence>
 
       <div className="bg-white dark:bg-[#0f172a] p-4 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm space-y-4">
         <div className="flex flex-col md:flex-row gap-4">
@@ -170,6 +173,7 @@ const History: React.FC = () => {
                         <option value="pending">Pendente</option>
                         <option value="half-won">Meio Green</option>
                         <option value="half-lost">Meio Red</option>
+                        <option value="refunded">Reembolsada</option> {/* ✅ Novo filtro */}
                         <option value="cashout">Cashout</option>
                     </select>
                     <ChevronDown className="absolute right-3 top-3.5 text-slate-400 pointer-events-none" size={16} />
@@ -199,32 +203,37 @@ const History: React.FC = () => {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-200 dark:divide-slate-800">
-              {filteredBets.length === 0 ? (
+              {filteredHistory.length === 0 ? (
                 <tr>
                   <td colSpan={7} className="px-6 py-12 text-center text-slate-500 dark:text-slate-500">
-                    <p>Nenhuma aposta encontrada para esta banca.</p>
+                    <p>Nenhuma aposta encontrada.</p>
                   </td>
                 </tr>
               ) : (
-                filteredBets.map((bet) => (
+                filteredHistory.map((bet) => (
                   <tr key={bet.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
-                    <td className="px-6 py-4 whitespace-nowrap font-mono text-xs">{bet.date}</td>
+                    <td className="px-6 py-4 whitespace-nowrap font-mono text-xs">{bet.date.split('-').reverse().join('/')}</td>
                     <td className="px-6 py-4">
                       <div className="text-slate-900 dark:text-white font-medium">{bet.event}</div>
                       <div className="text-xs text-slate-500">{bet.sport} • {bet.market}</div>
                     </td>
                     <td className="px-6 py-4 font-mono">@{bet.odds.toFixed(2)}</td>
-                    <td className="px-6 py-4 font-mono text-slate-900 dark:text-white">{bet.stake.toFixed(2)}</td>
+                    <td className="px-6 py-4 font-mono text-slate-900 dark:text-white">{formatCurrency(bet.stake)}</td>
                     <td className={`px-6 py-4 font-mono font-bold ${bet.profit > 0 ? 'text-emerald-600 dark:text-emerald-500' : bet.profit < 0 ? 'text-red-500' : 'text-slate-500'}`}>
-                      {bet.profit > 0 ? '+' : ''}{bet.profit.toFixed(2)}
+                      {bet.profit > 0 ? '+' : ''}{formatCurrency(bet.profit)}
                     </td>
                     <td className="px-6 py-4">
+                      {/* ✅ Visual do Status corrigido */}
                       <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${
                         ['won', 'half-won'].includes(bet.status) ? 'bg-emerald-100 text-emerald-700 border-emerald-200 dark:bg-emerald-500/10 dark:text-emerald-500 dark:border-emerald-500/20' :
                         ['lost', 'half-lost'].includes(bet.status) ? 'bg-red-100 text-red-700 border-red-200 dark:bg-red-500/10 dark:text-red-500 dark:border-red-500/20' :
+                        bet.status === 'refunded' ? 'bg-slate-100 text-slate-700 border-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700' :
                         'bg-yellow-100 text-yellow-700 border-yellow-200 dark:bg-yellow-500/10 dark:text-yellow-500 dark:border-yellow-500/20'
                       }`}>
-                        {['won', 'half-won'].includes(bet.status) ? 'Green' : ['lost', 'half-lost'].includes(bet.status) ? 'Red' : 'Pendente'}
+                        {['won', 'half-won'].includes(bet.status) ? 'Green' : 
+                         ['lost', 'half-lost'].includes(bet.status) ? 'Red' : 
+                         bet.status === 'refunded' ? 'Reembolso' : // ✅ Label corrigida
+                         'Pendente'}
                       </span>
                     </td>
                     <td className="px-6 py-4 text-right">
