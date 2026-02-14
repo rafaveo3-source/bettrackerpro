@@ -90,7 +90,7 @@ const Dashboard: React.FC = () => {
   const growth = ((currentBankrollBalance - initialBal) / initialBal) * 100;
 
   return (
-    <div className="space-y-6 pb-10">
+    <div className="space-y-6 pb-10 w-full max-w-full overflow-x-hidden">
       <header className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 border-b border-slate-200 dark:border-slate-800 pb-6">
         <div>
           <div className="flex items-center gap-2 text-emerald-500 text-[9px] font-mono font-bold uppercase tracking-widest mb-1">
@@ -101,8 +101,8 @@ const Dashboard: React.FC = () => {
             Dashboard <span className="text-slate-400 dark:text-slate-700 text-lg">///</span>
           </h1>
         </div>
-        <div className="flex items-center gap-6">
-            <div className="text-right hidden md:block">
+        <div className="flex items-center gap-6 w-full md:w-auto justify-between md:justify-end">
+            <div className="text-right">
                 <p className="text-[9px] text-slate-500 font-bold uppercase tracking-widest mb-0.5">Net Liquidity</p>
                 <p className="text-2xl font-black text-emerald-500 dark:text-emerald-400 font-mono tracking-tight">{formatCurrency(currentBankrollBalance)}</p>
             </div>
@@ -122,17 +122,18 @@ const Dashboard: React.FC = () => {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 h-auto">
-        <div className="lg:col-span-2 glass-card rounded-[1.5rem] p-6 flex flex-col border border-slate-200 dark:border-slate-800 bg-white dark:bg-[#0f172a]/40 shadow-sm">
-            <div className="flex justify-between items-center mb-6">
+        {/* CHART SECTION */}
+        <div className="lg:col-span-2 glass-card rounded-[1.5rem] p-4 md:p-6 flex flex-col border border-slate-200 dark:border-slate-800 bg-white dark:bg-[#0f172a]/40 shadow-sm overflow-hidden">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
                 <h3 className="text-xs font-black text-slate-900 dark:text-white uppercase tracking-widest flex items-center gap-2">
                     <Layers size={14} className="text-slate-500" /> Performance Curve
                 </h3>
-                <div className="flex gap-1 bg-slate-100 dark:bg-slate-900 p-1 rounded-lg border border-slate-200 dark:border-slate-800">
+                <div className="flex flex-wrap gap-1 bg-slate-100 dark:bg-slate-900 p-1 rounded-lg border border-slate-200 dark:border-slate-800 w-full sm:w-auto">
                     {['1S', '1M', '3M', 'YTD', 'ALL'].map(p => (
                         <button 
                             key={p} 
                             onClick={() => setPeriod(p as any)}
-                            className={`text-[9px] font-bold px-3 py-1 rounded transition-colors ${
+                            className={`flex-1 sm:flex-none text-[9px] font-bold px-3 py-1 rounded transition-colors ${
                                 period === p 
                                     ? 'bg-white dark:bg-slate-800 text-slate-900 dark:text-white shadow-sm' 
                                     : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-300'
@@ -157,8 +158,8 @@ const Dashboard: React.FC = () => {
                         <YAxis stroke="#94a3b8" fontSize={10} tickLine={false} axisLine={false} tickFormatter={(val) => `${val}`} width={40} />
                         <Tooltip 
                             contentStyle={{ 
-                                backgroundColor: 'var(--tooltip-bg, #0f172a)', 
-                                borderColor: 'var(--tooltip-border, #334155)', 
+                                backgroundColor: '#0f172a', 
+                                borderColor: '#334155', 
                                 borderRadius: '8px', 
                                 boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)',
                                 color: '#fff'
@@ -174,11 +175,12 @@ const Dashboard: React.FC = () => {
         </div>
 
         <div className="space-y-6 flex flex-col">
-            <div className="glass-card rounded-[1.5rem] p-6 border border-slate-200 dark:border-slate-800 bg-white dark:bg-[#0f172a]/40 shadow-sm flex-1">
+            {/* HEATMAP */}
+            <div className="glass-card rounded-[1.5rem] p-6 border border-slate-200 dark:border-slate-800 bg-white dark:bg-[#0f172a]/40 shadow-sm flex-1 overflow-x-auto">
                 <h3 className="text-xs font-black text-slate-900 dark:text-white uppercase tracking-widest mb-4 flex items-center gap-2">
                     <BarChart4 size={14} className="text-slate-500" /> Market Consistency
                 </h3>
-                <div className="grid grid-cols-6 gap-2">
+                <div className="grid grid-cols-6 gap-2 min-w-[200px]">
                     {heatmapData.map((d, i) => (
                         <div key={i} title={`${d.date}: ${formatCurrency(d.profit)} (${d.count} bets)`} 
                              className={`h-8 rounded-md transition-all hover:scale-110 cursor-pointer ${
@@ -195,6 +197,7 @@ const Dashboard: React.FC = () => {
                 </div>
             </div>
 
+            {/* RECENT FEED */}
             <div className="glass-card rounded-[1.5rem] p-0 overflow-hidden flex flex-col border border-slate-200 dark:border-slate-800 bg-white dark:bg-[#0f172a]/40 shadow-sm h-[300px]">
                 <div className="p-5 border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/30 flex justify-between items-center">
                     <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest">Order Flow</h3>
@@ -209,14 +212,14 @@ const Dashboard: React.FC = () => {
                     ) : (
                         bankrollHistory.slice().reverse().slice(0, 15).map(bet => (
                             <div key={bet.id} className="group flex items-center justify-between p-3 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800/80 transition-all border border-transparent hover:border-slate-200 dark:hover:border-slate-700 cursor-default">
-                                <div className="flex items-center gap-3">
-                                    <div className={`w-1 h-6 rounded-full ${bet.status === 'won' ? 'bg-emerald-500' : bet.status === 'lost' ? 'bg-red-500' : bet.status === 'refunded' ? 'bg-slate-400' : bet.status === 'cashout' ? 'bg-blue-500' : 'bg-yellow-500'}`}></div>
-                                    <div className="overflow-hidden">
-                                        <p className="text-slate-700 dark:text-slate-300 font-bold text-[10px] truncate max-w-[100px]">{bet.event}</p>
+                                <div className="flex items-center gap-3 min-w-0 flex-1">
+                                    <div className={`shrink-0 w-1 h-6 rounded-full ${bet.status === 'won' ? 'bg-emerald-500' : bet.status === 'lost' ? 'bg-red-500' : bet.status === 'refunded' ? 'bg-slate-400' : bet.status === 'cashout' ? 'bg-blue-500' : 'bg-yellow-500'}`}></div>
+                                    <div className="overflow-hidden min-w-0">
+                                        <p className="text-slate-700 dark:text-slate-300 font-bold text-[10px] truncate">{bet.event}</p>
                                         <p className="text-[8px] text-slate-500 uppercase font-mono">{bet.market}</p>
                                     </div>
                                 </div>
-                                <div className="text-right">
+                                <div className="text-right shrink-0 ml-2">
                                     <p className={`text-[10px] font-black font-mono ${bet.profit >= 0 ? 'text-emerald-500 dark:text-emerald-400' : 'text-red-500 dark:text-red-400'}`}>
                                         {bet.profit >= 0 ? '+' : ''}{bet.profit.toFixed(2)}
                                     </p>

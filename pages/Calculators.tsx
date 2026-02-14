@@ -76,7 +76,7 @@ const Calculators: React.FC = () => {
   };
 
   return (
-    <div className="space-y-6 pb-20 overflow-x-hidden w-full max-w-full">
+    <div className="space-y-6 pb-20 w-full overflow-x-hidden">
        <div className="flex items-center gap-3">
         <div className="bg-emerald-500/10 p-3 rounded-xl border border-emerald-500/20 text-emerald-600 dark:text-emerald-500">
              <Calculator size={24} />
@@ -88,7 +88,7 @@ const Calculators: React.FC = () => {
       </div>
 
       {/* Tabs com Scroll Horizontal para Mobile */}
-      <div className="flex gap-3 mb-4 overflow-x-auto pb-4 scrollbar-hide -mx-4 px-4 md:mx-0 md:px-0">
+      <div className="flex gap-3 mb-4 overflow-x-auto pb-4 scrollbar-hide -mx-6 px-6 md:mx-0 md:px-0 w-[calc(100%+3rem)] md:w-auto">
         <button onClick={() => setActiveTab('dutching')} className={`flex-shrink-0 px-6 py-3 rounded-xl font-black text-xs uppercase tracking-widest transition-all ${activeTab === 'dutching' ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/20 scale-105' : 'bg-white dark:bg-[#0f172a] text-slate-500 border border-slate-200 dark:border-slate-800'}`}>Dutching</button>
         <button onClick={() => setActiveTab('kelly')} className={`flex-shrink-0 px-6 py-3 rounded-xl font-black text-xs uppercase tracking-widest transition-all ${activeTab === 'kelly' ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/20 scale-105' : 'bg-white dark:bg-[#0f172a] text-slate-500 border border-slate-200 dark:border-slate-800'}`}>Critério de Kelly</button>
         <button onClick={() => setActiveTab('converter')} className={`flex-shrink-0 px-6 py-3 rounded-xl font-black text-xs uppercase tracking-widest transition-all ${activeTab === 'converter' ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/20 scale-105' : 'bg-white dark:bg-[#0f172a] text-slate-500 border border-slate-200 dark:border-slate-800'}`}>Conversor Odds</button>
