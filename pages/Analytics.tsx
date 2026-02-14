@@ -36,7 +36,7 @@ const Analytics: React.FC = () => {
 
   // Process Data: Status Distribution
   const statusCount = { won: 0, lost: 0, pending: 0, refunded: 0 };
-  const allBets = history.filter(b => b.bankrollId === activeBankrollId); // Aqui pega tudo para estatística de volume
+  const allBets = history.filter(b => b.bankrollId === activeBankrollId);
   
   allBets.forEach(bet => {
     if (['won', 'half-won'].includes(bet.status)) statusCount.won++;
@@ -69,14 +69,17 @@ const Analytics: React.FC = () => {
                         <CartesianGrid strokeDasharray="3 3" stroke="#94a3b8" strokeOpacity={0.2} vertical={false} />
                         <XAxis dataKey="name" stroke="#64748b" fontSize={12} tickLine={false} axisLine={false} />
                         <YAxis stroke="#64748b" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(val) => `R$${val}`} />
+                        {/* ✅ Tooltip Corrigido */}
                         <Tooltip 
                             cursor={{fill: '#94a3b8', opacity: 0.1}}
                             contentStyle={{ 
-                                backgroundColor: 'var(--tooltip-bg, #0f172a)', 
-                                borderColor: 'var(--tooltip-border, #334155)', 
+                                backgroundColor: '#0f172a', 
+                                borderColor: '#334155', 
                                 borderRadius: '8px', 
-                                color: '#fff' // ✅ Texto branco forçado
+                                color: '#fff' 
                             }}
+                            itemStyle={{ color: '#fff' }}
+                            labelStyle={{ color: '#94a3b8' }}
                         />
                         <Bar dataKey="profit" radius={[4, 4, 0, 0]}>
                             {barData.map((entry, index) => (
@@ -97,14 +100,17 @@ const Analytics: React.FC = () => {
                         <CartesianGrid strokeDasharray="3 3" stroke="#94a3b8" strokeOpacity={0.2} horizontal={false} />
                         <XAxis type="number" stroke="#64748b" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(val) => `R$${val}`} />
                         <YAxis dataKey="name" type="category" stroke="#64748b" fontSize={12} tickLine={false} axisLine={false} width={100} />
+                        {/* ✅ Tooltip Corrigido */}
                         <Tooltip 
                             cursor={{fill: '#94a3b8', opacity: 0.1}}
                             contentStyle={{ 
-                                backgroundColor: 'var(--tooltip-bg, #0f172a)', 
-                                borderColor: 'var(--tooltip-border, #334155)', 
+                                backgroundColor: '#0f172a', 
+                                borderColor: '#334155', 
                                 borderRadius: '8px', 
-                                color: '#fff' // ✅ Texto branco forçado
+                                color: '#fff' 
                             }}
+                            itemStyle={{ color: '#fff' }}
+                            labelStyle={{ color: '#94a3b8' }}
                         />
                         <Bar dataKey="profit" radius={[0, 4, 4, 0]}>
                             {methodBarData.map((entry, index) => (
@@ -135,13 +141,15 @@ const Analytics: React.FC = () => {
                                 <Cell key={`cell-${index}`} fill={entry.color} stroke="none" />
                             ))}
                         </Pie>
+                        {/* ✅ Tooltip Corrigido */}
                         <Tooltip 
                             contentStyle={{ 
-                                backgroundColor: 'var(--tooltip-bg, #0f172a)', 
-                                borderColor: 'var(--tooltip-border, #334155)', 
+                                backgroundColor: '#0f172a', 
+                                borderColor: '#334155', 
                                 borderRadius: '8px', 
-                                color: '#fff' // ✅ Texto branco forçado
+                                color: '#fff' 
                             }}
+                            itemStyle={{ color: '#fff' }}
                         />
                         <Legend verticalAlign="bottom" height={36} />
                     </PieChart>
