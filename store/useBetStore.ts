@@ -215,9 +215,16 @@ if (bankrollsError) {
 }
 
 if (bankrollsData) {
+  const formattedBankrolls = bankrollsData.map((b: any) => ({
+    id: b.id,
+    name: b.name,
+    currency: b.currency,
+    initialBalance: b.initial_balance
+  }));
+
   set({
-    bankrolls: bankrollsData,
-    activeBankrollId: bankrollsData.length > 0 ? bankrollsData[0].id : ''
+    bankrolls: formattedBankrolls,
+    activeBankrollId: formattedBankrolls.length > 0 ? formattedBankrolls[0].id : ''
   });
 }
 
@@ -326,6 +333,11 @@ if (bankrollsData) {
       addBet: async (newBetData) => {
   if (get().isTiltLocked()) return;
 
+  if (!get().activeBankrollId) {
+    alert("⚠️ Crie ou selecione uma banca antes de registrar uma aposta.");
+    return;
+  }
+
   const user = get().user;
   if (!user) return;
 
@@ -353,7 +365,7 @@ if (!activeBankrollId) {
 
 const betToInsert = {
   ...cleanBetData,
-  bankroll_id: activeBankrollId,
+  bankroll_id: get().activeBankrollId,
   profit,
   user_id: user.id
 };
@@ -462,11 +474,13 @@ console.log("BET SENDO INSERIDA:", betToInsert);
   const { data, error } = await supabase
     .from('methods')
     .insert([
-      {
-        name,
-        user_id: user.id
-      }
-    ])
+  {
+    name,
+    currency,
+    initial_balance: initialBalance,
+    user_id: user.id
+  }
+])
     .select()
     .single();
 
