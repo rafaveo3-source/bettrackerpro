@@ -22,7 +22,16 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
 
 // --- TIPAGEM ---
 
-export type BetStatus = 'pending' | 'won' | 'lost' | 'void' | 'half-won' | 'half-lost' | 'cashout';
+export type BetStatus =
+  | 'pending'
+  | 'won'
+  | 'lost'
+  | 'void'
+  | 'half-won'
+  | 'half-lost'
+  | 'cashout'
+  | 'refunded'; // ✅ Novo status adicionado
+
 export type TransactionType = 'deposit' | 'withdrawal';
 export type MoodType = 'confident' | 'disciplined' | 'anxious' | 'tilted';
 
@@ -45,7 +54,6 @@ export interface Goal {
   category: string;
   target: number;
   current: number;
-  // 🔥 Upgrade: Novos tipos de meta para nível profissional
   type: 'monthly' | 'daily' | 'weekly' | 'custom' | 'profit' | 'roi' | 'equity';
   deadline: string;
   createdAt: string;
@@ -148,15 +156,15 @@ interface BetState {
     winRate: number;
     totalBets: number;
     streak: BetStatus[];
-    maxDrawdown: number; // Hedge Fund Metric
-    sharpeRatio: number; // Hedge Fund Metric
+    maxDrawdown: number;
+    sharpeRatio: number;
     volatility: number;
     profitFactor: number;
   };
   
   // 🔥 MINDSET ANALYTICS
   getMindsetAnalytics: () => {
-    msi: number; // Mental Stability Index (0-100)
+    msi: number;
     moodCorrelation: Record<MoodType, { roi: number; winRate: number; count: number }>;
   };
 
@@ -443,6 +451,7 @@ export const useBetStore = create<BetState>()(
           case 'void': profit = 0; break;
           case 'cashout': profit = cashoutValue - stake; break;
           case 'pending': profit = 0; break;
+          case 'refunded': profit = 0; break; // ✅ Lucro zero no reembolso
         }
 
         const { cashoutValue: _, ...cleanBetData } = newBetData;
@@ -507,6 +516,7 @@ export const useBetStore = create<BetState>()(
           case 'void': profit = 0; break;
           case 'cashout': profit = cashoutValue - stake; break;
           case 'pending': profit = 0; break;
+          case 'refunded': profit = 0; break; // ✅ Lucro zero no reembolso
         }
 
         const payload = {
@@ -829,7 +839,13 @@ export const useBetStore = create<BetState>()(
       getMetrics: () => {
         const state = get();
         const history = state.history || [];
-        const activeBets = history.filter(b => b.bankroll_id === state.activeBankrollId && b.status !== 'void');
+        
+        // Apostas que devem contar para os cálculos (exclui void e refunded)
+        const activeBets = history.filter(b => 
+            b.bankroll_id === state.activeBankrollId && 
+            b.status !== 'void' && 
+            b.status !== 'refunded' // ✅ Reembolso não deve poluir a métrica
+        );
         
         const settledBets = activeBets.filter(b => b.status !== 'pending');
         const wins = settledBets.filter(b => b.status === 'won' || b.status === 'half-won').length;
@@ -841,7 +857,6 @@ export const useBetStore = create<BetState>()(
         let maxDrawdown = 0;
         let runningProfit = 0;
         
-        // Ordena por data para simular a curva de equidade corretamente
         const sortedBets = [...settledBets].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
         
         sortedBets.forEach(bet => {
@@ -852,16 +867,13 @@ export const useBetStore = create<BetState>()(
             if (drawdown > maxDrawdown) maxDrawdown = drawdown;
         });
 
-        // --- CÁLCULO DE VOLATILIDADE & SHARPE RATIO (Simplificado) ---
+        // --- CÁLCULO DE VOLATILIDADE & SHARPE RATIO ---
         const returns = sortedBets.map(b => b.profit);
         const meanReturn = returns.length > 0 ? totalProfit / returns.length : 0;
         
-        // Variância = média dos quadrados das diferenças em relação à média
         const variance = returns.reduce((sum, r) => sum + Math.pow(r - meanReturn, 2), 0) / (returns.length || 1);
         const volatility = Math.sqrt(variance);
         
-        // Sharpe Ratio = (Retorno Médio - RiskFree) / Volatilidade
-        // Assumindo RiskFree como 0 para apostas esportivas
         const sharpeRatio = volatility > 0 ? meanReturn / volatility : 0;
 
         // --- PROFIT FACTOR ---
@@ -894,17 +906,16 @@ export const useBetStore = create<BetState>()(
             tilted: { profit: 0, staked: 0, wins: 0, total: 0 },
         };
 
-        // Itera sobre o histórico de humor
         s.mindsetHistory.forEach(entry => {
             const entryDate = entry.date;
             
-            // Busca apostas feitas no mesmo dia desse registro de humor
-            // (Poderia ser refinado para usar hora, mas data já é um bom proxy)
+            // Aqui usamos as apostas da data específica
             const dayBets = s.history.filter(b => 
                 b.date.startsWith(entryDate) && 
                 b.bankroll_id === s.activeBankrollId && 
                 b.status !== 'pending' && 
-                b.status !== 'void'
+                b.status !== 'void' &&
+                b.status !== 'refunded' // ✅ Reembolso não afeta análise de mindset
             );
             
             dayBets.forEach(bet => {
@@ -918,7 +929,7 @@ export const useBetStore = create<BetState>()(
         });
 
         const moodCorrelation: any = {};
-        let msiScore = 50; // Base score (Neutro)
+        let msiScore = 50;
 
         Object.keys(stats).forEach(key => {
             const d = stats[key];
@@ -929,27 +940,17 @@ export const useBetStore = create<BetState>()(
             };
         });
 
-        // --- MSI ALGORITHM (Mental Stability Index) ---
-        // Pondera o score baseado no ROI obtido em cada estado emocional
-        
+        // --- MSI ALGORITHM ---
         const roiD = moodCorrelation.disciplined.roi;
         const roiC = moodCorrelation.confident.roi;
         const roiA = moodCorrelation.anxious.roi;
         const roiT = moodCorrelation.tilted.roi;
 
-        // Disciplina positiva aumenta muito o score
         msiScore += (roiD > 0 ? 15 : 5); 
-        
-        // Confiança só é boa se tiver resultado (evita excesso de confiança)
         msiScore += (roiC > 0 ? 10 : -5); 
-        
-        // Ansiedade pune o score se o resultado for negativo
         msiScore -= (roiA < 0 ? 15 : 5); 
-        
-        // Tilt pune severamente
         msiScore -= (roiT < 0 ? 25 : 10); 
 
-        // Normalização 0-100
         msiScore = Math.max(0, Math.min(100, msiScore));
 
         return { msi: msiScore, moodCorrelation };
