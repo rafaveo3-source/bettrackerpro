@@ -185,7 +185,7 @@ export const useBetStore = create<BetState>()(
             .eq('user_id', session.user.id);
 
           if (error) {
-            console.error(error);
+            console.error("Erro ao carregar bets:", error.message);
           } else if (data) {
             const formattedBets = data.map((bet: any) => ({
               ...bet,
@@ -204,7 +204,7 @@ export const useBetStore = create<BetState>()(
             .eq('user_id', session.user.id);
 
           if (methodsError) {
-            console.error(methodsError);
+            console.error("Erro ao carregar métodos:", methodsError.message);
           } else if (methodsData) {
             set({ methods: methodsData });
           }
@@ -216,7 +216,7 @@ export const useBetStore = create<BetState>()(
             .eq('user_id', session.user.id);
 
           if (bankrollsError) {
-            console.error(bankrollsError);
+            console.error("Erro ao carregar bankrolls:", bankrollsError.message);
           } else if (bankrollsData) {
             const formattedBankrolls = bankrollsData.map((b: any) => ({
               id: b.id,
@@ -239,7 +239,7 @@ export const useBetStore = create<BetState>()(
             .order('date', { ascending: false });
 
           if (mindsetError) {
-            console.error("Erro ao carregar mindset:", mindsetError);
+            console.error("Erro ao carregar mindset:", mindsetError.message);
           } else if (mindsetData) {
             const formattedMindset = mindsetData.map((m: any) => ({
               id: m.id,
@@ -247,7 +247,7 @@ export const useBetStore = create<BetState>()(
               time: m.time,
               mood: m.mood,
               note: m.note,
-              tags: m.tags || []
+              tags: Array.isArray(m.tags) ? m.tags : [] // Garante que tags seja array
             }));
             set({ mindsetHistory: formattedMindset });
           }
@@ -259,7 +259,7 @@ export const useBetStore = create<BetState>()(
             .eq('user_id', session.user.id);
 
           if (goalsError) {
-            console.error("Erro ao carregar goals:", goalsError);
+            console.error("Erro ao carregar goals:", goalsError.message);
           } else if (goalsData) {
             const formattedGoals = goalsData.map((g: any) => ({
               ...g,
@@ -319,7 +319,7 @@ export const useBetStore = create<BetState>()(
           .single();
 
         if (error) {
-          console.error(error);
+          console.error("Erro ao adicionar banca:", error.message);
           return;
         }
 
@@ -353,7 +353,7 @@ export const useBetStore = create<BetState>()(
           .eq('user_id', user.id);
 
         if (error) {
-          console.error(error);
+          console.error("Erro ao remover banca:", error.message);
           return;
         }
 
@@ -448,7 +448,7 @@ export const useBetStore = create<BetState>()(
           .single();
 
         if (error) {
-          console.error(error);
+          console.error("Erro ao adicionar aposta:", error.message);
           return;
         }
 
@@ -515,7 +515,7 @@ export const useBetStore = create<BetState>()(
           .eq('user_id', user.id);
 
         if (error) {
-          console.error(error);
+          console.error("Erro ao atualizar aposta:", error.message);
           return;
         }
 
@@ -539,7 +539,7 @@ export const useBetStore = create<BetState>()(
           .eq('user_id', user.id);
 
         if (error) {
-          console.error(error);
+          console.error("Erro ao remover aposta:", error.message);
           return;
         }
 
@@ -589,7 +589,7 @@ export const useBetStore = create<BetState>()(
           .single();
 
         if (error) {
-          console.error(error);
+          console.error("Erro ao adicionar método:", error.message);
           return;
         }
 
@@ -611,19 +611,24 @@ export const useBetStore = create<BetState>()(
         const user = get().user;
         if (!user) return;
 
+        // Payload limpo e seguro para tags
+        const payload = {
+            date: entry.date,
+            time: entry.time,
+            mood: entry.mood,
+            note: entry.note,
+            tags: entry.tags || [], // Garante array
+            user_id: user.id
+        };
+
         const { data, error } = await supabase
           .from('mindset_entries')
-          .insert([
-            {
-              ...entry,
-              user_id: user.id
-            }
-          ])
+          .insert([payload])
           .select()
           .single();
 
         if (error) {
-          console.error("Erro ao adicionar mindset:", error);
+          console.error("Erro ao adicionar mindset:", error.message, error.details);
           return;
         }
 
@@ -645,7 +650,7 @@ export const useBetStore = create<BetState>()(
           .eq('user_id', user.id);
 
         if (error) {
-          console.error("Erro ao deletar mindset:", error);
+          console.error("Erro ao deletar mindset:", error.message);
           return;
         }
 
@@ -665,7 +670,7 @@ export const useBetStore = create<BetState>()(
           .eq('user_id', user.id);
 
         if (error) {
-          console.error("Erro ao atualizar mindset:", error);
+          console.error("Erro ao atualizar mindset:", error.message);
           return;
         }
 
@@ -681,23 +686,29 @@ export const useBetStore = create<BetState>()(
         const user = get().user;
         if (!user) return;
 
+        // Payload explícito para garantir apenas campos existentes no DB
+        const payload = {
+            bankroll_id: goalData.bankroll_id,
+            title: goalData.title,
+            category: goalData.category,
+            target: Number(goalData.target), // Garante número
+            current: 0,
+            type: goalData.type,
+            deadline: goalData.deadline,
+            status: 'active',
+            user_id: user.id
+            // Deixa o created_at ser gerado pelo banco ou envia se necessário,
+            // aqui optamos por não enviar campos extras
+        };
+
         const { data, error } = await supabase
           .from('goals')
-          .insert([
-            {
-              ...goalData,
-              target: Number(goalData.target),
-              current: 0,
-              status: 'active',
-              created_at: new Date().toISOString(),
-              user_id: user.id
-            }
-          ])
+          .insert([payload])
           .select()
           .single();
 
         if (error) {
-          console.error("Erro ao adicionar goal:", error);
+          console.error("Erro ao adicionar goal:", error.message, error.details);
           return;
         }
 
@@ -705,7 +716,7 @@ export const useBetStore = create<BetState>()(
           // Normaliza retorno do Supabase para o Frontend
           const newGoal: Goal = {
              ...data,
-             createdAt: data.created_at,
+             createdAt: data.created_at || new Date().toISOString(), // Fallback
              target: Number(data.target),
              current: Number(data.current)
           };
@@ -720,14 +731,25 @@ export const useBetStore = create<BetState>()(
         const user = get().user;
         if (!user) return;
 
+        // Converte Partial<Goal> (frontend) para payload seguro do Supabase
+        const cleanPayload: any = {};
+        if (data.title !== undefined) cleanPayload.title = data.title;
+        if (data.category !== undefined) cleanPayload.category = data.category;
+        if (data.target !== undefined) cleanPayload.target = Number(data.target);
+        if (data.current !== undefined) cleanPayload.current = Number(data.current);
+        if (data.type !== undefined) cleanPayload.type = data.type;
+        if (data.deadline !== undefined) cleanPayload.deadline = data.deadline;
+        if (data.status !== undefined) cleanPayload.status = data.status;
+        if (data.bankroll_id !== undefined) cleanPayload.bankroll_id = data.bankroll_id;
+
         const { error } = await supabase
           .from('goals')
-          .update(data)
+          .update(cleanPayload)
           .eq('id', id)
           .eq('user_id', user.id);
 
         if (error) {
-          console.error("Erro ao atualizar goal:", error);
+          console.error("Erro ao atualizar goal:", error.message, error.details);
           return;
         }
 
@@ -749,7 +771,7 @@ export const useBetStore = create<BetState>()(
           .eq('user_id', user.id);
 
         if (error) {
-          console.error("Erro ao deletar goal:", error);
+          console.error("Erro ao deletar goal:", error.message);
           return;
         }
 
