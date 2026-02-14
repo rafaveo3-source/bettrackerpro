@@ -2,17 +2,10 @@ import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import { createClient } from '@supabase/supabase-js';
 
-/* ================= SUPABASE ================= */
-
+// Accepts both legacy and current key names to reduce deployment mistakes.
 const env = import.meta.env;
-
-const supabaseUrl =
-  env.VITE_SUPABASE_URL || 'https://invalid-project.supabase.co';
-
-const supabaseAnonKey =
-  env.VITE_SUPABASE_ANON_KEY ||
-  env.VITE_SUPABASE_PUBLISHABLE_KEY ||
-  'invalid-key';
+const supabaseUrl = env.VITE_SUPABASE_URL || 'https://invalid-project.supabase.co';
+const supabaseAnonKey = env.VITE_SUPABASE_ANON_KEY || env.VITE_SUPABASE_PUBLISHABLE_KEY || 'invalid-key';
 
 export const isSupabaseConfigured =
   supabaseUrl.startsWith('https://') &&
@@ -24,20 +17,10 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
     persistSession: true,
     autoRefreshToken: true,
     detectSessionInUrl: true,
-  },
+  }
 });
 
-/* ================= TYPES ================= */
-
-export type BetStatus =
-  | 'pending'
-  | 'won'
-  | 'lost'
-  | 'void'
-  | 'half-won'
-  | 'half-lost'
-  | 'cashout';
-
+export type BetStatus = 'pending' | 'won' | 'lost' | 'void' | 'half-won' | 'half-lost' | 'cashout';
 export type TransactionType = 'deposit' | 'withdrawal';
 export type MoodType = 'confident' | 'disciplined' | 'anxious' | 'tilted';
 
@@ -106,8 +89,6 @@ export interface User {
   avatar?: string;
 }
 
-/* ================= STATE ================= */
-
 interface BetState {
   user: User | null;
   isAuthenticated: boolean;
@@ -133,7 +114,7 @@ interface BetState {
   addBankroll: (name: string, currency: string, initialBalance: number) => Promise<void>;
   removeBankroll: (id: string) => Promise<void>;
   setActiveBankroll: (id: string) => void;
-  addBet: (bet: Omit<Bet, 'id' | 'profit'> & { cashoutValue?: number }) => Promise<void>;
+  addBet: (bet: Omit<Bet, 'id' | 'profit' | 'bankrollId'> & { cashoutValue?: number }) => Promise<void>;
   updateBet: (id: string, data: Partial<Bet> & { cashoutValue?: number }) => Promise<void>;
   removeBet: (id: string) => Promise<void>;
   addTransaction: (transaction: Omit<Transaction, 'id' | 'bankrollId'>) => void;
@@ -147,11 +128,15 @@ interface BetState {
   activateTiltLock: (hours: number) => void;
   resetData: () => void;
   recalculateBankroll: () => void;
-  getMetrics: () => any;
+  getMetrics: () => {
+    totalProfit: number;
+    roi: number;
+    winRate: number;
+    totalBets: number;
+    streak: BetStatus[];
+  };
   isTiltLocked: () => boolean;
 }
-
-/* ================= STORE ================= */
 
 export const useBetStore = create<BetState>()(
   persist(
@@ -171,85 +156,101 @@ export const useBetStore = create<BetState>()(
       goals: [],
       tiltLockUntil: null,
 
-      /* ================= SESSION ================= */
-
       setSession: async (session) => {
-        if (!session?.user) {
+        if (session?.user) {
+          set({
+            isAuthenticated: true,
+            user: {
+              id: session.user.id,
+              email: session.user.email,
+              name:
+                session.user.user_metadata?.full_name ||
+                session.user.email?.split('@')[0] ||
+                'Usuário',
+              avatar: session.user.user_metadata?.avatar_url,
+            },
+          });
+
+          // 🔥 CARREGAR BETS DO SUPABASE
+          const { data, error } = await supabase
+            .from('bets')
+            .select('*')
+            .eq('user_id', session.user.id);
+
+          if (error) {
+            console.error(error);
+          } else if (data) {
+            const formattedBets = data.map((bet: any) => ({
+              ...bet,
+              bankrollId: bet.bankroll_id,
+              stake: Number(bet.stake),
+              odds: Number(bet.odds),
+              profit: Number(bet.profit),
+            }));
+            set({ history: formattedBets });
+          }
+
+          const { data: methodsData, error: methodsError } = await supabase
+            .from('methods')
+            .select('*')
+            .eq('user_id', session.user.id);
+
+          if (methodsError) {
+            console.error(methodsError);
+          } else if (methodsData) {
+            set({ methods: methodsData });
+          }
+
+          // 🔥 CARREGAR BANKROLLS
+          const { data: bankrollsData, error: bankrollsError } = await supabase
+            .from('bankrolls')
+            .select('*')
+            .eq('user_id', session.user.id);
+
+          if (bankrollsError) {
+            console.error(bankrollsError);
+          } else if (bankrollsData) {
+            const formattedBankrolls = bankrollsData.map((b: any) => ({
+              id: b.id,
+              name: b.name,
+              currency: b.currency,
+              initialBalance: Number(b.initial_balance)
+            }));
+
+            set({
+              bankrolls: formattedBankrolls,
+              activeBankrollId: formattedBankrolls.length > 0 ? formattedBankrolls[0].id : ''
+            });
+          }
+
+          // Garante recálculo após carregar tudo
+          get().recalculateBankroll();
+
+        } else {
           set({
             isAuthenticated: false,
             user: null,
-            history: [],
-          });
-          return;
-        }
-
-        const user = {
-          id: session.user.id,
-          email: session.user.email,
-          name:
-            session.user.user_metadata?.full_name ||
-            session.user.email?.split('@')[0] ||
-            'Usuário',
-          avatar: session.user.user_metadata?.avatar_url,
-        };
-
-        set({ isAuthenticated: true, user });
-
-        /* LOAD BETS */
-        const { data: bets } = await supabase
-          .from('bets')
-          .select('*')
-          .eq('user_id', user.id);
-
-        if (bets) set({ history: bets });
-
-        /* LOAD METHODS */
-        const { data: methods } = await supabase
-          .from('methods')
-          .select('*')
-          .eq('user_id', user.id);
-
-        if (methods) set({ methods });
-
-        /* LOAD BANKROLLS */
-        const { data: bankrolls } = await supabase
-          .from('bankrolls')
-          .select('*')
-          .eq('user_id', user.id);
-
-        if (bankrolls) {
-          const formatted = bankrolls.map((b: any) => ({
-            id: b.id,
-            name: b.name,
-            currency: b.currency,
-            initialBalance: b.initial_balance,
-          }));
-
-          set({
-            bankrolls: formatted,
-            activeBankrollId: formatted[0]?.id || '',
+            history: []
           });
         }
       },
 
       logout: async () => {
-        await supabase.auth.signOut();
-        set({ isAuthenticated: false, user: null });
-        localStorage.removeItem('bettracker-storage-v5');
+        try {
+          await supabase.auth.signOut();
+        } finally {
+          set({ isAuthenticated: false, user: null });
+          localStorage.removeItem('bettracker-storage-v5');
+        }
       },
 
-      updateProfile: (data) =>
-        set((state) => ({
-          user: state.user ? { ...state.user, ...data } : null,
-        })),
+      updateProfile: (data) => set((state) => ({
+        user: state.user ? { ...state.user, ...data } : null
+      })),
 
-      toggleTheme: () =>
-        set((state) => ({ isDarkMode: !state.isDarkMode })),
-
+      toggleTheme: () => set((state) => ({ isDarkMode: !state.isDarkMode })),
       setPrimaryColor: (color) => set({ primaryColor: color }),
       setCurrency: (currency) => set({ currency }),
-
-      /* ================= BANKROLL ================= */
 
       addBankroll: async (name, currency, initialBalance) => {
         const user = get().user;
@@ -261,9 +262,9 @@ export const useBetStore = create<BetState>()(
             {
               name,
               currency,
-              initial_balance: initialBalance,
-              user_id: user.id,
-            },
+              initial_balance: Number(initialBalance),
+              user_id: user.id
+            }
           ])
           .select()
           .single();
@@ -273,34 +274,52 @@ export const useBetStore = create<BetState>()(
           return;
         }
 
-        const formatted = {
-          id: data.id,
-          name: data.name,
-          currency: data.currency,
-          initialBalance: data.initial_balance,
-        };
+        if (data) {
+          const newBankroll = {
+            id: data.id,
+            name: data.name,
+            currency: data.currency,
+            initialBalance: Number(data.initial_balance)
+          };
 
-        set((state) => ({
-          bankrolls: [...state.bankrolls, formatted],
-          activeBankrollId: formatted.id,
-        }));
+          set((state) => ({
+            bankrolls: [...state.bankrolls, newBankroll],
+            activeBankrollId: data.id
+          }));
 
-        get().recalculateBankroll();
+          get().recalculateBankroll();
+        }
       },
 
       removeBankroll: async (id) => {
         const user = get().user;
         if (!user) return;
 
-        await supabase
+        if (get().bankrolls.length <= 1) return;
+
+        const { error } = await supabase
           .from('bankrolls')
           .delete()
           .eq('id', id)
           .eq('user_id', user.id);
 
-        set((state) => ({
-          bankrolls: state.bankrolls.filter((b) => b.id !== id),
-        }));
+        if (error) {
+          console.error(error);
+          return;
+        }
+
+        set((state) => {
+          const newBankrolls = state.bankrolls.filter(b => b.id !== id);
+          return {
+            bankrolls: newBankrolls,
+            activeBankrollId:
+              state.activeBankrollId === id && newBankrolls.length > 0
+                ? newBankrolls[0].id
+                : state.activeBankrollId
+          };
+        });
+
+        get().recalculateBankroll();
       },
 
       setActiveBankroll: (id) => {
@@ -308,48 +327,215 @@ export const useBetStore = create<BetState>()(
         get().recalculateBankroll();
       },
 
-      /* ================= BET ================= */
-
-      addBet: async (newBetData) => {
-        const user = get().user;
-        const activeBankrollId = get().activeBankrollId;
-
-        if (!user || !activeBankrollId) return;
-
-        let profit = 0;
-        const { status, stake, odds, cashoutValue } = newBetData;
-
-        switch (status) {
-          case 'won':
-            profit = stake * odds - stake;
-            break;
-          case 'lost':
-            profit = -stake;
-            break;
-          case 'half-won':
-            profit = (stake * odds - stake) / 2;
-            break;
-          case 'half-lost':
-            profit = -stake / 2;
-            break;
-          case 'cashout':
-            profit = (cashoutValue || 0) - stake;
-            break;
-          default:
-            profit = 0;
+      recalculateBankroll: () => {
+        const state = get();
+        const activeBR = state.bankrolls.find(b => b.id === state.activeBankrollId);
+        
+        // Proteção se não houver banca ativa
+        if (!activeBR) {
+            set({ currentBankrollBalance: 0 });
+            return;
         }
 
-        const { cashoutValue: _, ...clean } = newBetData;
+        const betsProfit = (state.history || [])
+          .filter(b => b.bankroll_id === state.activeBankrollId)
+          .reduce((acc, b) => acc + (Number(b.profit) || 0), 0);
+
+        const deposits = (state.transactions || [])
+          .filter(t => t.bankrollId === state.activeBankrollId && t.type === 'deposit')
+          .reduce((acc, t) => acc + (Number(t.amount) || 0), 0);
+
+        const withdrawals = (state.transactions || [])
+          .filter(t => t.bankrollId === state.activeBankrollId && t.type === 'withdrawal')
+          .reduce((acc, t) => acc + (Number(t.amount) || 0), 0);
+
+        set({ currentBankrollBalance: Number(activeBR.initialBalance) + betsProfit + deposits - withdrawals });
+      },
+
+      addBet: async (newBetData) => {
+        if (get().isTiltLocked()) return;
+
+        const activeBankrollId = get().activeBankrollId;
+        if (!activeBankrollId) {
+          console.warn("⚠️ Crie ou selecione uma banca antes de registrar uma aposta.");
+          return;
+        }
+
+        const user = get().user;
+        if (!user) return;
+
+        let profit = 0;
+        const stake = Number(newBetData.stake);
+        const odds = Number(newBetData.odds);
+        const cashoutValue = newBetData.cashoutValue ? Number(newBetData.cashoutValue) : 0;
+        const { status } = newBetData;
+
+        switch (status) {
+          case 'won': profit = (stake * odds) - stake; break;
+          case 'lost': profit = -stake; break;
+          case 'half-won': profit = ((stake * odds) - stake) / 2; break;
+          case 'half-lost': profit = -stake / 2; break;
+          case 'void': profit = 0; break;
+          case 'cashout': profit = cashoutValue - stake; break;
+          case 'pending': profit = 0; break;
+        }
+
+        // Remove cashoutValue para não enviar campo undefined/extra para o Supabase se a tabela não tiver
+        const { cashoutValue: _, ...cleanBetData } = newBetData;
+
+        const betToInsert = {
+          ...cleanBetData,
+          bankroll_id: activeBankrollId,
+          stake,
+          odds,
+          profit,
+          user_id: user.id
+        };
 
         const { data, error } = await supabase
           .from('bets')
+          .insert([betToInsert])
+          .select()
+          .single();
+
+        if (error) {
+          console.error(error);
+          return;
+        }
+
+        if (data) {
+          const newBet = {
+             ...data,
+             bankrollId: data.bankroll_id, // Mapper para compatibilidade frontend
+             stake: Number(data.stake),
+             odds: Number(data.odds),
+             profit: Number(data.profit)
+          };
+
+          set((state) => ({
+            history: [newBet, ...state.history]
+          }));
+
+          get().recalculateBankroll();
+        }
+      },
+
+      updateBet: async (id, data) => {
+        const user = get().user;
+        if (!user) return;
+
+        const currentBet = get().history.find(b => b.id === id);
+        if (!currentBet) return;
+
+        const updated = { ...currentBet, ...data };
+
+        let profit = 0;
+        const stake = Number(updated.stake);
+        const odds = Number(updated.odds);
+        const cashoutValue = updated.cashoutValue ? Number(updated.cashoutValue) : 0;
+        const { status } = updated;
+
+        switch (status) {
+          case 'won': profit = (stake * odds) - stake; break;
+          case 'lost': profit = -stake; break;
+          case 'half-won': profit = ((stake * odds) - stake) / 2; break;
+          case 'half-lost': profit = -stake / 2; break;
+          case 'void': profit = 0; break;
+          case 'cashout': profit = cashoutValue - stake; break;
+          case 'pending': profit = 0; break;
+        }
+
+        // Prepara payload limpo para o Supabase
+        const payload = {
+            sport: updated.sport,
+            market: updated.market,
+            event: updated.event,
+            selection: updated.selection,
+            odds,
+            stake,
+            status: updated.status,
+            profit,
+            method: updated.method,
+            date: updated.date
+        };
+
+        const { error } = await supabase
+          .from('bets')
+          .update(payload)
+          .eq('id', id)
+          .eq('user_id', user.id);
+
+        if (error) {
+          console.error(error);
+          return;
+        }
+
+        set((state) => ({
+          history: state.history.map(b =>
+            b.id === id ? { ...updated, profit, stake, odds } : b
+          )
+        }));
+
+        get().recalculateBankroll();
+      },
+
+      removeBet: async (id) => {
+        const user = get().user;
+        if (!user) return;
+
+        const { error } = await supabase
+          .from('bets')
+          .delete()
+          .eq('id', id)
+          .eq('user_id', user.id);
+
+        if (error) {
+          console.error(error);
+          return;
+        }
+
+        set((state) => ({
+          history: state.history.filter(b => b.id !== id)
+        }));
+
+        get().recalculateBankroll();
+      },
+
+      addTransaction: (newTx) => {
+        if (get().isTiltLocked()) return;
+        set((state) => ({
+          transactions: [
+            { 
+                ...newTx, 
+                id: Math.random().toString(36).substr(2, 9), 
+                bankrollId: state.activeBankrollId,
+                amount: Number(newTx.amount) 
+            },
+            ...state.transactions
+          ]
+        }));
+        get().recalculateBankroll();
+      },
+
+      removeTransaction: (id) => {
+        set((state) => ({
+          transactions: state.transactions.filter(t => t.id !== id)
+        }));
+        get().recalculateBankroll();
+      },
+
+      addMethod: async (name) => {
+        const user = get().user;
+        if (!user) return;
+
+        // Correção: addMethod estava usando variáveis inexistentes (currency, initialBalance)
+        const { data, error } = await supabase
+          .from('methods')
           .insert([
             {
-              ...clean,
-              bankroll_id: activeBankrollId,
-              profit,
-              user_id: user.id,
-            },
+              name,
+              user_id: user.id
+            }
           ])
           .select()
           .single();
@@ -359,61 +545,105 @@ export const useBetStore = create<BetState>()(
           return;
         }
 
-        set((state) => ({
-          history: [data, ...state.history],
-        }));
-
-        get().recalculateBankroll();
-      },
-
-      updateBet: async () => {},
-      removeBet: async () => {},
-
-      addTransaction: () => {},
-      removeTransaction: () => {},
-
-      addMethod: async (name) => {
-        const user = get().user;
-        if (!user) return;
-
-        const { data, error } = await supabase
-          .from('methods')
-          .insert([{ name, user_id: user.id }])
-          .select()
-          .single();
-
-        if (error) {
-          console.error(error);
-          return;
+        if (data) {
+          set((state) => ({
+            methods: [data, ...state.methods]
+          }));
         }
+      },
 
+      removeMethod: (id) => {
         set((state) => ({
-          methods: [data, ...state.methods],
+          methods: state.methods.filter(m => m.id !== id)
         }));
       },
 
-      removeMethod: (id) =>
+      addMindsetEntry: (entry) => {
         set((state) => ({
-          methods: state.methods.filter((m) => m.id !== id),
-        })),
+          mindsetHistory: [{ ...entry, id: Math.random().toString(36).substr(2, 9) }, ...state.mindsetHistory]
+        }));
+      },
 
-      addMindsetEntry: () => {},
-      addGoal: () => {},
-      updateGoal: () => {},
-      deleteGoal: () => {},
+      addGoal: (goalData) => {
+        const id = Math.random().toString(36).substr(2, 9);
+        const newGoal: Goal = {
+          ...goalData,
+          id,
+          target: Number(goalData.target),
+          current: 0,
+          status: 'active',
+          createdAt: new Date().toISOString()
+        };
+        set((state) => ({ goals: [...state.goals, newGoal] }));
+      },
 
-      activateTiltLock: () => {},
-      isTiltLocked: () => false,
+      updateGoal: (id, data) => {
+        set((state) => ({
+          goals: state.goals.map(g => g.id === id ? { ...g, ...data } : g)
+        }));
+      },
 
-      resetData: () =>
+      deleteGoal: (id) => {
+        set((state) => ({
+          goals: state.goals.filter(g => g.id !== id)
+        }));
+      },
+
+      activateTiltLock: (hours) => {
+        const unlockTime = new Date();
+        unlockTime.setHours(unlockTime.getHours() + hours);
+        set({ tiltLockUntil: unlockTime.toISOString() });
+      },
+
+      isTiltLocked: () => {
+        const state = get();
+        if (!state.tiltLockUntil) return false;
+        const now = new Date();
+        const unlock = new Date(state.tiltLockUntil);
+        if (now >= unlock) {
+          set({ tiltLockUntil: null });
+          return false;
+        }
+        return true;
+      },
+
+      resetData: () => {
         set({
           bankrolls: [],
+          activeBankrollId: '',
+          currentBankrollBalance: 0,
           history: [],
-        }),
+          transactions: [],
+          mindsetHistory: [],
+          goals: []
+        });
+      },
 
-      recalculateBankroll: () => {},
+      getMetrics: () => {
+        const state = get();
+        // Blindagem contra arrays indefinidos
+        const history = state.history || [];
+        const activeBets = history.filter(b => b.bankroll_id === state.activeBankrollId);
+        
+        // Evita erros se activeBets estiver vazio, mas filter já retorna []
+        const settledBets = activeBets.filter(b => b.status !== 'pending' && b.status !== 'void');
+        
+        const totalBets = settledBets.length;
+        const wins = settledBets.filter(b => b.status === 'won' || b.status === 'half-won').length;
+        
+        const totalProfit = activeBets.reduce((acc, b) => acc + (Number(b.profit) || 0), 0);
+        const totalStaked = settledBets.reduce((acc, b) => acc + (Number(b.stake) || 0), 0);
+        
+        const streak = settledBets.slice(0, 5).map(b => b.status);
 
-      getMetrics: () => ({}),
+        return {
+          totalProfit,
+          roi: totalStaked > 0 ? (totalProfit / totalStaked) * 100 : 0,
+          winRate: totalBets > 0 ? (wins / totalBets) * 100 : 0,
+          totalBets: activeBets.length,
+          streak
+        };
+      }
     }),
     {
       name: 'bettracker-storage-v5',
