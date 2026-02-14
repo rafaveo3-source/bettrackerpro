@@ -1,7 +1,6 @@
-
 import React, { useState } from 'react';
 import { useBetStore } from '../store/useBetStore';
-import { Trash2, Plus, Save, AlertTriangle, PaintBucket, Coins, Layers, User, Image as ImageIcon, CheckCircle, Bell, ChevronRight } from 'lucide-react';
+import { Trash2, Save, AlertTriangle, PaintBucket, Coins, Layers, User, Image as ImageIcon, CheckCircle, LogOut } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 const Settings: React.FC = () => {
@@ -32,7 +31,7 @@ const Settings: React.FC = () => {
   };
 
   return (
-    <div className="space-y-10 max-w-6xl mx-auto pb-20">
+    <div className="space-y-10 max-w-6xl mx-auto pb-20 w-full overflow-x-hidden">
         <header className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4 border-b border-slate-200 dark:border-white/5 pb-8">
             <div>
                 <h1 className="text-4xl font-black text-slate-900 dark:text-white tracking-tighter uppercase italic">Configurações</h1>
@@ -50,7 +49,7 @@ const Settings: React.FC = () => {
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
             {/* Identity Card */}
-            <section className="glass-card rounded-[2.5rem] p-10 shadow-sm dark:shadow-xl">
+            <section className="bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-800 rounded-[2.5rem] p-6 md:p-10 shadow-sm dark:shadow-xl">
                 <div className="flex items-center gap-4 mb-10">
                     <div className="p-3 bg-emerald-500/10 rounded-2xl text-emerald-600 dark:text-emerald-500 shadow-inner"><User size={24} /></div>
                     <h2 className="text-xl font-black text-slate-900 dark:text-white uppercase tracking-tighter italic">Identidade Visual</h2>
@@ -58,7 +57,7 @@ const Settings: React.FC = () => {
                 
                 <form onSubmit={handleUpdateProfile} className="space-y-8">
                     <div className="flex flex-col sm:flex-row items-center gap-8">
-                        <div className="relative group">
+                        <div className="relative group shrink-0">
                             <div className="w-32 h-32 rounded-[2.5rem] overflow-hidden border-4 border-emerald-500/20 dark:border-emerald-500 shadow-2xl transition-all group-hover:scale-105 duration-500 p-1 bg-white dark:bg-slate-800">
                                 <img 
                                   src={profileAvatar || `https://ui-avatars.com/api/?name=${profileName}&background=10b981&color=fff&bold=true`} 
@@ -100,13 +99,13 @@ const Settings: React.FC = () => {
             </section>
 
             {/* Methods Card */}
-            <section className="glass-card rounded-[2.5rem] p-10 shadow-sm dark:shadow-xl">
+            <section className="bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-800 rounded-[2.5rem] p-6 md:p-10 shadow-sm dark:shadow-xl">
                  <div className="flex items-center gap-4 mb-10">
                     <div className="p-3 bg-blue-500/10 rounded-2xl text-blue-600 dark:text-blue-500 shadow-inner"><Layers size={24} /></div>
                     <h2 className="text-xl font-black text-slate-900 dark:text-white uppercase tracking-tighter italic">Arquitetura de Métodos</h2>
                 </div>
                 
-                <div className="flex gap-3 mb-8">
+                <div className="flex flex-col sm:flex-row gap-3 mb-8">
                     <input 
                         type="text" 
                         value={newMethodName}
@@ -114,7 +113,7 @@ const Settings: React.FC = () => {
                         placeholder="Ex: Alavancagem Under 2.5"
                         className="flex-1 bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 rounded-2xl px-6 py-4 outline-none focus:border-blue-500 transition-all text-slate-900 dark:text-white font-bold shadow-inner placeholder:text-slate-400"
                     />
-                    <button onClick={handleAddMethod} className="bg-blue-600 hover:bg-blue-500 text-white px-8 rounded-2xl font-black text-xs transition-all shadow-lg active:scale-95">
+                    <button onClick={handleAddMethod} className="bg-blue-600 hover:bg-blue-500 text-white px-8 py-4 sm:py-0 rounded-2xl font-black text-xs transition-all shadow-lg active:scale-95">
                         ADD
                     </button>
                 </div>
@@ -138,14 +137,14 @@ const Settings: React.FC = () => {
             </section>
 
             {/* Preferences */}
-            <section className="glass-card rounded-[2.5rem] p-10 lg:col-span-2 shadow-sm dark:shadow-xl">
+            <section className="bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-800 rounded-[2.5rem] p-6 md:p-10 lg:col-span-2 shadow-sm dark:shadow-xl">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-16">
                     <div className="space-y-8">
                         <div className="flex items-center gap-4">
                             <div className="p-3 bg-emerald-500/10 rounded-2xl text-emerald-600 dark:text-emerald-500"><PaintBucket size={22} /></div>
                             <h3 className="font-black text-slate-900 dark:text-white uppercase tracking-tighter text-lg italic">Acentuação Visual</h3>
                         </div>
-                        <div className="flex gap-5">
+                        <div className="flex gap-5 flex-wrap">
                             {[
                                 { id: 'emerald', color: '#10b981' },
                                 { id: 'blue', color: '#3b82f6' },
@@ -189,7 +188,7 @@ const Settings: React.FC = () => {
             </section>
 
             {/* Danger Zone */}
-            <section className="bg-red-500/5 dark:bg-red-500/5 rounded-[2.5rem] p-10 border border-red-200 dark:border-red-500/10 lg:col-span-2 flex flex-col md:flex-row justify-between items-center gap-10 shadow-sm">
+            <section className="bg-red-500/5 dark:bg-red-500/5 rounded-[2.5rem] p-6 md:p-10 border border-red-200 dark:border-red-500/10 lg:col-span-2 flex flex-col md:flex-row justify-between items-center gap-10 shadow-sm">
                 <div className="flex items-center gap-6 text-center md:text-left">
                     <div className="p-5 bg-red-100 dark:bg-red-500/10 rounded-3xl text-red-600 dark:text-red-500 shadow-lg"><AlertTriangle size={36} /></div>
                     <div>
@@ -199,7 +198,7 @@ const Settings: React.FC = () => {
                 </div>
                 <button 
                     onClick={() => window.confirm('Deseja RESETAR tudo? Esta ação não pode ser desfeita.') && resetData()} 
-                    className="bg-red-600 hover:bg-red-500 text-white px-12 py-5 rounded-2xl font-black text-xs shadow-2xl shadow-red-500/20 active:scale-95 transition-all flex items-center gap-3 group"
+                    className="bg-red-600 hover:bg-red-500 text-white px-12 py-5 rounded-2xl font-black text-xs shadow-2xl shadow-red-500/20 active:scale-95 transition-all flex items-center gap-3 group w-full md:w-auto justify-center"
                 >
                     PURGAR DADOS DO TERMINAL
                     <Trash2 size={16} className="group-hover:animate-bounce" />

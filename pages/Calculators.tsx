@@ -76,7 +76,7 @@ const Calculators: React.FC = () => {
   };
 
   return (
-    <div className="space-y-6 pb-20 overflow-x-hidden">
+    <div className="space-y-6 pb-20 overflow-x-hidden w-full max-w-full">
        <div className="flex items-center gap-3">
         <div className="bg-emerald-500/10 p-3 rounded-xl border border-emerald-500/20 text-emerald-600 dark:text-emerald-500">
              <Calculator size={24} />
@@ -280,6 +280,7 @@ const Calculators: React.FC = () => {
 
                     <h2 className="text-xl font-black text-slate-900 dark:text-white uppercase tracking-tighter italic mb-8">Critério de Kelly</h2>
                     
+                    {/* MOBILE STACK */}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
                         <div>
                              <label className="block text-[10px] font-black text-slate-400 uppercase mb-2 tracking-widest">Banca Atual (R$)</label>
