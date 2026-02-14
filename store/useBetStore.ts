@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import { createClient } from '@supabase/supabase-js';
 
-// Accepts both legacy and current key names to reduce deployment mistakes.
+// Configuração do Ambiente e Supabase
 const env = import.meta.env;
 const supabaseUrl = env.VITE_SUPABASE_URL || 'https://invalid-project.supabase.co';
 const supabaseAnonKey = env.VITE_SUPABASE_ANON_KEY || env.VITE_SUPABASE_PUBLISHABLE_KEY || 'invalid-key';
@@ -19,6 +19,8 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
     detectSessionInUrl: true,
   }
 });
+
+// --- TIPAGEM ---
 
 export type BetStatus = 'pending' | 'won' | 'lost' | 'void' | 'half-won' | 'half-lost' | 'cashout';
 export type TransactionType = 'deposit' | 'withdrawal';
@@ -89,6 +91,8 @@ export interface User {
   avatar?: string;
 }
 
+// --- STATE INTERFACE ---
+
 interface BetState {
   user: User | null;
   isAuthenticated: boolean;
@@ -122,12 +126,12 @@ interface BetState {
   addMethod: (name: string) => Promise<void>;
   removeMethod: (id: string) => void;
   
-  // 🔥 Novos métodos Async para Mindset
+  // Async Mindset
   addMindsetEntry: (entry: Omit<MindsetEntry, 'id'>) => Promise<void>;
   deleteMindsetEntry: (id: string) => Promise<void>;
   updateMindsetEntry: (id: string, data: Partial<MindsetEntry>) => Promise<void>;
 
-  // 🔥 Novos métodos Async para Goals
+  // Async Goals
   addGoal: (goal: Omit<Goal, 'id' | 'createdAt' | 'current' | 'status'>) => Promise<void>;
   updateGoal: (id: string, data: Partial<Goal>) => Promise<void>;
   deleteGoal: (id: string) => Promise<void>;
@@ -144,6 +148,8 @@ interface BetState {
   };
   isTiltLocked: () => boolean;
 }
+
+// --- STORE IMPLEMENTATION ---
 
 export const useBetStore = create<BetState>()(
   persist(
@@ -178,16 +184,17 @@ export const useBetStore = create<BetState>()(
             },
           });
 
-          // 🔥 CARREGAR BETS DO SUPABASE
-          const { data, error } = await supabase
+          const userId = session.user.id;
+
+          // 1. CARREGAR BETS
+          const { data: betsData, error: betsError } = await supabase
             .from('bets')
             .select('*')
-            .eq('user_id', session.user.id);
+            .eq('user_id', userId);
 
-          if (error) {
-            console.error("Erro ao carregar bets:", error.message);
-          } else if (data) {
-            const formattedBets = data.map((bet: any) => ({
+          if (betsError) console.error("Erro ao carregar bets:", betsError.message);
+          else if (betsData) {
+            const formattedBets = betsData.map((bet: any) => ({
               ...bet,
               bankrollId: bet.bankroll_id,
               stake: Number(bet.stake),
@@ -197,27 +204,25 @@ export const useBetStore = create<BetState>()(
             set({ history: formattedBets });
           }
 
-          // 🔥 CARREGAR METHODS
+          // 2. CARREGAR METHODS
           const { data: methodsData, error: methodsError } = await supabase
             .from('methods')
             .select('*')
-            .eq('user_id', session.user.id);
+            .eq('user_id', userId);
 
-          if (methodsError) {
-            console.error("Erro ao carregar métodos:", methodsError.message);
-          } else if (methodsData) {
+          if (methodsError) console.error("Erro ao carregar métodos:", methodsError.message);
+          else if (methodsData) {
             set({ methods: methodsData });
           }
 
-          // 🔥 CARREGAR BANKROLLS
+          // 3. CARREGAR BANKROLLS
           const { data: bankrollsData, error: bankrollsError } = await supabase
             .from('bankrolls')
             .select('*')
-            .eq('user_id', session.user.id);
+            .eq('user_id', userId);
 
-          if (bankrollsError) {
-            console.error("Erro ao carregar bankrolls:", bankrollsError.message);
-          } else if (bankrollsData) {
+          if (bankrollsError) console.error("Erro ao carregar bankrolls:", bankrollsError.message);
+          else if (bankrollsData) {
             const formattedBankrolls = bankrollsData.map((b: any) => ({
               id: b.id,
               name: b.name,
@@ -231,46 +236,45 @@ export const useBetStore = create<BetState>()(
             });
           }
 
-          // 🔥 CARREGAR MINDSET
+          // 4. CARREGAR MINDSET
           const { data: mindsetData, error: mindsetError } = await supabase
             .from('mindset_entries')
             .select('*')
-            .eq('user_id', session.user.id)
+            .eq('user_id', userId)
             .order('date', { ascending: false });
 
-          if (mindsetError) {
-            console.error("Erro ao carregar mindset:", mindsetError.message);
-          } else if (mindsetData) {
+          if (mindsetError) console.error("Erro ao carregar mindset:", mindsetError.message);
+          else if (mindsetData) {
             const formattedMindset = mindsetData.map((m: any) => ({
               id: m.id,
               date: m.date,
               time: m.time,
               mood: m.mood,
               note: m.note,
-              tags: Array.isArray(m.tags) ? m.tags : [] // Garante que tags seja array
+              // Garante array mesmo se o banco retornar null
+              tags: m.tags ? m.tags : [] 
             }));
             set({ mindsetHistory: formattedMindset });
           }
 
-          // 🔥 CARREGAR GOALS
+          // 5. CARREGAR GOALS
           const { data: goalsData, error: goalsError } = await supabase
             .from('goals')
             .select('*')
-            .eq('user_id', session.user.id);
+            .eq('user_id', userId);
 
-          if (goalsError) {
-            console.error("Erro ao carregar goals:", goalsError.message);
-          } else if (goalsData) {
+          if (goalsError) console.error("Erro ao carregar goals:", goalsError.message);
+          else if (goalsData) {
             const formattedGoals = goalsData.map((g: any) => ({
               ...g,
-              createdAt: g.created_at, // Mapping database snake_case to frontend camelCase
+              createdAt: g.created_at, // Mapeia snake_case para camelCase
               target: Number(g.target),
               current: Number(g.current)
             }));
             set({ goals: formattedGoals });
           }
 
-          // Garante recálculo após carregar tudo
+          // Garante recálculo do saldo
           get().recalculateBankroll();
 
         } else {
@@ -301,6 +305,7 @@ export const useBetStore = create<BetState>()(
       setPrimaryColor: (color) => set({ primaryColor: color }),
       setCurrency: (currency) => set({ currency }),
 
+      // --- BANKROLLS ---
       addBankroll: async (name, currency, initialBalance) => {
         const user = get().user;
         if (!user) return;
@@ -380,7 +385,6 @@ export const useBetStore = create<BetState>()(
         const state = get();
         const activeBR = state.bankrolls.find(b => b.id === state.activeBankrollId);
         
-        // Proteção se não houver banca ativa
         if (!activeBR) {
             set({ currentBankrollBalance: 0 });
             return;
@@ -401,6 +405,7 @@ export const useBetStore = create<BetState>()(
         set({ currentBankrollBalance: Number(activeBR.initialBalance) + betsProfit + deposits - withdrawals });
       },
 
+      // --- BETS ---
       addBet: async (newBetData) => {
         if (get().isTiltLocked()) return;
 
@@ -429,7 +434,6 @@ export const useBetStore = create<BetState>()(
           case 'pending': profit = 0; break;
         }
 
-        // Remove cashoutValue para não enviar campo undefined/extra para o Supabase
         const { cashoutValue: _, ...cleanBetData } = newBetData;
 
         const betToInsert = {
@@ -455,7 +459,7 @@ export const useBetStore = create<BetState>()(
         if (data) {
           const newBet = {
              ...data,
-             bankrollId: data.bankroll_id, // Mapper para compatibilidade frontend
+             bankrollId: data.bankroll_id,
              stake: Number(data.stake),
              odds: Number(data.odds),
              profit: Number(data.profit)
@@ -494,7 +498,6 @@ export const useBetStore = create<BetState>()(
           case 'pending': profit = 0; break;
         }
 
-        // Prepara payload limpo para o Supabase
         const payload = {
             sport: updated.sport,
             market: updated.market,
@@ -606,18 +609,18 @@ export const useBetStore = create<BetState>()(
         }));
       },
 
-      // 🔥 MINDSET ACTIONS
+      // --- MINDSET ACTIONS ---
       addMindsetEntry: async (entry) => {
         const user = get().user;
         if (!user) return;
 
-        // Payload limpo e seguro para tags
+        // Payload blindado para tabela mindset_entries (com tags e note)
         const payload = {
             date: entry.date,
             time: entry.time,
             mood: entry.mood,
-            note: entry.note,
-            tags: entry.tags || [], // Garante array
+            note: entry.note || '', // Proteção para note null
+            tags: entry.tags || [], // Proteção para tags null (envia array para o Postgres text[])
             user_id: user.id
         };
 
@@ -681,24 +684,22 @@ export const useBetStore = create<BetState>()(
         }));
       },
 
-      // 🔥 GOALS ACTIONS
+      // --- GOALS ACTIONS ---
       addGoal: async (goalData) => {
         const user = get().user;
         if (!user) return;
 
-        // Payload explícito para garantir apenas campos existentes no DB
+        // Payload mapeado manualmente para garantir compatibilidade com colunas do DB
         const payload = {
             bankroll_id: goalData.bankroll_id,
             title: goalData.title,
-            category: goalData.category,
-            target: Number(goalData.target), // Garante número
+            category: goalData.category || 'general',
+            target: Number(goalData.target), // Garante number
             current: 0,
             type: goalData.type,
             deadline: goalData.deadline,
             status: 'active',
             user_id: user.id
-            // Deixa o created_at ser gerado pelo banco ou envia se necessário,
-            // aqui optamos por não enviar campos extras
         };
 
         const { data, error } = await supabase
@@ -713,10 +714,9 @@ export const useBetStore = create<BetState>()(
         }
 
         if (data) {
-          // Normaliza retorno do Supabase para o Frontend
           const newGoal: Goal = {
              ...data,
-             createdAt: data.created_at || new Date().toISOString(), // Fallback
+             createdAt: data.created_at || new Date().toISOString(),
              target: Number(data.target),
              current: Number(data.current)
           };
@@ -731,7 +731,7 @@ export const useBetStore = create<BetState>()(
         const user = get().user;
         if (!user) return;
 
-        // Converte Partial<Goal> (frontend) para payload seguro do Supabase
+        // Monta payload parcial sanitizado
         const cleanPayload: any = {};
         if (data.title !== undefined) cleanPayload.title = data.title;
         if (data.category !== undefined) cleanPayload.category = data.category;
@@ -812,11 +812,9 @@ export const useBetStore = create<BetState>()(
 
       getMetrics: () => {
         const state = get();
-        // Blindagem contra arrays indefinidos
         const history = state.history || [];
         const activeBets = history.filter(b => b.bankroll_id === state.activeBankrollId);
         
-        // Evita erros se activeBets estiver vazio, mas filter já retorna []
         const settledBets = activeBets.filter(b => b.status !== 'pending' && b.status !== 'void');
         
         const totalBets = settledBets.length;
