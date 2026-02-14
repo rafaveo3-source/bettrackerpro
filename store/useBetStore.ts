@@ -684,14 +684,22 @@ export const useBetStore = create<BetState>()(
         }));
       },
 
-      // --- GOALS ACTIONS ---
+      // --- GOALS ACTIONS (CORRIGIDO) ---
       addGoal: async (goalData) => {
         const user = get().user;
         if (!user) return;
 
+        // Fallback: usa a banca ativa se não vier no payload
+        const bankrollId = goalData.bankroll_id || get().activeBankrollId;
+        
+        if (!bankrollId) {
+            console.error("Erro ao adicionar meta: Nenhuma banca selecionada.");
+            return;
+        }
+
         // Payload mapeado manualmente para garantir compatibilidade com colunas do DB
         const payload = {
-            bankroll_id: goalData.bankroll_id,
+            bankroll_id: bankrollId,
             title: goalData.title,
             category: goalData.category || 'general',
             target: Number(goalData.target), // Garante number
