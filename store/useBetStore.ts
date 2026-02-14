@@ -344,9 +344,16 @@ if (bankrollsData) {
 
   const { cashoutValue: _, ...cleanBetData } = newBetData;
 
-  const betToInsert = {
+  const activeBankrollId = get().activeBankrollId;
+
+if (!activeBankrollId) {
+  console.error("Nenhuma banca ativa selecionada.");
+  return;
+}
+
+const betToInsert = {
   ...cleanBetData,
-  bankroll_id: get().activeBankrollId, // 🔥 CORRIGIDO
+  bankroll_id: activeBankrollId,
   profit,
   user_id: user.id
 };
