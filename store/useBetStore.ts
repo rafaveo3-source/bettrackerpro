@@ -45,7 +45,8 @@ export interface Goal {
   category: string;
   target: number;
   current: number;
-  type: 'monthly' | 'daily' | 'weekly' | 'custom';
+  // 🔥 Upgrade: Novos tipos de meta para nível profissional
+  type: 'monthly' | 'daily' | 'weekly' | 'custom' | 'profit' | 'roi' | 'equity';
   deadline: string;
   createdAt: string;
   status: 'active' | 'completed' | 'abandoned';
@@ -139,13 +140,26 @@ interface BetState {
   activateTiltLock: (hours: number) => void;
   resetData: () => void;
   recalculateBankroll: () => void;
+  
+  // 🔥 INTELLIGENCE & METRICS AVANÇADAS
   getMetrics: () => {
     totalProfit: number;
     roi: number;
     winRate: number;
     totalBets: number;
     streak: BetStatus[];
+    maxDrawdown: number; // Hedge Fund Metric
+    sharpeRatio: number; // Hedge Fund Metric
+    volatility: number;
+    profitFactor: number;
   };
+  
+  // 🔥 MINDSET ANALYTICS
+  getMindsetAnalytics: () => {
+    msi: number; // Mental Stability Index (0-100)
+    moodCorrelation: Record<MoodType, { roi: number; winRate: number; count: number }>;
+  };
+
   isTiltLocked: () => boolean;
 }
 
@@ -251,7 +265,6 @@ export const useBetStore = create<BetState>()(
               time: m.time,
               mood: m.mood,
               note: m.note,
-              // Garante array mesmo se o banco retornar null
               tags: m.tags ? m.tags : [] 
             }));
             set({ mindsetHistory: formattedMindset });
@@ -267,16 +280,14 @@ export const useBetStore = create<BetState>()(
           else if (goalsData) {
             const formattedGoals = goalsData.map((g: any) => ({
               ...g,
-              createdAt: g.created_at, // Mapeia snake_case para camelCase
+              createdAt: g.created_at,
               target: Number(g.target),
               current: Number(g.current)
             }));
             set({ goals: formattedGoals });
           }
 
-          // Garante recálculo do saldo
           get().recalculateBankroll();
-
         } else {
           set({
             isAuthenticated: false,
@@ -614,13 +625,12 @@ export const useBetStore = create<BetState>()(
         const user = get().user;
         if (!user) return;
 
-        // Payload blindado para tabela mindset_entries (com tags e note)
         const payload = {
             date: entry.date,
             time: entry.time,
             mood: entry.mood,
-            note: entry.note || '', // Proteção para note null
-            tags: entry.tags || [], // Proteção para tags null (envia array para o Postgres text[])
+            note: entry.note || '',
+            tags: entry.tags || [],
             user_id: user.id
         };
 
@@ -684,12 +694,11 @@ export const useBetStore = create<BetState>()(
         }));
       },
 
-      // --- GOALS ACTIONS (CORRIGIDO) ---
+      // --- GOALS ACTIONS ---
       addGoal: async (goalData) => {
         const user = get().user;
         if (!user) return;
 
-        // Fallback: usa a banca ativa se não vier no payload
         const bankrollId = goalData.bankroll_id || get().activeBankrollId;
         
         if (!bankrollId) {
@@ -697,12 +706,11 @@ export const useBetStore = create<BetState>()(
             return;
         }
 
-        // Payload mapeado manualmente para garantir compatibilidade com colunas do DB
         const payload = {
             bankroll_id: bankrollId,
             title: goalData.title,
             category: goalData.category || 'general',
-            target: Number(goalData.target), // Garante number
+            target: Number(goalData.target),
             current: 0,
             type: goalData.type,
             deadline: goalData.deadline,
@@ -739,7 +747,6 @@ export const useBetStore = create<BetState>()(
         const user = get().user;
         if (!user) return;
 
-        // Monta payload parcial sanitizado
         const cleanPayload: any = {};
         if (data.title !== undefined) cleanPayload.title = data.title;
         if (data.category !== undefined) cleanPayload.category = data.category;
@@ -818,28 +825,134 @@ export const useBetStore = create<BetState>()(
         });
       },
 
+      // 🔥🔥🔥 HEDGE FUND METRICS ENGINE (Advanced Stats) 🔥🔥🔥
       getMetrics: () => {
         const state = get();
         const history = state.history || [];
-        const activeBets = history.filter(b => b.bankroll_id === state.activeBankrollId);
+        const activeBets = history.filter(b => b.bankroll_id === state.activeBankrollId && b.status !== 'void');
         
-        const settledBets = activeBets.filter(b => b.status !== 'pending' && b.status !== 'void');
-        
-        const totalBets = settledBets.length;
+        const settledBets = activeBets.filter(b => b.status !== 'pending');
         const wins = settledBets.filter(b => b.status === 'won' || b.status === 'half-won').length;
+        const totalProfit = settledBets.reduce((acc, b) => acc + b.profit, 0);
+        const totalStaked = settledBets.reduce((acc, b) => acc + b.stake, 0);
         
-        const totalProfit = activeBets.reduce((acc, b) => acc + (Number(b.profit) || 0), 0);
-        const totalStaked = settledBets.reduce((acc, b) => acc + (Number(b.stake) || 0), 0);
+        // --- CÁLCULO DE MAX DRAWDOWN ---
+        let peak = 0;
+        let maxDrawdown = 0;
+        let runningProfit = 0;
         
+        // Ordena por data para simular a curva de equidade corretamente
+        const sortedBets = [...settledBets].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+        
+        sortedBets.forEach(bet => {
+            runningProfit += bet.profit;
+            if (runningProfit > peak) peak = runningProfit;
+            
+            const drawdown = peak - runningProfit;
+            if (drawdown > maxDrawdown) maxDrawdown = drawdown;
+        });
+
+        // --- CÁLCULO DE VOLATILIDADE & SHARPE RATIO (Simplificado) ---
+        const returns = sortedBets.map(b => b.profit);
+        const meanReturn = returns.length > 0 ? totalProfit / returns.length : 0;
+        
+        // Variância = média dos quadrados das diferenças em relação à média
+        const variance = returns.reduce((sum, r) => sum + Math.pow(r - meanReturn, 2), 0) / (returns.length || 1);
+        const volatility = Math.sqrt(variance);
+        
+        // Sharpe Ratio = (Retorno Médio - RiskFree) / Volatilidade
+        // Assumindo RiskFree como 0 para apostas esportivas
+        const sharpeRatio = volatility > 0 ? meanReturn / volatility : 0;
+
+        // --- PROFIT FACTOR ---
+        const grossProfit = settledBets.filter(b => b.profit > 0).reduce((acc, b) => acc + b.profit, 0);
+        const grossLoss = Math.abs(settledBets.filter(b => b.profit < 0).reduce((acc, b) => acc + b.profit, 0));
+        const profitFactor = grossLoss > 0 ? grossProfit / grossLoss : grossProfit > 0 ? Infinity : 0;
+
         const streak = settledBets.slice(0, 5).map(b => b.status);
 
         return {
           totalProfit,
           roi: totalStaked > 0 ? (totalProfit / totalStaked) * 100 : 0,
-          winRate: totalBets > 0 ? (wins / totalBets) * 100 : 0,
-          totalBets: activeBets.length,
-          streak
+          winRate: settledBets.length > 0 ? (wins / settledBets.length) * 100 : 0,
+          totalBets: settledBets.length,
+          streak,
+          maxDrawdown,
+          sharpeRatio,
+          volatility,
+          profitFactor
         };
+      },
+
+      // 🔥🔥🔥 MINDSET INTELLIGENCE (Psycho-Analytics) 🔥🔥🔥
+      getMindsetAnalytics: () => {
+        const s = get();
+        const stats: Record<string, { profit: number; staked: number; wins: number; total: number }> = {
+            confident: { profit: 0, staked: 0, wins: 0, total: 0 },
+            disciplined: { profit: 0, staked: 0, wins: 0, total: 0 },
+            anxious: { profit: 0, staked: 0, wins: 0, total: 0 },
+            tilted: { profit: 0, staked: 0, wins: 0, total: 0 },
+        };
+
+        // Itera sobre o histórico de humor
+        s.mindsetHistory.forEach(entry => {
+            const entryDate = entry.date;
+            
+            // Busca apostas feitas no mesmo dia desse registro de humor
+            // (Poderia ser refinado para usar hora, mas data já é um bom proxy)
+            const dayBets = s.history.filter(b => 
+                b.date.startsWith(entryDate) && 
+                b.bankroll_id === s.activeBankrollId && 
+                b.status !== 'pending' && 
+                b.status !== 'void'
+            );
+            
+            dayBets.forEach(bet => {
+                if (stats[entry.mood]) {
+                    stats[entry.mood].profit += bet.profit;
+                    stats[entry.mood].staked += bet.stake;
+                    stats[entry.mood].total += 1;
+                    if (bet.status === 'won' || bet.status === 'half-won') stats[entry.mood].wins += 1;
+                }
+            });
+        });
+
+        const moodCorrelation: any = {};
+        let msiScore = 50; // Base score (Neutro)
+
+        Object.keys(stats).forEach(key => {
+            const d = stats[key];
+            moodCorrelation[key as MoodType] = {
+                roi: d.staked > 0 ? (d.profit / d.staked) * 100 : 0,
+                winRate: d.total > 0 ? (d.wins / d.total) * 100 : 0,
+                count: d.total
+            };
+        });
+
+        // --- MSI ALGORITHM (Mental Stability Index) ---
+        // Pondera o score baseado no ROI obtido em cada estado emocional
+        
+        const roiD = moodCorrelation.disciplined.roi;
+        const roiC = moodCorrelation.confident.roi;
+        const roiA = moodCorrelation.anxious.roi;
+        const roiT = moodCorrelation.tilted.roi;
+
+        // Disciplina positiva aumenta muito o score
+        msiScore += (roiD > 0 ? 15 : 5); 
+        
+        // Confiança só é boa se tiver resultado (evita excesso de confiança)
+        msiScore += (roiC > 0 ? 10 : -5); 
+        
+        // Ansiedade pune o score se o resultado for negativo
+        msiScore -= (roiA < 0 ? 15 : 5); 
+        
+        // Tilt pune severamente
+        msiScore -= (roiT < 0 ? 25 : 10); 
+
+        // Normalização 0-100
+        msiScore = Math.max(0, Math.min(100, msiScore));
+
+        return { msi: msiScore, moodCorrelation };
       }
     }),
     {
