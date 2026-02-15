@@ -293,12 +293,19 @@ const Goals: React.FC = () => {
     <div className="space-y-8 max-w-7xl mx-auto pb-20 w-full overflow-x-hidden">
       <header className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
-          <h1 className="text-3xl font-black text-slate-900 dark:text-white tracking-tighter uppercase italic">
-  Metas & Objetivos <span className="text-slate-400 dark:text-slate-700 text-lg">///</span>
-</h1>
-<p className="text-slate-500 dark:text-slate-400 text-xs font-bold mt-2 uppercase tracking-widest">
-  Gestão de performance orientada a resultados nesta banca.
-</p></div>
+  <h1 className="text-3xl font-black text-slate-900 dark:text-white tracking-tighter uppercase italic">
+    Metas & Objetivos <span className="text-slate-400 dark:text-slate-700 text-lg">///</span>
+  </h1>
+
+  <div className="flex items-center gap-2 mt-3 text-[10px] font-black uppercase tracking-[0.25em] text-emerald-600 dark:text-emerald-400">
+    <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse shadow-[0_0_8px_#10b981]"></span>
+    Strategic Performance Engine
+  </div>
+
+  <p className="text-slate-500 dark:text-slate-400 text-xs font-bold mt-2 uppercase tracking-widest">
+    Gestão de performance orientada a resultados nesta banca.
+  </p>
+</div>
         <button onClick={() => setView('config')} className="bg-emerald-600 hover:bg-emerald-500 text-white px-6 py-3 rounded-xl flex items-center gap-2 font-bold uppercase text-xs tracking-wider transition-all shadow-lg shadow-emerald-500/20 active:scale-95">
           <Plus size={16} /> Criar Nova Meta
         </button>
