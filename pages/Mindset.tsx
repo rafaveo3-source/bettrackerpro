@@ -160,18 +160,40 @@ const Mindset: React.FC = () => {
           </h3>
         </div>
 
-        <div className="bg-white dark:bg-[#0f172a]/60 p-6 rounded-2xl border">
-          <ResponsiveContainer width="100%" height={100}>
-            <BarChart data={chartData}>
-              <Tooltip contentStyle={{ background: '#0f172a', color: '#fff' }} />
-              <Bar dataKey="count">
-                {chartData.map((entry, index) => (
-                  <Cell key={index} fill={entry.color} />
-                ))}
-              </Bar>
-            </BarChart>
-          </ResponsiveContainer>
-        </div>
+        <div className="bg-white dark:bg-[#0f172a]/60 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 relative overflow-hidden">
+
+  {/* Label discreta */}
+  <p className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-4">
+    Distribuição Emocional
+  </p>
+
+  <ResponsiveContainer width="100%" height={160}>
+    <BarChart data={chartData} barCategoryGap="25%">
+      
+      <Tooltip
+        cursor={{ fill: 'rgba(148,163,184,0.1)' }}
+        contentStyle={{
+          background: '#ffffff',
+          border: '1px solid #e2e8f0',
+          borderRadius: '12px',
+          fontSize: '12px',
+          fontWeight: 'bold'
+        }}
+        labelStyle={{ color: '#64748b' }}
+      />
+
+      <Bar 
+        dataKey="count" 
+        radius={[8, 8, 0, 0]}
+      >
+        {chartData.map((entry, index) => (
+          <Cell key={index} fill={entry.color} />
+        ))}
+      </Bar>
+    </BarChart>
+  </ResponsiveContainer>
+
+</div>
       </div>
 
       {/* FORM */}
