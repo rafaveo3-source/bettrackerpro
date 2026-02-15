@@ -6,7 +6,7 @@ const Analytics: React.FC = () => {
   const { history, activeBankrollId, displayMode, unitSize, bankrolls } = useBetStore();
   const activeBR = bankrolls.find(b => b.id === activeBankrollId);
 
-  // ✅ Função Helper de Formatação
+  // ✅ Helper de Formatação (Moeda vs Unidade)
   const formatValue = (value: number) => {
     if (displayMode === 'units') {
         const units = value / (unitSize || 100);
@@ -68,10 +68,22 @@ const Analytics: React.FC = () => {
 
   return (
     <div className="space-y-6 pb-20">
-      <div>
-        <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Análise de Dados</h1>
-        <p className="text-slate-500 dark:text-slate-400">Análise detalhada da sua performance nesta banca.</p>
-      </div>
+      
+      {/* Header Unificado com Estilo do Dashboard */}
+      <header className="border-b border-slate-200 dark:border-slate-800 pb-6">
+        <div>
+            <div className="flex items-center gap-2 text-emerald-500 text-[9px] font-mono font-bold uppercase tracking-widest mb-1">
+                <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse shadow-[0_0_8px_#10b981]"></span>
+                Intelligence Module
+            </div>
+            <h1 className="text-3xl font-black text-slate-900 dark:text-white tracking-tighter uppercase italic">
+                Análise de Dados <span className="text-slate-400 dark:text-slate-700 text-lg">///</span>
+            </h1>
+            <p className="text-slate-500 dark:text-slate-400 text-xs font-bold mt-2 uppercase tracking-widest">
+                Métricas detalhadas da sua performance nesta banca.
+            </p>
+        </div>
+      </header>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Profit by Sport */}
@@ -83,7 +95,6 @@ const Analytics: React.FC = () => {
                         <CartesianGrid strokeDasharray="3 3" stroke="#94a3b8" strokeOpacity={0.2} vertical={false} />
                         <XAxis dataKey="name" stroke="#64748b" fontSize={12} tickLine={false} axisLine={false} />
                         <YAxis stroke="#64748b" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(val) => displayMode === 'units' ? `${(val/unitSize).toFixed(0)}u` : `${val}`} width={40} />
-                        {/* ✅ Tooltip Corrigido */}
                         <Tooltip 
                             cursor={{fill: '#94a3b8', opacity: 0.1}}
                             contentStyle={{ 
@@ -115,7 +126,6 @@ const Analytics: React.FC = () => {
                         <CartesianGrid strokeDasharray="3 3" stroke="#94a3b8" strokeOpacity={0.2} horizontal={false} />
                         <XAxis type="number" stroke="#64748b" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(val) => displayMode === 'units' ? `${(val/unitSize).toFixed(0)}u` : `${val}`} />
                         <YAxis dataKey="name" type="category" stroke="#64748b" fontSize={12} tickLine={false} axisLine={false} width={100} />
-                        {/* ✅ Tooltip Corrigido */}
                         <Tooltip 
                             cursor={{fill: '#94a3b8', opacity: 0.1}}
                             contentStyle={{ 
@@ -157,7 +167,6 @@ const Analytics: React.FC = () => {
                                 <Cell key={`cell-${index}`} fill={entry.color} stroke="none" />
                             ))}
                         </Pie>
-                        {/* ✅ Tooltip Corrigido */}
                         <Tooltip 
                             contentStyle={{ 
                                 backgroundColor: '#0f172a', 
