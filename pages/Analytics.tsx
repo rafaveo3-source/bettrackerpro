@@ -1,5 +1,5 @@
-import React from 'react';
-import { useBetStore } from '../store/useBetStore';
+import React from 'react'
+import { useBetStore } from '../store/useBetStore'
 import {
   BarChart,
   Bar,
@@ -12,8 +12,8 @@ import {
   PieChart,
   Pie,
   Legend
-} from 'recharts';
-import { BarChart4 } from 'lucide-react';
+} from 'recharts'
+import { BarChart4 } from 'lucide-react'
 
 const Analytics: React.FC = () => {
   const {
@@ -22,146 +22,120 @@ const Analytics: React.FC = () => {
     displayMode,
     unitSize,
     bankrolls
-  } = useBetStore();
+  } = useBetStore()
 
   const activeBR = bankrolls.find(
     b => b.id === activeBankrollId
-  );
+  )
 
   const formatValue = (value: number) => {
     if (displayMode === 'units') {
-      const units = value / (unitSize || 100);
-      return `${units >= 0 ? '+' : ''}${units.toFixed(
-        2
-      )}u`;
+      const units = value / (unitSize || 100)
+      return `${units >= 0 ? '+' : ''}${units.toFixed(2)}u`
     }
 
     return new Intl.NumberFormat('pt-BR', {
       style: 'currency',
       currency: activeBR?.currency || 'BRL'
-    }).format(value);
-  };
+    }).format(value)
+  }
 
   const bankrollBets = history.filter(
     b =>
       b.bankrollId === activeBankrollId &&
       b.status !== 'void' &&
       b.status !== 'refunded'
-  );
+  )
 
-  /* -----------------------------
+  /* =============================
      PROFIT BY SPORT
-  ----------------------------- */
+  ============================== */
 
-  const sportPerformance: Record<string, number> = {};
+  const sportPerformance: Record<string, number> = {}
 
   bankrollBets.forEach(bet => {
-    if (bet.status === 'pending') return;
+    if (bet.status === 'pending') return
     if (!sportPerformance[bet.sport])
-      sportPerformance[bet.sport] = 0;
-    sportPerformance[bet.sport] += bet.profit;
-  });
+      sportPerformance[bet.sport] = 0
+    sportPerformance[bet.sport] += bet.profit
+  })
 
   const barData = Object.keys(
     sportPerformance
   ).map(sport => ({
     name: sport,
     profit: sportPerformance[sport]
-  }));
+  }))
 
-  /* -----------------------------
+  /* =============================
      PROFIT BY METHOD
-  ----------------------------- */
+  ============================== */
 
-  const methodPerformance: Record<
-    string,
-    number
-  > = {};
+  const methodPerformance: Record<string, number> =
+    {}
 
   bankrollBets.forEach(bet => {
-    if (bet.status === 'pending') return;
-    const method = bet.method || 'Sem Método';
+    if (bet.status === 'pending') return
+    const method = bet.method || 'Sem Método'
     if (!methodPerformance[method])
-      methodPerformance[method] = 0;
-    methodPerformance[method] += bet.profit;
-  });
+      methodPerformance[method] = 0
+    methodPerformance[method] += bet.profit
+  })
 
   const methodBarData = Object.keys(
     methodPerformance
   ).map(method => ({
     name: method,
     profit: methodPerformance[method]
-  }));
+  }))
 
-  /* -----------------------------
+  /* =============================
      STATUS DISTRIBUTION
-  ----------------------------- */
+  ============================== */
 
   const statusCount = {
     won: 0,
     lost: 0,
     pending: 0,
     refunded: 0
-  };
+  }
 
   const allBets = history.filter(
     b => b.bankrollId === activeBankrollId
-  );
+  )
 
   allBets.forEach(bet => {
-    if (
-      ['won', 'half-won'].includes(
-        bet.status
-      )
-    )
-      statusCount.won++;
+    if (['won', 'half-won'].includes(bet.status))
+      statusCount.won++
     else if (
-      ['lost', 'half-lost'].includes(
-        bet.status
-      )
+      ['lost', 'half-lost'].includes(bet.status)
     )
-      statusCount.lost++;
+      statusCount.lost++
     else if (
       bet.status === 'refunded' ||
       bet.status === 'void'
     )
-      statusCount.refunded++;
+      statusCount.refunded++
     else if (bet.status === 'pending')
-      statusCount.pending++;
+      statusCount.pending++
     else if (bet.status === 'cashout') {
-      if (bet.profit >= 0)
-        statusCount.won++;
-      else statusCount.lost++;
+      bet.profit >= 0
+        ? statusCount.won++
+        : statusCount.lost++
     }
-  });
+  })
 
   const pieData = [
-    {
-      name: 'Green',
-      value: statusCount.won,
-      color: '#10b981'
-    },
-    {
-      name: 'Red',
-      value: statusCount.lost,
-      color: '#ef4444'
-    },
-    {
-      name: 'Reembolso',
-      value: statusCount.refunded,
-      color: '#64748b'
-    },
-    {
-      name: 'Pendente',
-      value: statusCount.pending,
-      color: '#eab308'
-    }
-  ].filter(d => d.value > 0);
+    { name: 'Green', value: statusCount.won, color: '#10b981' },
+    { name: 'Red', value: statusCount.lost, color: '#ef4444' },
+    { name: 'Reembolso', value: statusCount.refunded, color: '#64748b' },
+    { name: 'Pendente', value: statusCount.pending, color: '#eab308' }
+  ].filter(d => d.value > 0)
 
   return (
-    <div className="space-y-10 pb-20 max-w-7xl mx-auto">
+    <div className="space-y-10 pb-20 max-w-7xl mx-auto bg-slate-50 dark:bg-[#0b1220]">
 
-      {/* HEADER PADRÃO DO SISTEMA */}
+      {/* HEADER */}
       <header className="border-b border-slate-200 dark:border-slate-800 pb-6">
 
         <div className="flex items-center gap-2 text-emerald-500 text-[10px] font-mono font-bold uppercase tracking-widest mb-2">
@@ -181,10 +155,10 @@ const Analytics: React.FC = () => {
         </p>
       </header>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
 
         {/* LUCRO POR ESPORTE */}
-        <div className="bg-white dark:bg-[#0f172a]/50 border border-slate-200 dark:border-slate-800 rounded-3xl p-6">
+        <div className="rounded-3xl bg-white dark:bg-[#0f172a] ring-1 ring-slate-200 dark:ring-slate-800 shadow-sm p-8">
 
           <h3 className="text-xs font-black uppercase tracking-widest text-slate-400 mb-6 flex items-center gap-2">
             <BarChart4 size={14} />
@@ -195,8 +169,8 @@ const Analytics: React.FC = () => {
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={barData}>
                 <CartesianGrid
-                  strokeDasharray="4 4"
-                  strokeOpacity={0.08}
+                  strokeDasharray="3 3"
+                  strokeOpacity={0.05}
                   vertical={false}
                 />
 
@@ -215,18 +189,16 @@ const Analytics: React.FC = () => {
                   axisLine={false}
                   tickFormatter={val =>
                     displayMode === 'units'
-                      ? `${(
-                          val / unitSize
-                        ).toFixed(0)}u`
+                      ? `${(val / unitSize).toFixed(0)}u`
                       : val
                   }
                 />
 
                 <Tooltip
                   contentStyle={{
-                    backgroundColor:
-                      '#0b1220',
-                    borderRadius: '12px'
+                    backgroundColor: '#111827',
+                    borderRadius: '12px',
+                    border: '1px solid #1f2937'
                   }}
                   formatter={(value: number) => [
                     formatValue(value),
@@ -234,22 +206,17 @@ const Analytics: React.FC = () => {
                   ]}
                 />
 
-                <Bar
-                  dataKey="profit"
-                  radius={[8, 8, 0, 0]}
-                >
-                  {barData.map(
-                    (entry, index) => (
-                      <Cell
-                        key={index}
-                        fill={
-                          entry.profit >= 0
-                            ? '#10b981'
-                            : '#ef4444'
-                        }
-                      />
-                    )
-                  )}
+                <Bar dataKey="profit" radius={[10, 10, 0, 0]}>
+                  {barData.map((entry, index) => (
+                    <Cell
+                      key={index}
+                      fill={
+                        entry.profit >= 0
+                          ? '#10b981'
+                          : '#ef4444'
+                      }
+                    />
+                  ))}
                 </Bar>
               </BarChart>
             </ResponsiveContainer>
@@ -257,7 +224,7 @@ const Analytics: React.FC = () => {
         </div>
 
         {/* LUCRO POR MÉTODO */}
-        <div className="bg-white dark:bg-[#0f172a]/50 border border-slate-200 dark:border-slate-800 rounded-3xl p-6">
+        <div className="rounded-3xl bg-white dark:bg-[#0f172a] ring-1 ring-slate-200 dark:ring-slate-800 shadow-sm p-8">
 
           <h3 className="text-xs font-black uppercase tracking-widest text-slate-400 mb-6">
             Lucro por Método
@@ -265,13 +232,11 @@ const Analytics: React.FC = () => {
 
           <div className="h-[320px]">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart
-                data={methodBarData}
-                layout="vertical"
-              >
+              <BarChart data={methodBarData} layout="vertical">
+
                 <CartesianGrid
-                  strokeDasharray="4 4"
-                  strokeOpacity={0.08}
+                  strokeDasharray="3 3"
+                  strokeOpacity={0.05}
                   horizontal={false}
                 />
 
@@ -283,9 +248,7 @@ const Analytics: React.FC = () => {
                   axisLine={false}
                   tickFormatter={val =>
                     displayMode === 'units'
-                      ? `${(
-                          val / unitSize
-                        ).toFixed(0)}u`
+                      ? `${(val / unitSize).toFixed(0)}u`
                       : val
                   }
                 />
@@ -297,14 +260,14 @@ const Analytics: React.FC = () => {
                   fontSize={11}
                   tickLine={false}
                   axisLine={false}
-                  width={120}
+                  width={130}
                 />
 
                 <Tooltip
                   contentStyle={{
-                    backgroundColor:
-                      '#0b1220',
-                    borderRadius: '12px'
+                    backgroundColor: '#111827',
+                    borderRadius: '12px',
+                    border: '1px solid #1f2937'
                   }}
                   formatter={(value: number) => [
                     formatValue(value),
@@ -312,22 +275,17 @@ const Analytics: React.FC = () => {
                   ]}
                 />
 
-                <Bar
-                  dataKey="profit"
-                  radius={[0, 8, 8, 0]}
-                >
-                  {methodBarData.map(
-                    (entry, index) => (
-                      <Cell
-                        key={index}
-                        fill={
-                          entry.profit >= 0
-                            ? '#10b981'
-                            : '#ef4444'
-                        }
-                      />
-                    )
-                  )}
+                <Bar dataKey="profit" radius={[0, 10, 10, 0]}>
+                  {methodBarData.map((entry, index) => (
+                    <Cell
+                      key={index}
+                      fill={
+                        entry.profit >= 0
+                          ? '#10b981'
+                          : '#ef4444'
+                      }
+                    />
+                  ))}
                 </Bar>
               </BarChart>
             </ResponsiveContainer>
@@ -335,40 +293,38 @@ const Analytics: React.FC = () => {
         </div>
 
         {/* DISTRIBUIÇÃO */}
-        <div className="bg-white dark:bg-[#0f172a]/50 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 lg:col-span-2">
+        <div className="rounded-3xl bg-white dark:bg-[#0f172a] ring-1 ring-slate-200 dark:ring-slate-800 shadow-sm p-8 lg:col-span-2">
 
           <h3 className="text-xs font-black uppercase tracking-widest text-slate-400 mb-6">
             Distribuição de Resultados
           </h3>
 
-          <div className="h-[320px]">
+          <div className="h-[340px]">
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
                 <Pie
                   data={pieData}
                   cx="50%"
                   cy="50%"
-                  innerRadius={70}
-                  outerRadius={110}
-                  paddingAngle={4}
+                  innerRadius={80}
+                  outerRadius={120}
+                  paddingAngle={3}
                   dataKey="value"
                 >
-                  {pieData.map(
-                    (entry, index) => (
-                      <Cell
-                        key={index}
-                        fill={entry.color}
-                        stroke="none"
-                      />
-                    )
-                  )}
+                  {pieData.map((entry, index) => (
+                    <Cell
+                      key={index}
+                      fill={entry.color}
+                      stroke="none"
+                    />
+                  ))}
                 </Pie>
 
                 <Tooltip
                   contentStyle={{
-                    backgroundColor:
-                      '#0b1220',
-                    borderRadius: '12px'
+                    backgroundColor: '#111827',
+                    borderRadius: '12px',
+                    border: '1px solid #1f2937'
                   }}
                 />
 
@@ -380,7 +336,7 @@ const Analytics: React.FC = () => {
 
       </div>
     </div>
-  );
-};
+  )
+}
 
-export default Analytics;
+export default Analytics
