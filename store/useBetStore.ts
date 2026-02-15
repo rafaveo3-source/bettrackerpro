@@ -141,8 +141,8 @@ interface BetState {
   addBet: (bet: Omit<Bet, 'id' | 'profit' | 'bankrollId'> & { cashoutValue?: number }) => Promise<void>;
   updateBet: (id: string, data: Partial<Bet> & { cashoutValue?: number }) => Promise<void>;
   removeBet: (id: string) => Promise<void>;
-  addTransaction: (transaction: Omit<Transaction, 'id' | 'bankrollId'>) => void;
-  removeTransaction: (id: string) => void;
+  addTransaction: (transaction: Omit<Transaction, 'id' | 'bankrollId'>) => Promise<void>;
+removeTransaction: (id: string) => Promise<void>;
   addMethod: (name: string) => Promise<void>;
   removeMethod: (id: string) => void;
   
@@ -271,6 +271,27 @@ export const useBetStore = create<BetState>()(
             });
           }
 
+          // CARREGAR TRANSACTIONS
+const { data: txData, error: txError } = await supabase
+  .from('transactions')
+  .select('*')
+  .eq('user_id', userId)
+  .order('created_at', { ascending: false });
+
+if (txError) console.error("Erro ao carregar transações:", txError.message);
+else if (txData) {
+  const formattedTx = txData.map((t: any) => ({
+    id: t.id,
+    bankrollId: t.bankroll_id,
+    date: t.created_at,
+    type: t.type,
+    amount: Number(t.amount),
+    description: t.description
+  }));
+
+  set({ transactions: formattedTx });
+}
+
           // 4. CARREGAR MINDSET
           const { data: mindsetData, error: mindsetError } = await supabase
             .from('mindset_entries')
@@ -311,13 +332,16 @@ export const useBetStore = create<BetState>()(
           get().recalculateBankroll();
         } else {
           set({
-            isAuthenticated: false,
-            user: null,
-            history: [],
-            mindsetHistory: [],
-            goals: []
-          });
-        }
+  isAuthenticated: false,
+  user: null,
+  history: [],
+  transactions: [],
+  mindsetHistory: [],
+  goals: [],
+  bankrolls: [],
+  activeBankrollId: '',
+  currentBankrollBalance: 0
+});
       },
 
       logout: async () => {
@@ -626,28 +650,71 @@ export const useBetStore = create<BetState>()(
         get().recalculateBankroll();
       },
 
-      addTransaction: (newTx) => {
-        if (get().isTiltLocked()) return;
-        set((state) => ({
-          transactions: [
-            { 
-                ...newTx, 
-                id: Math.random().toString(36).substr(2, 9), 
-                bankrollId: state.activeBankrollId,
-                amount: Number(newTx.amount) 
-            },
-            ...state.transactions
-          ]
-        }));
-        get().recalculateBankroll();
-      },
+      addTransaction: async (newTx) => {
+  if (get().isTiltLocked()) return;
 
-      removeTransaction: (id) => {
-        set((state) => ({
-          transactions: state.transactions.filter(t => t.id !== id)
-        }));
-        get().recalculateBankroll();
-      },
+  const user = get().user;
+  const activeBankrollId = get().activeBankrollId;
+  if (!user || !activeBankrollId) return;
+
+  const payload = {
+    user_id: user.id,
+    bankroll_id: activeBankrollId,
+    type: newTx.type,
+    amount: Number(newTx.amount),
+    description: newTx.description || '',
+  };
+
+  const { data, error } = await supabase
+    .from('transactions')
+    .insert([payload])
+    .select()
+    .single();
+
+  if (error) {
+    console.error("Erro ao adicionar transação:", error.message);
+    return;
+  }
+
+  if (data) {
+    const formatted = {
+      id: data.id,
+      bankrollId: data.bankroll_id,
+      date: data.created_at,
+      type: data.type,
+      amount: Number(data.amount),
+      description: data.description
+    };
+
+    set((state) => ({
+      transactions: [formatted, ...state.transactions]
+    }));
+
+    get().recalculateBankroll();
+  }
+},
+
+removeTransaction: async (id) => {
+  const user = get().user;
+  if (!user) return;
+
+  const { error } = await supabase
+    .from('transactions')
+    .delete()
+    .eq('id', id)
+    .eq('user_id', user.id);
+
+  if (error) {
+    console.error("Erro ao remover transação:", error.message);
+    return;
+  }
+
+  set((state) => ({
+    transactions: state.transactions.filter(t => t.id !== id)
+  }));
+
+  get().recalculateBankroll();
+},
 
       addMethod: async (name) => {
         const user = get().user;
@@ -1008,9 +1075,17 @@ export const useBetStore = create<BetState>()(
         return { msi: msiScore, moodCorrelation };
       }
     }),
-    {
-      name: 'bettracker-storage-v5',
-      storage: createJSONStorage(() => localStorage),
-    }
+{
+  name: 'bettracker-storage-v5',
+  storage: createJSONStorage(() => localStorage),
+
+  // 🔥 Persistir apenas preferências locais
+  partialize: (state) => ({
+    isDarkMode: state.isDarkMode,
+    primaryColor: state.primaryColor,
+    displayMode: state.displayMode,
+    unitSize: state.unitSize,
+  }),
+}
   )
 );
