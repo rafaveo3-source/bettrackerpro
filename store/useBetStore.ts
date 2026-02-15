@@ -380,35 +380,72 @@ export const useBetStore = create<BetState>()(
       },
 
       removeBankroll: async (id) => {
-        const user = get().user;
-        if (!user) return;
+  const user = get().user;
+  if (!user) return;
 
-        if (get().bankrolls.length <= 1) return;
+  try {
+    // 🔥 1. Deletar todas as apostas vinculadas à banca
+    const { error: betsError } = await supabase
+      .from('bets')
+      .delete()
+      .eq('bankroll_id', id)
+      .eq('user_id', user.id);
 
-        const { error } = await supabase
-          .from('bankrolls')
-          .delete()
-          .eq('id', id)
-          .eq('user_id', user.id);
+    if (betsError) {
+      console.error("Erro ao deletar bets da banca:", betsError.message);
+      return;
+    }
 
-        if (error) {
-          console.error("Erro ao remover banca:", error.message);
-          return;
-        }
+    // 🔥 2. Deletar todas as metas vinculadas à banca
+    const { error: goalsError } = await supabase
+      .from('goals')
+      .delete()
+      .eq('bankroll_id', id)
+      .eq('user_id', user.id);
 
-        set((state) => {
-          const newBankrolls = state.bankrolls.filter(b => b.id !== id);
-          return {
-            bankrolls: newBankrolls,
-            activeBankrollId:
-              state.activeBankrollId === id && newBankrolls.length > 0
-                ? newBankrolls[0].id
-                : state.activeBankrollId
-          };
-        });
+    if (goalsError) {
+      console.error("Erro ao deletar metas da banca:", goalsError.message);
+      return;
+    }
 
-        get().recalculateBankroll();
-      },
+    // 🔥 3. Deletar a banca
+    const { error: brError } = await supabase
+      .from('bankrolls')
+      .delete()
+      .eq('id', id)
+      .eq('user_id', user.id);
+
+    if (brError) {
+      console.error("Erro ao remover banca:", brError.message);
+      return;
+    }
+
+    // 🔥 4. Atualizar estado local completamente
+    set((state) => {
+      const newBankrolls = state.bankrolls.filter(b => b.id !== id);
+
+      const newActiveId =
+        state.activeBankrollId === id
+          ? newBankrolls.length > 0
+            ? newBankrolls[0].id
+            : ''
+          : state.activeBankrollId;
+
+      return {
+        bankrolls: newBankrolls,
+        activeBankrollId: newActiveId,
+        history: state.history.filter(b => b.bankroll_id !== id),
+        transactions: state.transactions.filter(t => t.bankrollId !== id),
+        goals: state.goals.filter(g => g.bankroll_id !== id)
+      };
+    });
+
+    get().recalculateBankroll();
+
+  } catch (err) {
+    console.error("Erro inesperado ao remover banca:", err);
+  }
+},
 
       setActiveBankroll: (id) => {
         set({ activeBankrollId: id });
