@@ -293,11 +293,12 @@ const Goals: React.FC = () => {
     <div className="space-y-8 max-w-7xl mx-auto pb-20 w-full overflow-x-hidden">
       <header className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
-          <h1 className="text-3xl font-black text-slate-900 dark:text-white uppercase tracking-tighter italic flex items-center gap-3">
-            Metas & Objetivos <span className="text-xs not-italic bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-400 px-2 py-1 rounded border border-slate-300 dark:border-slate-700 tracking-normal">HEDGE</span>
-          </h1>
-          <p className="text-slate-500 dark:text-slate-400 text-xs font-bold uppercase tracking-widest mt-2">Gestão de Performance Orientada a Resultados</p>
-        </div>
+          <h1 className="text-3xl font-black text-slate-900 dark:text-white tracking-tighter uppercase italic">
+  Metas & Objetivos <span className="text-slate-400 dark:text-slate-700 text-lg">///</span>
+</h1>
+<p className="text-slate-500 dark:text-slate-400 text-xs font-bold mt-2 uppercase tracking-widest">
+  Gestão de performance orientada a resultados nesta banca.
+</p></div>
         <button onClick={() => setView('config')} className="bg-emerald-600 hover:bg-emerald-500 text-white px-6 py-3 rounded-xl flex items-center gap-2 font-bold uppercase text-xs tracking-wider transition-all shadow-lg shadow-emerald-500/20 active:scale-95">
           <Plus size={16} /> Criar Nova Meta
         </button>
