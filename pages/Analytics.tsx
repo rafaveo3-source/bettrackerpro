@@ -3,7 +3,17 @@ import { useBetStore } from '../store/useBetStore';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, PieChart, Pie, Legend } from 'recharts';
 
 const Analytics: React.FC = () => {
-  const { history, activeBankrollId } = useBetStore();
+  const { history, activeBankrollId, displayMode, unitSize, bankrolls } = useBetStore();
+  const activeBR = bankrolls.find(b => b.id === activeBankrollId);
+
+  // ✅ Função Helper de Formatação
+  const formatValue = (value: number) => {
+    if (displayMode === 'units') {
+        const units = value / (unitSize || 100);
+        return `${units >= 0 ? '+' : ''}${units.toFixed(2)}u`;
+    }
+    return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: activeBR?.currency || 'BRL' }).format(value);
+  };
 
   const bankrollBets = history.filter(b => b.bankrollId === activeBankrollId && b.status !== 'void' && b.status !== 'refunded');
 
@@ -35,7 +45,6 @@ const Analytics: React.FC = () => {
   }));
 
   // Process Data: Status Distribution
-  // Agora inclui TODOS os status relevantes para visualização precisa
   const statusCount = { won: 0, lost: 0, pending: 0, refunded: 0 };
   const allBets = history.filter(b => b.bankrollId === activeBankrollId);
   
@@ -44,9 +53,6 @@ const Analytics: React.FC = () => {
     else if (['lost', 'half-lost'].includes(bet.status)) statusCount.lost++;
     else if (bet.status === 'refunded' || bet.status === 'void') statusCount.refunded++;
     else if (bet.status === 'pending') statusCount.pending++;
-    // Cashout geralmente é considerado "won" ou "lost" dependendo do lucro, mas se quiser separado, precisaria de outro contador.
-    // Por enquanto, cashout com lucro entra em won, com prejuízo em lost, ou se status for explicitamente 'cashout' e não tratado acima, pode cair em pending se não ajustar.
-    // Ajuste fino: Se status for 'cashout', verificar lucro.
     else if (bet.status === 'cashout') {
         if (bet.profit >= 0) statusCount.won++;
         else statusCount.lost++;
@@ -54,10 +60,10 @@ const Analytics: React.FC = () => {
   });
   
   const pieData = [
-    { name: 'Green', value: statusCount.won, color: '#10b981' }, // Emerald
-    { name: 'Red', value: statusCount.lost, color: '#ef4444' }, // Red
-    { name: 'Reembolso', value: statusCount.refunded, color: '#64748b' }, // Slate
-    { name: 'Pendente', value: statusCount.pending, color: '#eab308' }, // Yellow
+    { name: 'Green', value: statusCount.won, color: '#10b981' }, 
+    { name: 'Red', value: statusCount.lost, color: '#ef4444' }, 
+    { name: 'Reembolso', value: statusCount.refunded, color: '#64748b' }, 
+    { name: 'Pendente', value: statusCount.pending, color: '#eab308' }, 
   ].filter(d => d.value > 0);
 
   return (
@@ -76,7 +82,7 @@ const Analytics: React.FC = () => {
                     <BarChart data={barData}>
                         <CartesianGrid strokeDasharray="3 3" stroke="#94a3b8" strokeOpacity={0.2} vertical={false} />
                         <XAxis dataKey="name" stroke="#64748b" fontSize={12} tickLine={false} axisLine={false} />
-                        <YAxis stroke="#64748b" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(val) => `R$${val}`} />
+                        <YAxis stroke="#64748b" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(val) => displayMode === 'units' ? `${(val/unitSize).toFixed(0)}u` : `${val}`} width={40} />
                         {/* ✅ Tooltip Corrigido */}
                         <Tooltip 
                             cursor={{fill: '#94a3b8', opacity: 0.1}}
@@ -87,6 +93,7 @@ const Analytics: React.FC = () => {
                                 color: '#fff' 
                             }}
                             itemStyle={{ color: '#fff' }}
+                            formatter={(value: number) => [formatValue(value), 'Lucro']}
                             labelStyle={{ color: '#94a3b8' }}
                         />
                         <Bar dataKey="profit" radius={[4, 4, 0, 0]}>
@@ -106,7 +113,7 @@ const Analytics: React.FC = () => {
                 <ResponsiveContainer width="100%" height="100%">
                     <BarChart data={methodBarData} layout="vertical">
                         <CartesianGrid strokeDasharray="3 3" stroke="#94a3b8" strokeOpacity={0.2} horizontal={false} />
-                        <XAxis type="number" stroke="#64748b" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(val) => `R$${val}`} />
+                        <XAxis type="number" stroke="#64748b" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(val) => displayMode === 'units' ? `${(val/unitSize).toFixed(0)}u` : `${val}`} />
                         <YAxis dataKey="name" type="category" stroke="#64748b" fontSize={12} tickLine={false} axisLine={false} width={100} />
                         {/* ✅ Tooltip Corrigido */}
                         <Tooltip 
@@ -118,6 +125,7 @@ const Analytics: React.FC = () => {
                                 color: '#fff' 
                             }}
                             itemStyle={{ color: '#fff' }}
+                            formatter={(value: number) => [formatValue(value), 'Lucro']}
                             labelStyle={{ color: '#94a3b8' }}
                         />
                         <Bar dataKey="profit" radius={[0, 4, 4, 0]}>
