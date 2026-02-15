@@ -55,25 +55,25 @@ const Layout: React.FC<LayoutProps> = ({ children, currentView, setView }) => {
   if (!isAuthenticated) return <Auth />;
 
   return (
-    <div className="flex min-h-screen font-sans bg-slate-50 dark:bg-slate-950 transition-colors duration-300">
+    <div className="flex min-h-screen font-sans bg-slate-50 dark:bg-slate-950 transition-colors duration-300 w-full overflow-x-hidden">
       <Sidebar currentView={currentView} setView={setView} isOpen={isSidebarOpen} setIsOpen={setIsSidebarOpen} />
 
-      <div className="flex-1 lg:ml-72 transition-all duration-300">
+      <div className="flex-1 lg:ml-72 transition-all duration-300 min-w-0">
         {locked && (
             <div className="bg-red-600 text-white px-4 py-3 text-center text-[10px] font-black flex items-center justify-center gap-2 sticky top-0 z-50 uppercase tracking-widest shadow-xl">
                 <Lock size={14} /> Protocolo de Tilt Ativo. Bloqueio até {new Date(tiltLockUntil!).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
             </div>
         )}
 
-        <div className="p-6 pt-24 lg:p-12 lg:pt-12 max-w-[1400px] mx-auto">
+        <div className="p-4 pt-20 lg:p-12 lg:pt-12 max-w-[1400px] mx-auto w-full">
           {children}
         </div>
       </div>
 
       {!locked && (
-          <button onClick={() => { setBetToEdit(undefined); setIsModalOpen(true); }} className="fixed bottom-10 right-10 bg-emerald-500 hover:bg-emerald-400 text-white dark:text-[#020617] p-5 rounded-[2rem] shadow-2xl shadow-emerald-500/20 transition-all hover:scale-110 active:scale-95 z-40 flex items-center gap-3 group border-4 border-white dark:border-slate-900">
+          <button onClick={() => { setBetToEdit(undefined); setIsModalOpen(true); }} className="fixed bottom-6 right-6 lg:bottom-10 lg:right-10 bg-emerald-500 hover:bg-emerald-400 text-white dark:text-[#020617] p-4 lg:p-5 rounded-[2rem] shadow-2xl shadow-emerald-500/20 transition-all hover:scale-110 active:scale-95 z-50 flex items-center gap-3 group border-4 border-white dark:border-slate-900">
             <Plus size={24} />
-            <span className="max-w-0 overflow-hidden group-hover:max-w-xs transition-all duration-300 whitespace-nowrap font-black uppercase text-xs tracking-widest">Registrar Entrada</span>
+            <span className="max-w-0 overflow-hidden group-hover:max-w-xs transition-all duration-300 whitespace-nowrap font-black uppercase text-xs tracking-widest hidden md:inline-block">Registrar Entrada</span>
           </button>
       )}
 
