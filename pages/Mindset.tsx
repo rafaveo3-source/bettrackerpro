@@ -3,7 +3,7 @@ import { useBetStore, MoodType } from '../store/useBetStore';
 import { Book, Clock, ShieldAlert, Search, Sparkles, BrainCircuit, TrendingUp, TrendingDown, AlertTriangle } from 'lucide-react';
 import TiltModal from '../components/TiltModal';
 import { motion, AnimatePresence } from 'framer-motion';
-import { BarChart, Bar, XAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts';
+import { BarChart, Bar, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 
 const Mindset: React.FC = () => {
   const { addMindsetEntry, mindsetHistory, history } = useBetStore();

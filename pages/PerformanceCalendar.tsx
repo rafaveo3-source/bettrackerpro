@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useBetStore } from '../store/useBetStore';
-import { ChevronLeft, ChevronRight, Activity, CircleDollarSign, Target, Trophy, Filter } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Activity, CircleDollarSign, Target, Trophy, Filter, Calendar as CalendarIcon } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 const PerformanceCalendar: React.FC = () => {
@@ -8,38 +8,31 @@ const PerformanceCalendar: React.FC = () => {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState<Date | null>(new Date());
   
-  // ✅ Novos Filtros de Visualização
   const [selectedBankroll, setSelectedBankroll] = useState('all');
   const [selectedMethod, setSelectedMethod] = useState('all');
 
-  // Metrics Helpers
   const formatCurrency = (val: number) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency }).format(val);
 
-  // Month Navigation
   const nextMonth = () => setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1));
   const prevMonth = () => setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1));
 
-  // Calendar Logic
   const year = currentDate.getFullYear();
   const month = currentDate.getMonth();
   
   const daysInMonth = new Date(year, month + 1, 0).getDate();
-  const firstDayOfMonth = new Date(year, month, 1).getDay(); // 0 = Sunday
+  const firstDayOfMonth = new Date(year, month, 1).getDay(); 
 
-  // ✅ Aplicando Filtros aos Dados do Calendário
   const filteredHistory = history.filter(bet => {
       const matchBankroll = selectedBankroll === 'all' || bet.bankrollId === selectedBankroll;
       const matchMethod = selectedMethod === 'all' || bet.method === selectedMethod;
       return matchBankroll && matchMethod && bet.status !== 'pending' && bet.status !== 'void' && bet.status !== 'refunded';
   });
 
-  // Get bets for current month
   const currentMonthBets = filteredHistory.filter(bet => {
     const d = new Date(bet.date);
     return d.getMonth() === month && d.getFullYear() === year;
   });
 
-  // Calculate Daily Stats
   const dailyStats: Record<number, { profit: number, wins: number, count: number }> = {};
   
   currentMonthBets.forEach(bet => {
@@ -52,7 +45,6 @@ const PerformanceCalendar: React.FC = () => {
     }
   });
 
-  // KPI Calculations for Header
   const totalProfit = currentMonthBets.reduce((acc, b) => acc + b.profit, 0);
   const totalStaked = currentMonthBets.reduce((acc, b) => acc + b.stake, 0);
   const totalWins = currentMonthBets.filter(b => ['won', 'half-won'].includes(b.status)).length;
@@ -62,7 +54,6 @@ const PerformanceCalendar: React.FC = () => {
   const winRate = totalBets > 0 ? (totalWins / totalBets) * 100 : 0;
   const biggestWin = Math.max(0, ...currentMonthBets.map(b => b.profit));
 
-  // Selected Date Details
   const selectedDateBets = selectedDate 
     ? filteredHistory.filter(bet => bet.date === selectedDate.toISOString().split('T')[0])
     : [];
@@ -70,40 +61,42 @@ const PerformanceCalendar: React.FC = () => {
   const dayProfit = selectedDateBets.reduce((acc, b) => acc + b.profit, 0);
 
   return (
-    <div className="space-y-6 pb-20">
-      {/* Header with Navigation and KPIs */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+    <div className="space-y-8 pb-20 max-w-7xl mx-auto">
+      {/* Header Unificado */}
+      <header className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 border-b border-slate-200 dark:border-slate-800 pb-6">
         <div>
-            <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Calendário de Desempenho</h1>
-            <p className="text-slate-500 dark:text-slate-400">Acompanhe seu ROI diário e histórico de operações.</p>
+            <h1 className="text-3xl font-black text-slate-900 dark:text-white uppercase tracking-tighter italic flex items-center gap-3">
+               <CalendarIcon className="text-emerald-500" size={32} /> Calendário de Performance
+            </h1>
+            <p className="text-slate-500 dark:text-slate-400 text-xs font-bold mt-2 uppercase tracking-widest">
+                Análise Diária de ROI e Consistência
+            </p>
         </div>
-        <div className="flex gap-4">
-            <div className="flex items-center gap-4 bg-white dark:bg-[#0f172a] p-2 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm">
-                <button onClick={prevMonth} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg text-slate-500 dark:text-slate-400">
-                    <ChevronLeft size={20} />
-                </button>
-                <span className="text-lg font-bold text-slate-900 dark:text-white min-w-[150px] text-center capitalize">
-                    {currentDate.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })}
-                </span>
-                <button onClick={nextMonth} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg text-slate-500 dark:text-slate-400">
-                    <ChevronRight size={20} />
-                </button>
-            </div>
+        <div className="flex items-center gap-4 bg-white dark:bg-[#0f172a] p-2 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm">
+            <button onClick={prevMonth} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg text-slate-500 dark:text-slate-400 transition-colors">
+                <ChevronLeft size={20} />
+            </button>
+            <span className="text-lg font-black text-slate-900 dark:text-white min-w-[160px] text-center capitalize tracking-tight">
+                {currentDate.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })}
+            </span>
+            <button onClick={nextMonth} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg text-slate-500 dark:text-slate-400 transition-colors">
+                <ChevronRight size={20} />
+            </button>
         </div>
-      </div>
+      </header>
 
-      {/* ✅ Filtros de Visualização */}
-      <div className="bg-white dark:bg-[#0f172a] p-4 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col md:flex-row gap-4">
+      {/* Filtros */}
+      <div className="bg-white dark:bg-[#0f172a] p-6 rounded-[2rem] border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col md:flex-row gap-6">
           <div className="flex-1">
-              <label className="text-xs font-bold text-slate-500 uppercase mb-1 block">Filtrar por Banca</label>
-              <select value={selectedBankroll} onChange={e => setSelectedBankroll(e.target.value)} className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 text-sm outline-none focus:border-emerald-500 dark:text-white cursor-pointer">
+              <label className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase mb-2 block tracking-widest">Filtrar por Banca</label>
+              <select value={selectedBankroll} onChange={e => setSelectedBankroll(e.target.value)} className="w-full bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 text-sm font-bold outline-none focus:border-emerald-500 dark:text-white cursor-pointer transition-colors">
                   <option value="all">Todas as Bancas</option>
                   {bankrolls.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
               </select>
           </div>
           <div className="flex-1">
-              <label className="text-xs font-bold text-slate-500 uppercase mb-1 block">Filtrar por Método</label>
-              <select value={selectedMethod} onChange={e => setSelectedMethod(e.target.value)} className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 text-sm outline-none focus:border-emerald-500 dark:text-white cursor-pointer">
+              <label className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase mb-2 block tracking-widest">Filtrar por Método</label>
+              <select value={selectedMethod} onChange={e => setSelectedMethod(e.target.value)} className="w-full bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 text-sm font-bold outline-none focus:border-emerald-500 dark:text-white cursor-pointer transition-colors">
                   <option value="all">Todos os Métodos</option>
                   {methods.map(m => <option key={m.id} value={m.name}>{m.name}</option>)}
               </select>
@@ -112,52 +105,51 @@ const PerformanceCalendar: React.FC = () => {
 
       {/* KPI Cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <div className="bg-white dark:bg-[#0f172a] rounded-xl p-4 border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white relative overflow-hidden shadow-sm">
+        <div className="bg-white dark:bg-[#0f172a]/60 border border-slate-200 dark:border-slate-800 rounded-[1.5rem] p-5 relative overflow-hidden shadow-sm group hover:border-emerald-500/30 transition-colors">
              <div className="relative z-10">
-                <p className="text-xs text-slate-500 dark:text-slate-400 font-bold uppercase">ROI Mensal</p>
-                <h3 className={`text-2xl font-bold mt-1 ${roi >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
+                <p className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-1">ROI Mensal</p>
+                <h3 className={`text-2xl font-black tracking-tighter ${roi >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'}`}>
                     {roi > 0 ? '+' : ''}{roi.toFixed(1)}%
                 </h3>
              </div>
-             <Activity className="absolute right-4 top-4 text-slate-200 dark:text-slate-800 opacity-50" size={60} />
+             <Activity className="absolute right-4 top-4 text-slate-200 dark:text-slate-800 opacity-50 group-hover:scale-110 transition-transform" size={48} />
         </div>
-        <div className="bg-white dark:bg-[#0f172a] rounded-xl p-4 border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white relative overflow-hidden shadow-sm">
+        <div className="bg-white dark:bg-[#0f172a]/60 border border-slate-200 dark:border-slate-800 rounded-[1.5rem] p-5 relative overflow-hidden shadow-sm group hover:border-blue-500/30 transition-colors">
              <div className="relative z-10">
-                <p className="text-xs text-slate-500 dark:text-slate-400 font-bold uppercase">Lucro Total</p>
-                <h3 className="text-2xl font-bold mt-1 text-slate-900 dark:text-white">
+                <p className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-1">Lucro Total</p>
+                <h3 className="text-2xl font-black tracking-tighter text-slate-900 dark:text-white">
                     {formatCurrency(totalProfit)}
                 </h3>
              </div>
-             <CircleDollarSign className="absolute right-4 top-4 text-slate-200 dark:text-slate-800 opacity-50" size={60} />
+             <CircleDollarSign className="absolute right-4 top-4 text-slate-200 dark:text-slate-800 opacity-50 group-hover:scale-110 transition-transform" size={48} />
         </div>
-        <div className="bg-white dark:bg-[#0f172a] rounded-xl p-4 border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white relative overflow-hidden shadow-sm">
+        <div className="bg-white dark:bg-[#0f172a]/60 border border-slate-200 dark:border-slate-800 rounded-[1.5rem] p-5 relative overflow-hidden shadow-sm group hover:border-purple-500/30 transition-colors">
              <div className="relative z-10">
-                <p className="text-xs text-slate-500 dark:text-slate-400 font-bold uppercase">Taxa de Win</p>
-                <h3 className="text-2xl font-bold mt-1 text-slate-900 dark:text-white">
+                <p className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-1">Taxa de Acerto</p>
+                <h3 className="text-2xl font-black tracking-tighter text-slate-900 dark:text-white">
                     {winRate.toFixed(0)}%
                 </h3>
              </div>
-             <Target className="absolute right-4 top-4 text-slate-200 dark:text-slate-800 opacity-50" size={60} />
+             <Target className="absolute right-4 top-4 text-slate-200 dark:text-slate-800 opacity-50 group-hover:scale-110 transition-transform" size={48} />
         </div>
-        <div className="bg-white dark:bg-[#0f172a] rounded-xl p-4 border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white relative overflow-hidden shadow-sm">
+        <div className="bg-white dark:bg-[#0f172a]/60 border border-slate-200 dark:border-slate-800 rounded-[1.5rem] p-5 relative overflow-hidden shadow-sm group hover:border-yellow-500/30 transition-colors">
              <div className="relative z-10">
-                <p className="text-xs text-slate-500 dark:text-slate-400 font-bold uppercase">Maior Green</p>
-                <h3 className="text-2xl font-bold mt-1 text-emerald-500">
+                <p className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-1">Maior Green</p>
+                <h3 className="text-2xl font-black tracking-tighter text-emerald-600 dark:text-emerald-400">
                     {formatCurrency(biggestWin)}
                 </h3>
              </div>
-             <Trophy className="absolute right-4 top-4 text-slate-200 dark:text-slate-800 opacity-50" size={60} />
+             <Trophy className="absolute right-4 top-4 text-slate-200 dark:text-slate-800 opacity-50 group-hover:scale-110 transition-transform" size={48} />
         </div>
       </div>
 
-      {/* Main Grid & Details */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         
         {/* Calendar Grid */}
-        <div className="lg:col-span-2 bg-white dark:bg-[#0f172a] p-6 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm">
-            <div className="grid grid-cols-7 gap-2 mb-2 text-center">
+        <div className="lg:col-span-2 bg-white dark:bg-[#0f172a]/60 border border-slate-200 dark:border-slate-800 p-8 rounded-[2.5rem] shadow-sm">
+            <div className="grid grid-cols-7 gap-2 mb-4 text-center">
                 {['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'].map(d => (
-                    <div key={d} className="text-xs font-bold text-slate-400 uppercase tracking-wider">{d}</div>
+                    <div key={d} className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">{d}</div>
                 ))}
             </div>
             <div className="grid grid-cols-7 gap-2">
@@ -177,28 +169,28 @@ const PerformanceCalendar: React.FC = () => {
                             whileTap={{ scale: 0.95 }}
                             key={day}
                             onClick={() => setSelectedDate(new Date(year, month, day))}
-                            className={`aspect-square rounded-xl border flex flex-col items-center justify-center relative transition-all ${
+                            className={`aspect-square rounded-2xl border flex flex-col items-center justify-center relative transition-all ${
                                 isSelected 
-                                    ? 'ring-2 ring-emerald-500 border-transparent' 
+                                    ? 'ring-4 ring-emerald-500/30 border-emerald-500 z-10' 
                                     : 'border-slate-100 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-600'
                             } ${
                                 hasData 
-                                    ? isPositive ? 'bg-emerald-100 dark:bg-emerald-900/20' : 'bg-red-100 dark:bg-red-900/20' 
-                                    : 'bg-slate-50 dark:bg-slate-900'
+                                    ? isPositive ? 'bg-emerald-50 dark:bg-emerald-900/20' : 'bg-red-50 dark:bg-red-900/20' 
+                                    : 'bg-slate-50 dark:bg-slate-900/30'
                             }`}
                         >
-                            <span className={`text-sm font-bold ${hasData ? (isPositive ? 'text-emerald-700 dark:text-emerald-400' : 'text-red-700 dark:text-red-400') : 'text-slate-400'}`}>
+                            <span className={`text-sm font-black ${hasData ? (isPositive ? 'text-emerald-700 dark:text-emerald-400' : 'text-red-700 dark:text-red-400') : 'text-slate-400 dark:text-slate-600'}`}>
                                 {day}
                             </span>
                             {hasData && (
-                                <span className={`text-[10px] font-bold mt-1 ${isPositive ? 'text-emerald-500' : 'text-red-500'}`}>
+                                <span className={`text-[9px] font-bold mt-0.5 ${isPositive ? 'text-emerald-600 dark:text-emerald-500' : 'text-red-600 dark:text-red-500'}`}>
                                     {isPositive ? '+' : ''}{stats.profit.toFixed(0)}
                                 </span>
                             )}
                             {hasData && (
                                 <div className="flex gap-0.5 mt-1">
                                     <div className={`w-1 h-1 rounded-full ${isPositive ? 'bg-emerald-500' : 'bg-red-500'}`}></div>
-                                    <div className={`w-1 h-1 rounded-full ${isPositive ? 'bg-emerald-500' : 'bg-red-500'} opacity-50`}></div>
+                                    {Math.abs(stats.profit) > 100 && <div className={`w-1 h-1 rounded-full ${isPositive ? 'bg-emerald-500' : 'bg-red-500'} opacity-50`}></div>}
                                 </div>
                             )}
                         </motion.button>
@@ -208,45 +200,46 @@ const PerformanceCalendar: React.FC = () => {
         </div>
 
         {/* Sidebar Details */}
-        <div className="bg-white dark:bg-[#0f172a] rounded-xl border border-slate-200 dark:border-slate-800 p-6 shadow-sm text-slate-900 dark:text-white">
-            <div className="flex justify-between items-center mb-6 border-b border-slate-200 dark:border-slate-700 pb-4">
+        <div className="bg-white dark:bg-[#0f172a]/60 border border-slate-200 dark:border-slate-800 rounded-[2.5rem] p-8 shadow-sm flex flex-col h-[600px]">
+            <div className="flex justify-between items-center mb-6 border-b border-slate-200 dark:border-slate-800 pb-6">
                 <div>
-                    <h3 className="font-bold text-lg">Detalhes do Dia</h3>
-                    <p className="text-slate-500 dark:text-slate-400 text-sm">
+                    <h3 className="font-black text-xl text-slate-900 dark:text-white uppercase tracking-tighter italic">Detalhes do Dia</h3>
+                    <p className="text-slate-500 dark:text-slate-400 text-xs font-bold uppercase tracking-widest mt-1">
                         {selectedDate 
                             ? selectedDate.toLocaleDateString('pt-BR', { day: 'numeric', month: 'long', year: 'numeric' }) 
                             : 'Selecione uma data'}
                     </p>
                 </div>
                 {selectedDate && (
-                    <div className={`px-3 py-1 rounded-full text-xs font-bold ${dayProfit >= 0 ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-400' : 'bg-red-100 text-red-700 dark:bg-red-500/20 dark:text-red-400'}`}>
+                    <div className={`px-4 py-2 rounded-xl text-sm font-black ${dayProfit >= 0 ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-400' : 'bg-red-100 text-red-700 dark:bg-red-500/20 dark:text-red-400'}`}>
                         {dayProfit > 0 ? '+' : ''}{formatCurrency(dayProfit)}
                     </div>
                 )}
             </div>
 
-            <div className="space-y-4 max-h-[400px] overflow-y-auto custom-scrollbar pr-2">
+            <div className="space-y-3 overflow-y-auto custom-scrollbar flex-1 pr-2">
                 {selectedDateBets.length === 0 ? (
-                    <div className="text-center py-10 text-slate-500">
-                        <p>Nenhuma atividade neste dia.</p>
+                    <div className="h-full flex flex-col items-center justify-center text-slate-400 dark:text-slate-600 opacity-50">
+                        <CalendarIcon size={48} className="mb-4" />
+                        <p className="text-[10px] font-black uppercase tracking-widest">Nenhuma atividade</p>
                     </div>
                 ) : (
                     selectedDateBets.map(bet => (
-                        <div key={bet.id} className="bg-slate-50 dark:bg-slate-900 rounded-lg p-3 border border-slate-200 dark:border-slate-700 flex justify-between items-center">
-                            <div className="flex items-center gap-3">
-                                <div className="w-8 h-8 rounded-full bg-slate-200 dark:bg-slate-800 flex items-center justify-center text-slate-500 dark:text-slate-400">
-                                    <Trophy size={14} />
+                        <div key={bet.id} className="bg-slate-50 dark:bg-slate-900/50 rounded-2xl p-4 border border-slate-200 dark:border-slate-800 flex justify-between items-center group hover:border-slate-300 dark:hover:border-slate-700 transition-colors">
+                            <div className="flex items-center gap-4">
+                                <div className="w-10 h-10 rounded-xl bg-white dark:bg-slate-800 flex items-center justify-center text-slate-400 dark:text-slate-500 shadow-sm">
+                                    <Trophy size={18} />
                                 </div>
                                 <div>
-                                    <p className="font-bold text-sm text-slate-800 dark:text-slate-200">{bet.event}</p>
-                                    <p className="text-xs text-slate-500">{bet.market} • Odd {bet.odds}</p>
+                                    <p className="font-bold text-sm text-slate-900 dark:text-white line-clamp-1">{bet.event}</p>
+                                    <p className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wide mt-0.5">{bet.market} • <span className="font-mono text-slate-700 dark:text-slate-300">@{bet.odds}</span></p>
                                 </div>
                             </div>
                             <div className="text-right">
-                                <p className={`font-bold text-sm ${bet.profit >= 0 ? 'text-emerald-600 dark:text-emerald-500' : 'text-red-600 dark:text-red-500'}`}>
+                                <p className={`font-black font-mono text-sm ${bet.profit >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'}`}>
                                     {bet.profit > 0 ? '+' : ''} {formatCurrency(bet.profit)}
                                 </p>
-                                <p className="text-xs text-slate-500">Stake {bet.stake}</p>
+                                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mt-0.5">Stake {bet.stake}</p>
                             </div>
                         </div>
                     ))
@@ -254,14 +247,14 @@ const PerformanceCalendar: React.FC = () => {
             </div>
 
             {selectedDateBets.length > 0 && (
-                <div className="mt-6 pt-4 border-t border-slate-200 dark:border-slate-700">
-                    <div className="flex justify-between items-center text-sm">
-                        <span className="text-slate-500 dark:text-slate-400">Desempenho no Dia</span>
-                        <span className={`font-bold ${dayProfit >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
+                <div className="mt-6 pt-6 border-t border-slate-200 dark:border-slate-800">
+                    <div className="flex justify-between items-center text-xs mb-2">
+                        <span className="text-slate-500 dark:text-slate-400 font-bold uppercase tracking-wider">Desempenho no Dia</span>
+                        <span className={`font-black uppercase tracking-wider ${dayProfit >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
                             {dayProfit >= 0 ? 'Positivo' : 'Negativo'}
                         </span>
                     </div>
-                    <div className="w-full bg-slate-200 dark:bg-slate-800 h-1.5 rounded-full mt-2 overflow-hidden">
+                    <div className="w-full bg-slate-200 dark:bg-slate-800 h-2 rounded-full overflow-hidden">
                         <div 
                             className={`h-full ${dayProfit >= 0 ? 'bg-emerald-500' : 'bg-red-500'}`} 
                             style={{ width: '100%' }} 
