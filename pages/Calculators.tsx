@@ -87,27 +87,23 @@ const Calculators: React.FC = () => {
   </div>
 
   {/* Título principal */}
-  <header className="border-b border-slate-200 dark:border-slate-800 pb-6">
-  <div className="flex flex-col gap-3">
-    
-    {/* Micro Label */}
-    <div className="flex items-center gap-2 text-purple-500 text-[9px] font-mono font-bold uppercase tracking-widest">
-      <span className="w-1.5 h-1.5 bg-purple-500 rounded-full animate-pulse shadow-[0_0_8px_#a855f7]"></span>
-      Strategic Math Engine
-    </div>
-
-    {/* Headline */}
-    <h1 className="text-3xl font-black text-slate-900 dark:text-white uppercase tracking-tighter italic">
-      Calculadoras Estratégicas <span className="text-slate-400">///</span>
-    </h1>
-
-    {/* Subheadline */}
-    <p className="text-slate-500 dark:text-slate-400 text-xs font-bold uppercase tracking-widest">
-      Gestão Matemática & Edge Profissional.
-    </p>
-
+  <div>
+  {/* Label superior discreta */}
+  <div className="flex items-center gap-2 text-purple-500 text-[9px] font-mono font-bold uppercase tracking-widest mb-1">
+    <span className="w-1.5 h-1.5 bg-purple-500 rounded-full animate-pulse shadow-[0_0_8px_#a855f7]"></span>
+    Strategic Math Engine
   </div>
-</header>
+
+  {/* Headline principal */}
+  <h1 className="text-3xl font-black text-slate-900 dark:text-white tracking-tighter uppercase italic">
+    Calculadoras Estratégicas <span className="text-slate-400 dark:text-slate-700 text-lg">///</span>
+  </h1>
+
+  {/* Subheadline */}
+  <p className="text-slate-500 dark:text-slate-400 text-xs font-bold mt-2 uppercase tracking-widest">
+    Gestão matemática & edge profissional.
+  </p>
+</div>
 
 </div>
 
