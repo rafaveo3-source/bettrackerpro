@@ -296,10 +296,10 @@ const Goals: React.FC = () => {
   <div className="space-y-3">
   
   {/* ENGINE LABEL (DISCRETO) */}
-  <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.25em] text-emerald-500 dark:text-emerald-400">
+  <div className="flex items-center gap-2 text-emerald-500 text-[9px] font-mono font-bold uppercase tracking-widest mb-1">
     <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse shadow-[0_0_8px_#10b981]"></span>
     Strategic Performance Engine
-  </div>
+</div>
 
   {/* HEADLINE */}
   <h1 className="text-3xl font-black text-slate-900 dark:text-white tracking-tighter uppercase italic">
