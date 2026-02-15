@@ -40,6 +40,36 @@ const Analytics: React.FC = () => {
     }).format(value)
   }
 
+  /* -----------------------------
+   THEME DETECTION (UX FIX)
+----------------------------- */
+const [isDark, setIsDark] = React.useState(false)
+
+React.useEffect(() => {
+  const checkTheme = () => {
+    setIsDark(
+      document.documentElement.classList.contains('dark')
+    )
+  }
+
+  checkTheme()
+
+  const observer = new MutationObserver(checkTheme)
+
+  observer.observe(document.documentElement, {
+    attributes: true,
+    attributeFilter: ['class']
+  })
+
+  return () => observer.disconnect()
+}, [])
+
+const axisColor = isDark ? '#94a3b8' : '#475569'
+const gridColor = isDark ? '#1e293b' : '#e2e8f0'
+const tooltipBg = isDark ? '#0f172a' : '#ffffff'
+const tooltipBorder = isDark ? '#1e293b' : '#e2e8f0'
+const tooltipText = isDark ? '#ffffff' : '#0f172a'
+
   const bankrollBets = history.filter(
     b =>
       b.bankrollId === activeBankrollId &&
@@ -169,42 +199,48 @@ const Analytics: React.FC = () => {
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={barData}>
                 <CartesianGrid
-                  strokeDasharray="3 3"
-                  strokeOpacity={0.05}
-                  vertical={false}
-                />
+  stroke={gridColor}
+  strokeDasharray="3 3"
+  horizontal={false}
+/>
 
-                <XAxis
-                  dataKey="name"
-                  stroke="#94a3b8"
-                  fontSize={11}
-                  tickLine={false}
-                  axisLine={false}
-                />
+<XAxis
+  type="number"
+  stroke={axisColor}
+  fontSize={11}
+  tickLine={false}
+  axisLine={false}
+  tickFormatter={val =>
+    displayMode === 'units'
+      ? `${(val / unitSize).toFixed(0)}u`
+      : val
+  }
+/>
 
-                <YAxis
-                  stroke="#94a3b8"
-                  fontSize={11}
-                  tickLine={false}
-                  axisLine={false}
-                  tickFormatter={val =>
-                    displayMode === 'units'
-                      ? `${(val / unitSize).toFixed(0)}u`
-                      : val
-                  }
-                />
+<YAxis
+  dataKey="name"
+  type="category"
+  stroke={axisColor}
+  fontSize={11}
+  tickLine={false}
+  axisLine={false}
+  width={130}
+/>
 
-                <Tooltip
-                  contentStyle={{
-                    backgroundColor: '#111827',
-                    borderRadius: '12px',
-                    border: '1px solid #1f2937'
-                  }}
-                  formatter={(value: number) => [
-                    formatValue(value),
-                    'Lucro'
-                  ]}
-                />
+<Tooltip
+  contentStyle={{
+    backgroundColor: tooltipBg,
+    border: `1px solid ${tooltipBorder}`,
+    borderRadius: '12px',
+    color: tooltipText
+  }}
+  itemStyle={{ color: tooltipText }}
+  labelStyle={{ color: axisColor }}
+  formatter={(value: number) => [
+    formatValue(value),
+    'Lucro'
+  ]}
+/>
 
                 <Bar dataKey="profit" radius={[10, 10, 0, 0]}>
                   {barData.map((entry, index) => (
@@ -235,45 +271,45 @@ const Analytics: React.FC = () => {
               <BarChart data={methodBarData} layout="vertical">
 
                 <CartesianGrid
-                  strokeDasharray="3 3"
-                  strokeOpacity={0.05}
-                  horizontal={false}
-                />
+  stroke={gridColor}
+  strokeDasharray="3 3"
+  vertical={false}
+/>
 
-                <XAxis
-                  type="number"
-                  stroke="#94a3b8"
-                  fontSize={11}
-                  tickLine={false}
-                  axisLine={false}
-                  tickFormatter={val =>
-                    displayMode === 'units'
-                      ? `${(val / unitSize).toFixed(0)}u`
-                      : val
-                  }
-                />
+<XAxis
+  dataKey="name"
+  stroke={axisColor}
+  fontSize={11}
+  tickLine={false}
+  axisLine={false}
+/>
 
-                <YAxis
-                  dataKey="name"
-                  type="category"
-                  stroke="#94a3b8"
-                  fontSize={11}
-                  tickLine={false}
-                  axisLine={false}
-                  width={130}
-                />
+<YAxis
+  stroke={axisColor}
+  fontSize={11}
+  tickLine={false}
+  axisLine={false}
+  tickFormatter={val =>
+    displayMode === 'units'
+      ? `${(val / unitSize).toFixed(0)}u`
+      : val
+  }
+/>
 
-                <Tooltip
-                  contentStyle={{
-                    backgroundColor: '#111827',
-                    borderRadius: '12px',
-                    border: '1px solid #1f2937'
-                  }}
-                  formatter={(value: number) => [
-                    formatValue(value),
-                    'Lucro'
-                  ]}
-                />
+<Tooltip
+  contentStyle={{
+    backgroundColor: tooltipBg,
+    border: `1px solid ${tooltipBorder}`,
+    borderRadius: '12px',
+    color: tooltipText
+  }}
+  itemStyle={{ color: tooltipText }}
+  labelStyle={{ color: axisColor }}
+  formatter={(value: number) => [
+    formatValue(value),
+    'Lucro'
+  ]}
+/>
 
                 <Bar dataKey="profit" radius={[0, 10, 10, 0]}>
                   {methodBarData.map((entry, index) => (
@@ -321,12 +357,15 @@ const Analytics: React.FC = () => {
                 </Pie>
 
                 <Tooltip
-                  contentStyle={{
-                    backgroundColor: '#111827',
-                    borderRadius: '12px',
-                    border: '1px solid #1f2937'
-                  }}
-                />
+  contentStyle={{
+    backgroundColor: tooltipBg,
+    border: `1px solid ${tooltipBorder}`,
+    borderRadius: '12px',
+    color: tooltipText
+  }}
+  itemStyle={{ color: tooltipText }}
+  labelStyle={{ color: axisColor }}
+/>
 
                 <Legend verticalAlign="bottom" />
               </PieChart>
