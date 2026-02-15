@@ -1,17 +1,24 @@
 import React, { useState } from 'react';
 import { useBetStore } from '../store/useBetStore';
-import { ChevronLeft, ChevronRight, Activity, CircleDollarSign, Target, Trophy, Filter, Calendar as CalendarIcon } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Activity, CircleDollarSign, Target, Trophy, Calendar as CalendarIcon } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 const PerformanceCalendar: React.FC = () => {
-  const { history, currency, bankrolls, methods } = useBetStore();
+  const { history, currency, bankrolls, methods, displayMode, unitSize } = useBetStore();
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState<Date | null>(new Date());
   
   const [selectedBankroll, setSelectedBankroll] = useState('all');
   const [selectedMethod, setSelectedMethod] = useState('all');
 
-  const formatCurrency = (val: number) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency }).format(val);
+  // ✅ Helper de Formatação (Moeda vs Unidade)
+  const formatValue = (val: number) => {
+    if (displayMode === 'units') {
+        const units = val / (unitSize || 100);
+        return `${units >= 0 ? '+' : ''}${units.toFixed(2)}u`;
+    }
+    return new Intl.NumberFormat('pt-BR', { style: 'currency', currency }).format(val);
+  };
 
   const nextMonth = () => setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1));
   const prevMonth = () => setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1));
@@ -61,7 +68,7 @@ const PerformanceCalendar: React.FC = () => {
   const dayProfit = selectedDateBets.reduce((acc, b) => acc + b.profit, 0);
 
   return (
-    <div className="space-y-8 pb-20 max-w-7xl mx-auto">
+    <div className="space-y-8 pb-20 max-w-7xl mx-auto w-full overflow-x-hidden">
       {/* Header Unificado */}
       <header className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 border-b border-slate-200 dark:border-slate-800 pb-6">
         <div>
@@ -118,7 +125,7 @@ const PerformanceCalendar: React.FC = () => {
              <div className="relative z-10">
                 <p className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-1">Lucro Total</p>
                 <h3 className="text-2xl font-black tracking-tighter text-slate-900 dark:text-white">
-                    {formatCurrency(totalProfit)}
+                    {formatValue(totalProfit)}
                 </h3>
              </div>
              <CircleDollarSign className="absolute right-4 top-4 text-slate-200 dark:text-slate-800 opacity-50 group-hover:scale-110 transition-transform" size={48} />
@@ -136,7 +143,7 @@ const PerformanceCalendar: React.FC = () => {
              <div className="relative z-10">
                 <p className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-1">Maior Green</p>
                 <h3 className="text-2xl font-black tracking-tighter text-emerald-600 dark:text-emerald-400">
-                    {formatCurrency(biggestWin)}
+                    {formatValue(biggestWin)}
                 </h3>
              </div>
              <Trophy className="absolute right-4 top-4 text-slate-200 dark:text-slate-800 opacity-50 group-hover:scale-110 transition-transform" size={48} />
@@ -184,7 +191,7 @@ const PerformanceCalendar: React.FC = () => {
                             </span>
                             {hasData && (
                                 <span className={`text-[9px] font-bold mt-0.5 ${isPositive ? 'text-emerald-600 dark:text-emerald-500' : 'text-red-600 dark:text-red-500'}`}>
-                                    {isPositive ? '+' : ''}{stats.profit.toFixed(0)}
+                                    {formatValue(stats.profit)}
                                 </span>
                             )}
                             {hasData && (
@@ -212,7 +219,7 @@ const PerformanceCalendar: React.FC = () => {
                 </div>
                 {selectedDate && (
                     <div className={`px-4 py-2 rounded-xl text-sm font-black ${dayProfit >= 0 ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-400' : 'bg-red-100 text-red-700 dark:bg-red-500/20 dark:text-red-400'}`}>
-                        {dayProfit > 0 ? '+' : ''}{formatCurrency(dayProfit)}
+                        {dayProfit > 0 ? '+' : ''}{formatValue(dayProfit)}
                     </div>
                 )}
             </div>
@@ -237,9 +244,9 @@ const PerformanceCalendar: React.FC = () => {
                             </div>
                             <div className="text-right">
                                 <p className={`font-black font-mono text-sm ${bet.profit >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'}`}>
-                                    {bet.profit > 0 ? '+' : ''} {formatCurrency(bet.profit)}
+                                    {bet.profit > 0 ? '+' : ''} {formatValue(bet.profit)}
                                 </p>
-                                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mt-0.5">Stake {bet.stake}</p>
+                                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mt-0.5">Stake {formatValue(bet.stake)}</p>
                             </div>
                         </div>
                     ))

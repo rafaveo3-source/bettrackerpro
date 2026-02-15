@@ -4,7 +4,7 @@ import { Search, Filter, Download, ArrowUpDown, ChevronDown, RefreshCcw, Trash2,
 import { motion, AnimatePresence } from 'framer-motion';
 
 const History: React.FC = () => {
-  const { history, removeBet, activeBankrollId, getMetrics } = useBetStore();
+  const { history, removeBet, activeBankrollId, getMetrics, displayMode, unitSize, bankrolls } = useBetStore();
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [sportFilter, setSportFilter] = useState<string>('all');
@@ -16,7 +16,16 @@ const History: React.FC = () => {
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [sortConfig, setSortConfig] = useState<{ key: keyof Bet; direction: 'asc' | 'desc' }>({ key: 'date', direction: 'desc' });
 
-  const metrics = getMetrics();
+  const activeBR = bankrolls.find(b => b.id === activeBankrollId);
+
+  // ✅ Helper de Formatação (Moeda vs Unidade)
+  const formatCurrency = (val: number) => {
+    if (displayMode === 'units') {
+        const units = val / (unitSize || 100);
+        return `${units >= 0 ? '+' : ''}${units.toFixed(2)}u`;
+    }
+    return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: activeBR?.currency || 'BRL' }).format(val);
+  };
 
   const handleEdit = (bet: Bet) => {
     const event = new CustomEvent('editBet', { detail: bet });
@@ -59,12 +68,6 @@ const History: React.FC = () => {
       key,
       direction: current.key === key && current.direction === 'asc' ? 'desc' : 'asc'
     }));
-  };
-
-  const formatCurrency = (val: number) => {
-      const activeBR = useBetStore.getState().bankrolls.find(b => b.id === activeBankrollId);
-      const curr = activeBR?.currency || 'BRL';
-      return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: curr }).format(val);
   };
 
   const exportCSV = () => {
