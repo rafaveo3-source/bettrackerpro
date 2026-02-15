@@ -158,6 +158,79 @@ const Bankroll: React.FC = () => {
   </div>
 </div>
 
+    {/* 💰 MOVIMENTAÇÃO DE CAPITAL */}
+{activeBR && (
+  <div className="bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm">
+    
+    <div className="flex items-center gap-3 mb-6">
+      <ArrowRightLeft className="text-emerald-500" size={20} />
+      <h3 className="font-black uppercase text-sm tracking-widest text-slate-700 dark:text-slate-300">
+        Movimentação de Capital
+      </h3>
+    </div>
+
+    <form onSubmit={handleTransaction} className="grid md:grid-cols-4 gap-4 items-end">
+
+      {/* Tipo */}
+      <div className="flex flex-col">
+        <label className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-2">
+          Tipo
+        </label>
+        <select
+          value={txType}
+          onChange={(e) => setTxType(e.target.value as TransactionType)}
+          className="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 font-bold text-sm outline-none focus:border-emerald-500"
+        >
+          <option value="deposit">Aporte</option>
+          <option value="withdrawal">Saque</option>
+        </select>
+      </div>
+
+      {/* Valor */}
+      <div className="flex flex-col">
+        <label className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-2">
+          Valor
+        </label>
+        <input
+          type="number"
+          step="0.01"
+          placeholder="0.00"
+          value={txAmount}
+          onChange={(e) => setTxAmount(e.target.value)}
+          className="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 font-bold text-sm outline-none focus:border-emerald-500"
+        />
+      </div>
+
+      {/* Observação */}
+      <div className="flex flex-col md:col-span-1">
+        <label className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-2">
+          Observação
+        </label>
+        <input
+          type="text"
+          placeholder="Opcional"
+          value={txNote}
+          onChange={(e) => setTxNote(e.target.value)}
+          className="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 font-bold text-sm outline-none focus:border-emerald-500"
+        />
+      </div>
+
+      {/* Botão */}
+      <button
+        type="submit"
+        className={`h-[52px] rounded-xl font-black text-xs uppercase tracking-widest transition shadow-lg active:scale-95 ${
+          txType === 'deposit'
+            ? 'bg-emerald-500 hover:bg-emerald-600 text-white shadow-emerald-500/20'
+            : 'bg-red-500 hover:bg-red-600 text-white shadow-red-500/20'
+        }`}
+      >
+        {txType === 'deposit' ? 'Confirmar Aporte' : 'Confirmar Saque'}
+      </button>
+
+    </form>
+  </div>
+)}
+
       {/* BANKROLL GRID */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {bankrolls.map((br) => (
