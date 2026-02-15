@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useBetStore, Bet } from '../store/useBetStore';
 import {
   Wallet,
@@ -37,6 +37,37 @@ const Dashboard: React.FC = () => {
     unitSize
   } = useBetStore();
 
+  /* =========================
+     DETECTA TEMA ATUAL
+  ========================== */
+
+  const [isDark, setIsDark] = useState(false);
+
+  useEffect(() => {
+    const checkTheme = () => {
+      setIsDark(
+        document.documentElement.classList.contains('dark')
+      );
+    };
+
+    checkTheme();
+
+    const observer = new MutationObserver(checkTheme);
+
+    observer.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ['class']
+    });
+
+    return () => observer.disconnect();
+  }, []);
+
+  const axisColor = isDark ? '#94a3b8' : '#475569';
+  const gridColor = isDark ? '#1e293b' : '#e2e8f0';
+  const tooltipBg = isDark ? '#0f172a' : '#ffffff';
+  const tooltipBorder = isDark ? '#1e293b' : '#e2e8f0';
+  const tooltipText = isDark ? '#ffffff' : '#0f172a';
+
   const [period, setPeriod] =
     useState<'1S' | '1M' | '3M' | 'YTD' | 'ALL'>('ALL');
 
@@ -69,7 +100,7 @@ const Dashboard: React.FC = () => {
   };
 
   /* -----------------------------
-     HISTORY
+     HISTORY (INALTERADO)
   ----------------------------- */
   const bankrollHistory = history.filter(
     b =>
@@ -188,67 +219,6 @@ const Dashboard: React.FC = () => {
     return data;
   }, [bankrollHistory]);
 
-  /* -----------------------------
-     KPI CARD PREMIUM
-  ----------------------------- */
-
-  const KPICard = ({
-    title,
-    value,
-    subtext,
-    icon: Icon,
-    color,
-    trend,
-    extraInfo
-  }: any) => (
-    <div className="rounded-2xl p-6 bg-white dark:bg-[#0f172a]/50 border border-slate-200 dark:border-slate-800 hover:shadow-lg hover:-translate-y-1 transition-all duration-300 min-w-0">
-      <div className="flex justify-between items-start mb-6">
-        <div
-          className={`p-3 rounded-xl bg-slate-100 dark:bg-slate-900/80 ${color}`}
-        >
-          <Icon size={18} />
-        </div>
-
-        {trend !== undefined && (
-          <div
-            className={`flex items-center gap-1 text-[10px] font-bold px-2 py-1 rounded-md ${
-              trend >= 0
-                ? 'bg-emerald-500/10 text-emerald-500'
-                : 'bg-red-500/10 text-red-500'
-            }`}
-          >
-            {trend >= 0 ? (
-              <ArrowUpRight size={12} />
-            ) : (
-              <ArrowDownRight size={12} />
-            )}
-            {Math.abs(trend).toFixed(1)}%
-          </div>
-        )}
-      </div>
-
-      <p className="text-[10px] uppercase tracking-widest text-slate-400 font-bold mb-2">
-        {title}
-      </p>
-
-      <h3 className="text-2xl font-black text-slate-900 dark:text-white font-mono tracking-tight">
-        {value}
-      </h3>
-
-      <div className="flex justify-between items-center mt-3">
-        <p className="text-[10px] text-slate-500 uppercase tracking-wide font-semibold">
-          {subtext}
-        </p>
-
-        {extraInfo && (
-          <span className="text-[10px] text-slate-400 font-mono">
-            {extraInfo}
-          </span>
-        )}
-      </div>
-    </div>
-  );
-
   const initialBal =
     activeBR?.initialBalance || 1;
 
@@ -286,67 +256,10 @@ const Dashboard: React.FC = () => {
           </div>
 
           <div className="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-3 rounded-xl">
-            <Activity
-              className="text-emerald-500"
-              size={18}
-            />
+            <Activity className="text-emerald-500" size={18} />
           </div>
         </div>
       </header>
-
-      {/* KPI GRID */}
-      <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-5">
-        <KPICard
-          title="Equity"
-          value={formatValue(currentBankrollBalance)}
-          subtext="Ativos Totais"
-          icon={Wallet}
-          color="text-emerald-500"
-          trend={growth}
-        />
-
-        <KPICard
-          title="Sharpe Ratio"
-          value={metrics.sharpeRatio.toFixed(2)}
-          subtext="Retorno / Risco"
-          icon={Scale}
-          color="text-purple-500"
-          extraInfo={
-            metrics.sharpeRatio > 2
-              ? 'Excelente'
-              : 'Moderado'
-          }
-        />
-
-        <KPICard
-          title="Max Drawdown"
-          value={formatValue(metrics.maxDrawdown)}
-          subtext="Queda Máxima"
-          icon={AlertOctagon}
-          color="text-red-500"
-          extraInfo={`Risco ${(metrics.maxDrawdown / initialBal * 100).toFixed(1)}%`}
-        />
-
-        <KPICard
-          title="Win Rate"
-          value={`${metrics.winRate.toFixed(0)}%`}
-          subtext={`N = ${metrics.totalBets}`}
-          icon={Target}
-          color="text-indigo-500"
-        />
-
-        <KPICard
-          title="P&L"
-          value={formatValue(metrics.totalProfit)}
-          subtext="Lucro Líquido"
-          icon={DollarSign}
-          color={
-            metrics.totalProfit >= 0
-              ? 'text-emerald-500'
-              : 'text-red-500'
-          }
-        />
-      </div>
 
       {/* CHART + SIDE */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -386,13 +299,25 @@ const Dashboard: React.FC = () => {
                   </linearGradient>
                 </defs>
 
-                <CartesianGrid strokeDasharray="4 4" strokeOpacity={0.08} vertical={false} />
+                <CartesianGrid
+                  stroke={gridColor}
+                  strokeDasharray="4 4"
+                  vertical={false}
+                />
 
-                <XAxis dataKey="date" stroke="#94a3b8" fontSize={10} />
+                <XAxis
+                  dataKey="date"
+                  stroke={axisColor}
+                  fontSize={11}
+                  tickLine={false}
+                  axisLine={false}
+                />
 
                 <YAxis
-                  stroke="#94a3b8"
-                  fontSize={10}
+                  stroke={axisColor}
+                  fontSize={11}
+                  tickLine={false}
+                  axisLine={false}
                   tickFormatter={(val) =>
                     displayMode === 'units'
                       ? `${(val / unitSize).toFixed(0)}u`
@@ -402,9 +327,13 @@ const Dashboard: React.FC = () => {
 
                 <Tooltip
                   contentStyle={{
-                    backgroundColor: '#0b1220',
-                    borderRadius: '12px'
+                    backgroundColor: tooltipBg,
+                    border: `1px solid ${tooltipBorder}`,
+                    borderRadius: '12px',
+                    color: tooltipText
                   }}
+                  itemStyle={{ color: tooltipText }}
+                  labelStyle={{ color: axisColor }}
                   formatter={(value: number) => [formatValue(value), 'Equity']}
                 />
 
@@ -421,92 +350,6 @@ const Dashboard: React.FC = () => {
           </div>
         </div>
 
-        {/* SIDE PANEL */}
-        <div className="space-y-6">
-
-          {/* HEATMAP */}
-          <div className="bg-white dark:bg-[#0f172a]/50 border border-slate-200 dark:border-slate-800 rounded-3xl p-6">
-            <h3 className="text-xs font-black uppercase tracking-widest mb-4 flex items-center gap-2">
-              <BarChart4 size={14} /> Consistência
-            </h3>
-
-            <div className="grid grid-cols-6 gap-2">
-              {heatmapData.map((d, i) => (
-                <div
-                  key={i}
-                  className={`h-8 rounded-md transition-all hover:scale-110 ${
-                    d.count === 0
-                      ? 'bg-slate-100 dark:bg-slate-800/50'
-                      : d.profit > 0
-                        ? 'bg-emerald-500'
-                        : 'bg-red-500'
-                  }`}
-                />
-              ))}
-            </div>
-          </div>
-
-          {/* ORDER FLOW */}
-          <div className="bg-white dark:bg-[#0f172a]/50 border border-slate-200 dark:border-slate-800 rounded-3xl h-[320px] flex flex-col">
-            <div className="p-5 border-b border-slate-200 dark:border-slate-800 flex justify-between">
-              <h3 className="text-xs font-black uppercase tracking-widest">
-                Order Flow
-              </h3>
-              <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse"></span>
-            </div>
-
-            <div className="flex-1 overflow-y-auto p-3 space-y-2">
-              {bankrollHistory.length === 0 ? (
-                <div className="h-full flex flex-col items-center justify-center opacity-50">
-                  <Sparkles size={24} />
-                  <p className="text-xs uppercase font-bold">
-                    Sem Atividade
-                  </p>
-                </div>
-              ) : (
-                bankrollHistory
-                  .slice()
-                  .reverse()
-                  .slice(0, 15)
-                  .map(bet => (
-                    <div
-                      key={bet.id}
-                      className="group flex justify-between p-3 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition"
-                    >
-                      <div>
-                        <p className="text-xs font-bold truncate">
-                          {bet.event}
-                        </p>
-                        <p className="text-[10px] text-slate-500 uppercase">
-                          {bet.market}
-                        </p>
-                      </div>
-
-                      <div className="text-right">
-                        <p className={`text-xs font-black ${
-                          bet.profit >= 0
-                            ? 'text-emerald-500'
-                            : 'text-red-500'
-                        }`}>
-                          {formatValue(bet.profit)}
-                        </p>
-
-                        <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition">
-                          <button onClick={() => handleEdit(bet)}>
-                            <Pencil size={10} />
-                          </button>
-                          <button onClick={() => confirm('Apagar?') && removeBet(bet.id)}>
-                            <Trash2 size={10} />
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  ))
-              )}
-            </div>
-          </div>
-
-        </div>
       </div>
     </div>
   );
