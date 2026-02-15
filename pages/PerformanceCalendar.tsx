@@ -70,27 +70,48 @@ const PerformanceCalendar: React.FC = () => {
   return (
     <div className="space-y-8 pb-20 max-w-7xl mx-auto w-full overflow-x-hidden">
       {/* Header Unificado */}
-      <header className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 border-b border-slate-200 dark:border-slate-800 pb-6">
-        <div>
-            <h1 className="text-3xl font-black text-slate-900 dark:text-white uppercase tracking-tighter italic flex items-center gap-3">
-               <CalendarIcon className="text-emerald-500" size={32} /> Calendário de Performance
-            </h1>
-            <p className="text-slate-500 dark:text-slate-400 text-xs font-bold mt-2 uppercase tracking-widest">
-                Análise Diária de ROI e Consistência
-            </p>
-        </div>
-        <div className="flex items-center gap-4 bg-white dark:bg-[#0f172a] p-2 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm">
-            <button onClick={prevMonth} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg text-slate-500 dark:text-slate-400 transition-colors">
-                <ChevronLeft size={20} />
-            </button>
-            <span className="text-lg font-black text-slate-900 dark:text-white min-w-[160px] text-center capitalize tracking-tight">
-                {currentDate.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })}
-            </span>
-            <button onClick={nextMonth} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg text-slate-500 dark:text-slate-400 transition-colors">
-                <ChevronRight size={20} />
-            </button>
-        </div>
-      </header>
+      <header className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+
+  <div>
+    {/* Label superior discreta */}
+    <div className="flex items-center gap-2 text-emerald-500 text-[9px] font-mono font-bold uppercase tracking-widest mb-1">
+      <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse shadow-[0_0_8px_#10b981]"></span>
+      Temporal Performance Engine
+    </div>
+
+    {/* Headline principal */}
+    <h1 className="text-3xl font-black text-slate-900 dark:text-white tracking-tighter uppercase italic">
+      Calendário de Performance <span className="text-slate-400 dark:text-slate-700 text-lg">///</span>
+    </h1>
+
+    {/* Subheadline */}
+    <p className="text-slate-500 dark:text-slate-400 text-xs font-bold mt-2 uppercase tracking-widest">
+      Análise temporal de ROI, consistência e ciclos de resultado.
+    </p>
+  </div>
+
+  {/* Navegação de mês */}
+  <div className="flex items-center gap-4 bg-white dark:bg-[#0f172a] p-2 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm">
+      <button
+        onClick={prevMonth}
+        className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg text-slate-500 dark:text-slate-400 transition-colors"
+      >
+          <ChevronLeft size={20} />
+      </button>
+
+      <span className="text-lg font-black text-slate-900 dark:text-white min-w-[160px] text-center capitalize tracking-tight">
+          {currentDate.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })}
+      </span>
+
+      <button
+        onClick={nextMonth}
+        className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg text-slate-500 dark:text-slate-400 transition-colors"
+      >
+          <ChevronRight size={20} />
+      </button>
+  </div>
+
+</header>
 
       {/* Filtros */}
       <div className="bg-white dark:bg-[#0f172a] p-6 rounded-[2rem] border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col md:flex-row gap-6">
