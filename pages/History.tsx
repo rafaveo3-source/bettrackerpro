@@ -135,23 +135,44 @@ const History: React.FC = () => {
 
   return (
     <div className="space-y-6 pb-20">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-black text-slate-900 dark:text-white uppercase tracking-tighter italic">Histórico de Operações</h1>
-          <p className="text-slate-500 dark:text-slate-400 text-xs font-bold uppercase tracking-widest mt-1">Performance & Auditoria</p>
-        </div>
-        <div className="flex gap-2 w-full md:w-auto">
-            <button 
-                onClick={() => setShowAdvanced(!showAdvanced)}
-                className={`flex-1 md:flex-none flex items-center justify-center gap-2 px-4 py-3 rounded-xl text-xs font-bold uppercase tracking-wider transition-colors border ${showAdvanced ? 'bg-emerald-50 border-emerald-500 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-500' : 'bg-white dark:bg-[#0f172a] border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-300'}`}
-            >
-                <Filter size={16} /> Filtros
-            </button>
-            <button onClick={exportCSV} className="flex-1 md:flex-none flex items-center justify-center gap-2 bg-slate-900 hover:bg-slate-800 dark:bg-white dark:hover:bg-slate-200 text-white dark:text-slate-900 px-4 py-3 rounded-xl transition-colors text-xs font-bold uppercase tracking-wider shadow-lg shadow-slate-900/10">
-                <Download size={16} /> CSV
-            </button>
-        </div>
-      </div>
+      <header className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+
+  <div>
+    {/* Label superior discreta */}
+    <div className="flex items-center gap-2 text-emerald-500 text-[9px] font-mono font-bold uppercase tracking-widest mb-1">
+      <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse shadow-[0_0_8px_#10b981]"></span>
+      Operations Audit Engine
+    </div>
+
+    {/* Headline principal */}
+    <h1 className="text-3xl font-black text-slate-900 dark:text-white tracking-tighter uppercase italic">
+      Histórico de Operações <span className="text-slate-400 dark:text-slate-700 text-lg">///</span>
+    </h1>
+
+    {/* Subheadline */}
+    <p className="text-slate-500 dark:text-slate-400 text-xs font-bold mt-2 uppercase tracking-widest">
+      Auditoria completa, filtros avançados e rastreabilidade de performance.
+    </p>
+  </div>
+
+  {/* Botões laterais */}
+  <div className="flex gap-2 w-full md:w-auto">
+      <button 
+          onClick={() => setShowAdvanced(!showAdvanced)}
+          className={`flex-1 md:flex-none flex items-center justify-center gap-2 px-4 py-3 rounded-xl text-xs font-bold uppercase tracking-wider transition-colors border ${showAdvanced ? 'bg-emerald-50 border-emerald-500 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-500' : 'bg-white dark:bg-[#0f172a] border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-300'}`}
+      >
+          <Filter size={16} /> Filtros
+      </button>
+
+      <button 
+          onClick={exportCSV} 
+          className="flex-1 md:flex-none flex items-center justify-center gap-2 bg-slate-900 hover:bg-slate-800 dark:bg-white dark:hover:bg-slate-200 text-white dark:text-slate-900 px-4 py-3 rounded-xl transition-colors text-xs font-bold uppercase tracking-wider shadow-lg shadow-slate-900/10"
+      >
+          <Download size={16} /> CSV
+      </button>
+  </div>
+
+</header>
 
       <AnimatePresence>
         {showAdvanced && (
