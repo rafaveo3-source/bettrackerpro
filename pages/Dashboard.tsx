@@ -63,7 +63,7 @@ const Dashboard: React.FC = () => {
   }, [bankrollHistory]);
 
   const KPICard = ({ title, value, subtext, icon: Icon, color, trend, extraInfo }: any) => (
-    <div className="glass-card rounded-[1.2rem] p-5 group hover:border-slate-600 transition-all duration-300 relative overflow-hidden bg-white dark:bg-[#0f172a]/60 border border-slate-200 dark:border-slate-800 shadow-sm">
+    <div className="glass-card rounded-[1.2rem] p-5 group hover:border-slate-600 transition-all duration-300 relative overflow-hidden bg-white dark:bg-[#0f172a]/60 border border-slate-200 dark:border-slate-800 shadow-sm min-w-0">
         <div className="flex justify-between items-start mb-4">
             <div className={`p-2.5 rounded-lg bg-slate-100 dark:bg-slate-900/80 shadow-inner ${color}`}>
                 <Icon size={18} />
@@ -76,11 +76,11 @@ const Dashboard: React.FC = () => {
             )}
         </div>
         <div className="relative z-10">
-            <p className="text-slate-500 text-[9px] font-bold uppercase tracking-widest mb-1">{title}</p>
-            <h3 className="text-xl font-black text-slate-900 dark:text-white tracking-tight font-mono">{value}</h3>
+            <p className="text-slate-500 text-[9px] font-bold uppercase tracking-widest mb-1 truncate">{title}</p>
+            <h3 className="text-xl font-black text-slate-900 dark:text-white tracking-tight font-mono truncate">{value}</h3>
             <div className="flex justify-between items-end mt-2">
-                <p className="text-slate-600 dark:text-slate-400 text-[9px] font-bold uppercase tracking-wide opacity-80">{subtext}</p>
-                {extraInfo && <span className="text-[9px] text-slate-500 font-mono">{extraInfo}</span>}
+                <p className="text-slate-600 dark:text-slate-400 text-[9px] font-bold uppercase tracking-wide opacity-80 truncate">{subtext}</p>
+                {extraInfo && <span className="text-[9px] text-slate-500 font-mono ml-2">{extraInfo}</span>}
             </div>
         </div>
     </div>
@@ -123,9 +123,9 @@ const Dashboard: React.FC = () => {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 h-auto">
         {/* CHART SECTION */}
-        <div className="lg:col-span-2 glass-card rounded-[1.5rem] p-4 md:p-6 flex flex-col border border-slate-200 dark:border-slate-800 bg-white dark:bg-[#0f172a]/40 shadow-sm overflow-hidden">
+        <div className="lg:col-span-2 glass-card rounded-[1.5rem] p-4 md:p-6 flex flex-col border border-slate-200 dark:border-slate-800 bg-white dark:bg-[#0f172a]/40 shadow-sm overflow-hidden min-w-0">
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
-                <h3 className="text-xs font-black text-slate-900 dark:text-white uppercase tracking-widest flex items-center gap-2">
+                <h3 className="text-xs font-black text-slate-900 dark:text-white uppercase tracking-widest flex items-center gap-2 shrink-0">
                     <Layers size={14} className="text-slate-500" /> Performance Curve
                 </h3>
                 <div className="flex flex-wrap gap-1 bg-slate-100 dark:bg-slate-900 p-1 rounded-lg border border-slate-200 dark:border-slate-800 w-full sm:w-auto">
@@ -174,9 +174,9 @@ const Dashboard: React.FC = () => {
             </div>
         </div>
 
-        <div className="space-y-6 flex flex-col">
+        <div className="space-y-6 flex flex-col min-w-0">
             {/* HEATMAP */}
-            <div className="glass-card rounded-[1.5rem] p-6 border border-slate-200 dark:border-slate-800 bg-white dark:bg-[#0f172a]/40 shadow-sm flex-1 overflow-x-auto">
+            <div className="glass-card rounded-[1.5rem] p-6 border border-slate-200 dark:border-slate-800 bg-white dark:bg-[#0f172a]/40 shadow-sm flex-1 overflow-x-auto min-w-0">
                 <h3 className="text-xs font-black text-slate-900 dark:text-white uppercase tracking-widest mb-4 flex items-center gap-2">
                     <BarChart4 size={14} className="text-slate-500" /> Market Consistency
                 </h3>
@@ -198,7 +198,7 @@ const Dashboard: React.FC = () => {
             </div>
 
             {/* RECENT FEED */}
-            <div className="glass-card rounded-[1.5rem] p-0 overflow-hidden flex flex-col border border-slate-200 dark:border-slate-800 bg-white dark:bg-[#0f172a]/40 shadow-sm h-[300px]">
+            <div className="glass-card rounded-[1.5rem] p-0 overflow-hidden flex flex-col border border-slate-200 dark:border-slate-800 bg-white dark:bg-[#0f172a]/40 shadow-sm h-[300px] min-w-0">
                 <div className="p-5 border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/30 flex justify-between items-center">
                     <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest">Order Flow</h3>
                     <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></div>
@@ -214,9 +214,9 @@ const Dashboard: React.FC = () => {
                             <div key={bet.id} className="group flex items-center justify-between p-3 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800/80 transition-all border border-transparent hover:border-slate-200 dark:hover:border-slate-700 cursor-default">
                                 <div className="flex items-center gap-3 min-w-0 flex-1">
                                     <div className={`shrink-0 w-1 h-6 rounded-full ${bet.status === 'won' ? 'bg-emerald-500' : bet.status === 'lost' ? 'bg-red-500' : bet.status === 'refunded' ? 'bg-slate-400' : bet.status === 'cashout' ? 'bg-blue-500' : 'bg-yellow-500'}`}></div>
-                                    <div className="overflow-hidden min-w-0">
+                                    <div className="overflow-hidden min-w-0 flex-1">
                                         <p className="text-slate-700 dark:text-slate-300 font-bold text-[10px] truncate">{bet.event}</p>
-                                        <p className="text-[8px] text-slate-500 uppercase font-mono">{bet.market}</p>
+                                        <p className="text-[8px] text-slate-500 uppercase font-mono truncate">{bet.market}</p>
                                     </div>
                                 </div>
                                 <div className="text-right shrink-0 ml-2">
