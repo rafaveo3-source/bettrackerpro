@@ -77,15 +77,32 @@ const Calculators: React.FC = () => {
 
   return (
     <div className="space-y-6 pb-20 w-full overflow-x-hidden">
-       <div className="flex items-center gap-3">
-        <div className="bg-emerald-500/10 p-3 rounded-xl border border-emerald-500/20 text-emerald-600 dark:text-emerald-500 shrink-0">
-             <Calculator size={24} />
-        </div>
-        <div>
-            <h1 className="text-2xl font-black text-slate-900 dark:text-white uppercase tracking-tighter italic">Ferramentas Pro</h1>
-            <p className="text-slate-500 dark:text-slate-400 text-xs font-bold uppercase tracking-widest mt-1">Gestão Matemática & Estratégia</p>
-        </div>
-      </div>
+       {/* HEADER PADRÃO PREMIUM */}
+<div className="flex flex-col gap-2">
+
+  {/* Micro label superior */}
+  <div className="flex items-center gap-2 text-emerald-500 text-[9px] font-mono font-bold uppercase tracking-widest">
+    <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse shadow-[0_0_8px_#10b981]"></span>
+    Strategic Math Engine
+  </div>
+
+  {/* Título principal */}
+  <div className="flex items-center gap-3">
+    <div className="bg-emerald-500/10 p-3 rounded-xl border border-emerald-500/20 text-emerald-600 dark:text-emerald-500 shrink-0">
+      <Calculator size={24} />
+    </div>
+
+    <div>
+      <h1 className="text-3xl font-black text-slate-900 dark:text-white uppercase tracking-tighter italic">
+        Calculadoras Estratégicas
+      </h1>
+      <p className="text-slate-500 dark:text-slate-400 text-xs font-bold uppercase tracking-widest mt-1">
+        Gestão Matemática & Edge Profissional
+      </p>
+    </div>
+  </div>
+
+</div>
 
       {/* ✅ SOLUÇÃO DEFINITIVA: Grid Responsivo (Stack no Mobile, Linha no Desktop) */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-6">
