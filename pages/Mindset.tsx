@@ -113,19 +113,36 @@ const Mindset: React.FC = () => {
     <div className="space-y-8 pb-20 max-w-7xl mx-auto">
 
       {/* HEADER */}
-      <header className="flex justify-between items-center">
-        <h1 className="text-3xl font-black text-slate-900 dark:text-white uppercase italic flex items-center gap-3">
-          <BrainCircuit className="text-purple-500" size={32} />
-          Psicologia & Performance
-        </h1>
-        <button 
-          onClick={() => setShowTiltModal(true)} 
-          className="bg-red-500/10 border border-red-500/30 text-red-600 dark:text-red-500 px-6 py-3 rounded-xl text-xs font-black uppercase tracking-widest"
-        >
-          <ShieldAlert size={16} className="inline mr-2"/>
-          Protocolo de Emergência
-        </button>
-      </header>
+<header className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+
+  <div>
+    {/* Label superior discreta */}
+    <div className="flex items-center gap-2 text-emerald-500 text-[9px] font-mono font-bold uppercase tracking-widest mb-1">
+      <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse shadow-[0_0_8px_#10b981]"></span>
+      Cognitive Performance Engine
+    </div>
+
+    {/* Headline principal */}
+    <h1 className="text-3xl font-black text-slate-900 dark:text-white tracking-tighter uppercase italic">
+      Psicologia & Performance <span className="text-slate-400 dark:text-slate-700 text-lg">///</span>
+    </h1>
+
+    {/* Subheadline */}
+    <p className="text-slate-500 dark:text-slate-400 text-xs font-bold mt-2 uppercase tracking-widest">
+      Monitoramento emocional e impacto direto na sua performance operacional.
+    </p>
+  </div>
+
+  {/* Botão lateral */}
+  <button 
+    onClick={() => setShowTiltModal(true)} 
+    className="bg-red-500/10 border border-red-500/30 text-red-600 dark:text-red-500 px-6 py-3 rounded-xl text-xs font-black uppercase tracking-widest"
+  >
+    <ShieldAlert size={16} className="inline mr-2"/>
+    Protocolo de Emergência
+  </button>
+
+</header>
 
       {/* INSIGHTS CARDS */}
       <div className="grid md:grid-cols-3 gap-6">
