@@ -330,18 +330,19 @@ else if (txData) {
           }
 
           get().recalculateBankroll();
-        } else {
+                } else {
           set({
-  isAuthenticated: false,
-  user: null,
-  history: [],
-  transactions: [],
-  mindsetHistory: [],
-  goals: [],
-  bankrolls: [],
-  activeBankrollId: '',
-  currentBankrollBalance: 0
-});
+            isAuthenticated: false,
+            user: null,
+            history: [],
+            transactions: [],
+            mindsetHistory: [],
+            goals: [],
+            bankrolls: [],
+            activeBankrollId: '',
+            currentBankrollBalance: 0,
+          });
+        }
       },
 
       logout: async () => {
