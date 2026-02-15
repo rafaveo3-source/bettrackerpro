@@ -35,6 +35,7 @@ const Analytics: React.FC = () => {
   }));
 
   // Process Data: Status Distribution
+  // Agora inclui TODOS os status relevantes para visualização precisa
   const statusCount = { won: 0, lost: 0, pending: 0, refunded: 0 };
   const allBets = history.filter(b => b.bankrollId === activeBankrollId);
   
@@ -42,14 +43,21 @@ const Analytics: React.FC = () => {
     if (['won', 'half-won'].includes(bet.status)) statusCount.won++;
     else if (['lost', 'half-lost'].includes(bet.status)) statusCount.lost++;
     else if (bet.status === 'refunded' || bet.status === 'void') statusCount.refunded++;
-    else statusCount.pending++;
+    else if (bet.status === 'pending') statusCount.pending++;
+    // Cashout geralmente é considerado "won" ou "lost" dependendo do lucro, mas se quiser separado, precisaria de outro contador.
+    // Por enquanto, cashout com lucro entra em won, com prejuízo em lost, ou se status for explicitamente 'cashout' e não tratado acima, pode cair em pending se não ajustar.
+    // Ajuste fino: Se status for 'cashout', verificar lucro.
+    else if (bet.status === 'cashout') {
+        if (bet.profit >= 0) statusCount.won++;
+        else statusCount.lost++;
+    }
   });
   
   const pieData = [
-    { name: 'Green', value: statusCount.won, color: '#10b981' },
-    { name: 'Red', value: statusCount.lost, color: '#ef4444' },
-    { name: 'Reembolso', value: statusCount.refunded, color: '#64748b' },
-    { name: 'Pendente', value: statusCount.pending, color: '#eab308' },
+    { name: 'Green', value: statusCount.won, color: '#10b981' }, // Emerald
+    { name: 'Red', value: statusCount.lost, color: '#ef4444' }, // Red
+    { name: 'Reembolso', value: statusCount.refunded, color: '#64748b' }, // Slate
+    { name: 'Pendente', value: statusCount.pending, color: '#eab308' }, // Yellow
   ].filter(d => d.value > 0);
 
   return (
