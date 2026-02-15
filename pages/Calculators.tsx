@@ -87,20 +87,27 @@ const Calculators: React.FC = () => {
   </div>
 
   {/* Título principal */}
-  <div className="flex items-center gap-3">
-    <div className="bg-emerald-500/10 p-3 rounded-xl border border-emerald-500/20 text-emerald-600 dark:text-emerald-500 shrink-0">
-      <Calculator size={24} />
+  <header className="border-b border-slate-200 dark:border-slate-800 pb-6">
+  <div className="flex flex-col gap-3">
+    
+    {/* Micro Label */}
+    <div className="flex items-center gap-2 text-purple-500 text-[9px] font-mono font-bold uppercase tracking-widest">
+      <span className="w-1.5 h-1.5 bg-purple-500 rounded-full animate-pulse shadow-[0_0_8px_#a855f7]"></span>
+      Strategic Math Engine
     </div>
 
-    <div>
-      <h1 className="text-3xl font-black text-slate-900 dark:text-white uppercase tracking-tighter italic">
-        Calculadoras Estratégicas
-      </h1>
-      <p className="text-slate-500 dark:text-slate-400 text-xs font-bold uppercase tracking-widest mt-1">
-        Gestão Matemática & Edge Profissional
-      </p>
-    </div>
+    {/* Headline */}
+    <h1 className="text-3xl font-black text-slate-900 dark:text-white uppercase tracking-tighter italic">
+      Calculadoras Estratégicas <span className="text-slate-400">///</span>
+    </h1>
+
+    {/* Subheadline */}
+    <p className="text-slate-500 dark:text-slate-400 text-xs font-bold uppercase tracking-widest">
+      Gestão Matemática & Edge Profissional.
+    </p>
+
   </div>
+</header>
 
 </div>
 
