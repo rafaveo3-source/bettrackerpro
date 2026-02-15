@@ -201,11 +201,18 @@ const tooltipText = isDark ? '#ffffff' : '#0f172a'
                 <CartesianGrid
   stroke={gridColor}
   strokeDasharray="3 3"
-  horizontal={false}
+  vertical={false}
 />
 
 <XAxis
-  type="number"
+  dataKey="name"
+  stroke={axisColor}
+  fontSize={11}
+  tickLine={false}
+  axisLine={false}
+/>
+
+<YAxis
   stroke={axisColor}
   fontSize={11}
   tickLine={false}
@@ -215,16 +222,6 @@ const tooltipText = isDark ? '#ffffff' : '#0f172a'
       ? `${(val / unitSize).toFixed(0)}u`
       : val
   }
-/>
-
-<YAxis
-  dataKey="name"
-  type="category"
-  stroke={axisColor}
-  fontSize={11}
-  tickLine={false}
-  axisLine={false}
-  width={130}
 />
 
 <Tooltip
@@ -273,18 +270,11 @@ const tooltipText = isDark ? '#ffffff' : '#0f172a'
                 <CartesianGrid
   stroke={gridColor}
   strokeDasharray="3 3"
-  vertical={false}
+  horizontal={false}
 />
 
 <XAxis
-  dataKey="name"
-  stroke={axisColor}
-  fontSize={11}
-  tickLine={false}
-  axisLine={false}
-/>
-
-<YAxis
+  type="number"
   stroke={axisColor}
   fontSize={11}
   tickLine={false}
@@ -294,6 +284,16 @@ const tooltipText = isDark ? '#ffffff' : '#0f172a'
       ? `${(val / unitSize).toFixed(0)}u`
       : val
   }
+/>
+
+<YAxis
+  dataKey="name"
+  type="category"
+  stroke={axisColor}
+  fontSize={11}
+  tickLine={false}
+  axisLine={false}
+  width={140}
 />
 
 <Tooltip
