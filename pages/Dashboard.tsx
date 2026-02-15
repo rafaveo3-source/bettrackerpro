@@ -4,13 +4,18 @@ import { Wallet, TrendingUp, Target, Activity, DollarSign, Trash2, Pencil, Spark
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 
 const Dashboard: React.FC = () => {
-  const { currentBankrollBalance, bankrolls, activeBankrollId, getMetrics, history, removeBet } = useBetStore();
+  const { currentBankrollBalance, bankrolls, activeBankrollId, getMetrics, history, removeBet, displayMode, unitSize } = useBetStore();
   const [period, setPeriod] = useState<'1S' | '1M' | '3M' | 'YTD' | 'ALL'>('ALL');
   
   const metrics = getMetrics();
   const activeBR = bankrolls.find(b => b.id === activeBankrollId);
 
-  const formatCurrency = (value: number) => {
+  // ✅ Função Helper de Formatação (Moeda vs Unidade)
+  const formatValue = (value: number) => {
+    if (displayMode === 'units') {
+        const units = value / (unitSize || 100);
+        return `${units >= 0 ? '+' : ''}${units.toFixed(2)}u`;
+    }
     return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: activeBR?.currency || 'BRL' }).format(value);
   };
 
@@ -40,6 +45,9 @@ const Dashboard: React.FC = () => {
       runningBalance += betsBefore.reduce((acc, b) => acc + b.profit, 0);
   }
 
+  // ✅ Chart Data
+  // Para o gráfico, mantemos o valor monetário no eixo Y para precisão visual da curva,
+  // mas o Tooltip usará o formatValue para mostrar em unidades se selecionado.
   const chartData = filteredHistory.map(bet => {
     runningBalance += bet.profit;
     return { date: bet.date.split('-').slice(1).reverse().join('/'), balance: runningBalance };
@@ -103,8 +111,9 @@ const Dashboard: React.FC = () => {
         </div>
         <div className="flex items-center gap-6 w-full md:w-auto justify-between md:justify-end">
             <div className="text-right">
-                <p className="text-[9px] text-slate-500 font-bold uppercase tracking-widest mb-0.5">Net Liquidity</p>
-                <p className="text-2xl font-black text-emerald-500 dark:text-emerald-400 font-mono tracking-tight">{formatCurrency(currentBankrollBalance)}</p>
+                <p className="text-[9px] text-slate-500 font-bold uppercase tracking-widest mb-0.5">Liquidez Líquida</p>
+                {/* ✅ Exibe conforme configuração (R$ ou Unidades) */}
+                <p className="text-2xl font-black text-emerald-500 dark:text-emerald-400 font-mono tracking-tight">{formatValue(currentBankrollBalance)}</p>
             </div>
             <div className="h-8 w-[1px] bg-slate-200 dark:bg-slate-800 hidden md:block"></div>
             <div className="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-2.5 rounded-xl hover:border-slate-300 dark:hover:border-slate-700 transition-colors cursor-help" title="System Health: Optimal">
@@ -114,11 +123,11 @@ const Dashboard: React.FC = () => {
       </header>
 
       <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4">
-        <KPICard title="Equity" value={formatCurrency(currentBankrollBalance)} subtext="Total Assets" icon={Wallet} color="text-emerald-500 dark:text-emerald-400" trend={growth} />
-        <KPICard title="Sharpe Ratio" value={metrics.sharpeRatio.toFixed(2)} subtext="Risk-Adj Return" icon={Scale} color={metrics.sharpeRatio > 1 ? "text-emerald-500 dark:text-emerald-400" : "text-amber-500 dark:text-amber-400"} extraInfo={metrics.sharpeRatio > 2 ? 'Excellent' : 'Moderate'} />
-        <KPICard title="Max Drawdown" value={formatCurrency(metrics.maxDrawdown)} subtext="Peak to Valley" icon={AlertOctagon} color="text-red-500 dark:text-red-400" extraInfo={`Risk: ${(metrics.maxDrawdown / initialBal * 100).toFixed(1)}%`} />
+        <KPICard title="Equity" value={formatValue(currentBankrollBalance)} subtext="Ativos Totais" icon={Wallet} color="text-emerald-500 dark:text-emerald-400" trend={growth} />
+        <KPICard title="Sharpe Ratio" value={metrics.sharpeRatio.toFixed(2)} subtext="Retorno/Risco" icon={Scale} color={metrics.sharpeRatio > 1 ? "text-emerald-500 dark:text-emerald-400" : "text-amber-500 dark:text-amber-400"} extraInfo={metrics.sharpeRatio > 2 ? 'Excelente' : 'Moderado'} />
+        <KPICard title="Max Drawdown" value={formatValue(metrics.maxDrawdown)} subtext="Queda Máxima" icon={AlertOctagon} color="text-red-500 dark:text-red-400" extraInfo={`Risco: ${(metrics.maxDrawdown / initialBal * 100).toFixed(1)}%`} />
         <KPICard title="Win Rate" value={`${metrics.winRate.toFixed(0)}%`} subtext={`N = ${metrics.totalBets}`} icon={Target} color="text-purple-500 dark:text-purple-400" />
-        <KPICard title="P&L" value={formatCurrency(metrics.totalProfit)} subtext="Net Profit" icon={DollarSign} color={metrics.totalProfit >= 0 ? "text-emerald-500 dark:text-emerald-400" : "text-red-500 dark:text-red-400"} />
+        <KPICard title="P&L" value={formatValue(metrics.totalProfit)} subtext="Lucro Líquido" icon={DollarSign} color={metrics.totalProfit >= 0 ? "text-emerald-500 dark:text-emerald-400" : "text-red-500 dark:text-red-400"} />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 h-auto">
@@ -126,7 +135,7 @@ const Dashboard: React.FC = () => {
         <div className="lg:col-span-2 glass-card rounded-[1.5rem] p-4 md:p-6 flex flex-col border border-slate-200 dark:border-slate-800 bg-white dark:bg-[#0f172a]/40 shadow-sm overflow-hidden min-w-0">
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
                 <h3 className="text-xs font-black text-slate-900 dark:text-white uppercase tracking-widest flex items-center gap-2 shrink-0">
-                    <Layers size={14} className="text-slate-500" /> Performance Curve
+                    <Layers size={14} className="text-slate-500" /> Curva de Performance
                 </h3>
                 <div className="flex flex-wrap gap-1 bg-slate-100 dark:bg-slate-900 p-1 rounded-lg border border-slate-200 dark:border-slate-800 w-full sm:w-auto">
                     {['1S', '1M', '3M', 'YTD', 'ALL'].map(p => (
@@ -155,7 +164,8 @@ const Dashboard: React.FC = () => {
                         </defs>
                         <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" vertical={false} />
                         <XAxis dataKey="date" stroke="#94a3b8" fontSize={10} tickLine={false} axisLine={false} tickMargin={10} />
-                        <YAxis stroke="#94a3b8" fontSize={10} tickLine={false} axisLine={false} tickFormatter={(val) => `${val}`} width={40} />
+                        {/* ✅ Eixo Y e Tooltip ajustados para formatValue */}
+                        <YAxis stroke="#94a3b8" fontSize={10} tickLine={false} axisLine={false} tickFormatter={(val) => displayMode === 'units' ? `${(val/unitSize).toFixed(0)}u` : `${val}`} width={40} />
                         <Tooltip 
                             contentStyle={{ 
                                 backgroundColor: '#0f172a', 
@@ -165,7 +175,7 @@ const Dashboard: React.FC = () => {
                                 color: '#fff'
                             }} 
                             itemStyle={{ color: '#fff', fontSize: '11px', fontWeight: 'bold', fontFamily: 'monospace' }}
-                            formatter={(value: number) => [formatCurrency(value), 'Equity']}
+                            formatter={(value: number) => [formatValue(value), 'Equity']}
                             labelStyle={{ color: '#94a3b8', fontSize: '10px', marginBottom: '4px' }}
                         />
                         <Area type="monotone" dataKey="balance" stroke="#10b981" strokeWidth={2} fill="url(#colorBal)" animationDuration={1000} />
@@ -178,11 +188,11 @@ const Dashboard: React.FC = () => {
             {/* HEATMAP */}
             <div className="glass-card rounded-[1.5rem] p-6 border border-slate-200 dark:border-slate-800 bg-white dark:bg-[#0f172a]/40 shadow-sm flex-1 overflow-x-auto min-w-0">
                 <h3 className="text-xs font-black text-slate-900 dark:text-white uppercase tracking-widest mb-4 flex items-center gap-2">
-                    <BarChart4 size={14} className="text-slate-500" /> Market Consistency
+                    <BarChart4 size={14} className="text-slate-500" /> Consistência
                 </h3>
                 <div className="grid grid-cols-6 gap-2 min-w-[200px]">
                     {heatmapData.map((d, i) => (
-                        <div key={i} title={`${d.date}: ${formatCurrency(d.profit)} (${d.count} bets)`} 
+                        <div key={i} title={`${d.date}: ${formatValue(d.profit)} (${d.count} bets)`} 
                              className={`h-8 rounded-md transition-all hover:scale-110 cursor-pointer ${
                                  d.count === 0 ? 'bg-slate-100 dark:bg-slate-800/50' : 
                                  d.profit > 0 ? 'bg-emerald-500' : 'bg-red-500'
@@ -192,8 +202,8 @@ const Dashboard: React.FC = () => {
                     ))}
                 </div>
                 <div className="flex justify-between mt-4 text-[9px] text-slate-500 font-mono uppercase">
-                    <span>30 Days Ago</span>
-                    <span>Today</span>
+                    <span>30 Dias Atrás</span>
+                    <span>Hoje</span>
                 </div>
             </div>
 
@@ -207,7 +217,7 @@ const Dashboard: React.FC = () => {
                     {bankrollHistory.length === 0 ? (
                         <div className="h-full flex flex-col items-center justify-center text-slate-700 gap-3 opacity-50">
                             <Sparkles size={24} />
-                            <p className="text-[10px] font-black uppercase tracking-widest">No Activity</p>
+                            <p className="text-[10px] font-black uppercase tracking-widest">Sem Atividade</p>
                         </div>
                     ) : (
                         bankrollHistory.slice().reverse().slice(0, 15).map(bet => (
@@ -221,7 +231,7 @@ const Dashboard: React.FC = () => {
                                 </div>
                                 <div className="text-right shrink-0 ml-2">
                                     <p className={`text-[10px] font-black font-mono ${bet.profit >= 0 ? 'text-emerald-500 dark:text-emerald-400' : 'text-red-500 dark:text-red-400'}`}>
-                                        {bet.profit >= 0 ? '+' : ''}{bet.profit.toFixed(2)}
+                                        {bet.profit >= 0 ? '+' : ''}{formatValue(bet.profit)}
                                     </p>
                                     <div className="flex gap-2 justify-end mt-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
                                         <button onClick={() => handleEdit(bet)} className="text-slate-400 hover:text-emerald-500"><Pencil size={8} /></button>
