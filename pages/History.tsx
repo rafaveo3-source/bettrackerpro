@@ -178,6 +178,22 @@ const History: React.FC = () => {
         {showAdvanced && (
             <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
                 <div className="bg-white dark:bg-[#0f172a] p-6 rounded-2xl border border-slate-200 dark:border-slate-800 grid grid-cols-1 md:grid-cols-4 gap-4 mb-6 shadow-sm">
+                    <div className="md:col-span-4 flex justify-end pt-2 border-t border-slate-100 dark:border-slate-800 mt-2">
+  <button
+    onClick={() => {
+      setSearchTerm('');
+      setStatusFilter('all');
+      setSportFilter('all');
+      setDateStart('');
+      setDateEnd('');
+      setMinOdd('');
+      setMinStake('');
+    }}
+    className="text-xs font-bold uppercase tracking-widest text-slate-500 hover:text-red-500 transition-colors"
+  >
+    Limpar Filtros
+  </button>
+</div>
                     <div>
                         <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2 block">Data Início</label>
                         <input type="date" value={dateStart} onChange={e => setDateStart(e.target.value)} className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 text-sm outline-none focus:border-emerald-500 dark:text-white transition-colors" />
@@ -193,14 +209,73 @@ const History: React.FC = () => {
                     <div>
                         <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2 block">Stake Mínima</label>
                         <input type="number" value={minStake} onChange={e => setMinStake(e.target.value)} className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 text-sm outline-none focus:border-emerald-500 dark:text-white transition-colors" placeholder="100" />
+                    
                     </div>
                 </div>
             </motion.div>
         )}
       </AnimatePresence>
 
+      {/* RESUMO EXECUTIVO DO FILTRO */}
+<div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+  <div className="bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-800 rounded-xl p-4 shadow-sm">
+    <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">
+      Operações
+    </p>
+    <p className="text-xl font-black text-slate-900 dark:text-white">
+      {filteredHistory.length}
+    </p>
+  </div>
+
+  <div className="bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-800 rounded-xl p-4 shadow-sm">
+    <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">
+      Lucro Total
+    </p>
+    <p className={`text-xl font-black ${
+      filteredHistory.reduce((acc, b) => acc + b.profit, 0) >= 0
+        ? 'text-emerald-600 dark:text-emerald-400'
+        : 'text-red-600 dark:text-red-400'
+    }`}>
+      {formatCurrency(filteredHistory.reduce((acc, b) => acc + b.profit, 0))}
+    </p>
+  </div>
+
+  <div className="bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-800 rounded-xl p-4 shadow-sm">
+    <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">
+      Win Rate
+    </p>
+    <p className="text-xl font-black text-slate-900 dark:text-white">
+      {filteredHistory.length > 0
+        ? `${(
+            (filteredHistory.filter(b => b.profit > 0).length /
+              filteredHistory.length) *
+            100
+          ).toFixed(0)}%`
+        : '0%'}
+    </p>
+  </div>
+
+  <div className="bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-800 rounded-xl p-4 shadow-sm">
+    <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">
+      ROI Médio
+    </p>
+    <p className="text-xl font-black text-slate-900 dark:text-white">
+      {filteredHistory.length > 0
+        ? `${(
+            (filteredHistory.reduce((acc, b) => acc + b.profit, 0) /
+              filteredHistory.reduce((acc, b) => acc + b.stake, 0)) *
+            100
+          ).toFixed(2)}%`
+        : '0%'}
+    </p>
+  </div>
+</div>
+
       <div className="bg-white dark:bg-[#0f172a] p-4 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm space-y-4">
         <div className="flex flex-col md:flex-row gap-4">
+          <div className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mt-2">
+  {filteredHistory.length} resultado(s) encontrado(s)
+</div>
             <div className="flex-1 relative">
                 <Search className="absolute left-4 top-3.5 text-slate-400" size={18} />
                 <input 
