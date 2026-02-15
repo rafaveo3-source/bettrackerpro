@@ -119,6 +119,45 @@ const Bankroll: React.FC = () => {
 
 </header>
 
+    {/* RESUMO EXECUTIVO */}
+<div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+  <div className="bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-800 rounded-xl p-4 shadow-sm">
+    <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">
+      Bancas Ativas
+    </p>
+    <p className="text-2xl font-black text-slate-900 dark:text-white">
+      {bankrolls.length}
+    </p>
+  </div>
+
+  <div className="bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-800 rounded-xl p-4 shadow-sm">
+    <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">
+      Banca Selecionada
+    </p>
+    <p className="text-lg font-black text-emerald-600 dark:text-emerald-400 truncate">
+      {activeBR?.name || '—'}
+    </p>
+  </div>
+
+  <div className="bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-800 rounded-xl p-4 shadow-sm">
+    <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">
+      Saldo Atual
+    </p>
+    <p className="text-xl font-black text-slate-900 dark:text-white">
+      {formatCurrency(currentBankrollBalance)}
+    </p>
+  </div>
+
+  <div className="bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-800 rounded-xl p-4 shadow-sm">
+    <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">
+      Transações
+    </p>
+    <p className="text-xl font-black text-slate-900 dark:text-white">
+      {transactions.length}
+    </p>
+  </div>
+</div>
+
       {/* BANKROLL GRID */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {bankrolls.map((br) => (
@@ -132,10 +171,16 @@ const Bankroll: React.FC = () => {
             }`}
           >
             {activeBankrollId === br.id && (
-              <div className="absolute top-6 right-6 text-emerald-500 animate-in fade-in zoom-in duration-300">
-                <CheckCircle2 size={24} />
-              </div>
-            )}
+  <>
+    <div className="absolute top-6 right-6 text-emerald-500">
+      <CheckCircle2 size={24} />
+    </div>
+
+    <div className="absolute top-6 left-6 bg-emerald-500 text-white text-[9px] font-black px-2 py-1 rounded-full uppercase tracking-widest shadow-lg shadow-emerald-500/20">
+      Ativa
+    </div>
+  </>
+)}
 
             <div className="flex items-center gap-4 mb-6">
               <div
@@ -163,6 +208,15 @@ const Bankroll: React.FC = () => {
                 Saldo Atual
               </p>
               <h4 className="text-3xl font-black text-slate-900 dark:text-white tracking-tighter">
+                {br.id === activeBankrollId && (
+  <p className={`text-[10px] font-bold uppercase tracking-widest mt-2 ${
+    currentBankrollBalance >= br.initialBalance
+      ? 'text-emerald-600 dark:text-emerald-400'
+      : 'text-red-500 dark:text-red-400'
+  }`}>
+    {currentBankrollBalance >= br.initialBalance ? '▲ Crescimento' : '▼ Em Drawdown'}
+  </p>
+)}
                 {formatCurrency(
                   br.id === activeBankrollId
                     ? currentBankrollBalance
@@ -194,6 +248,9 @@ const Bankroll: React.FC = () => {
               className="bg-slate-50 dark:bg-[#0f172a]/50 border-2 border-dashed border-emerald-500/50 rounded-[2rem] p-6 flex flex-col justify-center"
             >
               <h3 className="font-bold text-slate-900 dark:text-white mb-4 text-sm uppercase tracking-wide">
+                <p className="text-[10px] text-slate-500 dark:text-slate-400 mb-4 uppercase tracking-widest font-bold">
+  Defina capital inicial e moeda base da operação
+</p>
                 Configurar Nova Banca
               </h3>
 
@@ -280,12 +337,16 @@ const Bankroll: React.FC = () => {
               </p>
 
               <input
-                type="text"
-                placeholder="Digite o nome da banca para confirmar"
-                value={confirmInput}
-                onChange={(e) => setConfirmInput(e.target.value)}
-                className="w-full border rounded-xl p-3 mb-6"
-              />
+  type="text"
+  placeholder="Digite exatamente: "
+  value={confirmInput}
+  onChange={(e) => setConfirmInput(e.target.value)}
+  className="w-full bg-slate-50 dark:bg-slate-900 border border-red-300 dark:border-red-500/30 rounded-xl px-4 py-3 mb-4 outline-none focus:border-red-500 transition-colors text-sm font-bold text-slate-900 dark:text-white"
+/>
+
+<p className="text-[10px] text-red-500 font-bold uppercase tracking-widest mb-4">
+  Confirmação exigida: {selectedBR.name}
+</p>
 
               <div className="flex gap-4">
                 <button
