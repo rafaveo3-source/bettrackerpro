@@ -7,7 +7,17 @@ import {
 } from 'lucide-react';
 import TiltModal from '../components/TiltModal';
 import { motion, AnimatePresence } from 'framer-motion';
-import { BarChart, Bar, Tooltip, ResponsiveContainer, Cell } from 'recharts';
+import { 
+  ResponsiveContainer,
+  Tooltip,
+  RadialBarChart,
+  RadialBar,
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  Cell
+} from 'recharts';
 
 const Mindset: React.FC = () => {
   const { 
@@ -68,11 +78,22 @@ const Mindset: React.FC = () => {
   const bestMood = [...moodInsights].sort((a, b) => b.avgProfit - a.avgProfit)[0];
   const worstMood = [...moodInsights].sort((a, b) => a.avgProfit - b.avgProfit)[0];
 
-  const chartData = moodInsights.map(m => ({
+  const totalEntries = mindsetHistory.length;
+
+const chartData = moodInsights.map(m => {
+  const percentage = totalEntries > 0 
+    ? (m.count / totalEntries) * 100 
+    : 0;
+
+  return {
     name: m.label,
+    percentage: Number(percentage.toFixed(1)),
     count: m.count,
     color: m.color
-  }));
+  };
+});
+
+const dominantMood = chartData.sort((a,b) => b.percentage - a.percentage)[0];
 
   const handleSave = () => {
     if (!note.trim()) return;
@@ -162,38 +183,101 @@ const Mindset: React.FC = () => {
 
         <div className="bg-white dark:bg-[#0f172a]/60 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 relative overflow-hidden">
 
-  {/* Label discreta */}
-  <p className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-4">
-    Distribuição Emocional
+  <p className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-6">
+    Emotional Distribution Engine
   </p>
 
-  <ResponsiveContainer width="100%" height={160}>
-    <BarChart data={chartData} barCategoryGap="25%">
-      
-      <Tooltip
-        cursor={{ fill: 'rgba(148,163,184,0.1)' }}
-        contentStyle={{
-          background: '#ffffff',
-          border: '1px solid #e2e8f0',
-          borderRadius: '12px',
-          fontSize: '12px',
-          fontWeight: 'bold'
-        }}
-        labelStyle={{ color: '#64748b' }}
-      />
+  <div className="grid grid-cols-2 gap-6 items-center">
 
-      <Bar 
-        dataKey="count" 
-        radius={[8, 8, 0, 0]}
-      >
-        {chartData.map((entry, index) => (
-          <Cell key={index} fill={entry.color} />
-        ))}
-      </Bar>
-    </BarChart>
-  </ResponsiveContainer>
+    {/* 🔵 RADIAL CHART */}
+    <div className="relative h-[180px]">
+      <ResponsiveContainer width="100%" height="100%">
+        <RadialBarChart 
+          innerRadius="30%" 
+          outerRadius="100%" 
+          data={chartData}
+          startAngle={90}
+          endAngle={-270}
+        >
+          <RadialBar
+            dataKey="percentage"
+            cornerRadius={10}
+            animationDuration={1200}
+          >
+            {chartData.map((entry, index) => (
+              <Cell key={index} fill={entry.color} />
+            ))}
+          </RadialBar>
+
+          <Tooltip 
+            formatter={(value: any) => `${value}%`}
+            contentStyle={{
+              borderRadius: '12px',
+              fontSize: '12px',
+              fontWeight: 'bold'
+            }}
+          />
+        </RadialBarChart>
+      </ResponsiveContainer>
+    </div>
+
+    {/* 🟢 HORIZONTAL BAR */}
+    <div className="h-[180px]">
+      <ResponsiveContainer width="100%" height="100%">
+        <BarChart
+          layout="vertical"
+          data={chartData}
+          margin={{ top: 0, right: 10, left: 0, bottom: 0 }}
+        >
+          <XAxis type="number" hide />
+          <YAxis 
+            type="category" 
+            dataKey="name" 
+            width={80}
+            tick={{ fontSize: 10 }}
+          />
+
+          <Tooltip 
+            formatter={(value: any) => `${value}%`}
+            cursor={{ fill: 'rgba(148,163,184,0.08)' }}
+          />
+
+          <Bar 
+            dataKey="percentage"
+            radius={[0, 10, 10, 0]}
+            animationDuration={1000}
+          >
+            {chartData.map((entry, index) => (
+              <Cell key={index} fill={entry.color} />
+            ))}
+          </Bar>
+        </BarChart>
+      </ResponsiveContainer>
+    </div>
+
+  </div>
+
+  {/* 🧠 MICRO INSIGHT AUTOMÁTICO */}
+  {dominantMood && (
+    <div className="mt-6 p-4 bg-slate-50 dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800">
+      <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">
+        Behavioral Insight
+      </p>
+
+      <p className="text-sm font-bold text-slate-700 dark:text-slate-300">
+        Seu estado predominante é <span style={{color: dominantMood.color}}>
+          {dominantMood.name}
+        </span> ({dominantMood.percentage}% das sessões).
+      </p>
+
+      <p className="text-xs text-slate-500 mt-1">
+        Alta frequência desse estado impacta diretamente sua consistência operacional.
+      </p>
+    </div>
+  )}
 
 </div>
+        
       </div>
 
       {/* FORM */}
