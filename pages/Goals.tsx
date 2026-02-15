@@ -323,8 +323,13 @@ const Goals: React.FC = () => {
           {activeGoals.length === 0 ? (
             <div className="bg-white dark:bg-[#0f172a]/60 border border-slate-200 dark:border-slate-800 rounded-[2rem] p-16 flex flex-col items-center justify-center text-center">
               <div className="w-16 h-16 rounded-full bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 flex items-center justify-center text-slate-400 dark:text-slate-600 mb-6"><Target size={32} /></div>
-              <h3 className="text-slate-900 dark:text-white font-bold text-lg mb-2 uppercase tracking-wide">Sem Tração</h3>
-              <p className="text-slate-500 dark:text-slate-400 text-sm max-w-xs leading-relaxed">O mercado pune quem não tem alvo. Defina sua primeira meta agora.</p>
+              <h3 className="text-slate-900 dark:text-white font-black text-lg mb-2 uppercase tracking-wider">
+  Nenhuma Meta Ativa
+</h3>
+<p className="text-slate-500 dark:text-slate-400 text-sm max-w-sm leading-relaxed">
+  Traders consistentes operam com direção clara.
+  Defina um alvo estratégico e acompanhe sua probabilidade em tempo real.
+</p>
             </div>
           ) : (
             activeGoals.map(goal => {
@@ -340,10 +345,14 @@ const Goals: React.FC = () => {
                         <h3 className="text-lg font-black text-slate-900 dark:text-white tracking-tight uppercase italic">{goal.title}</h3>
                         <div className="flex flex-wrap items-center gap-2 mt-1">
                           <span className="text-[10px] bg-slate-100 dark:bg-slate-900 text-slate-500 dark:text-slate-400 px-2 py-0.5 rounded border border-slate-200 dark:border-slate-800 font-bold uppercase">{goal.category}</span>
-                          <span className={`text-[10px] font-black uppercase tracking-wide flex items-center gap-1 px-2 py-0.5 rounded ${stats.statusColor}`}>
-                             {stats.status === 'Em Risco' ? <Info size={10} /> : <BarChart2 size={10} />}
-                             {stats.status} ({stats.probabilityScore.toFixed(0)}%)
-                          </span>
+                          <div className={`px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest flex items-center gap-2 ${stats.statusColor}`}>
+  {stats.status === 'Improvável' && <Info size={12} />}
+  {stats.status === 'Em Risco' && <BarChart2 size={12} />}
+  {stats.status === 'Concluída' && <Trophy size={12} />}
+  {stats.status === 'No Caminho' && <Target size={12} />}
+  {stats.status}
+  <span className="opacity-70">• {stats.probabilityScore.toFixed(0)}%</span>
+</div>
                         </div>
                       </div>
                     </div>
@@ -370,13 +379,39 @@ const Goals: React.FC = () => {
                       </svg>
                       <div className="absolute flex flex-col items-center">
                         <span className="text-2xl font-black text-slate-900 dark:text-white tracking-tighter">{stats.progress.toFixed(0)}%</span>
-                        <span className="text-[9px] font-black uppercase text-slate-500 dark:text-slate-500 tracking-widest">{stats.daysLeft} Dias Rest.</span>
+                        <span className="text-[9px] font-black uppercase text-slate-500 dark:text-slate-500 tracking-widest">
+  {stats.daysLeft} Dias
+</span>
+<span className="text-[9px] text-slate-400 dark:text-slate-600 font-mono">
+  {new Date(goal.deadline).toLocaleDateString('pt-BR')}
+</span>
                       </div>
                     </div>
 
                     {/* Stats */}
                     <div className="flex-1 w-full space-y-5">
                       <div className="flex justify-between items-end pb-4 border-b border-slate-200 dark:border-slate-800">
+                        {/* Linear Progress Bar */}
+<div className="space-y-2">
+  <div className="w-full h-2 bg-slate-200 dark:bg-slate-800 rounded-full overflow-hidden">
+    <motion.div
+      initial={{ width: 0 }}
+      animate={{ width: `${stats.progress}%` }}
+      transition={{ duration: 1 }}
+      className={`h-full ${
+        stats.status === 'Improvável'
+          ? 'bg-red-500'
+          : stats.status === 'Em Risco'
+          ? 'bg-yellow-500'
+          : 'bg-emerald-500'
+      }`}
+    />
+  </div>
+  <div className="flex justify-between text-[9px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500">
+    <span>Progresso</span>
+    <span>{stats.progress.toFixed(1)}%</span>
+  </div>
+</div>
                         <div>
                           <p className="text-[10px] text-slate-500 dark:text-slate-500 font-bold uppercase tracking-widest mb-1">Saldo Atual</p>
                           <p className="text-2xl font-black text-slate-900 dark:text-white tracking-tighter">{formatCurrency(stats.current, stats.currency)}</p>
