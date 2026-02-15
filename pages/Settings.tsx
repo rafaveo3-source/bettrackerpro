@@ -35,20 +35,38 @@ const Settings: React.FC = () => {
 
   return (
     <div className="space-y-10 max-w-6xl mx-auto pb-20 w-full overflow-x-hidden">
-        <header className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4 border-b border-slate-200 dark:border-slate-800 pb-8">
-            <div>
-                <h1 className="text-3xl md:text-4xl font-black text-slate-900 dark:text-white tracking-tighter uppercase italic">Configurações</h1>
-                <p className="text-slate-500 dark:text-slate-400 text-xs md:text-sm font-bold mt-2 uppercase tracking-widest">Controle total da sua interface e algoritmos.</p>
-            </div>
-            
-            <AnimatePresence>
-                {showSavedToast && (
-                    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="flex items-center gap-2 bg-emerald-100 dark:bg-emerald-500/10 border border-emerald-200 dark:border-emerald-500/20 text-emerald-700 dark:text-emerald-500 px-6 py-3 rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] shadow-xl">
-                        <CheckCircle size={16} /> Configurações Salvas
-                    </motion.div>
-                )}
-            </AnimatePresence>
-        </header>
+        <div className="border-b border-slate-200 dark:border-slate-800 pb-8 flex flex-col md:flex-row md:items-end md:justify-between gap-6">
+  <div>
+    {/* Label superior discreta */}
+    <div className="flex items-center gap-2 text-emerald-500 text-[9px] font-mono font-bold uppercase tracking-widest mb-1">
+      <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse shadow-[0_0_8px_#10b981]"></span>
+      System Control Engine
+    </div>
+
+    {/* Headline principal */}
+    <h1 className="text-3xl font-black text-slate-900 dark:text-white tracking-tighter uppercase italic">
+      Configurações <span className="text-slate-400 dark:text-slate-700 text-lg">///</span>
+    </h1>
+
+    {/* Subheadline */}
+    <p className="text-slate-500 dark:text-slate-400 text-xs font-bold mt-2 uppercase tracking-widest">
+      Controle total da interface, preferências e arquitetura do sistema.
+    </p>
+  </div>
+
+  <AnimatePresence>
+    {showSavedToast && (
+      <motion.div
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        exit={{ opacity: 0 }}
+        className="flex items-center gap-2 bg-emerald-100 dark:bg-emerald-500/10 border border-emerald-200 dark:border-emerald-500/20 text-emerald-700 dark:text-emerald-500 px-6 py-3 rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] shadow-xl"
+      >
+        <CheckCircle size={16} /> Configurações Salvas
+      </motion.div>
+    )}
+  </AnimatePresence>
+</div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
             {/* Identity Card */}
