@@ -195,25 +195,31 @@ const Bankroll: React.FC = () => {
                   className="w-full bg-white dark:bg-[#020617] border border-slate-200 dark:border-slate-700 rounded-xl p-3 text-slate-900 dark:text-white outline-none focus:border-emerald-500 transition-colors text-sm font-bold"
                 />
 
-                <div className="flex gap-2">
-                  <select
-                    value={newBRCurrency}
-                    onChange={(e) => setNewBRCurrency(e.target.value)}
-                    className="bg-white dark:bg-[#020617] border border-slate-200 dark:border-slate-700 rounded-xl p-3 text-slate-900 dark:text-white outline-none font-bold text-sm cursor-pointer"
-                  >
-                    <option>BRL</option>
-                    <option>USD</option>
-                    <option>EUR</option>
-                  </select>
+                <div className="flex gap-2 w-full">
+    <div className="w-28 shrink-0">
+        <select 
+            value={newBRCurrency} 
+            onChange={e => setNewBRCurrency(e.target.value)}
+            className="w-full bg-white dark:bg-[#020617] border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-3 text-slate-900 dark:text-white outline-none font-bold text-sm cursor-pointer"
+        >
+            <option value="BRL">BRL</option>
+            <option value="USD">USD</option>
+            <option value="EUR">EUR</option>
+        </select>
+    </div>
 
-                  <input
-                    type="number"
-                    placeholder="Saldo Inicial"
-                    value={newBRBalance}
-                    onChange={(e) => setNewBRBalance(e.target.value)}
-                    className="flex-1 bg-white dark:bg-[#020617] border border-slate-200 dark:border-slate-700 rounded-xl p-3 text-slate-900 dark:text-white outline-none focus:border-emerald-500 transition-colors text-sm font-bold"
-                  />
-                </div>
+    <div className="flex-1 min-w-0">
+        <input 
+            type="number"
+            inputMode="decimal"
+            step="0.01"
+            placeholder="Saldo Inicial"
+            value={newBRBalance}
+            onChange={e => setNewBRBalance(e.target.value)}
+            className="w-full bg-white dark:bg-[#020617] border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 text-slate-900 dark:text-white outline-none focus:border-emerald-500 transition-colors text-sm font-bold"
+        />
+    </div>
+</div>
 
                 <button
                   type="submit"
