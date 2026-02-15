@@ -90,23 +90,34 @@ const Bankroll: React.FC = () => {
   return (
     <div className="space-y-6 pb-20 w-full overflow-x-hidden">
       {/* HEADER */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-        <div>
-          <h1 className="text-2xl font-black text-slate-900 dark:text-white uppercase tracking-tighter italic">
-            Gestão de Bancas
-          </h1>
-          <p className="text-slate-500 dark:text-slate-400 text-xs font-bold uppercase tracking-widest mt-1">
-            Controle de Capital e Fluxo de Caixa
-          </p>
-        </div>
+      <header className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
 
-        <button
-          onClick={() => setShowAddForm(!showAddForm)}
-          className="bg-emerald-500 hover:bg-emerald-600 text-white px-6 py-3 rounded-xl flex items-center gap-2 font-black text-xs uppercase tracking-wider transition-all shadow-lg shadow-emerald-500/20 active:scale-95"
-        >
-          <Plus size={16} /> Nova Banca
-        </button>
-      </div>
+  <div>
+    {/* Label superior discreta */}
+    <div className="flex items-center gap-2 text-emerald-500 text-[9px] font-mono font-bold uppercase tracking-widest mb-1">
+      <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse shadow-[0_0_8px_#10b981]"></span>
+      Capital Management Engine
+    </div>
+
+    {/* Headline principal */}
+    <h1 className="text-3xl font-black text-slate-900 dark:text-white tracking-tighter uppercase italic">
+      Gestão de Bancas <span className="text-slate-400 dark:text-slate-700 text-lg">///</span>
+    </h1>
+
+    {/* Subheadline */}
+    <p className="text-slate-500 dark:text-slate-400 text-xs font-bold mt-2 uppercase tracking-widest">
+      Controle de capital, fluxo de caixa e estrutura financeira operacional.
+    </p>
+  </div>
+
+  <button
+    onClick={() => setShowAddForm(!showAddForm)}
+    className="bg-emerald-500 hover:bg-emerald-600 text-white px-6 py-3 rounded-xl flex items-center gap-2 font-black text-xs uppercase tracking-wider transition-all shadow-lg shadow-emerald-500/20 active:scale-95"
+  >
+    <Plus size={16} /> Nova Banca
+  </button>
+
+</header>
 
       {/* BANKROLL GRID */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
