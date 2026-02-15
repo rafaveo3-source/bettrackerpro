@@ -2,27 +2,14 @@ import React, { useState, useMemo } from 'react'
 import { useBetStore, MoodType } from '../store/useBetStore'
 import {
   Book,
-  ShieldAlert,
   Pencil,
   Trash2,
-  X,
   TrendingUp,
   TrendingDown,
-  Activity
+  BrainCircuit
 } from 'lucide-react'
 import TiltModal from '../components/TiltModal'
 import { motion, AnimatePresence } from 'framer-motion'
-import {
-  ResponsiveContainer,
-  RadialBarChart,
-  RadialBar,
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  Tooltip,
-  Cell
-} from 'recharts'
 
 const Mindset: React.FC = () => {
   const {
@@ -36,22 +23,25 @@ const Mindset: React.FC = () => {
   const [selectedMood, setSelectedMood] =
     useState<MoodType>('disciplined')
   const [note, setNote] = useState('')
-  const [editingId, setEditingId] = useState<string | null>(null)
-  const [searchQuery, setSearchQuery] = useState('')
+  const [editingId, setEditingId] =
+    useState<string | null>(null)
+  const [searchQuery, setSearchQuery] =
+    useState('')
   const [filterMood, setFilterMood] =
     useState<MoodType | 'all'>('all')
-  const [showTiltModal, setShowTiltModal] = useState(false)
+  const [showTiltModal, setShowTiltModal] =
+    useState(false)
 
   const moods = [
-    { id: 'confident', label: 'Confiante', icon: '🦁', color: '#eab308' },
-    { id: 'disciplined', label: 'Disciplinado', icon: '🧘‍♂️', color: '#10b981' },
-    { id: 'anxious', label: 'Ansioso', icon: '😰', color: '#3b82f6' },
-    { id: 'tilted', label: 'Tilted', icon: '🤬', color: '#ef4444' }
+    { id: 'confident', label: 'Confiante', icon: '🦁' },
+    { id: 'disciplined', label: 'Disciplinado', icon: '🧘‍♂️' },
+    { id: 'anxious', label: 'Ansioso', icon: '😰' },
+    { id: 'tilted', label: 'Tilted', icon: '🤬' }
   ]
 
-  /* ---------------------------------------
-     INSIGHTS CALC
-  ----------------------------------------*/
+  /* -----------------------------
+     INSIGHTS
+  ----------------------------- */
 
   const moodInsights = useMemo(() => {
     const stats: any = {}
@@ -96,10 +86,6 @@ const Mindset: React.FC = () => {
 
   const totalEntries = mindsetHistory.length
 
-  /* ---------------------------------------
-     MENTAL SCORE
-  ----------------------------------------*/
-
   const mentalScore = useMemo(() => {
     const counts: any = {}
     moods.forEach(m => (counts[m.id] = 0))
@@ -113,25 +99,28 @@ const Mindset: React.FC = () => {
     )
   }, [mindsetHistory])
 
-  /* ---------------------------------------
+  /* -----------------------------
      FILTER
-  ----------------------------------------*/
+  ----------------------------- */
 
   const filteredHistory = useMemo(() => {
     return mindsetHistory.filter(e => {
       const matchesSearch =
-        e.note.toLowerCase().includes(searchQuery.toLowerCase())
+        e.note
+          .toLowerCase()
+          .includes(searchQuery.toLowerCase())
 
       const matchesMood =
-        filterMood === 'all' || e.mood === filterMood
+        filterMood === 'all' ||
+        e.mood === filterMood
 
       return matchesSearch && matchesMood
     })
   }, [mindsetHistory, searchQuery, filterMood])
 
-  /* ---------------------------------------
+  /* -----------------------------
      SAVE
-  ----------------------------------------*/
+  ----------------------------- */
 
   const handleSave = () => {
     if (!note.trim()) return
@@ -144,11 +133,16 @@ const Mindset: React.FC = () => {
       setEditingId(null)
     } else {
       addMindsetEntry({
-        date: new Date().toISOString().split('T')[0],
-        time: new Date().toLocaleTimeString('pt-BR', {
-          hour: '2-digit',
-          minute: '2-digit'
-        }),
+        date: new Date()
+          .toISOString()
+          .split('T')[0],
+        time: new Date().toLocaleTimeString(
+          'pt-BR',
+          {
+            hour: '2-digit',
+            minute: '2-digit'
+          }
+        ),
         mood: selectedMood,
         note,
         tags: []
@@ -161,21 +155,38 @@ const Mindset: React.FC = () => {
     setNote('')
   }
 
-  /* ---------------------------------------
-     UI
-  ----------------------------------------*/
-
   return (
     <div className="space-y-10 pb-24 max-w-7xl mx-auto">
 
-      {/* HEADER MANTIDO INTACTO */}
+      {/* HEADER PADRONIZADO */}
+      <header className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 border-b border-slate-200 dark:border-slate-800 pb-6">
 
-      {/* --------------------------
-         INSIGHT CARDS
-      -------------------------- */}
+        <div>
+          <div className="flex items-center gap-2 text-emerald-500 text-[10px] font-mono font-bold uppercase tracking-widest mb-2">
+            <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse"></span>
+            System: Online • Mindset Engine
+          </div>
 
+          <h1 className="text-3xl font-black text-slate-900 dark:text-white tracking-tighter uppercase italic">
+            Psicologia & Performance
+            <span className="text-slate-400 dark:text-slate-700 text-lg ml-2">///</span>
+          </h1>
+
+          <p className="text-xs text-slate-500 dark:text-slate-400 font-semibold uppercase tracking-widest mt-2">
+            Monitoramento emocional e impacto direto na performance operacional
+          </p>
+        </div>
+
+        <div className="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-3 rounded-xl">
+          <BrainCircuit
+            className="text-emerald-500"
+            size={18}
+          />
+        </div>
+      </header>
+
+      {/* INSIGHTS */}
       <section className="grid md:grid-cols-4 gap-6">
-
         <InsightCard
           title="Zona de Performance"
           value={bestMood?.label}
@@ -203,24 +214,27 @@ const Mindset: React.FC = () => {
         />
       </section>
 
-      {/* --------------------------
-         FORM PREMIUM
-      -------------------------- */}
-
-      <section className="bg-white dark:bg-slate-900/50 p-8 rounded-3xl border">
+      {/* FORM */}
+      <section className="bg-white dark:bg-[#0f172a]/50 border border-slate-200 dark:border-slate-800 p-8 rounded-3xl">
 
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
           {moods.map(m => (
             <button
               key={m.id}
-              onClick={() => setSelectedMood(m.id as MoodType)}
+              onClick={() =>
+                setSelectedMood(
+                  m.id as MoodType
+                )
+              }
               className={`p-5 rounded-2xl border transition-all ${
                 selectedMood === m.id
                   ? 'border-purple-500 scale-105'
                   : 'border-transparent'
               }`}
             >
-              <div className="text-3xl">{m.icon}</div>
+              <div className="text-3xl">
+                {m.icon}
+              </div>
               <div className="text-xs font-bold mt-2">
                 {m.label}
               </div>
@@ -230,9 +244,11 @@ const Mindset: React.FC = () => {
 
         <textarea
           value={note}
-          onChange={e => setNote(e.target.value)}
+          onChange={e =>
+            setNote(e.target.value)
+          }
           placeholder="Descreva seu estado mental, gatilhos e decisões..."
-          className="w-full p-6 rounded-2xl border bg-slate-50 dark:bg-slate-800 min-h-[140px]"
+          className="w-full p-6 rounded-2xl border bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 min-h-[140px]"
         />
 
         <div className="flex justify-between items-center mt-4">
@@ -244,7 +260,10 @@ const Mindset: React.FC = () => {
             onClick={handleSave}
             className="px-8 py-3 rounded-xl bg-slate-900 dark:bg-white text-white dark:text-black text-xs font-bold uppercase"
           >
-            <Book size={14} className="inline mr-1" />
+            <Book
+              size={14}
+              className="inline mr-1"
+            />
             {editingId
               ? 'Atualizar Sessão'
               : 'Registrar Sessão'}
@@ -252,30 +271,36 @@ const Mindset: React.FC = () => {
         </div>
       </section>
 
-      {/* --------------------------
-         TIMELINE
-      -------------------------- */}
-
-      <section className="bg-white dark:bg-slate-900/50 p-6 rounded-3xl border space-y-4 max-h-[600px] overflow-y-auto">
+      {/* TIMELINE */}
+      <section className="bg-white dark:bg-[#0f172a]/50 border border-slate-200 dark:border-slate-800 p-6 rounded-3xl space-y-4 max-h-[600px] overflow-y-auto">
 
         <div className="flex gap-3 flex-wrap mb-4">
           <input
             placeholder="Buscar..."
             value={searchQuery}
-            onChange={e => setSearchQuery(e.target.value)}
-            className="px-4 py-2 rounded-xl border text-sm"
+            onChange={e =>
+              setSearchQuery(e.target.value)
+            }
+            className="px-4 py-2 rounded-xl border text-sm bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700"
           />
 
           <select
             value={filterMood}
             onChange={e =>
-              setFilterMood(e.target.value as any)
+              setFilterMood(
+                e.target.value as any
+              )
             }
-            className="px-4 py-2 rounded-xl border text-sm"
+            className="px-4 py-2 rounded-xl border text-sm bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700"
           >
-            <option value="all">Todos</option>
+            <option value="all">
+              Todos
+            </option>
             {moods.map(m => (
-              <option key={m.id} value={m.id}>
+              <option
+                key={m.id}
+                value={m.id}
+              >
                 {m.label}
               </option>
             ))}
@@ -283,63 +308,79 @@ const Mindset: React.FC = () => {
         </div>
 
         <AnimatePresence>
-          {filteredHistory.map(entry => (
-            <motion.div
-              key={entry.id}
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              className="p-5 rounded-2xl border bg-slate-50 dark:bg-slate-800 group"
-            >
-              <div className="flex justify-between">
-                <div className="font-bold text-sm">
-                  {
-                    moods.find(
-                      m => m.id === entry.mood
-                    )?.icon
-                  }{' '}
-                  {entry.date}
+          {filteredHistory.map(
+            entry => (
+              <motion.div
+                key={entry.id}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                className="p-5 rounded-2xl border bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 group"
+              >
+                <div className="flex justify-between">
+                  <div className="font-bold text-sm text-slate-800 dark:text-slate-200">
+                    {
+                      moods.find(
+                        m =>
+                          m.id ===
+                          entry.mood
+                      )?.icon
+                    }{' '}
+                    {entry.date}
+                  </div>
+
+                  <div className="opacity-0 group-hover:opacity-100 transition flex gap-2">
+                    <button
+                      onClick={() => {
+                        setEditingId(
+                          entry.id
+                        )
+                        setSelectedMood(
+                          entry.mood
+                        )
+                        setNote(
+                          entry.note
+                        )
+                      }}
+                    >
+                      <Pencil
+                        size={14}
+                      />
+                    </button>
+
+                    <button
+                      onClick={() =>
+                        deleteMindsetEntry(
+                          entry.id
+                        )
+                      }
+                    >
+                      <Trash2
+                        size={14}
+                      />
+                    </button>
+                  </div>
                 </div>
 
-                <div className="opacity-0 group-hover:opacity-100 transition flex gap-2">
-                  <button
-                    onClick={() => {
-                      setEditingId(entry.id)
-                      setSelectedMood(entry.mood)
-                      setNote(entry.note)
-                    }}
-                  >
-                    <Pencil size={14} />
-                  </button>
-
-                  <button
-                    onClick={() =>
-                      deleteMindsetEntry(entry.id)
-                    }
-                  >
-                    <Trash2 size={14} />
-                  </button>
-                </div>
-              </div>
-
-              <p className="text-sm mt-3">
-                {entry.note}
-              </p>
-            </motion.div>
-          ))}
+                <p className="text-sm mt-3 text-slate-600 dark:text-slate-300">
+                  {entry.note}
+                </p>
+              </motion.div>
+            )
+          )}
         </AnimatePresence>
       </section>
 
       <TiltModal
         isOpen={showTiltModal}
-        onClose={() => setShowTiltModal(false)}
+        onClose={() =>
+          setShowTiltModal(false)
+        }
       />
     </div>
   )
 }
 
-/* ---------------------------------------
-   INSIGHT CARD COMPONENT
-----------------------------------------*/
+/* INSIGHT CARD */
 
 const InsightCard = ({
   title,
@@ -348,24 +389,30 @@ const InsightCard = ({
   positive,
   negative
 }: any) => (
-  <div className="p-6 rounded-2xl border bg-white dark:bg-slate-900/50 space-y-2">
-    <p className="text-xs uppercase text-slate-400 font-bold tracking-widest">
+  <div className="p-6 rounded-2xl border bg-white dark:bg-[#0f172a]/50 border-slate-200 dark:border-slate-800">
+    <p className="text-xs uppercase text-slate-400 font-bold tracking-widest mb-2">
       {title}
     </p>
 
     <div className="flex items-center gap-2">
       {positive && (
-        <TrendingUp size={18} className="text-emerald-500" />
+        <TrendingUp
+          size={18}
+          className="text-emerald-500"
+        />
       )}
       {negative && (
-        <TrendingDown size={18} className="text-red-500" />
+        <TrendingDown
+          size={18}
+          className="text-red-500"
+        />
       )}
-      <h3 className="text-xl font-bold">
+      <h3 className="text-xl font-bold text-slate-900 dark:text-white">
         {value}
       </h3>
     </div>
 
-    <p className="text-xs text-slate-500">
+    <p className="text-xs text-slate-500 dark:text-slate-400 mt-2">
       {description}
     </p>
   </div>
