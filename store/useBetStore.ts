@@ -30,10 +30,11 @@ export type BetStatus =
   | 'half-won'
   | 'half-lost'
   | 'cashout'
-  | 'refunded'; // ✅ Novo status adicionado
+  | 'refunded';
 
 export type TransactionType = 'deposit' | 'withdrawal';
 export type MoodType = 'confident' | 'disciplined' | 'anxious' | 'tilted';
+export type DisplayMode = 'currency' | 'units'; // ✅ Novo tipo para controle de exibição
 
 export interface BetMethod {
   id: string;
@@ -108,6 +109,11 @@ interface BetState {
   isDarkMode: boolean;
   primaryColor: string;
   currency: string;
+  
+  // ✅ Novas Propriedades de Configuração
+  displayMode: DisplayMode;
+  unitSize: number;
+
   bankrolls: Bankroll[];
   activeBankrollId: string;
   currentBankrollBalance: number;
@@ -124,6 +130,11 @@ interface BetState {
   toggleTheme: () => void;
   setPrimaryColor: (color: string) => void;
   setCurrency: (currency: string) => void;
+  
+  // ✅ Actions para Configuração
+  setDisplayMode: (mode: DisplayMode) => void;
+  setUnitSize: (size: number) => void;
+
   addBankroll: (name: string, currency: string, initialBalance: number) => Promise<void>;
   removeBankroll: (id: string) => Promise<void>;
   setActiveBankroll: (id: string) => void;
@@ -181,6 +192,8 @@ export const useBetStore = create<BetState>()(
       isDarkMode: true,
       primaryColor: 'gold',
       currency: 'BRL',
+      displayMode: 'currency', // Default
+      unitSize: 100, // Default unit size
       bankrolls: [],
       activeBankrollId: '',
       currentBankrollBalance: 0,
@@ -323,6 +336,8 @@ export const useBetStore = create<BetState>()(
       toggleTheme: () => set((state) => ({ isDarkMode: !state.isDarkMode })),
       setPrimaryColor: (color) => set({ primaryColor: color }),
       setCurrency: (currency) => set({ currency }),
+      setDisplayMode: (mode) => set({ displayMode: mode }),
+      setUnitSize: (size) => set({ unitSize: size }),
 
       // --- BANKROLLS ---
       addBankroll: async (name, currency, initialBalance) => {
