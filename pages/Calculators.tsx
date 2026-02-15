@@ -88,11 +88,6 @@ const Calculators: React.FC = () => {
 
   {/* Título principal */}
   <div>
-  {/* Label superior discreta */}
-  <div className="flex items-center gap-2 text-purple-500 text-[9px] font-mono font-bold uppercase tracking-widest mb-1">
-    <span className="w-1.5 h-1.5 bg-purple-500 rounded-full animate-pulse shadow-[0_0_8px_#a855f7]"></span>
-    Strategic Math Engine
-  </div>
 
   {/* Headline principal */}
   <h1 className="text-3xl font-black text-slate-900 dark:text-white tracking-tighter uppercase italic">
