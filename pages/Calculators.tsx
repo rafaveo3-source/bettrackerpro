@@ -1,4 +1,12 @@
 import React, { useState } from 'react';
+import { 
+  Info, 
+  ChevronDown, 
+  Sparkles, 
+  Trash2, 
+  Plus, 
+  ArrowRightLeft 
+} from 'lucide-react';
 import { useBetStore } from '../store/useBetStore';
 import { motion, AnimatePresence } from 'framer-motion';
 
