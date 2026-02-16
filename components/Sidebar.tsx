@@ -11,7 +11,6 @@ interface SidebarProps {
 }
 
 const menuItems = [
-  { key: 'system-library', label: 'System Library', icon: BookOpen },
   { key: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { key: 'analytics', label: 'Análise', icon: BarChart3 },
   { key: 'metas', label: 'Metas', icon: Target },
@@ -20,6 +19,10 @@ const menuItems = [
   { key: 'bancas', label: 'Bancas', icon: Wallet },
   { key: 'calendar', label: 'Calendário', icon: CalendarDays },
   { key: 'calculators', label: 'Calculadoras', icon: Calculator },
+
+  // 🔥 Nova Biblioteca Inteligente
+  { key: 'biblioteca', label: 'Biblioteca PRO', icon: Layers },
+
   { key: 'settings', label: 'Configurações', icon: Settings },
 ];
 

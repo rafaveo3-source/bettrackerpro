@@ -12,6 +12,8 @@ import Mindset from './pages/Mindset';
 import Goals from './pages/Goals';
 import { useBetStore, supabase } from './store/useBetStore';
 import SystemLibrary from './pages/SystemLibrary';
+case 'biblioteca':
+  return <SystemLibrary />;
 
 const App: React.FC = () => {
   const [currentView, setCurrentView] = useState('dashboard');
