@@ -13,10 +13,21 @@ const Settings: React.FC = () => {
   } = useBetStore();
 
   const [newMethodName, setNewMethodName] = useState('');
-  const [profileName, setProfileName] = useState(user?.name || '');
-  const [profileAvatar, setProfileAvatar] = useState(user?.avatar || '');
   const [showSavedToast, setShowSavedToast] = useState(false);
-  const [tempUnitSize, setTempUnitSize] = useState(unitSize.toString());
+  const [profileName, setProfileName] = useState('');
+const [profileAvatar, setProfileAvatar] = useState('');
+const [tempUnitSize, setTempUnitSize] = useState('100');
+
+React.useEffect(() => {
+  if (user) {
+    setProfileName(user.name || '');
+    setProfileAvatar(user.avatar || '');
+  }
+}, [user]);
+
+React.useEffect(() => {
+  setTempUnitSize(unitSize.toString());
+}, [unitSize]);
   
   const handleAddMethod = () => {
     if (newMethodName.trim()) {
@@ -28,7 +39,14 @@ const Settings: React.FC = () => {
   const handleUpdateProfile = (e: React.FormEvent) => {
     e.preventDefault();
     updateProfile({ name: profileName, avatar: profileAvatar });
-    setUnitSize(parseFloat(tempUnitSize) || 100);
+    const parsed = parseFloat(tempUnitSize);
+
+if (!parsed || parsed <= 0) {
+  setTempUnitSize(unitSize.toString());
+  return;
+}
+
+await setUnitSize(parsed);
     setShowSavedToast(true);
     setTimeout(() => setShowSavedToast(false), 3000);
   };
@@ -120,14 +138,22 @@ const Settings: React.FC = () => {
                                      <div className="flex bg-white dark:bg-slate-900 rounded-xl p-1 border border-slate-200 dark:border-slate-800 h-[46px]">
                                          <button 
                                             type="button"
-                                            onClick={() => setDisplayMode('currency')}
+                                            onClick={async () => {
+  await setDisplayMode('currency');
+  setShowSavedToast(true);
+  setTimeout(() => setShowSavedToast(false), 2000);
+}}
                                             className={`flex-1 rounded-lg text-xs font-bold transition-all ${displayMode === 'currency' ? 'bg-emerald-500 text-white shadow-md' : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-300'}`}
                                          >
                                             {currency}
                                          </button>
                                          <button 
                                             type="button"
-                                            onClick={() => setDisplayMode('units')}
+                                            onClick={async () => {
+  await setDisplayMode('units');
+  setShowSavedToast(true);
+  setTimeout(() => setShowSavedToast(false), 2000);
+}}
                                             className={`flex-1 rounded-lg text-xs font-bold transition-all ${displayMode === 'units' ? 'bg-blue-500 text-white shadow-md' : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-300'}`}
                                          >
                                             Unid.
@@ -187,7 +213,11 @@ const Settings: React.FC = () => {
                             ].map(c => (
                                 <button 
                                     key={c.id} 
-                                    onClick={() => setPrimaryColor(c.id)} 
+                                    onClick={async () => {
+  await setPrimaryColor(c.id);
+  setShowSavedToast(true);
+  setTimeout(() => setShowSavedToast(false), 2000);
+}} 
                                     className={`w-14 h-14 rounded-2xl border-4 transition-all flex items-center justify-center ${primaryColor === c.id ? 'border-emerald-500 dark:border-white scale-110 shadow-xl' : 'border-transparent opacity-50 hover:opacity-100'}`} 
                                     style={{ backgroundColor: c.color }}
                                 >
@@ -205,7 +235,11 @@ const Settings: React.FC = () => {
                             {['BRL', 'USD', 'EUR', 'GBP'].map(curr => (
                                 <button 
                                     key={curr} 
-                                    onClick={() => setCurrency(curr)} 
+                                    onClick={async () => {
+  await setCurrency(curr);
+  setShowSavedToast(true);
+  setTimeout(() => setShowSavedToast(false), 2000);
+}} 
                                     className={`px-8 py-4 rounded-2xl font-black text-xs transition-all border ${
                                         currency === curr 
                                         ? 'bg-slate-900 dark:bg-white text-white dark:text-black border-slate-900 dark:border-white shadow-xl transform scale-105' 
@@ -238,6 +272,10 @@ const Settings: React.FC = () => {
                 </button>
             </section>
         </div>
+
+        <div className="text-center text-[9px] uppercase tracking-widest text-emerald-500 font-bold">
+  Cloud Sync Active
+</div>
         
         <footer className="pt-10 text-center">
              <p className="text-[10px] text-slate-400 dark:text-slate-700 font-black uppercase tracking-[0.5em]">BetTracker Cloud Ecosystem • Build 4.6.0</p>
