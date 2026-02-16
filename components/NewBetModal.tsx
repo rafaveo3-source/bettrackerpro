@@ -75,7 +75,6 @@ const NewBetModal: React.FC<NewBetModalProps> = ({ isOpen, onClose, betToEdit })
     return;
 }
 
-// ✅ BLOQUEAR "__custom" SEM TEXTO
 if (formData.market === '__custom') {
     setError("Digite o nome do mercado personalizado.");
     return;
@@ -86,15 +85,11 @@ let stakeValue = parseFloat(formData.stake);
 if (displayMode === 'units') {
     stakeValue = stakeValue * unitSize;
 }
-    let stakeValue = parseFloat(formData.stake);
 
-if (displayMode === 'units') {
-    stakeValue = stakeValue * unitSize;
+if (stakeValue < 0) {
+    setError("A stake não pode ser negativa.");
+    return;
 }
-    if (stakeValue < 0) {
-        setError("A stake não pode ser negativa.");
-        return;
-    }
 
     if (betToEdit) {
         updateBet(betToEdit.id, {
