@@ -2,16 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   X,
-  Trophy,
   AlertCircle,
-  Clock,
-  DollarSign,
-  Target,
-  Activity,
-  Divide,
-  Ban,
-  CornerDownRight,
-  BookOpen,
   Save
 } from 'lucide-react';
 import { useBetStore, BetStatus, Bet } from '../store/useBetStore';
@@ -168,6 +159,9 @@ const NewBetModal: React.FC<NewBetModalProps> = ({
 
   const resultValue = calculateResult();
 
+  const inputStyle =
+    'w-full bg-slate-950 border border-slate-700 text-slate-200 rounded-xl px-4 py-3 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/30 outline-none transition-all';
+
   return (
     <AnimatePresence>
       {isOpen && (
@@ -176,174 +170,213 @@ const NewBetModal: React.FC<NewBetModalProps> = ({
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           onClick={onClose}
-          className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+          className="fixed inset-0 bg-black/70 backdrop-blur-md z-50 flex items-center justify-center p-4"
         >
           <motion.div
-            initial={{ scale: 0.95, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            exit={{ scale: 0.95, opacity: 0 }}
+            initial={{ scale: 0.96, opacity: 0, y: 20 }}
+            animate={{ scale: 1, opacity: 1, y: 0 }}
+            exit={{ scale: 0.96, opacity: 0, y: 20 }}
             onClick={(e) => e.stopPropagation()}
-            className="bg-slate-900 border border-slate-800 w-full max-w-2xl rounded-2xl shadow-2xl"
+            className="bg-gradient-to-b from-slate-900 to-slate-950 border border-slate-800 w-full max-w-3xl rounded-3xl shadow-2xl overflow-hidden"
           >
             {/* HEADER */}
-            <div className="p-6 border-b border-slate-800 flex justify-between items-center bg-slate-950">
+            <div className="px-8 py-6 border-b border-slate-800 flex justify-between items-center">
               <div>
-                <h2 className="text-xl font-bold text-white">
+                <h2 className="text-2xl font-black text-white tracking-tight">
                   {betToEdit ? 'Editar Aposta' : 'Nova Aposta'}
                 </h2>
-                <p className="text-slate-500 text-sm">
-                  {betToEdit
-                    ? 'Atualize os dados da entrada'
-                    : 'Registre sua entrada'}
+                <p className="text-slate-500 text-sm mt-1">
+                  Registro avançado de entrada
                 </p>
               </div>
               <button
                 onClick={onClose}
-                className="text-slate-400 hover:text-white"
+                className="text-slate-500 hover:text-white transition"
               >
                 <X size={24} />
               </button>
             </div>
 
-            <form onSubmit={handleSubmit} className="p-6 space-y-6">
+            <form onSubmit={handleSubmit} className="p-8 space-y-8">
+
               {error && (
-                <div className="bg-red-500/10 border border-red-500/20 text-red-500 p-3 rounded-lg text-sm flex items-center gap-2">
+                <div className="bg-red-500/10 border border-red-500/30 text-red-400 p-4 rounded-xl text-sm flex items-center gap-2">
                   <AlertCircle size={16} />
                   {error}
                 </div>
               )}
 
-              {/* SPORT + EVENT */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <select
-                  value={formData.sport}
-                  onChange={(e) =>
-                    setFormData({ ...formData, sport: e.target.value })
-                  }
-                  className="bg-slate-950 border border-slate-700 text-slate-200 rounded-lg p-2.5"
-                >
-                  <option>Futebol</option>
-                  <option>Basquete</option>
-                  <option>Tênis</option>
-                  <option>eSports</option>
-                  <option>MMA</option>
-                </select>
+              {/* BLOCO PRINCIPAL */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
 
-                <input
-                  type="text"
-                  placeholder="Evento"
-                  value={formData.event}
-                  onChange={(e) =>
-                    setFormData({ ...formData, event: e.target.value })
-                  }
-                  className="md:col-span-2 bg-slate-950 border border-slate-700 text-slate-200 rounded-lg px-4 py-2.5"
-                />
-              </div>
+                <div className="space-y-4">
+                  <label className="text-xs uppercase text-slate-500 font-semibold tracking-wider">
+                    Esporte
+                  </label>
+                  <select
+                    value={formData.sport}
+                    onChange={(e) =>
+                      setFormData({ ...formData, sport: e.target.value })
+                    }
+                    className={inputStyle}
+                  >
+                    <option>Futebol</option>
+                    <option>Basquete</option>
+                    <option>Tênis</option>
+                    <option>eSports</option>
+                    <option>MMA</option>
+                  </select>
+                </div>
 
-              {/* MARKET + SELECTION + METHOD + STRATEGY */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <select
-                  value={formData.market}
-                  onChange={(e) =>
-                    setFormData({ ...formData, market: e.target.value })
-                  }
-                  className="bg-slate-950 border border-slate-700 text-slate-200 rounded-lg px-4 py-2.5"
-                >
-                  <option value="">Selecione Mercado</option>
-                  {customMarkets.map((m) => (
-                    <option key={m.id} value={m.name}>
-                      {m.name}
-                    </option>
-                  ))}
-                  <option value="__custom">Outro (manual)</option>
-                </select>
-
-                {formData.market === '__custom' && (
+                <div className="space-y-4">
+                  <label className="text-xs uppercase text-slate-500 font-semibold tracking-wider">
+                    Evento
+                  </label>
                   <input
                     type="text"
-                    placeholder="Digite o mercado"
-                    value={manualMarket}
-                    onChange={(e) => setManualMarket(e.target.value)}
-                    className="bg-slate-950 border border-slate-700 text-slate-200 rounded-lg px-4 py-2.5"
+                    value={formData.event}
+                    onChange={(e) =>
+                      setFormData({ ...formData, event: e.target.value })
+                    }
+                    className={inputStyle}
                   />
-                )}
+                </div>
 
-                <input
-                  type="text"
-                  placeholder="Seleção"
-                  value={formData.selection}
-                  onChange={(e) =>
-                    setFormData({ ...formData, selection: e.target.value })
-                  }
-                  className="bg-slate-950 border border-slate-700 text-slate-200 rounded-lg px-4 py-2.5"
-                />
+                <div className="space-y-4">
+                  <label className="text-xs uppercase text-slate-500 font-semibold tracking-wider">
+                    Mercado
+                  </label>
+                  <select
+                    value={formData.market}
+                    onChange={(e) =>
+                      setFormData({ ...formData, market: e.target.value })
+                    }
+                    className={inputStyle}
+                  >
+                    <option value="">Selecione</option>
+                    {customMarkets.map((m) => (
+                      <option key={m.id} value={m.name}>
+                        {m.name}
+                      </option>
+                    ))}
+                    <option value="__custom">Outro (manual)</option>
+                  </select>
 
-                <select
-                  value={formData.method}
-                  onChange={(e) =>
-                    setFormData({ ...formData, method: e.target.value })
-                  }
-                  className="bg-slate-950 border border-slate-700 text-slate-200 rounded-lg px-4 py-2.5"
-                >
-                  <option value="">Método</option>
-                  {methods.map((m) => (
-                    <option key={m.id} value={m.name}>
-                      {m.name}
-                    </option>
-                  ))}
-                </select>
+                  {formData.market === '__custom' && (
+                    <input
+                      type="text"
+                      value={manualMarket}
+                      onChange={(e) => setManualMarket(e.target.value)}
+                      placeholder="Digite o mercado"
+                      className={inputStyle}
+                    />
+                  )}
+                </div>
 
-                <select
-                  value={formData.strategy}
-                  onChange={(e) =>
-                    setFormData({ ...formData, strategy: e.target.value })
-                  }
-                  className="bg-slate-950 border border-slate-700 text-slate-200 rounded-lg px-4 py-2.5 md:col-span-2"
-                >
-                  <option value="">Estratégia</option>
-                  {customStrategies.map((s) => (
-                    <option key={s.id} value={s.name}>
-                      {s.name}
-                    </option>
-                  ))}
-                </select>
+                <div className="space-y-4">
+                  <label className="text-xs uppercase text-slate-500 font-semibold tracking-wider">
+                    Seleção
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.selection}
+                    onChange={(e) =>
+                      setFormData({ ...formData, selection: e.target.value })
+                    }
+                    className={inputStyle}
+                  />
+                </div>
+
+                <div className="space-y-4">
+                  <label className="text-xs uppercase text-slate-500 font-semibold tracking-wider">
+                    Método
+                  </label>
+                  <select
+                    value={formData.method}
+                    onChange={(e) =>
+                      setFormData({ ...formData, method: e.target.value })
+                    }
+                    className={inputStyle}
+                  >
+                    <option value="">Selecione</option>
+                    {methods.map((m) => (
+                      <option key={m.id} value={m.name}>
+                        {m.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="space-y-4">
+                  <label className="text-xs uppercase text-slate-500 font-semibold tracking-wider">
+                    Estratégia
+                  </label>
+                  <select
+                    value={formData.strategy}
+                    onChange={(e) =>
+                      setFormData({ ...formData, strategy: e.target.value })
+                    }
+                    className={inputStyle}
+                  >
+                    <option value="">Selecione</option>
+                    {customStrategies.map((s) => (
+                      <option key={s.id} value={s.name}>
+                        {s.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="space-y-4">
+                  <label className="text-xs uppercase text-slate-500 font-semibold tracking-wider">
+                    Odd
+                  </label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    value={formData.odds}
+                    onChange={(e) =>
+                      setFormData({ ...formData, odds: e.target.value })
+                    }
+                    className={inputStyle}
+                  />
+                </div>
+
+                <div className="space-y-4">
+                  <label className="text-xs uppercase text-slate-500 font-semibold tracking-wider">
+                    Stake ({displayMode === 'units' ? 'Unidades' : currency})
+                  </label>
+                  <input
+                    type="number"
+                    value={formData.stake}
+                    onChange={(e) =>
+                      setFormData({ ...formData, stake: e.target.value })
+                    }
+                    placeholder={
+                      displayMode === 'units'
+                        ? 'Ex: 1.5 unidades'
+                        : 'Valor stake'
+                    }
+                    className={inputStyle}
+                  />
+                </div>
               </div>
 
-              {/* ODDS + STAKE */}
-              <div className="grid grid-cols-2 gap-4">
-                <input
-                  type="number"
-                  step="0.01"
-                  placeholder="Odd"
-                  value={formData.odds}
-                  onChange={(e) =>
-                    setFormData({ ...formData, odds: e.target.value })
-                  }
-                  className="bg-slate-950 border border-slate-700 text-white font-mono rounded-lg px-4 py-2.5"
-                />
+              {/* RESULT CARD */}
+              <div className="bg-slate-950 border border-slate-800 rounded-2xl p-6 flex justify-between items-center">
+                <div>
+                  <p className="text-slate-500 text-sm">
+                    Resultado Estimado
+                  </p>
+                  <p className="text-xs text-slate-600">
+                    {formData.status === 'pending'
+                      ? 'Lucro Potencial'
+                      : 'Lucro/Prejuízo Real'}
+                  </p>
+                </div>
 
-                <input
-                  type="number"
-                  placeholder={
-                    displayMode === 'units'
-                      ? 'Ex: 1.5 unidades'
-                      : 'Valor stake'
-                  }
-                  value={formData.stake}
-                  onChange={(e) =>
-                    setFormData({ ...formData, stake: e.target.value })
-                  }
-                  className="bg-slate-950 border border-slate-700 text-white font-mono rounded-lg px-4 py-2.5"
-                />
-              </div>
-
-              {/* RESULT */}
-              <div className="bg-slate-950 rounded-xl p-4 border border-slate-800 flex justify-between items-center">
-                <span className="text-slate-400 text-sm">
-                  Resultado Estimado
-                </span>
-                <span
-                  className={`font-mono font-bold ${
+                <div
+                  className={`text-2xl font-mono font-bold ${
                     resultValue > 0
                       ? 'text-emerald-500'
                       : resultValue < 0
@@ -352,14 +385,21 @@ const NewBetModal: React.FC<NewBetModalProps> = ({
                   }`}
                 >
                   {currency} {resultValue.toFixed(2)}
-                </span>
+                </div>
               </div>
 
               <button
                 type="submit"
-                className="w-full bg-emerald-500 hover:bg-emerald-600 text-white font-bold py-3 rounded-xl"
+                className="w-full bg-emerald-500 hover:bg-emerald-400 text-black font-black py-4 rounded-2xl transition-all shadow-xl tracking-wide"
               >
-                {betToEdit ? 'Atualizar Aposta' : 'Salvar Aposta'}
+                {betToEdit ? (
+                  <>
+                    <Save size={16} className="inline mr-2" />
+                    Atualizar Aposta
+                  </>
+                ) : (
+                  'Salvar Aposta'
+                )}
               </button>
             </form>
           </motion.div>
