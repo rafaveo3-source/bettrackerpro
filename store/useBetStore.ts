@@ -242,6 +242,7 @@ export const useBetStore = create<BetState>()(
     avatar: session.user.user_metadata?.avatar_url,
   },
 });
+
           const userId = session.user.id;
 
           // 1. CARREGAR BETS
@@ -262,6 +263,7 @@ export const useBetStore = create<BetState>()(
             set({ history: formattedBets });
           }
 
+
           // 2. CARREGAR METHODS
           const { data: methodsData, error: methodsError } = await supabase
             .from('methods')
@@ -272,23 +274,23 @@ export const useBetStore = create<BetState>()(
           else if (methodsData) {
             set({ methods: methodsData });
           }
-
-          const { data: marketsData } = await supabase
-  .from('markets')
+      
+        const { data: userMarkets } = await supabase
+  .from('user_markets')
   .select('*')
-  .eq('category', 'custom');
+  .eq('user_id', userId);
 
-if (marketsData) {
-  set({ customMarkets: marketsData });
+if (userMarkets) {
+  set({ customMarkets: userMarkets });
 }
 
-const { data: strategiesData } = await supabase
-  .from('progression_strategies')
+const { data: userStrategies } = await supabase
+  .from('user_strategies')
   .select('*')
-  .eq('is_pro', false);
+  .eq('user_id', userId);
 
-if (strategiesData) {
-  set({ customStrategies: strategiesData });
+if (userStrategies) {
+  set({ customStrategies: userStrategies });
 }
 
           // 3. CARREGAR BANKROLLS
@@ -867,14 +869,12 @@ removeTransaction: async (id) => {
   if (!user) return;
 
   const { data, error } = await supabase
-    .from('markets')
-    .insert([
-      {
-        name,
-        category: 'custom',
-        is_active: true
-      }
-    ])
+    .from('user_markets')
+    .insert({
+      user_id: user.id,
+      market_id: null,
+      name
+    })
     .select()
     .single();
 
@@ -892,7 +892,8 @@ removeTransaction: async (id) => {
 
 removeCustomMarket: async (id) => {
   const { error } = await supabase
-    .from('markets')
+    .from('user_markets')
+.eq('user_id', user.id)
     .delete()
     .eq('id', id);
 
@@ -907,16 +908,16 @@ removeCustomMarket: async (id) => {
 },
 
 addCustomStrategy: async (name) => {
+  const user = get().user;
+  if (!user) return;
+
   const { data, error } = await supabase
-    .from('progression_strategies')
-    .insert([
-      {
-        name,
-        description: 'Custom Strategy',
-        logic: {},
-        is_pro: false
-      }
-    ])
+    .from('user_strategies')
+    .insert({
+      user_id: user.id,
+      strategy_id: null,
+      name
+    })
     .select()
     .single();
 
@@ -1140,7 +1141,8 @@ importMarket: async (marketId) => {
   if (!user) return false;
 
   const { data, error } = await supabase
-    .from('markets')
+    .from('user_markets')
+.eq('user_id', user.id)
     .select('*')
     .eq('id', marketId)
     .single();
@@ -1150,8 +1152,20 @@ importMarket: async (marketId) => {
     return false;
   }
 
-  // Aqui você pode criar tabela user_markets futuramente
-  get().setToast({ type: 'success', message: 'Mercado importado com sucesso.' });
+  const { error: insertError } = await supabase
+    .from('user_markets')
+    .insert({
+      user_id: user.id,
+      market_id: data.id,
+      name: data.name
+    });
+
+  if (insertError) {
+    get().setToast({ type: 'error', message: 'Mercado já importado.' });
+    return false;
+  }
+
+  get().setToast({ type: 'success', message: 'Mercado adicionado à sua conta.' });
   return true;
 },
 
@@ -1228,11 +1242,24 @@ importProgressionStrategy: async (strategyId) => {
     .single();
 
   if (error || !data) {
-    get().setToast({ type: 'error', message: 'Erro ao importar progressão.' });
+    get().setToast({ type: 'error', message: 'Erro ao importar estratégia.' });
     return false;
   }
 
-  get().setToast({ type: 'success', message: 'Estratégia PRO ativada.' });
+  const { error: insertError } = await supabase
+    .from('user_strategies')
+    .insert({
+      user_id: user.id,
+      strategy_id: data.id,
+      name: data.name
+    });
+
+  if (insertError) {
+    get().setToast({ type: 'error', message: 'Estratégia já ativada.' });
+    return false;
+  }
+
+  get().setToast({ type: 'success', message: 'Estratégia ativada na sua conta.' });
   return true;
 },
 
