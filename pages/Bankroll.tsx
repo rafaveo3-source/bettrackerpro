@@ -153,7 +153,7 @@ const Bankroll: React.FC = () => {
       Transações
     </p>
     <p className="text-xl font-black text-slate-900 dark:text-white">
-      {transactions.length}
+      {transactions.filter(t => t.bankrollId === activeBankrollId).length}
     </p>
   </div>
 </div>
@@ -228,6 +228,74 @@ const Bankroll: React.FC = () => {
       </button>
 
     </form>
+  </div>
+)}
+
+    {/* 📜 HISTÓRICO DE TRANSAÇÕES */}
+{activeBR && (
+  <div className="bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm">
+    
+    <div className="flex items-center gap-3 mb-6">
+      <DollarSign className="text-emerald-500" size={20} />
+      <h3 className="font-black uppercase text-sm tracking-widest text-slate-700 dark:text-slate-300">
+        Histórico de Transações
+      </h3>
+    </div>
+
+    {transactions.filter(t => t.bankrollId === activeBankrollId).length === 0 ? (
+      <p className="text-sm text-slate-400">
+        Nenhuma movimentação registrada ainda.
+      </p>
+    ) : (
+      <div className="space-y-3">
+        {transactions
+          .filter(t => t.bankrollId === activeBankrollId)
+          .map((tx) => (
+            <div
+              key={tx.id}
+              className="flex items-center justify-between bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl p-4"
+            >
+              {/* ESQUERDA */}
+              <div>
+                <p className="font-bold text-sm text-slate-900 dark:text-white">
+                  {tx.type === 'deposit' ? 'Aporte' : 'Saque'}
+                </p>
+
+                <p className="text-xs text-slate-400">
+                  {new Date(tx.date).toLocaleString('pt-BR')}
+                </p>
+
+                {tx.description && (
+                  <p className="text-xs text-slate-500 mt-1">
+                    {tx.description}
+                  </p>
+                )}
+              </div>
+
+              {/* DIREITA */}
+              <div className="flex items-center gap-4">
+                <p
+                  className={`font-black text-sm ${
+                    tx.type === 'deposit'
+                      ? 'text-emerald-500'
+                      : 'text-red-500'
+                  }`}
+                >
+                  {tx.type === 'deposit' ? '+' : '-'}
+                  {formatCurrency(tx.amount, activeBR.currency)}
+                </p>
+
+                <button
+                  onClick={() => removeTransaction(tx.id)}
+                  className="text-slate-400 hover:text-red-500 transition"
+                >
+                  <Trash2 size={16} />
+                </button>
+              </div>
+            </div>
+          ))}
+      </div>
+    )}
   </div>
 )}
 
