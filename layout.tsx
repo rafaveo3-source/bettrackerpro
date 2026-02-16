@@ -23,7 +23,15 @@ const Layout: React.FC<LayoutProps> = ({ children, currentView, setView }) => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [betToEdit, setBetToEdit] = useState<Bet | undefined>(undefined);
-  const { isDarkMode, primaryColor, isAuthenticated, isTiltLocked, tiltLockUntil } = useBetStore();
+  const { 
+  isDarkMode, 
+  primaryColor, 
+  isAuthenticated, 
+  isTiltLocked, 
+  tiltLockUntil,
+  toast,
+  setToast
+} = useBetStore();
   const [locked, setLocked] = useState(false);
 
   useEffect(() => {
@@ -52,6 +60,17 @@ const Layout: React.FC<LayoutProps> = ({ children, currentView, setView }) => {
     return () => window.removeEventListener('editBet', handleEditBet);
   }, []);
 
+  // 🔥 AUTO CLOSE TOAST
+useEffect(() => {
+  if (!toast) return;
+
+  const timer = setTimeout(() => {
+    setToast(null);
+  }, 3000);
+
+  return () => clearTimeout(timer);
+}, [toast, setToast]);
+
   if (!isAuthenticated) return <Auth />;
 
   return (
@@ -76,6 +95,22 @@ const Layout: React.FC<LayoutProps> = ({ children, currentView, setView }) => {
             <span className="max-w-0 overflow-hidden group-hover:max-w-xs transition-all duration-300 whitespace-nowrap font-black uppercase text-xs tracking-widest hidden md:inline-block">Registrar Entrada</span>
           </button>
       )}
+
+      {/* 🔥 GLOBAL TOAST */}
+{toast && (
+  <div className="fixed top-6 right-6 z-[999] animate-in fade-in slide-in-from-right duration-300">
+    <div
+      className={`px-6 py-4 rounded-2xl shadow-2xl border text-sm font-bold uppercase tracking-wider backdrop-blur-xl
+      ${
+        toast.type === 'success'
+          ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-500'
+          : 'bg-red-500/10 border-red-500/30 text-red-500'
+      }`}
+    >
+      {toast.message}
+    </div>
+  </div>
+)}
 
       <NewBetModal isOpen={isModalOpen} betToEdit={betToEdit} onClose={() => { setIsModalOpen(false); setBetToEdit(undefined); }} />
     </div>

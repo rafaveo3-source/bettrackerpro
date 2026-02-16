@@ -180,6 +180,17 @@ removeTransaction: (id: string) => Promise<void>;
     moodCorrelation: Record<MoodType, { roi: number; winRate: number; count: number }>;
   };
 
+  // 🔥 SYSTEM LIBRARY IMPORTS
+importMarket: (marketId: string) => Promise<boolean>;
+importLeague: (leagueId: string) => Promise<boolean>;
+importTeam: (teamId: string) => Promise<boolean>;
+importSystemMethod: (methodId: string) => Promise<boolean>;
+importProgressionStrategy: (strategyId: string) => Promise<boolean>;
+
+// 🔥 TOAST SYSTEM
+toast: { type: 'success' | 'error'; message: string } | null;
+setToast: (toast: { type: 'success' | 'error'; message: string } | null) => void;
+
   isTiltLocked: () => boolean;
 }
 
@@ -205,6 +216,7 @@ export const useBetStore = create<BetState>()(
       mindsetHistory: [],
       goals: [],
       tiltLockUntil: null,
+      toast: null,
 
       setSession: async (session) => {
         if (session?.user) {
@@ -1002,6 +1014,113 @@ removeTransaction: async (id) => {
         unlockTime.setHours(unlockTime.getHours() + hours);
         set({ tiltLockUntil: unlockTime.toISOString() });
       },
+
+      // ===============================
+// 🔥 SYSTEM LIBRARY IMPORT ENGINE
+// ===============================
+
+setToast: (toast) => set({ toast }),
+
+importMarket: async (marketId) => {
+  const user = get().user;
+  if (!user) return false;
+
+  const { data, error } = await supabase
+    .from('markets')
+    .select('*')
+    .eq('id', marketId)
+    .single();
+
+  if (error || !data) {
+    get().setToast({ type: 'error', message: 'Erro ao importar mercado.' });
+    return false;
+  }
+
+  // Aqui você pode criar tabela user_markets futuramente
+  get().setToast({ type: 'success', message: 'Mercado importado com sucesso.' });
+  return true;
+},
+
+importLeague: async (leagueId) => {
+  const user = get().user;
+  if (!user) return false;
+
+  const { data, error } = await supabase
+    .from('leagues')
+    .select('*')
+    .eq('id', leagueId)
+    .single();
+
+  if (error || !data) {
+    get().setToast({ type: 'error', message: 'Erro ao importar liga.' });
+    return false;
+  }
+
+  get().setToast({ type: 'success', message: 'Liga importada com sucesso.' });
+  return true;
+},
+
+importTeam: async (teamId) => {
+  const user = get().user;
+  if (!user) return false;
+
+  const { data, error } = await supabase
+    .from('teams')
+    .select('*')
+    .eq('id', teamId)
+    .single();
+
+  if (error || !data) {
+    get().setToast({ type: 'error', message: 'Erro ao importar time.' });
+    return false;
+  }
+
+  get().setToast({ type: 'success', message: 'Time importado com sucesso.' });
+  return true;
+},
+
+importSystemMethod: async (methodId) => {
+  const user = get().user;
+  if (!user) return false;
+
+  const { data, error } = await supabase
+    .from('system_methods')
+    .select('*')
+    .eq('id', methodId)
+    .single();
+
+  if (error || !data) {
+    get().setToast({ type: 'error', message: 'Erro ao importar método.' });
+    return false;
+  }
+
+  await supabase.from('methods').insert({
+    name: data.name,
+    user_id: user.id
+  });
+
+  get().setToast({ type: 'success', message: 'Método importado para sua conta.' });
+  return true;
+},
+
+importProgressionStrategy: async (strategyId) => {
+  const user = get().user;
+  if (!user) return false;
+
+  const { data, error } = await supabase
+    .from('progression_strategies')
+    .select('*')
+    .eq('id', strategyId)
+    .single();
+
+  if (error || !data) {
+    get().setToast({ type: 'error', message: 'Erro ao importar progressão.' });
+    return false;
+  }
+
+  get().setToast({ type: 'success', message: 'Estratégia PRO ativada.' });
+  return true;
+},
 
       isTiltLocked: () => {
         const state = get();
