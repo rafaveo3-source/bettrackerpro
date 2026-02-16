@@ -1,6 +1,22 @@
 import { BookOpen } from 'lucide-react';
 import React from 'react';
-import { LayoutDashboard, BarChart3, Target, Brain, History, Wallet, CalendarDays, Calculator, Settings, LogOut, Menu, X, Sun, Moon } from 'lucide-react';
+import { 
+  LayoutDashboard, 
+  BarChart3, 
+  Target, 
+  Brain, 
+  History, 
+  Wallet, 
+  CalendarDays, 
+  Calculator, 
+  Settings, 
+  LogOut, 
+  Menu, 
+  X, 
+  Sun, 
+  Moon,
+  Layers
+} from 'lucide-react';
 import { useBetStore } from '../store/useBetStore';
 
 interface SidebarProps {
