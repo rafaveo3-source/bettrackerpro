@@ -37,22 +37,30 @@ const SystemLibrary: React.FC = () => {
   }
 
   return (
-    <div className="space-y-12 max-w-7xl mx-auto pb-20">
+    <div className="space-y-10 max-w-7xl mx-auto pb-20">
       {/* HEADER */}
-      <div>
-        <div className="flex items-center gap-2 text-emerald-500 text-xs font-black uppercase tracking-widest">
-          <span className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></span>
-          Arsenal Estratégico Global
-        </div>
+<header className="border-b border-slate-200 dark:border-slate-800 pb-6">
 
-        <h1 className="text-3xl font-black uppercase italic mt-2">
-          Biblioteca PRO ///
-        </h1>
+  {/* Label superior discreta */}
+  <div className="flex items-center gap-2 text-purple-500 text-[10px] font-mono font-bold uppercase tracking-widest mb-2">
+    <span className="w-1.5 h-1.5 bg-purple-500 rounded-full animate-pulse shadow-[0_0_8px_#a855f7]"></span>
+    Strategic Intelligence Core
+  </div>
 
-        <p className="text-slate-500 text-xs uppercase tracking-widest mt-2">
-          Estruturas globais prontas para importação e uso profissional.
-        </p>
-      </div>
+  {/* Headline principal */}
+  <h1 className="text-3xl font-black text-slate-900 dark:text-white tracking-tighter uppercase italic">
+    Biblioteca Estratégica
+    <span className="text-slate-400 dark:text-slate-700 text-lg ml-2">
+      ///
+    </span>
+  </h1>
+
+  {/* Subheadline */}
+  <p className="text-slate-500 dark:text-slate-400 text-xs font-bold mt-2 uppercase tracking-widest">
+    Estruturas globais, métodos profissionais e modelos prontos para importação.
+  </p>
+
+</header>
 
       {/* GRID */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8">

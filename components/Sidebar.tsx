@@ -26,7 +26,7 @@ interface SidebarProps {
   setIsOpen: React.Dispatch<React.SetStateAction<boolean>>;
 }
 
-const menuItems = [
+const mainMenuItems = [
   { key: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { key: 'analytics', label: 'Análise', icon: BarChart3 },
   { key: 'metas', label: 'Metas', icon: Target },
@@ -35,11 +35,10 @@ const menuItems = [
   { key: 'bancas', label: 'Bancas', icon: Wallet },
   { key: 'calendar', label: 'Calendário', icon: CalendarDays },
   { key: 'calculators', label: 'Calculadoras', icon: Calculator },
+];
 
-  // 🔥 Nova Biblioteca Inteligente
-  { key: 'biblioteca', label: 'Biblioteca PRO', icon: Layers },
-
-  { key: 'settings', label: 'Configurações', icon: Settings },
+const proMenuItems = [
+  { key: 'biblioteca', label: 'Biblioteca Estratégica', icon: Layers },
 ];
 
 const Sidebar: React.FC<SidebarProps> = ({ currentView, setView, isOpen, setIsOpen }) => {
@@ -81,24 +80,56 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, setView, isOpen, setIsOp
           </div>
 
           <nav className="flex-1 p-4 space-y-1 overflow-y-auto custom-scrollbar">
-            {menuItems.map(({ key, label, icon: Icon }) => {
-              const active = currentView === key;
-              return (
-                <button
-                  key={key}
-                  onClick={() => openView(key)}
-                  className={`w-full flex items-center gap-3 rounded-xl px-3 py-3 text-left transition-all duration-200 group ${
-                    active
-                      ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/30 font-bold'
-                      : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-900/50 hover:text-slate-900 dark:hover:text-white font-medium'
-                  }`}
-                >
-                  <Icon size={18} className={`transition-transform duration-300 ${active ? 'scale-110' : 'group-hover:scale-110'}`} />
-                  <span className="text-sm">{label}</span>
-                </button>
-              );
-            })}
-          </nav>
+
+  {mainMenuItems.map(({ key, label, icon: Icon }) => {
+    const active = currentView === key;
+    return (
+      <button
+        key={key}
+        onClick={() => openView(key)}
+        className={`w-full flex items-center gap-3 rounded-xl px-3 py-3 text-left transition-all duration-200 group ${
+          active
+            ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/30 font-bold'
+            : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-900/50 hover:text-slate-900 dark:hover:text-white font-medium'
+        }`}
+      >
+        <Icon size={18} />
+        <span className="text-sm">{label}</span>
+      </button>
+    );
+  })}
+
+  {/* Separador PRO */}
+  <div className="pt-6 pb-2">
+    <p className="text-[10px] uppercase tracking-widest text-slate-400 font-black">
+      Recursos PRO
+    </p>
+  </div>
+
+  {proMenuItems.map(({ key, label, icon: Icon }) => {
+    const active = currentView === key;
+    return (
+      <button
+        key={key}
+        onClick={() => openView(key)}
+        className={`w-full flex items-center gap-3 rounded-xl px-3 py-3 text-left transition-all duration-200 group ${
+          active
+            ? 'bg-purple-600 text-white shadow-lg shadow-purple-500/30 font-bold'
+            : 'text-slate-600 dark:text-slate-400 hover:bg-purple-50 dark:hover:bg-purple-900/30 hover:text-purple-600 font-medium'
+        }`}
+      >
+        <Icon size={18} />
+        <span className="text-sm flex items-center gap-2">
+          {label}
+          <span className="text-[9px] bg-purple-600 text-white px-2 py-0.5 rounded-full font-black">
+            PRO
+          </span>
+        </span>
+      </button>
+    );
+  })}
+
+</nav>
 
           <div className="p-4 space-y-2 border-t border-slate-200 dark:border-white/5 bg-slate-50 dark:bg-slate-900/30 m-4 rounded-2xl">
             {/* ✅ Botão de Tema */}
