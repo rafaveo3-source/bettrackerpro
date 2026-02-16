@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import { Info, ChevronDown, Calculator, Sparkles, Trash2, Plus, ArrowRightLeft } from 'lucide-react';
 import { useBetStore } from '../store/useBetStore';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -26,16 +25,28 @@ const Calculators: React.FC = () => {
   };
 
   const calculateDutching = () => {
-    const totalStake = parseFloat(dutchTotalStake);
-    const impliedProbs = dutchSelections.map(s => (s.odds ? 1 / parseFloat(s.odds) : 0));
-    const totalImplied = impliedProbs.reduce((a, b) => a + b, 0);
-    const newSelections = dutchSelections.map((s, i) => {
-      const stake = (totalStake * (impliedProbs[i] / totalImplied)) || 0;
-      const profit = (stake * parseFloat(s.odds || '0')) - totalStake;
-      return { ...s, stake, profit };
-    });
-    setDutchSelections(newSelections);
-  };
+  const totalStake = parseFloat(dutchTotalStake);
+
+  if (!totalStake || totalStake <= 0) return;
+
+  const impliedProbs = dutchSelections.map(s => {
+    const odd = parseFloat(s.odds);
+    return odd > 1 ? 1 / odd : 0;
+  });
+
+  const totalImplied = impliedProbs.reduce((a, b) => a + b, 0);
+
+  if (totalImplied <= 0) return;
+
+  const newSelections = dutchSelections.map((s, i) => {
+    const stake = totalStake * (impliedProbs[i] / totalImplied);
+    const odd = parseFloat(s.odds || '0');
+    const profit = odd > 1 ? (stake * odd) - totalStake : 0;
+    return { ...s, stake: stake || 0, profit: profit || 0 };
+  });
+
+  setDutchSelections(newSelections);
+};
 
   // --- KELLY ---
   const [kellyOdds, setKellyOdds] = useState('2.00');
@@ -65,14 +76,15 @@ const Calculators: React.FC = () => {
   const toFractional = (dec: number) => {
     const tolerance = 1.0E-6;
     let h1 = 1, h2 = 0, k1 = 0, k2 = 1;
-    let b = dec - 1;
+    if (!dec || dec <= 1) return '--';
+let b = dec - 1;
     do {
         let a = Math.floor(b);
         let aux = h1; h1 = a * h1 + h2; h2 = aux;
         aux = k1; k1 = a * k1 + k2; k2 = aux;
         b = 1 / (b - a);
     } while (Math.abs(dec - 1 - h1 / k1) > dec * tolerance);
-    return `${h1}/${k1}`;
+    return k1 !== 0 ? `${h1}/${k1}` : '--';
   };
 
   return (
@@ -104,37 +116,53 @@ const Calculators: React.FC = () => {
 
       {/* ✅ SOLUÇÃO DEFINITIVA: Grid Responsivo (Stack no Mobile, Linha no Desktop) */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-6">
-        <button 
-            onClick={() => setActiveTab('dutching')} 
-            className={`w-full flex items-center justify-center px-4 py-4 rounded-xl font-black text-xs uppercase tracking-widest transition-all ${
-                activeTab === 'dutching' 
-                ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/20 transform md:scale-105' 
-                : 'bg-white dark:bg-[#0f172a] text-slate-500 border border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-900'
-            }`}
-        >
-            Dutching
-        </button>
-        <button 
-            onClick={() => setActiveTab('kelly')} 
-            className={`w-full flex items-center justify-center px-4 py-4 rounded-xl font-black text-xs uppercase tracking-widest transition-all ${
-                activeTab === 'kelly' 
-                ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/20 transform md:scale-105' 
-                : 'bg-white dark:bg-[#0f172a] text-slate-500 border border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-900'
-            }`}
-        >
-            Critério de Kelly
-        </button>
-        <button 
-            onClick={() => setActiveTab('converter')} 
-            className={`w-full flex items-center justify-center px-4 py-4 rounded-xl font-black text-xs uppercase tracking-widest transition-all ${
-                activeTab === 'converter' 
-                ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/20 transform md:scale-105' 
-                : 'bg-white dark:bg-[#0f172a] text-slate-500 border border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-900'
-            }`}
-        >
-            Conversor Odds
-        </button>
-      </div>
+
+  {/* DUTCHING */}
+  <button
+    onClick={() => setActiveTab('dutching')}
+    className={`relative w-full flex items-center justify-center px-4 py-4 rounded-xl font-black text-xs uppercase tracking-widest transition-all ${
+      activeTab === 'dutching'
+        ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/20'
+        : 'bg-white dark:bg-[#0f172a] text-slate-500 border border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-900'
+    }`}
+  >
+    Dutching
+    {activeTab === 'dutching' && (
+      <span className="absolute bottom-0 left-0 w-full h-[3px] bg-white/40 animate-pulse rounded-b-xl" />
+    )}
+  </button>
+
+  {/* KELLY */}
+  <button
+    onClick={() => setActiveTab('kelly')}
+    className={`relative w-full flex items-center justify-center px-4 py-4 rounded-xl font-black text-xs uppercase tracking-widest transition-all ${
+      activeTab === 'kelly'
+        ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/20'
+        : 'bg-white dark:bg-[#0f172a] text-slate-500 border border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-900'
+    }`}
+  >
+    Critério de Kelly
+    {activeTab === 'kelly' && (
+      <span className="absolute bottom-0 left-0 w-full h-[3px] bg-white/40 animate-pulse rounded-b-xl" />
+    )}
+  </button>
+
+  {/* CONVERTER */}
+  <button
+    onClick={() => setActiveTab('converter')}
+    className={`relative w-full flex items-center justify-center px-4 py-4 rounded-xl font-black text-xs uppercase tracking-widest transition-all ${
+      activeTab === 'converter'
+        ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/20'
+        : 'bg-white dark:bg-[#0f172a] text-slate-500 border border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-900'
+    }`}
+  >
+    Conversor Odds
+    {activeTab === 'converter' && (
+      <span className="absolute bottom-0 left-0 w-full h-[3px] bg-white/40 animate-pulse rounded-b-xl" />
+    )}
+  </button>
+
+</div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         <div className="lg:col-span-2 space-y-6 min-w-0 w-full">
@@ -349,11 +377,25 @@ const Calculators: React.FC = () => {
 
                     <div className="bg-gradient-to-r from-purple-50 to-white dark:from-purple-900/10 dark:to-slate-900/50 rounded-2xl p-6 flex flex-col items-center border border-purple-100 dark:border-purple-500/10 gap-4 text-center">
                          <p className="text-purple-800 dark:text-purple-300 text-xs font-black uppercase tracking-widest">Recomendação</p>
-                         <h3 className="text-4xl font-black text-slate-900 dark:text-white tracking-tighter">{parseFloat(kellyResult) > 0 ? kellyResult : '0.00'}%</h3>
+                         <h3 className={`text-4xl font-black tracking-tighter ${
+  parseFloat(kellyResult) > 0 
+    ? 'text-purple-600 dark:text-purple-400' 
+    : 'text-slate-400'
+}`}>{parseFloat(kellyResult) > 0 ? kellyResult : '0.00'}%</h3>
                          <p className="text-purple-600 dark:text-purple-400 font-mono font-bold text-sm bg-purple-100 dark:bg-purple-500/10 px-3 py-1 rounded-lg">
                             R$ {parseFloat(kellyResult) > 0 ? kellyMoney.toFixed(2) : '0.00'}
                          </p>
                     </div>
+                    {parseFloat(kellyResult) <= 0 && (
+  <div className="mt-4 text-center bg-red-50 dark:bg-red-900/10 border border-red-200 dark:border-red-500/20 rounded-xl p-3">
+    <p className="text-xs font-bold uppercase tracking-widest text-red-600 dark:text-red-400">
+      Sem Edge Matemática
+    </p>
+    <p className="text-[11px] text-red-500 dark:text-red-300 mt-1">
+      A probabilidade informada não justifica aposta segundo Kelly.
+    </p>
+  </div>
+)}
                 </div>
             )}
 
@@ -391,11 +433,11 @@ const Calculators: React.FC = () => {
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
                             <div>
                                 <label className="text-[10px] text-slate-400 font-black uppercase mb-2 block tracking-widest">Americana (US)</label>
-                                <div className="w-full bg-slate-100 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 rounded-xl p-4 text-slate-600 dark:text-slate-300 font-mono font-bold text-lg truncate">{toAmerican(parseFloat(decimalOdd) || 1)}</div>
+                                <div className="w-full bg-slate-100 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 rounded-xl p-4 text-slate-600 dark:text-slate-300 font-mono font-bold text-lg truncate">{parseFloat(decimalOdd) > 1 ? toAmerican(parseFloat(decimalOdd)) : '--'}</div>
                             </div>
                             <div>
                                 <label className="text-[10px] text-slate-400 font-black uppercase mb-2 block tracking-widest">Fracionária (UK)</label>
-                                <div className="w-full bg-slate-100 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 rounded-xl p-4 text-slate-600 dark:text-slate-300 font-mono font-bold text-lg truncate">{toFractional(parseFloat(decimalOdd) || 1)}</div>
+                                <div className="w-full bg-slate-100 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 rounded-xl p-4 text-slate-600 dark:text-slate-300 font-mono font-bold text-lg truncate">{parseFloat(decimalOdd) > 1 ? toFractional(parseFloat(decimalOdd)) : '--'}</div>
                             </div>
                         </div>
                       </div>
