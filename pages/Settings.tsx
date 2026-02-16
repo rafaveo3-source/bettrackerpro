@@ -36,20 +36,23 @@ React.useEffect(() => {
     }
   };
 
-  const handleUpdateProfile = (e: React.FormEvent) => {
-    e.preventDefault();
-    updateProfile({ name: profileName, avatar: profileAvatar });
-    const parsed = parseFloat(tempUnitSize);
+  const handleUpdateProfile = async (e: React.FormEvent) => {
+  e.preventDefault();
 
-if (!parsed || parsed <= 0) {
-  setTempUnitSize(unitSize.toString());
-  return;
-}
+  updateProfile({ name: profileName, avatar: profileAvatar });
 
-await setUnitSize(parsed);
-    setShowSavedToast(true);
-    setTimeout(() => setShowSavedToast(false), 3000);
-  };
+  const parsed = parseFloat(tempUnitSize);
+
+  if (!parsed || parsed <= 0) {
+    setTempUnitSize(unitSize.toString());
+    return;
+  }
+
+  await setUnitSize(parsed);
+
+  setShowSavedToast(true);
+  setTimeout(() => setShowSavedToast(false), 3000);
+};
 
   return (
     <div className="space-y-10 max-w-6xl mx-auto pb-20 w-full overflow-x-hidden">
