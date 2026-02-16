@@ -10,35 +10,47 @@ interface NewBetModalProps {
 }
 
 const NewBetModal: React.FC<NewBetModalProps> = ({ isOpen, onClose, betToEdit }) => {
-  const { addBet, updateBet, methods, currency } = useBetStore();
+  const { 
+  addBet, 
+  updateBet, 
+  methods, 
+  currency,
+  customMarkets,
+  customStrategies,
+  displayMode,
+  unitSize
+} = useBetStore();
   const [error, setError] = useState('');
   
   const [formData, setFormData] = useState({
-    sport: 'Futebol',
-    event: '',
-    market: '',
-    selection: '',
-    odds: '',
-    stake: '',
-    status: 'pending' as BetStatus,
-    method: '',
-    cashoutValue: ''
-  });
+  sport: 'Futebol',
+  event: '',
+  market: '',
+  selection: '',
+  odds: '',
+  stake: '',
+  status: 'pending' as BetStatus,
+  method: '',
+  strategy: '', // 🔥 NOVO
+  cashoutValue: ''
+});
 
   useEffect(() => {
     if (betToEdit) {
-        setFormData({
-            sport: betToEdit.sport,
-            event: betToEdit.event,
-            market: betToEdit.market,
-            selection: betToEdit.selection,
-            odds: betToEdit.odds.toString(),
-            stake: betToEdit.stake.toString(),
-            status: betToEdit.status,
-            method: betToEdit.method || '',
-            cashoutValue: '' // In simplified edit, we don't necessarily keep the old cashout result input
-        });
-    } else {
+    setFormData({
+        sport: betToEdit.sport,
+        event: betToEdit.event,
+        market: betToEdit.market,
+        selection: betToEdit.selection,
+        odds: betToEdit.odds.toString(),
+        stake: betToEdit.stake.toString(),
+        status: betToEdit.status,
+        method: betToEdit.method || '',
+        strategy: (betToEdit as any).strategy || '',
+        cashoutValue: ''
+    });
+}
+    else {
         setFormData({
             sport: 'Futebol',
             event: '',
@@ -48,6 +60,7 @@ const NewBetModal: React.FC<NewBetModalProps> = ({ isOpen, onClose, betToEdit })
             stake: '',
             status: 'pending',
             method: '',
+             strategy: '', // 🔥 NOVO
             cashoutValue: ''
         });
     }
@@ -58,11 +71,23 @@ const NewBetModal: React.FC<NewBetModalProps> = ({ isOpen, onClose, betToEdit })
     setError('');
 
     if (!formData.event || !formData.odds || !formData.stake) {
-        setError("Preencha todos os campos obrigatórios.");
-        return;
-    }
+    setError("Preencha todos os campos obrigatórios.");
+    return;
+}
 
-    const stakeValue = parseFloat(formData.stake);
+// ✅ BLOQUEAR "__custom" SEM TEXTO
+if (formData.market === '__custom') {
+    setError("Digite o nome do mercado personalizado.");
+    return;
+}
+
+const stakeValue = parseFloat(formData.stake);
+
+    let stakeValue = parseFloat(formData.stake);
+
+if (displayMode === 'units') {
+    stakeValue = stakeValue * unitSize;
+}
     if (stakeValue < 0) {
         setError("A stake não pode ser negativa.");
         return;
@@ -89,7 +114,11 @@ const NewBetModal: React.FC<NewBetModalProps> = ({ isOpen, onClose, betToEdit })
   };
 
   const calculateResult = () => {
-    const stake = parseFloat(formData.stake) || 0;
+    let stake = parseFloat(formData.stake) || 0;
+
+if (displayMode === 'units') {
+    stake = stake * unitSize;
+}
     const odds = parseFloat(formData.odds) || 0;
     const cashout = parseFloat(formData.cashoutValue) || 0;
     if (stake === 0 || odds === 0) return 0;
@@ -180,13 +209,29 @@ const NewBetModal: React.FC<NewBetModalProps> = ({ isOpen, onClose, betToEdit })
                         <label className="block text-xs font-medium text-slate-400 mb-1.5 uppercase">Mercado</label>
                         <div className="relative">
                             <Target className="absolute left-3 top-3 text-slate-600" size={16} />
-                            <input 
-                                type="text"
-                                placeholder="Ex: Over 2.5"
-                                value={formData.market}
-                                onChange={(e) => setFormData({...formData, market: e.target.value})}
-                                className="w-full bg-slate-950 border border-slate-700 text-slate-200 rounded-lg pl-10 pr-4 py-2.5 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 outline-none placeholder-slate-600"
-                            />
+                            <select
+  value={formData.market}
+  onChange={(e) => setFormData({...formData, market: e.target.value})}
+  className="w-full bg-slate-950 border border-slate-700 text-slate-200 rounded-lg px-4 py-2.5 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 outline-none"
+>
+  <option value="">Selecione...</option>
+
+  {customMarkets.map(m => (
+    <option key={m.id} value={m.name}>
+      {m.name}
+    </option>
+  ))}
+
+  <option value="__custom">Outro (digitar manual)</option>
+</select>
+{formData.market === '__custom' && (
+  <input
+    type="text"
+    placeholder="Digite o mercado"
+    onChange={(e) => setFormData({...formData, market: e.target.value})}
+    className="mt-2 w-full bg-slate-950 border border-slate-700 text-slate-200 rounded-lg px-4 py-2.5"
+  />
+)}
                         </div>
                     </div>
                     <div>
@@ -200,7 +245,64 @@ const NewBetModal: React.FC<NewBetModalProps> = ({ isOpen, onClose, betToEdit })
                         />
                     </div>
                     <div>
-                        <label className="block text-xs font-medium text-slate-400 mb-1.5 uppercase">Método</label>
+                        <div className="space-y-3">
+
+  <div>
+    <label className="block text-xs font-medium text-slate-400 mb-1.5 uppercase">
+      Método
+    </label>
+    <div className="relative">
+      <BookOpen className="absolute left-3 top-3 text-slate-600" size={16} />
+      <select 
+        value={formData.method}
+        onChange={(e) => setFormData({...formData, method: e.target.value})}
+        className="w-full bg-slate-950 border border-slate-700 text-slate-200 rounded-lg pl-10 pr-4 py-2.5 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 outline-none"
+      >
+        <option value="">Selecione...</option>
+        {methods.map(m => (
+          <option key={m.id} value={m.name}>{m.name}</option>
+        ))}
+      </select>
+    </div>
+  </div>
+
+  <div>
+    <label className="block text-xs font-medium text-slate-400 mb-1.5 uppercase">
+      Estratégia
+    </label>
+    <select
+      value={formData.strategy}
+      onChange={(e) => setFormData({...formData, strategy: e.target.value})}
+      className="w-full bg-slate-950 border border-slate-700 text-slate-200 rounded-lg px-4 py-2.5 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 outline-none"
+    >
+      <option value="">Selecione...</option>
+      {customStrategies.map(s => (
+        <option key={s.id} value={s.name}>
+          {s.name}
+        </option>
+      ))}
+    </select>
+  </div>
+
+</div>
+                        <div>
+  <label className="block text-xs font-medium text-slate-400 mb-1.5 uppercase">
+    Estratégia
+  </label>
+
+  <select
+    value={formData.strategy}
+    onChange={(e) => setFormData({...formData, strategy: e.target.value})}
+    className="w-full bg-slate-950 border border-slate-700 text-slate-200 rounded-lg px-4 py-2.5 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 outline-none"
+  >
+    <option value="">Selecione...</option>
+    {customStrategies.map(s => (
+      <option key={s.id} value={s.name}>
+        {s.name}
+      </option>
+    ))}
+  </select>
+</div>
                         <div className="relative">
                             <BookOpen className="absolute left-3 top-3 text-slate-600" size={16} />
                             <select 
@@ -235,14 +337,14 @@ const NewBetModal: React.FC<NewBetModalProps> = ({ isOpen, onClose, betToEdit })
                         <div className="relative">
                             <DollarSign className="absolute left-3 top-3 text-emerald-500" size={16} />
                             <input 
-                                type="number"
-                                step="1"
-                                placeholder="100"
-                                value={formData.stake}
-                                onChange={(e) => setFormData({...formData, stake: e.target.value})}
-                                className="w-full bg-slate-950 border border-slate-700 text-white font-mono rounded-lg pl-9 pr-4 py-2.5 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 outline-none"
-                                required
-                            />
+  type="number"
+  step="1"
+  placeholder={displayMode === 'units' ? 'Ex: 1.5 unidades' : '100'}
+  value={formData.stake}
+  onChange={(e) => setFormData({...formData, stake: e.target.value})}
+  className="w-full bg-slate-950 border border-slate-700 text-white font-mono rounded-lg pl-9 pr-4 py-2.5 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 outline-none"
+  required
+/>
                         </div>
                     </div>
                     {formData.status === 'cashout' && (
