@@ -128,12 +128,13 @@ interface BetState {
   logout: () => Promise<void>;
   updateProfile: (data: Partial<User>) => void;
   toggleTheme: () => void;
-  setPrimaryColor: (color: string) => void;
-  setCurrency: (currency: string) => void;
-  
-  // ✅ Actions para Configuração
-  setDisplayMode: (mode: DisplayMode) => void;
-  setUnitSize: (size: number) => void;
+  setPrimaryColor: (color: string) => Promise<void>;
+setCurrency: (currency: string) => Promise<void>;
+setDisplayMode: (mode: DisplayMode) => Promise<void>;
+setUnitSize: (size: number) => Promise<void>;
+
+loadUserSettings: () => Promise<void>;
+saveUserSettings: () => Promise<void>;
 
   addBankroll: (name: string, currency: string, initialBalance: number) => Promise<void>;
   removeBankroll: (id: string) => Promise<void>;
@@ -185,6 +186,7 @@ removeTransaction: (id: string) => Promise<void>;
 // --- STORE IMPLEMENTATION ---
 
 export const useBetStore = create<BetState>()(
+
   persist(
     (set, get) => ({
       user: null,
@@ -207,18 +209,17 @@ export const useBetStore = create<BetState>()(
       setSession: async (session) => {
         if (session?.user) {
           set({
-            isAuthenticated: true,
-            user: {
-              id: session.user.id,
-              email: session.user.email,
-              name:
-                session.user.user_metadata?.full_name ||
-                session.user.email?.split('@')[0] ||
-                'Usuário',
-              avatar: session.user.user_metadata?.avatar_url,
-            },
-          });
-
+  isAuthenticated: true,
+  user: {
+    id: session.user.id,
+    email: session.user.email,
+    name:
+      session.user.user_metadata?.full_name ||
+      session.user.email?.split('@')[0] ||
+      'Usuário',
+    avatar: session.user.user_metadata?.avatar_url,
+  },
+});
           const userId = session.user.id;
 
           // 1. CARREGAR BETS
@@ -329,7 +330,8 @@ else if (txData) {
             set({ goals: formattedGoals });
           }
 
-          get().recalculateBankroll();
+          await get().loadUserSettings();
+get().recalculateBankroll();
                 } else {
           set({
             isAuthenticated: false,
@@ -359,10 +361,80 @@ else if (txData) {
       })),
 
       toggleTheme: () => set((state) => ({ isDarkMode: !state.isDarkMode })),
-      setPrimaryColor: (color) => set({ primaryColor: color }),
-      setCurrency: (currency) => set({ currency }),
-      setDisplayMode: (mode) => set({ displayMode: mode }),
-      setUnitSize: (size) => set({ unitSize: size }),
+      setPrimaryColor: async (color) => {
+  set({ primaryColor: color });
+  await get().saveUserSettings();
+},
+
+setCurrency: async (currency) => {
+  set({ currency });
+  await get().saveUserSettings();
+},
+
+setDisplayMode: async (mode) => {
+  set({ displayMode: mode });
+  await get().saveUserSettings();
+},
+
+setUnitSize: async (size) => {
+  set({ unitSize: size });
+  await get().saveUserSettings();
+},
+
+loadUserSettings: async () => {
+  const user = get().user;
+  if (!user) return;
+
+  const { data, error } = await supabase
+    .from('user_settings')
+    .select('*')
+    .eq('user_id', user.id)
+    .single();
+
+  if (error && error.code !== 'PGRST116') {
+    console.error("Erro ao carregar settings:", error.message);
+    return;
+  }
+
+  if (data) {
+    set({
+      primaryColor: data.primary_color || 'gold',
+      currency: data.currency || 'BRL',
+      displayMode: data.display_mode || 'currency',
+      unitSize: Number(data.unit_size) || 100
+    });
+  } else {
+    await supabase.from('user_settings').insert([{
+      user_id: user.id,
+      primary_color: 'gold',
+      currency: 'BRL',
+      display_mode: 'currency',
+      unit_size: 100
+    }]);
+  }
+},
+
+saveUserSettings: async () => {
+  const user = get().user;
+  if (!user) return;
+
+  const state = get();
+
+  const { error } = await supabase
+    .from('user_settings')
+    .upsert({
+      user_id: user.id,
+      primary_color: state.primaryColor,
+      currency: state.currency,
+      display_mode: state.displayMode,
+      unit_size: state.unitSize,
+      updated_at: new Date().toISOString()
+    }, { onConflict: 'user_id' });
+
+  if (error) {
+    console.error("Erro ao salvar settings:", error.message);
+  }
+},
 
       // --- BANKROLLS ---
       addBankroll: async (name, currency, initialBalance) => {
@@ -1082,11 +1154,8 @@ removeTransaction: async (id) => {
 
   // 🔥 Persistir apenas preferências locais
   partialize: (state) => ({
-    isDarkMode: state.isDarkMode,
-    primaryColor: state.primaryColor,
-    displayMode: state.displayMode,
-    unitSize: state.unitSize,
-  }),
+  isDarkMode: state.isDarkMode,
+}),
 }
   )
 );
