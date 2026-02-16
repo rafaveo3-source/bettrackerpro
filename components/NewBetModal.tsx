@@ -81,8 +81,11 @@ if (formData.market === '__custom') {
     return;
 }
 
-const stakeValue = parseFloat(formData.stake);
+let stakeValue = parseFloat(formData.stake);
 
+if (displayMode === 'units') {
+    stakeValue = stakeValue * unitSize;
+}
     let stakeValue = parseFloat(formData.stake);
 
 if (displayMode === 'units') {
