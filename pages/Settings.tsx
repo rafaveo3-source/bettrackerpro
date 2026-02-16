@@ -189,21 +189,28 @@ React.useEffect(() => {
                 </div>
                 <div className="grid grid-cols-1 gap-3 max-h-[250px] overflow-y-auto pr-2 custom-scrollbar">
                     {methods.map(method => (
-                        <div key={method.id} className="flex justify-between items-center p-4 bg-slate-50 dark:bg-slate-900/30 rounded-2xl border border-slate-100 dark:border-white/5 group hover:border-blue-500/30 transition-all shadow-sm">
-                            <span className="text-slate-700 dark:text-slate-200 font-bold text-sm flex items-center gap-3"><div className="w-2 h-2 rounded-full bg-blue-500"></div>{method.name}</span>
-                                <button
-  onClick={() => {
-    const confirmed = window.confirm('Deseja realmente excluir este método?');
-    if (confirmed) {
-      removeMethod(method.id);
-    }
-  }}
-  className="text-slate-400 hover:text-red-500 transition-colors"
->
-  <Trash2 size={16} />
-</button>
-                        </div>
-                    ))}
+  <div
+    key={method.id}
+    className="flex justify-between items-center p-4 bg-slate-50 dark:bg-slate-900/30 rounded-2xl border border-slate-100 dark:border-white/5 group hover:border-blue-500/30 transition-all shadow-sm"
+  >
+    <span className="text-slate-700 dark:text-slate-200 font-bold text-sm flex items-center gap-3">
+      <div className="w-2 h-2 rounded-full bg-blue-500"></div>
+      {method.name}
+    </span>
+
+    <button
+      onClick={() => {
+        const confirmed = window.confirm('Deseja realmente excluir este método?');
+        if (confirmed) {
+          removeMethod(method.id);
+        }
+      }}
+      className="text-slate-400 hover:text-red-500 transition-colors p-2"
+    >
+      <Trash2 size={16} />
+    </button>
+  </div>
+))}
                     {methods.length === 0 && (
                         <p className="text-center py-10 text-slate-400 text-[10px] font-black uppercase tracking-widest italic">Nenhum método cadastrado</p>
                     )}
@@ -240,23 +247,25 @@ React.useEffect(() => {
 
   <div className="space-y-2">
     {customMarkets.map((m) => (
-      <div key={m.id} className="flex justify-between p-3 bg-slate-50 dark:bg-slate-900 rounded-xl">
-        <span>{m.name}</span>
-        <button
-  onClick={() => {
-    const confirmed = window.confirm('Deseja realmente excluir este mercado?');
-    if (confirmed) {
-      removeCustomMarket(m.id);
-    }
-  }}
-  className="text-slate-400 hover:text-red-500 transition-colors"
->
-  <Trash2 size={14} />
-</button>
-          <Trash2 size={14} />
-        </button>
-      </div>
-    ))}
+  <div
+    key={m.id}
+    className="flex justify-between items-center p-3 bg-slate-50 dark:bg-slate-900 rounded-xl"
+  >
+    <span>{m.name}</span>
+
+    <button
+      onClick={() => {
+        const confirmed = window.confirm('Deseja realmente excluir este mercado?');
+        if (confirmed) {
+          removeCustomMarket(m.id);
+        }
+      }}
+      className="text-slate-400 hover:text-red-500 transition-colors"
+    >
+      <Trash2 size={14} />
+    </button>
+  </div>
+))}
   </div>
 </section>
 
@@ -290,21 +299,25 @@ React.useEffect(() => {
 
   <div className="space-y-2">
     {customStrategies.map((s) => (
-      <div key={s.id} className="flex justify-between p-3 bg-slate-50 dark:bg-slate-900 rounded-xl">
-        <span>{s.name}</span>
-        <button
-  onClick={() => {
-    const confirmed = window.confirm('Deseja realmente excluir esta estratégia?');
-    if (confirmed) {
-      removeCustomStrategy(s.id);
-    }
-  }}
-  className="text-slate-400 hover:text-red-500 transition-colors"
->
-  <Trash2 size={14} />
-</button>
-      </div>
-    ))}
+  <div
+    key={s.id}
+    className="flex justify-between items-center p-3 bg-slate-50 dark:bg-slate-900 rounded-xl"
+  >
+    <span>{s.name}</span>
+
+    <button
+      onClick={() => {
+        const confirmed = window.confirm('Deseja realmente excluir esta estratégia?');
+        if (confirmed) {
+          removeCustomStrategy(s.id);
+        }
+      }}
+      className="text-slate-400 hover:text-red-500 transition-colors"
+    >
+      <Trash2 size={14} />
+    </button>
+  </div>
+))}
   </div>
 </section>
 
