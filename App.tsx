@@ -11,6 +11,7 @@ import Calculators from './pages/Calculators';
 import Mindset from './pages/Mindset';
 import Goals from './pages/Goals';
 import { useBetStore, supabase } from './store/useBetStore';
+import SystemLibrary from './pages/SystemLibrary';
 
 const App: React.FC = () => {
   const [currentView, setCurrentView] = useState('dashboard');
@@ -50,6 +51,8 @@ const App: React.FC = () => {
         return <Calculators />;
       case 'settings':
         return <Settings />;
+        case 'system-library':
+  return <SystemLibrary />;
       default:
         return <Dashboard />;
     }

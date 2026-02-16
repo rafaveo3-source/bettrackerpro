@@ -1,3 +1,4 @@
+import { BookOpen } from 'lucide-react';
 import React from 'react';
 import { LayoutDashboard, BarChart3, Target, Brain, History, Wallet, CalendarDays, Calculator, Settings, LogOut, Menu, X, Sun, Moon } from 'lucide-react';
 import { useBetStore } from '../store/useBetStore';
@@ -10,6 +11,7 @@ interface SidebarProps {
 }
 
 const menuItems = [
+  { key: 'system-library', label: 'System Library', icon: BookOpen },
   { key: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { key: 'analytics', label: 'Análise', icon: BarChart3 },
   { key: 'metas', label: 'Metas', icon: Target },
