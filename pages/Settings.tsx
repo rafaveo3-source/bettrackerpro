@@ -5,14 +5,18 @@ import { motion, AnimatePresence } from 'framer-motion';
 
 const Settings: React.FC = () => {
   const { 
-    methods, addMethod, removeMethod, 
-    primaryColor, setPrimaryColor, 
-    currency, setCurrency, resetData, 
-    user, updateProfile,
-    displayMode, setDisplayMode, unitSize, setUnitSize 
-  } = useBetStore();
+  methods, addMethod, removeMethod,
+  customMarkets, addCustomMarket, removeCustomMarket,
+  customStrategies, addCustomStrategy, removeCustomStrategy,
+  primaryColor, setPrimaryColor, 
+  currency, setCurrency, resetData, 
+  user, updateProfile,
+  displayMode, setDisplayMode, unitSize, setUnitSize 
+} = useBetStore();
 
   const [newMethodName, setNewMethodName] = useState('');
+  const [newMarketName, setNewMarketName] = useState('');
+const [newStrategyName, setNewStrategyName] = useState('');
   const [showSavedToast, setShowSavedToast] = useState(false);
   const [profileName, setProfileName] = useState('');
 const [profileAvatar, setProfileAvatar] = useState('');
@@ -197,6 +201,86 @@ React.useEffect(() => {
                     )}
                 </div>
             </section>
+
+            <section className="bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-800 rounded-[2.5rem] p-6 md:p-10 shadow-sm">
+  <div className="flex items-center gap-4 mb-8">
+    <h2 className="text-xl font-black uppercase italic">
+      Mercados Personalizados
+    </h2>
+  </div>
+
+  <div className="flex gap-3 mb-6">
+    <input
+      type="text"
+      value={newMarketName}
+      onChange={(e) => setNewMarketName(e.target.value)}
+      placeholder="Ex: Escanteios HT"
+      className="flex-1 bg-slate-50 dark:bg-slate-900 border rounded-2xl px-4 py-3"
+    />
+    <button
+      onClick={() => {
+        if (newMarketName.trim()) {
+          addCustomMarket(newMarketName.trim());
+          setNewMarketName('');
+        }
+      }}
+      className="bg-emerald-600 text-white px-6 rounded-2xl text-xs font-bold"
+    >
+      ADD
+    </button>
+  </div>
+
+  <div className="space-y-2">
+    {customMarkets.map((m) => (
+      <div key={m.id} className="flex justify-between p-3 bg-slate-50 dark:bg-slate-900 rounded-xl">
+        <span>{m.name}</span>
+        <button onClick={() => removeCustomMarket(m.id)}>
+          <Trash2 size={14} />
+        </button>
+      </div>
+    ))}
+  </div>
+</section>
+
+<section className="bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-800 rounded-[2.5rem] p-6 md:p-10 shadow-sm">
+  <div className="flex items-center gap-4 mb-8">
+    <h2 className="text-xl font-black uppercase italic">
+      Estratégias de Progressão
+    </h2>
+  </div>
+
+  <div className="flex gap-3 mb-6">
+    <input
+      type="text"
+      value={newStrategyName}
+      onChange={(e) => setNewStrategyName(e.target.value)}
+      placeholder="Ex: Progressão 2x conservadora"
+      className="flex-1 bg-slate-50 dark:bg-slate-900 border rounded-2xl px-4 py-3"
+    />
+    <button
+      onClick={() => {
+        if (newStrategyName.trim()) {
+          addCustomStrategy(newStrategyName.trim());
+          setNewStrategyName('');
+        }
+      }}
+      className="bg-blue-600 text-white px-6 rounded-2xl text-xs font-bold"
+    >
+      ADD
+    </button>
+  </div>
+
+  <div className="space-y-2">
+    {customStrategies.map((s) => (
+      <div key={s.id} className="flex justify-between p-3 bg-slate-50 dark:bg-slate-900 rounded-xl">
+        <span>{s.name}</span>
+        <button onClick={() => removeCustomStrategy(s.id)}>
+          <Trash2 size={14} />
+        </button>
+      </div>
+    ))}
+  </div>
+</section>
 
              {/* Preferences */}
             <section className="bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-800 rounded-[2.5rem] p-6 md:p-10 lg:col-span-2 shadow-sm transition-shadow hover:shadow-md">

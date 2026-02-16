@@ -120,6 +120,8 @@ interface BetState {
   history: Bet[];
   transactions: Transaction[];
   methods: BetMethod[];
+  customMarkets: { id: string; name: string }[];
+customStrategies: { id: string; name: string }[];
   mindsetHistory: MindsetEntry[];
   goals: Goal[];
   tiltLockUntil: string | null;
@@ -146,6 +148,12 @@ saveUserSettings: () => Promise<void>;
 removeTransaction: (id: string) => Promise<void>;
   addMethod: (name: string) => Promise<void>;
   removeMethod: (id: string) => void;
+
+  addCustomMarket: (name: string) => Promise<void>;
+removeCustomMarket: (id: string) => Promise<void>;
+
+addCustomStrategy: (name: string) => Promise<void>;
+removeCustomStrategy: (id: string) => Promise<void>;
   
   // Async Mindset
   addMindsetEntry: (entry: Omit<MindsetEntry, 'id'>) => Promise<void>;
@@ -213,6 +221,8 @@ export const useBetStore = create<BetState>()(
       history: [],
       transactions: [],
       methods: [],
+      customMarkets: [],
+      customStrategies: [],
       mindsetHistory: [],
       goals: [],
       tiltLockUntil: null,
@@ -262,6 +272,24 @@ export const useBetStore = create<BetState>()(
           else if (methodsData) {
             set({ methods: methodsData });
           }
+
+          const { data: marketsData } = await supabase
+  .from('markets')
+  .select('*')
+  .eq('category', 'custom');
+
+if (marketsData) {
+  set({ customMarkets: marketsData });
+}
+
+const { data: strategiesData } = await supabase
+  .from('progression_strategies')
+  .select('*')
+  .eq('is_pro', false);
+
+if (strategiesData) {
+  set({ customStrategies: strategiesData });
+}
 
           // 3. CARREGAR BANKROLLS
           const { data: bankrollsData, error: bankrollsError } = await supabase
@@ -833,6 +861,92 @@ removeTransaction: async (id) => {
           methods: state.methods.filter(m => m.id !== id)
         }));
       },
+
+      addCustomMarket: async (name) => {
+  const user = get().user;
+  if (!user) return;
+
+  const { data, error } = await supabase
+    .from('markets')
+    .insert([
+      {
+        name,
+        category: 'custom',
+        is_active: true
+      }
+    ])
+    .select()
+    .single();
+
+  if (error) {
+    console.error("Erro ao adicionar mercado:", error.message);
+    return;
+  }
+
+  if (data) {
+    set((state) => ({
+      customMarkets: [...state.customMarkets, data]
+    }));
+  }
+},
+
+removeCustomMarket: async (id) => {
+  const { error } = await supabase
+    .from('markets')
+    .delete()
+    .eq('id', id);
+
+  if (error) {
+    console.error("Erro ao remover mercado:", error.message);
+    return;
+  }
+
+  set((state) => ({
+    customMarkets: state.customMarkets.filter(m => m.id !== id)
+  }));
+},
+
+addCustomStrategy: async (name) => {
+  const { data, error } = await supabase
+    .from('progression_strategies')
+    .insert([
+      {
+        name,
+        description: 'Custom Strategy',
+        logic: {},
+        is_pro: false
+      }
+    ])
+    .select()
+    .single();
+
+  if (error) {
+    console.error("Erro ao adicionar estratégia:", error.message);
+    return;
+  }
+
+  if (data) {
+    set((state) => ({
+      customStrategies: [...state.customStrategies, data]
+    }));
+  }
+},
+
+removeCustomStrategy: async (id) => {
+  const { error } = await supabase
+    .from('progression_strategies')
+    .delete()
+    .eq('id', id);
+
+  if (error) {
+    console.error("Erro ao remover estratégia:", error.message);
+    return;
+  }
+
+  set((state) => ({
+    customStrategies: state.customStrategies.filter(s => s.id !== id)
+  }));
+},
 
       // --- MINDSET ACTIONS ---
       addMindsetEntry: async (entry) => {
