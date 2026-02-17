@@ -36,6 +36,15 @@ export type TransactionType = 'deposit' | 'withdrawal';
 export type MoodType = 'confident' | 'disciplined' | 'anxious' | 'tilted';
 export type DisplayMode = 'currency' | 'units'; // ✅ Novo tipo para controle de exibição
 
+// --- ADICIONAR AQUI ---
+export interface League {
+  id: string;
+  name: string;
+  country: string;
+  sport: string;
+}
+// ----------------------
+
 export interface BetMethod {
   id: string;
   name: string;
@@ -109,6 +118,22 @@ interface BetState {
   isDarkMode: boolean;
   primaryColor: string;
   currency: string;
+
+  // ... (código existente)
+  currency: string;
+  
+  // --- ADICIONAR AQUI ---
+  globalLeagues: League[];
+  userLeagues: string[];
+  isLoadingLeagues: boolean;
+  
+  fetchLeagues: () => Promise<void>;
+  toggleUserLeague: (leagueId: string) => Promise<void>;
+  // ----------------------
+
+  // ✅ Novas Propriedades de Configuração
+  displayMode: DisplayMode;
+  // ... (continua o código)
   
   // ✅ Novas Propriedades de Configuração
   displayMode: DisplayMode;
@@ -188,6 +213,83 @@ removeCustomStrategy: (id: string) => Promise<void>;
     moodCorrelation: Record<MoodType, { roi: number; winRate: number; count: number }>;
   };
 
+  // ... (fim das actions de Goals e ActivateTiltLock)
+
+      // --- ADICIONAR ESTE BLOCO COMPLETO AQUI ---
+      
+      // 🔥 LEAGUES MANAGEMENT ACTIONS
+      fetchLeagues: async () => {
+        set({ isLoadingLeagues: true });
+        try {
+          // 1. Busca todas as ligas globais
+          const { data: leagues } = await supabase
+            .from('leagues')
+            .select('*')
+            .order('country', { ascending: true });
+
+          // 2. Busca as ligas ativas do usuário
+          const { data: { user } } = await supabase.auth.getUser();
+          
+          let userLeagueIds: string[] = [];
+          if (user) {
+            const { data: userLeaguesData } = await supabase
+              .from('user_leagues')
+              .select('league_id')
+              .eq('user_id', user.id);
+              
+            if (userLeaguesData) {
+              userLeagueIds = userLeaguesData.map((ul: any) => ul.league_id);
+            }
+          }
+
+          set({ 
+            globalLeagues: leagues || [], 
+            userLeagues: userLeagueIds
+          });
+        } catch (error) {
+          console.error('Erro ao buscar ligas:', error);
+        } finally {
+          set({ isLoadingLeagues: false });
+        }
+      },
+
+      toggleUserLeague: async (leagueId) => {
+        const { userLeagues } = get();
+        const isActive = userLeagues.includes(leagueId);
+        
+        // Otimistic Update
+        const newUserLeagues = isActive
+          ? userLeagues.filter(id => id !== leagueId)
+          : [...userLeagues, leagueId];
+        
+        set({ userLeagues: newUserLeagues });
+
+        try {
+          const { data: { user } } = await supabase.auth.getUser();
+          if (!user) return;
+
+          if (isActive) {
+            // Remover
+            await supabase
+              .from('user_leagues')
+              .delete()
+              .match({ user_id: user.id, league_id: leagueId });
+          } else {
+            // Adicionar
+            await supabase
+              .from('user_leagues')
+              .insert({ user_id: user.id, league_id: leagueId });
+          }
+        } catch (error) {
+          console.error('Erro ao atualizar liga:', error);
+          set({ userLeagues }); // Reverte em caso de erro
+        }
+      },
+      // -------------------------------------------
+
+      // 🔥 SYSTEM LIBRARY IMPORTS
+      // ... (continua o código existente)
+
   // 🔥 SYSTEM LIBRARY IMPORTS
 importMarket: (marketId: string) => Promise<boolean>;
 importLeague: (leagueId: string) => Promise<boolean>;
@@ -213,6 +315,14 @@ export const useBetStore = create<BetState>()(
       isDarkMode: true,
       primaryColor: 'gold',
       currency: 'BRL',
+      // --- ADICIONAR AQUI ---
+      globalLeagues: [],
+      userLeagues: [],
+      isLoadingLeagues: false,
+      // ----------------------
+
+      displayMode: 'currency', // Default
+      // ... (continua o código)
       displayMode: 'currency', // Default
       unitSize: 100, // Default unit size
       bankrolls: [],
