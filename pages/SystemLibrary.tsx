@@ -9,19 +9,19 @@ import {
   LayoutGrid,
   Download,
   Check,
-  CheckCircle2 // ✅ CORRIGIDO: Import adicionado
+  CheckCircle2 // ✅ CORRIGIDO: Import adicionado para evitar o erro ReferenceError
 } from 'lucide-react';
 import { supabase } from '../store/useBetStore';
 import { useBetStore } from '../store/useBetStore';
 
-// Importação dos Componentes de Gerenciamento
+// Importação dos Novos Componentes de Gerenciamento
 import ManageLeagues from '../components/ManageLeagues';
 import ManageTeams from '../components/ManageTeams';
 
 const SystemLibrary: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'leagues' | 'teams' | 'markets' | 'strategies' | 'methods'>('leagues');
   
-  // Store Global (Dados do Usuário)
+  // Store Global
   const { 
     userLeagues, 
     userTeams, 
@@ -64,22 +64,22 @@ const SystemLibrary: React.FC = () => {
     { id: 'methods', label: 'Métodos', icon: Target, count: userMethods.length },
   ];
 
-  // Componente de Card Reutilizável (Light/Dark Mode Ready)
+  // Componente de Card Reutilizável (Estilo Premium Clean)
   const GlobalItemCard = ({ item, isImported, onImport }: any) => (
-    <div className="flex items-center justify-between p-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl hover:border-purple-500/30 transition-all group shadow-sm hover:shadow-md dark:shadow-none">
+    <div className="flex items-center justify-between p-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl hover:border-emerald-500/50 transition-all shadow-sm">
       <div>
-        <h4 className="font-bold text-slate-800 dark:text-slate-200 text-sm">{item.name}</h4>
+        <h4 className="font-bold text-slate-900 dark:text-slate-100 text-sm">{item.name}</h4>
         {item.description && <p className="text-xs text-slate-500 mt-1">{item.description}</p>}
       </div>
       
       {isImported ? (
-        <span className="text-xs font-bold text-emerald-600 dark:text-emerald-500 flex items-center gap-1 bg-emerald-50 dark:bg-emerald-500/10 px-3 py-1 rounded-full border border-emerald-200 dark:border-emerald-500/20">
+        <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400 flex items-center gap-1 bg-emerald-50 dark:bg-emerald-500/10 px-3 py-1 rounded-full border border-emerald-100 dark:border-emerald-500/20">
           <Check size={12} /> Ativo
         </span>
       ) : (
         <button
           onClick={() => onImport(item.id)}
-          className="text-xs font-bold text-slate-500 hover:text-white dark:text-slate-400 bg-slate-100 dark:bg-slate-800 hover:bg-emerald-500 dark:hover:bg-emerald-600 px-3 py-1.5 rounded-lg transition-all flex items-center gap-2 group-hover:shadow-lg"
+          className="text-xs font-bold text-slate-600 dark:text-slate-400 hover:text-white bg-slate-100 dark:bg-slate-800 hover:bg-emerald-500 dark:hover:bg-emerald-600 px-3 py-1.5 rounded-lg transition-all flex items-center gap-2 border border-slate-200 dark:border-slate-700 hover:border-transparent"
         >
           <Download size={14} /> Importar
         </button>
@@ -88,28 +88,29 @@ const SystemLibrary: React.FC = () => {
   );
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-200 pb-20 md:pl-20 pt-20 md:pt-10 px-4 md:px-8 transition-colors duration-300">
+    <div className="min-h-screen bg-[#F8FAFC] dark:bg-[#020617] text-slate-900 dark:text-slate-200 pb-20 md:pl-20 pt-20 md:pt-8 px-4 md:px-8 transition-colors duration-300 font-sans">
       
-      {/* HEADER */}
-      <div className="max-w-7xl mx-auto mb-10">
-        <div className="flex items-center gap-2 text-purple-600 dark:text-purple-500 text-[10px] font-mono font-bold uppercase tracking-widest mb-2">
-          <span className="w-1.5 h-1.5 bg-purple-600 dark:bg-purple-500 rounded-full animate-pulse"></span>
+      {/* HEADER (Estilo Calendário) */}
+      <div className="max-w-7xl mx-auto mb-8">
+        <div className="flex items-center gap-2 text-emerald-600 dark:text-emerald-500 text-[10px] font-bold uppercase tracking-widest mb-1">
+          <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full"></span>
           Strategic Intelligence Core
         </div>
-        <h1 className="text-3xl md:text-4xl font-black text-slate-900 dark:text-white tracking-tight flex items-center gap-3 italic uppercase">
-          <BookOpen className="text-purple-600 dark:text-purple-500" size={32} />
-          Biblioteca
-          <span className="text-slate-300 dark:text-slate-700 text-lg ml-2">///</span>
+        
+        <h1 className="text-3xl md:text-4xl font-black text-slate-900 dark:text-white tracking-tighter uppercase italic flex items-center gap-2">
+          Biblioteca Estratégica
+          <span className="text-slate-300 dark:text-slate-700 text-2xl not-italic">///</span>
         </h1>
-        <p className="text-slate-600 dark:text-slate-500 mt-2 text-sm md:text-base font-medium max-w-2xl">
-          Gerencie suas ligas ativas, importe estratégias validadas e configure seu arsenal de apostas.
+        
+        <p className="text-slate-500 dark:text-slate-400 text-xs font-bold mt-2 uppercase tracking-widest">
+          Gerencie estruturas globais, métodos profissionais e modelos de importação.
         </p>
       </div>
 
       <div className="max-w-7xl mx-auto">
         
-        {/* NAVEGAÇÃO POR ABAS */}
-        <div className="flex overflow-x-auto pb-4 mb-8 gap-2 md:gap-4 scrollbar-hide">
+        {/* FILTROS / ABAS (Estilo Clean) */}
+        <div className="bg-white dark:bg-slate-900 p-1.5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm inline-flex mb-8 overflow-x-auto max-w-full">
           {tabs.map((tab) => {
             const isActive = activeTab === tab.id;
             return (
@@ -117,40 +118,39 @@ const SystemLibrary: React.FC = () => {
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id as any)}
                 className={`
-                  relative flex items-center gap-2 px-5 py-3 rounded-xl font-bold whitespace-nowrap transition-all duration-300 border
+                  flex items-center gap-2 px-4 py-2.5 rounded-xl font-bold text-sm whitespace-nowrap transition-all duration-200
                   ${isActive 
-                    ? 'bg-purple-600 text-white shadow-lg shadow-purple-500/20 border-purple-500' 
-                    : 'bg-white dark:bg-slate-900 text-slate-500 dark:text-slate-400 border-slate-200 dark:border-slate-800 hover:border-purple-300 dark:hover:border-slate-700'}
+                    ? 'bg-emerald-500 text-white shadow-md shadow-emerald-500/20' 
+                    : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800'}
                 `}
               >
-                <tab.icon size={18} className={isActive ? 'text-white' : ''} />
+                <tab.icon size={16} />
                 {tab.label}
-                
-                <span className={`
-                  text-[10px] px-2 py-0.5 rounded-full font-black ml-1
-                  ${isActive 
-                    ? 'bg-white/20 text-white' 
-                    : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-500'}
-                `}>
-                  {tab.count}
-                </span>
+                {tab.count > 0 && (
+                  <span className={`
+                    text-[10px] px-1.5 py-0.5 rounded-full font-black ml-1
+                    ${isActive ? 'bg-white/20 text-white' : 'bg-slate-100 dark:bg-slate-800 text-slate-500'}
+                  `}>
+                    {tab.count}
+                  </span>
+                )}
               </button>
             );
           })}
         </div>
 
-        {/* ÁREA DE CONTEÚDO */}
-        <div className="min-h-[500px] animate-in fade-in zoom-in-95 duration-300">
+        {/* CONTEÚDO */}
+        <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
           <AnimatePresence mode="wait">
             
             {/* ABA: LIGAS */}
             {activeTab === 'leagues' && (
               <motion.div
                 key="leagues"
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: 20 }}
-                transition={{ duration: 0.2 }}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.1 }}
               >
                 <ManageLeagues />
               </motion.div>
@@ -160,10 +160,10 @@ const SystemLibrary: React.FC = () => {
             {activeTab === 'teams' && (
               <motion.div
                 key="teams"
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: 20 }}
-                transition={{ duration: 0.2 }}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.1 }}
               >
                 <ManageTeams />
               </motion.div>
@@ -173,23 +173,26 @@ const SystemLibrary: React.FC = () => {
             {activeTab === 'markets' && (
               <motion.div
                 key="markets"
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: 20 }}
-                className="grid grid-cols-1 lg:grid-cols-2 gap-8"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="grid grid-cols-1 lg:grid-cols-2 gap-6"
               >
                 {/* Meus Mercados */}
-                <div className="bg-white dark:bg-slate-900/50 p-6 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-sm">
-                  <h3 className="text-xl font-bold text-slate-800 dark:text-white mb-6 flex items-center gap-2">
-                    <CheckCircle2 className="text-emerald-500" /> Meus Mercados Ativos
+                <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm">
+                  <h3 className="text-lg font-black text-slate-800 dark:text-white mb-6 flex items-center gap-2 uppercase tracking-tight">
+                    <CheckCircle2 size={18} className="text-emerald-500" /> Meus Mercados
                   </h3>
                   <div className="space-y-2">
                     {customMarkets.length === 0 ? (
-                      <p className="text-slate-500 text-sm">Nenhum mercado ativado.</p>
+                      <div className="text-center py-8 text-slate-400 text-sm bg-slate-50 dark:bg-slate-950/50 rounded-xl border border-dashed border-slate-200 dark:border-slate-800">
+                        Nenhum mercado ativo
+                      </div>
                     ) : (
                       customMarkets.map(m => (
-                        <div key={m.id} className="p-3 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-lg text-sm text-slate-700 dark:text-slate-300 font-medium">
+                        <div key={m.id} className="px-4 py-3 bg-slate-50 dark:bg-slate-950 border border-slate-100 dark:border-slate-800 rounded-xl text-sm font-semibold text-slate-700 dark:text-slate-300 flex justify-between items-center">
                           {m.name}
+                          <div className="w-2 h-2 rounded-full bg-emerald-500"></div>
                         </div>
                       ))
                     )}
@@ -197,12 +200,12 @@ const SystemLibrary: React.FC = () => {
                 </div>
 
                 {/* Biblioteca Global */}
-                <div className="bg-white dark:bg-slate-900/50 p-6 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-sm">
-                  <h3 className="text-xl font-bold text-slate-800 dark:text-white mb-6 flex items-center gap-2">
-                    <Globe className="text-purple-600 dark:text-purple-500" /> Biblioteca Global
+                <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm">
+                  <h3 className="text-lg font-black text-slate-800 dark:text-white mb-6 flex items-center gap-2 uppercase tracking-tight">
+                    <Globe size={18} className="text-blue-500" /> Explorar Global
                   </h3>
                   <div className="space-y-3 max-h-[500px] overflow-y-auto pr-2 custom-scrollbar">
-                    {loadingGlobal ? <p className="text-slate-500">Carregando...</p> : globalMarkets.map(m => (
+                    {loadingGlobal ? <p className="text-slate-500 text-sm">Carregando...</p> : globalMarkets.map(m => (
                       <GlobalItemCard 
                         key={m.id} 
                         item={m} 
@@ -219,36 +222,37 @@ const SystemLibrary: React.FC = () => {
             {activeTab === 'strategies' && (
               <motion.div
                 key="strategies"
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: 20 }}
-                className="grid grid-cols-1 lg:grid-cols-2 gap-8"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="grid grid-cols-1 lg:grid-cols-2 gap-6"
               >
-                {/* Minhas Estratégias */}
-                <div className="bg-white dark:bg-slate-900/50 p-6 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-sm">
-                  <h3 className="text-xl font-bold text-slate-800 dark:text-white mb-6 flex items-center gap-2">
-                    <CheckCircle2 className="text-emerald-500" /> Minhas Estratégias
+                <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm">
+                  <h3 className="text-lg font-black text-slate-800 dark:text-white mb-6 flex items-center gap-2 uppercase tracking-tight">
+                    <CheckCircle2 size={18} className="text-emerald-500" /> Minhas Estratégias
                   </h3>
                   <div className="space-y-2">
                     {customStrategies.length === 0 ? (
-                      <p className="text-slate-500 text-sm">Nenhuma estratégia ativada.</p>
+                      <div className="text-center py-8 text-slate-400 text-sm bg-slate-50 dark:bg-slate-950/50 rounded-xl border border-dashed border-slate-200 dark:border-slate-800">
+                        Nenhuma estratégia ativa
+                      </div>
                     ) : (
                       customStrategies.map(s => (
-                        <div key={s.id} className="p-3 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-lg text-sm text-slate-700 dark:text-slate-300 font-medium">
+                        <div key={s.id} className="px-4 py-3 bg-slate-50 dark:bg-slate-950 border border-slate-100 dark:border-slate-800 rounded-xl text-sm font-semibold text-slate-700 dark:text-slate-300 flex justify-between items-center">
                           {s.name}
+                          <div className="w-2 h-2 rounded-full bg-emerald-500"></div>
                         </div>
                       ))
                     )}
                   </div>
                 </div>
 
-                {/* Biblioteca Global */}
-                <div className="bg-white dark:bg-slate-900/50 p-6 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-sm">
-                  <h3 className="text-xl font-bold text-slate-800 dark:text-white mb-6 flex items-center gap-2">
-                    <Globe className="text-purple-600 dark:text-purple-500" /> Modelos Profissionais
+                <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm">
+                  <h3 className="text-lg font-black text-slate-800 dark:text-white mb-6 flex items-center gap-2 uppercase tracking-tight">
+                    <Globe size={18} className="text-blue-500" /> Modelos PRO
                   </h3>
                   <div className="space-y-3 max-h-[500px] overflow-y-auto pr-2 custom-scrollbar">
-                    {loadingGlobal ? <p className="text-slate-500">Carregando...</p> : globalStrategies.map(s => (
+                    {loadingGlobal ? <p className="text-slate-500 text-sm">Carregando...</p> : globalStrategies.map(s => (
                       <GlobalItemCard 
                         key={s.id} 
                         item={s} 
@@ -265,36 +269,37 @@ const SystemLibrary: React.FC = () => {
             {activeTab === 'methods' && (
               <motion.div
                 key="methods"
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: 20 }}
-                className="grid grid-cols-1 lg:grid-cols-2 gap-8"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="grid grid-cols-1 lg:grid-cols-2 gap-6"
               >
-                {/* Meus Métodos */}
-                <div className="bg-white dark:bg-slate-900/50 p-6 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-sm">
-                  <h3 className="text-xl font-bold text-slate-800 dark:text-white mb-6 flex items-center gap-2">
-                    <CheckCircle2 className="text-emerald-500" /> Meus Métodos
+                <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm">
+                  <h3 className="text-lg font-black text-slate-800 dark:text-white mb-6 flex items-center gap-2 uppercase tracking-tight">
+                    <CheckCircle2 size={18} className="text-emerald-500" /> Meus Métodos
                   </h3>
                   <div className="space-y-2">
                     {userMethods.length === 0 ? (
-                      <p className="text-slate-500 text-sm">Nenhum método cadastrado.</p>
+                      <div className="text-center py-8 text-slate-400 text-sm bg-slate-50 dark:bg-slate-950/50 rounded-xl border border-dashed border-slate-200 dark:border-slate-800">
+                        Nenhum método cadastrado
+                      </div>
                     ) : (
                       userMethods.map(m => (
-                        <div key={m.id} className="p-3 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-lg text-sm text-slate-700 dark:text-slate-300 font-medium">
+                        <div key={m.id} className="px-4 py-3 bg-slate-50 dark:bg-slate-950 border border-slate-100 dark:border-slate-800 rounded-xl text-sm font-semibold text-slate-700 dark:text-slate-300 flex justify-between items-center">
                           {m.name}
+                          <div className="w-2 h-2 rounded-full bg-emerald-500"></div>
                         </div>
                       ))
                     )}
                   </div>
                 </div>
 
-                {/* Biblioteca Global */}
-                <div className="bg-white dark:bg-slate-900/50 p-6 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-sm">
-                  <h3 className="text-xl font-bold text-slate-800 dark:text-white mb-6 flex items-center gap-2">
-                    <Globe className="text-purple-600 dark:text-purple-500" /> Métodos Validados
+                <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm">
+                  <h3 className="text-lg font-black text-slate-800 dark:text-white mb-6 flex items-center gap-2 uppercase tracking-tight">
+                    <Globe size={18} className="text-blue-500" /> Métodos Validados
                   </h3>
                   <div className="space-y-3 max-h-[500px] overflow-y-auto pr-2 custom-scrollbar">
-                    {loadingGlobal ? <p className="text-slate-500">Carregando...</p> : globalMethods.map(m => (
+                    {loadingGlobal ? <p className="text-slate-500 text-sm">Carregando...</p> : globalMethods.map(m => (
                       <GlobalItemCard 
                         key={m.id} 
                         item={m} 
