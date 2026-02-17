@@ -8,12 +8,13 @@ import {
   Shield, 
   LayoutGrid,
   Download,
-  Check
+  Check,
+  CheckCircle2 // ✅ CORRIGIDO: Import adicionado
 } from 'lucide-react';
 import { supabase } from '../store/useBetStore';
 import { useBetStore } from '../store/useBetStore';
 
-// Importação dos Novos Componentes de Gerenciamento
+// Importação dos Componentes de Gerenciamento
 import ManageLeagues from '../components/ManageLeagues';
 import ManageTeams from '../components/ManageTeams';
 
@@ -32,13 +33,12 @@ const SystemLibrary: React.FC = () => {
     importProgressionStrategy
   } = useBetStore();
 
-  // Estados Locais para Dados Globais (Biblioteca)
+  // Estados Locais para Dados Globais
   const [globalMarkets, setGlobalMarkets] = useState<any[]>([]);
   const [globalMethods, setGlobalMethods] = useState<any[]>([]);
   const [globalStrategies, setGlobalStrategies] = useState<any[]>([]);
   const [loadingGlobal, setLoadingGlobal] = useState(true);
 
-  // Carregar dados globais para as abas que ainda não têm componentes dedicados
   useEffect(() => {
     const fetchGlobalLibrary = async () => {
       const [m, sm, ps] = await Promise.all([
@@ -64,22 +64,22 @@ const SystemLibrary: React.FC = () => {
     { id: 'methods', label: 'Métodos', icon: Target, count: userMethods.length },
   ];
 
-  // Componente de Item da Lista Global
-  const GlobalItemCard = ({ item, type, isImported, onImport }: any) => (
-    <div className="flex items-center justify-between p-4 bg-slate-900 border border-slate-800 rounded-xl hover:border-slate-700 transition-all group">
+  // Componente de Card Reutilizável (Light/Dark Mode Ready)
+  const GlobalItemCard = ({ item, isImported, onImport }: any) => (
+    <div className="flex items-center justify-between p-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl hover:border-purple-500/30 transition-all group shadow-sm hover:shadow-md dark:shadow-none">
       <div>
-        <h4 className="font-bold text-slate-200 text-sm">{item.name}</h4>
+        <h4 className="font-bold text-slate-800 dark:text-slate-200 text-sm">{item.name}</h4>
         {item.description && <p className="text-xs text-slate-500 mt-1">{item.description}</p>}
       </div>
       
       {isImported ? (
-        <span className="text-xs font-bold text-emerald-500 flex items-center gap-1 bg-emerald-500/10 px-3 py-1 rounded-full border border-emerald-500/20">
+        <span className="text-xs font-bold text-emerald-600 dark:text-emerald-500 flex items-center gap-1 bg-emerald-50 dark:bg-emerald-500/10 px-3 py-1 rounded-full border border-emerald-200 dark:border-emerald-500/20">
           <Check size={12} /> Ativo
         </span>
       ) : (
         <button
           onClick={() => onImport(item.id)}
-          className="text-xs font-bold text-slate-400 hover:text-white bg-slate-800 hover:bg-emerald-600 px-3 py-1.5 rounded-lg transition-all flex items-center gap-2 group-hover:shadow-lg"
+          className="text-xs font-bold text-slate-500 hover:text-white dark:text-slate-400 bg-slate-100 dark:bg-slate-800 hover:bg-emerald-500 dark:hover:bg-emerald-600 px-3 py-1.5 rounded-lg transition-all flex items-center gap-2 group-hover:shadow-lg"
         >
           <Download size={14} /> Importar
         </button>
@@ -88,20 +88,20 @@ const SystemLibrary: React.FC = () => {
   );
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-200 pb-20 md:pl-20 pt-20 md:pt-10 px-4 md:px-8">
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-200 pb-20 md:pl-20 pt-20 md:pt-10 px-4 md:px-8 transition-colors duration-300">
       
-      {/* HEADER DA PÁGINA */}
+      {/* HEADER */}
       <div className="max-w-7xl mx-auto mb-10">
-        <div className="flex items-center gap-2 text-purple-500 text-[10px] font-mono font-bold uppercase tracking-widest mb-2">
-          <span className="w-1.5 h-1.5 bg-purple-500 rounded-full animate-pulse shadow-[0_0_8px_#a855f7]"></span>
+        <div className="flex items-center gap-2 text-purple-600 dark:text-purple-500 text-[10px] font-mono font-bold uppercase tracking-widest mb-2">
+          <span className="w-1.5 h-1.5 bg-purple-600 dark:bg-purple-500 rounded-full animate-pulse"></span>
           Strategic Intelligence Core
         </div>
-        <h1 className="text-3xl md:text-4xl font-black text-white tracking-tight flex items-center gap-3 italic uppercase">
-          <BookOpen className="text-purple-500" size={32} />
+        <h1 className="text-3xl md:text-4xl font-black text-slate-900 dark:text-white tracking-tight flex items-center gap-3 italic uppercase">
+          <BookOpen className="text-purple-600 dark:text-purple-500" size={32} />
           Biblioteca
-          <span className="text-slate-700 text-lg ml-2">///</span>
+          <span className="text-slate-300 dark:text-slate-700 text-lg ml-2">///</span>
         </h1>
-        <p className="text-slate-500 mt-2 text-sm md:text-base font-medium max-w-2xl">
+        <p className="text-slate-600 dark:text-slate-500 mt-2 text-sm md:text-base font-medium max-w-2xl">
           Gerencie suas ligas ativas, importe estratégias validadas e configure seu arsenal de apostas.
         </p>
       </div>
@@ -117,18 +117,20 @@ const SystemLibrary: React.FC = () => {
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id as any)}
                 className={`
-                  relative flex items-center gap-2 px-5 py-3 rounded-xl font-bold whitespace-nowrap transition-all duration-300
+                  relative flex items-center gap-2 px-5 py-3 rounded-xl font-bold whitespace-nowrap transition-all duration-300 border
                   ${isActive 
-                    ? 'bg-gradient-to-br from-purple-600 to-purple-800 text-white shadow-lg shadow-purple-900/50 border border-purple-500/50' 
-                    : 'bg-slate-900 text-slate-400 hover:bg-slate-800 hover:text-white border border-slate-800'}
+                    ? 'bg-purple-600 text-white shadow-lg shadow-purple-500/20 border-purple-500' 
+                    : 'bg-white dark:bg-slate-900 text-slate-500 dark:text-slate-400 border-slate-200 dark:border-slate-800 hover:border-purple-300 dark:hover:border-slate-700'}
                 `}
               >
-                <tab.icon size={18} className={isActive ? 'text-purple-200' : ''} />
+                <tab.icon size={18} className={isActive ? 'text-white' : ''} />
                 {tab.label}
                 
                 <span className={`
                   text-[10px] px-2 py-0.5 rounded-full font-black ml-1
-                  ${isActive ? 'bg-black/30 text-white' : 'bg-slate-800 text-slate-500'}
+                  ${isActive 
+                    ? 'bg-white/20 text-white' 
+                    : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-500'}
                 `}>
                   {tab.count}
                 </span>
@@ -138,10 +140,10 @@ const SystemLibrary: React.FC = () => {
         </div>
 
         {/* ÁREA DE CONTEÚDO */}
-        <div className="min-h-[500px] rounded-3xl animate-in fade-in zoom-in-95 duration-300">
+        <div className="min-h-[500px] animate-in fade-in zoom-in-95 duration-300">
           <AnimatePresence mode="wait">
             
-            {/* ABA: LIGAS (Novo Componente) */}
+            {/* ABA: LIGAS */}
             {activeTab === 'leagues' && (
               <motion.div
                 key="leagues"
@@ -154,7 +156,7 @@ const SystemLibrary: React.FC = () => {
               </motion.div>
             )}
 
-            {/* ABA: TIMES (Novo Componente) */}
+            {/* ABA: TIMES */}
             {activeTab === 'teams' && (
               <motion.div
                 key="teams"
@@ -177,8 +179,8 @@ const SystemLibrary: React.FC = () => {
                 className="grid grid-cols-1 lg:grid-cols-2 gap-8"
               >
                 {/* Meus Mercados */}
-                <div className="bg-slate-900/50 p-6 rounded-3xl border border-slate-800">
-                  <h3 className="text-xl font-bold text-white mb-6 flex items-center gap-2">
+                <div className="bg-white dark:bg-slate-900/50 p-6 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-sm">
+                  <h3 className="text-xl font-bold text-slate-800 dark:text-white mb-6 flex items-center gap-2">
                     <CheckCircle2 className="text-emerald-500" /> Meus Mercados Ativos
                   </h3>
                   <div className="space-y-2">
@@ -186,7 +188,7 @@ const SystemLibrary: React.FC = () => {
                       <p className="text-slate-500 text-sm">Nenhum mercado ativado.</p>
                     ) : (
                       customMarkets.map(m => (
-                        <div key={m.id} className="p-3 bg-slate-950 border border-slate-800 rounded-lg text-sm text-slate-300">
+                        <div key={m.id} className="p-3 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-lg text-sm text-slate-700 dark:text-slate-300 font-medium">
                           {m.name}
                         </div>
                       ))
@@ -195,16 +197,16 @@ const SystemLibrary: React.FC = () => {
                 </div>
 
                 {/* Biblioteca Global */}
-                <div className="bg-slate-900/50 p-6 rounded-3xl border border-slate-800">
-                  <h3 className="text-xl font-bold text-white mb-6 flex items-center gap-2">
-                    <Globe className="text-purple-500" /> Biblioteca Global
+                <div className="bg-white dark:bg-slate-900/50 p-6 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-sm">
+                  <h3 className="text-xl font-bold text-slate-800 dark:text-white mb-6 flex items-center gap-2">
+                    <Globe className="text-purple-600 dark:text-purple-500" /> Biblioteca Global
                   </h3>
                   <div className="space-y-3 max-h-[500px] overflow-y-auto pr-2 custom-scrollbar">
-                    {loadingGlobal ? <p>Carregando...</p> : globalMarkets.map(m => (
+                    {loadingGlobal ? <p className="text-slate-500">Carregando...</p> : globalMarkets.map(m => (
                       <GlobalItemCard 
                         key={m.id} 
                         item={m} 
-                        isImported={customMarkets.some(cm => cm.name === m.name)} // Verifica por nome pois ID muda na importação
+                        isImported={customMarkets.some(cm => cm.name === m.name)} 
                         onImport={() => importMarket(m.id)}
                       />
                     ))}
@@ -223,8 +225,8 @@ const SystemLibrary: React.FC = () => {
                 className="grid grid-cols-1 lg:grid-cols-2 gap-8"
               >
                 {/* Minhas Estratégias */}
-                <div className="bg-slate-900/50 p-6 rounded-3xl border border-slate-800">
-                  <h3 className="text-xl font-bold text-white mb-6 flex items-center gap-2">
+                <div className="bg-white dark:bg-slate-900/50 p-6 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-sm">
+                  <h3 className="text-xl font-bold text-slate-800 dark:text-white mb-6 flex items-center gap-2">
                     <CheckCircle2 className="text-emerald-500" /> Minhas Estratégias
                   </h3>
                   <div className="space-y-2">
@@ -232,7 +234,7 @@ const SystemLibrary: React.FC = () => {
                       <p className="text-slate-500 text-sm">Nenhuma estratégia ativada.</p>
                     ) : (
                       customStrategies.map(s => (
-                        <div key={s.id} className="p-3 bg-slate-950 border border-slate-800 rounded-lg text-sm text-slate-300">
+                        <div key={s.id} className="p-3 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-lg text-sm text-slate-700 dark:text-slate-300 font-medium">
                           {s.name}
                         </div>
                       ))
@@ -241,12 +243,12 @@ const SystemLibrary: React.FC = () => {
                 </div>
 
                 {/* Biblioteca Global */}
-                <div className="bg-slate-900/50 p-6 rounded-3xl border border-slate-800">
-                  <h3 className="text-xl font-bold text-white mb-6 flex items-center gap-2">
-                    <Globe className="text-purple-500" /> Modelos Profissionais
+                <div className="bg-white dark:bg-slate-900/50 p-6 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-sm">
+                  <h3 className="text-xl font-bold text-slate-800 dark:text-white mb-6 flex items-center gap-2">
+                    <Globe className="text-purple-600 dark:text-purple-500" /> Modelos Profissionais
                   </h3>
                   <div className="space-y-3 max-h-[500px] overflow-y-auto pr-2 custom-scrollbar">
-                    {loadingGlobal ? <p>Carregando...</p> : globalStrategies.map(s => (
+                    {loadingGlobal ? <p className="text-slate-500">Carregando...</p> : globalStrategies.map(s => (
                       <GlobalItemCard 
                         key={s.id} 
                         item={s} 
@@ -269,8 +271,8 @@ const SystemLibrary: React.FC = () => {
                 className="grid grid-cols-1 lg:grid-cols-2 gap-8"
               >
                 {/* Meus Métodos */}
-                <div className="bg-slate-900/50 p-6 rounded-3xl border border-slate-800">
-                  <h3 className="text-xl font-bold text-white mb-6 flex items-center gap-2">
+                <div className="bg-white dark:bg-slate-900/50 p-6 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-sm">
+                  <h3 className="text-xl font-bold text-slate-800 dark:text-white mb-6 flex items-center gap-2">
                     <CheckCircle2 className="text-emerald-500" /> Meus Métodos
                   </h3>
                   <div className="space-y-2">
@@ -278,7 +280,7 @@ const SystemLibrary: React.FC = () => {
                       <p className="text-slate-500 text-sm">Nenhum método cadastrado.</p>
                     ) : (
                       userMethods.map(m => (
-                        <div key={m.id} className="p-3 bg-slate-950 border border-slate-800 rounded-lg text-sm text-slate-300">
+                        <div key={m.id} className="p-3 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-lg text-sm text-slate-700 dark:text-slate-300 font-medium">
                           {m.name}
                         </div>
                       ))
@@ -287,12 +289,12 @@ const SystemLibrary: React.FC = () => {
                 </div>
 
                 {/* Biblioteca Global */}
-                <div className="bg-slate-900/50 p-6 rounded-3xl border border-slate-800">
-                  <h3 className="text-xl font-bold text-white mb-6 flex items-center gap-2">
-                    <Globe className="text-purple-500" /> Métodos Validados
+                <div className="bg-white dark:bg-slate-900/50 p-6 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-sm">
+                  <h3 className="text-xl font-bold text-slate-800 dark:text-white mb-6 flex items-center gap-2">
+                    <Globe className="text-purple-600 dark:text-purple-500" /> Métodos Validados
                   </h3>
                   <div className="space-y-3 max-h-[500px] overflow-y-auto pr-2 custom-scrollbar">
-                    {loadingGlobal ? <p>Carregando...</p> : globalMethods.map(m => (
+                    {loadingGlobal ? <p className="text-slate-500">Carregando...</p> : globalMethods.map(m => (
                       <GlobalItemCard 
                         key={m.id} 
                         item={m} 
