@@ -15,9 +15,10 @@ import {
 import { supabase } from '../store/useBetStore';
 import { useBetStore } from '../store/useBetStore';
 
-// Importação dos Componentes
+// Importação dos Componentes de Gerenciamento
 import ManageLeagues from '../components/ManageLeagues';
 import ManageTeams from '../components/ManageTeams';
+import ManageMarkets from '../components/ManageMarkets'; // ✅ IMPORTADO
 
 const SystemLibrary: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'leagues' | 'teams' | 'markets' | 'strategies' | 'methods'>('leagues');
@@ -113,7 +114,7 @@ const SystemLibrary: React.FC = () => {
         {/* NAVEGAÇÃO HÍBRIDA (Desktop: Abas | Mobile: Select) */}
         <div className="mb-8">
           
-          {/* MOBILE: Select Dropdown (Mais limpo que scroll horizontal) */}
+          {/* MOBILE: Select Dropdown */}
           <div className="md:hidden relative">
             <div className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none">
               {React.createElement(tabs.find(t => t.id === activeTab)?.icon || Globe, { size: 18 })}
@@ -181,42 +182,10 @@ const SystemLibrary: React.FC = () => {
               </motion.div>
             )}
 
-            {/* ABA: MERCADOS */}
+            {/* ✅ ABA: MERCADOS (ATUALIZADA) */}
             {activeTab === 'markets' && (
-              <motion.div key="markets" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm">
-                  <h3 className="text-lg font-black text-slate-800 dark:text-white mb-6 flex items-center gap-2 uppercase tracking-tight">
-                    <CheckCircle2 size={18} className="text-emerald-500" /> Meus Mercados
-                  </h3>
-                  <div className="space-y-2">
-                    {customMarkets.length === 0 ? (
-                      <div className="text-center py-8 text-slate-400 text-sm bg-slate-50 dark:bg-slate-950/50 rounded-xl border border-dashed border-slate-200 dark:border-slate-800">
-                        Nenhum mercado ativo
-                      </div>
-                    ) : (
-                      customMarkets.map(m => (
-                        <div key={m.id} className="px-4 py-3 bg-slate-50 dark:bg-slate-950 border border-slate-100 dark:border-slate-800 rounded-xl text-sm font-semibold text-slate-700 dark:text-slate-300 flex justify-between items-center">
-                          {m.name}
-                          <div className="w-2 h-2 rounded-full bg-emerald-500"></div>
-                        </div>
-                      ))
-                    )}
-                  </div>
-                </div>
-                <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm">
-                  <h3 className="text-lg font-black text-slate-800 dark:text-white mb-6 flex items-center gap-2 uppercase tracking-tight">
-                    <Globe size={18} className="text-blue-500" /> Biblioteca Global
-                  </h3>
-                  <div className="space-y-3 max-h-[500px] overflow-y-auto pr-2 custom-scrollbar">
-                    {loadingGlobal ? <p className="text-slate-500 text-sm">Carregando...</p> : globalMarkets.map(m => (
-                      <GlobalItemCard 
-                        key={m.id} item={m} 
-                        isImported={customMarkets.some(cm => cm.name === m.name)} 
-                        onImport={() => importMarket(m.id)}
-                      />
-                    ))}
-                  </div>
-                </div>
+              <motion.div key="markets" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+                <ManageMarkets />
               </motion.div>
             )}
 

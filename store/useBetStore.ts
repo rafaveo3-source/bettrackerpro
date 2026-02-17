@@ -49,6 +49,14 @@ export interface Team {
   league_id: string;
 }
 
+// 🔥 NOVA INTERFACE PARA MERCADOS GLOBAIS
+export interface GlobalMarket {
+  id: string;
+  category: string;
+  label: string;
+  name: string;
+}
+
 export interface BetMethod {
   id: string;
   name: string;
@@ -132,6 +140,10 @@ interface BetState {
   userLeagues: string[];
   isLoadingLeagues: boolean;
 
+  // 🔥 MARKET STATES
+  globalMarkets: GlobalMarket[];
+  isLoadingMarkets: boolean;
+
   bankrolls: Bankroll[];
   activeBankrollId: string;
   currentBankrollBalance: number;
@@ -144,12 +156,12 @@ interface BetState {
   goals: Goal[];
   tiltLockUntil: string | null;
 
-  // 🔥 TEAM STATES
-  currentLeagueTeams: Team[]; // Times da liga selecionada no momento
-  userTeams: string[]; // IDs dos times que o usuário segue
+  // TEAM STATES
+  currentLeagueTeams: Team[];
+  userTeams: string[];
   isLoadingTeams: boolean;
 
-  // 🔥 TEAM ACTIONS
+  // TEAM ACTIONS
   fetchLeagueTeams: (leagueId: string) => Promise<void>;
   toggleUserTeam: (teamId: string) => Promise<void>;
 
@@ -169,6 +181,10 @@ interface BetState {
   // Ligas Actions
   fetchLeagues: () => Promise<void>;
   toggleUserLeague: (leagueId: string) => Promise<void>;
+
+  // 🔥 MARKET ACTIONS
+  fetchGlobalMarkets: () => Promise<void>;
+  toggleUserMarket: (market: GlobalMarket) => Promise<void>;
 
   addBankroll: (name: string, currency: string, initialBalance: number) => Promise<void>;
   removeBankroll: (id: string) => Promise<void>;
@@ -251,6 +267,9 @@ export const useBetStore = create<BetState>()(
       userLeagues: [],
       isLoadingLeagues: false,
 
+      globalMarkets: [],
+      isLoadingMarkets: false,
+
       bankrolls: [],
       activeBankrollId: '',
       currentBankrollBalance: 0,
@@ -301,24 +320,23 @@ export const useBetStore = create<BetState>()(
           }
 
           // 2. CARREGAR METHODS
-          const { data: methodsData, error: methodsError } = await supabase
+          const { data: methodsData } = await supabase
             .from('methods')
             .select('*')
             .eq('user_id', userId);
 
-          if (methodsError) console.error("Erro ao carregar métodos:", methodsError.message);
-          else if (methodsData) {
+          if (methodsData) {
             set({ methods: methodsData });
           }
-       
+        
           // Carregar User Markets
-          const { data: userMarkets } = await supabase
+          const { data: userMarketsData } = await supabase
             .from('user_markets')
-            .select('*')
+            .select('id, name') // Importante pegar o nome para o estado local
             .eq('user_id', userId);
 
-          if (userMarkets) {
-            set({ customMarkets: userMarkets });
+          if (userMarketsData) {
+            set({ customMarkets: userMarketsData });
           }
 
           // Carregar User Strategies
@@ -332,13 +350,12 @@ export const useBetStore = create<BetState>()(
           }
 
           // 3. CARREGAR BANKROLLS
-          const { data: bankrollsData, error: bankrollsError } = await supabase
+          const { data: bankrollsData } = await supabase
             .from('bankrolls')
             .select('*')
             .eq('user_id', userId);
 
-          if (bankrollsError) console.error("Erro ao carregar bankrolls:", bankrollsError.message);
-          else if (bankrollsData) {
+          if (bankrollsData) {
             const formattedBankrolls = bankrollsData.map((b: any) => ({
               id: b.id,
               name: b.name,
@@ -353,14 +370,13 @@ export const useBetStore = create<BetState>()(
           }
 
           // CARREGAR TRANSACTIONS
-          const { data: txData, error: txError } = await supabase
+          const { data: txData } = await supabase
             .from('transactions')
             .select('*')
             .eq('user_id', userId)
             .order('created_at', { ascending: false });
 
-          if (txError) console.error("Erro ao carregar transações:", txError.message);
-          else if (txData) {
+          if (txData) {
             const formattedTx = txData.map((t: any) => ({
               id: t.id,
               bankrollId: t.bankroll_id,
@@ -374,14 +390,13 @@ export const useBetStore = create<BetState>()(
           }
 
           // 4. CARREGAR MINDSET
-          const { data: mindsetData, error: mindsetError } = await supabase
+          const { data: mindsetData } = await supabase
             .from('mindset_entries')
             .select('*')
             .eq('user_id', userId)
             .order('date', { ascending: false });
 
-          if (mindsetError) console.error("Erro ao carregar mindset:", mindsetError.message);
-          else if (mindsetData) {
+          if (mindsetData) {
             const formattedMindset = mindsetData.map((m: any) => ({
               id: m.id,
               date: m.date,
@@ -394,13 +409,12 @@ export const useBetStore = create<BetState>()(
           }
 
           // 5. CARREGAR GOALS
-          const { data: goalsData, error: goalsError } = await supabase
+          const { data: goalsData } = await supabase
             .from('goals')
             .select('*')
             .eq('user_id', userId);
 
-          if (goalsError) console.error("Erro ao carregar goals:", goalsError.message);
-          else if (goalsData) {
+          if (goalsData) {
             const formattedGoals = goalsData.map((g: any) => ({
               ...g,
               createdAt: g.created_at,
@@ -425,8 +439,6 @@ export const useBetStore = create<BetState>()(
             userLeagues: userLeaguesData ? userLeaguesData.map((ul: any) => ul.league_id) : [],
             userTeams: userTeamsData ? userTeamsData.map((ut: any) => ut.team_id) : []
           });
-
-          // (Código existente continua abaixo...)
           
           await get().loadUserSettings();
           get().recalculateBankroll();
@@ -442,7 +454,9 @@ export const useBetStore = create<BetState>()(
             activeBankrollId: '',
             currentBankrollBalance: 0,
             userLeagues: [],
-            globalLeagues: []
+            globalLeagues: [],
+            globalMarkets: [],
+            customMarkets: []
           });
         }
       },
@@ -541,13 +555,11 @@ export const useBetStore = create<BetState>()(
       fetchLeagues: async () => {
         set({ isLoadingLeagues: true });
         try {
-          // 1. Busca todas as ligas globais
           const { data: leagues } = await supabase
             .from('leagues')
             .select('*')
             .order('country', { ascending: true });
 
-          // 2. Busca as ligas ativas do usuário
           const { data: { user } } = await supabase.auth.getUser();
           
           let userLeagueIds: string[] = [];
@@ -589,20 +601,72 @@ export const useBetStore = create<BetState>()(
           if (!user) return;
 
           if (isActive) {
-            // Remover
             await supabase
               .from('user_leagues')
               .delete()
               .match({ user_id: user.id, league_id: leagueId });
           } else {
-            // Adicionar
             await supabase
               .from('user_leagues')
               .insert({ user_id: user.id, league_id: leagueId });
           }
         } catch (error) {
           console.error('Erro ao atualizar liga:', error);
-          set({ userLeagues }); // Reverte em caso de erro
+          set({ userLeagues });
+        }
+      },
+
+      // 🔥 MARKET ACTIONS (IMPLEMENTAÇÃO)
+      fetchGlobalMarkets: async () => {
+        set({ isLoadingMarkets: true });
+        try {
+          const { data } = await supabase
+            .from('markets')
+            .select('*')
+            .order('label', { ascending: true })
+            .order('name', { ascending: true });
+            
+          set({ globalMarkets: data || [] });
+        } catch (error) {
+          console.error('Erro ao buscar mercados:', error);
+        } finally {
+          set({ isLoadingMarkets: false });
+        }
+      },
+
+      toggleUserMarket: async (market) => {
+        const { customMarkets } = get();
+        const exists = customMarkets.find(m => m.name === market.name);
+        
+        try {
+          const { data: { user } } = await supabase.auth.getUser();
+          if (!user) return;
+
+          if (exists) {
+            // Remover
+            const newMarkets = customMarkets.filter(m => m.name !== market.name);
+            set({ customMarkets: newMarkets }); 
+
+            await supabase
+              .from('user_markets')
+              .delete()
+              .eq('user_id', user.id)
+              .eq('name', market.name);
+          } else {
+            // Adicionar
+            const newMarket = { id: crypto.randomUUID(), name: market.name }; 
+            set({ customMarkets: [...customMarkets, newMarket] }); 
+
+            await supabase
+              .from('user_markets')
+              .insert({ 
+                user_id: user.id, 
+                market_id: market.id, 
+                name: market.name 
+              });
+          }
+        } catch (error) {
+          console.error('Erro ao atualizar mercado:', error);
         }
       },
 
@@ -1021,7 +1085,7 @@ export const useBetStore = create<BetState>()(
           .from('user_markets')
           .delete()
           .eq('id', id)
-          .eq('user_id', user.id); // Add security check
+          .eq('user_id', user.id); 
 
         if (error) {
           console.error("Erro ao remover mercado:", error.message);
@@ -1064,10 +1128,10 @@ export const useBetStore = create<BetState>()(
         if (!user) return;
 
         const { error } = await supabase
-          .from('user_strategies') // FIXED: was progression_strategies
+          .from('user_strategies') 
           .delete()
           .eq('id', id)
-          .eq('user_id', user.id); // Add security check
+          .eq('user_id', user.id); 
 
         if (error) {
           console.error("Erro ao remover estratégia:", error.message);
@@ -1271,18 +1335,12 @@ export const useBetStore = create<BetState>()(
         if (!user) return false;
 
         const { data, error } = await supabase
-          .from('user_markets') // Should query global markets first but you dont have global 'markets' table populated for users yet? Assuming logic from prompt.
-          // Actually, if importing from system library, usually we select from 'markets' then insert into 'user_markets'. 
-          // Based on previous code:
-          .from('markets') // Assuming global table exists as per context
+          .from('markets')
           .select('*')
           .eq('id', marketId)
           .single();
         
-        // Fallback if no global market logic yet
         if (error || !data) {
-             // For now just error out if not implemented
-             // Or check the user_markets directly?
              return false; 
         }
 
@@ -1298,6 +1356,11 @@ export const useBetStore = create<BetState>()(
           get().setToast({ type: 'error', message: 'Mercado já importado.' });
           return false;
         }
+
+        // Atualiza estado local
+        set((state) => ({
+            customMarkets: [...state.customMarkets, { id: crypto.randomUUID(), name: data.name }]
+        }));
 
         get().setToast({ type: 'success', message: 'Mercado adicionado à sua conta.' });
         return true;
@@ -1319,14 +1382,11 @@ export const useBetStore = create<BetState>()(
           return false;
         }
         
-        // This is now redundant with toggleUserLeague but kept for compatibility with Library component
-        // Using toggleUserLeague logic:
         const { error: insertError } = await supabase
               .from('user_leagues')
               .insert({ user_id: user.id, league_id: leagueId });
 
         if (insertError) {
-           // Probably already exists
            get().setToast({ type: 'success', message: 'Liga já está na sua lista.' });
            return true;
         }
@@ -1356,7 +1416,6 @@ export const useBetStore = create<BetState>()(
           return false;
         }
         
-        // Future: Insert into user_teams
         get().setToast({ type: 'success', message: 'Time importado com sucesso.' });
         return true;
       },
