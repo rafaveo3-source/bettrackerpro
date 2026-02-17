@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useBetStore } from '../store/useBetStore';
-import { Shield, Check, Loader2, ChevronDown, Trophy } from 'lucide-react';
+import { Shield, Check, Loader2, ChevronDown, Trophy, CheckSquare, Square } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 const ManageTeams = () => {
@@ -29,45 +29,80 @@ const ManageTeams = () => {
     }
   }, [selectedLeagueId]);
 
+  // Lógica de Seleção em Massa
+  const handleSelectAll = async () => {
+    const toSelect = currentLeagueTeams.filter(t => !userTeams.includes(t.id));
+    for (const team of toSelect) {
+      await toggleUserTeam(team.id);
+    }
+  };
+
+  const handleDeselectAll = async () => {
+    const toDeselect = currentLeagueTeams.filter(t => userTeams.includes(t.id));
+    for (const team of toDeselect) {
+      await toggleUserTeam(team.id);
+    }
+  };
+
   return (
     <div className="w-full max-w-5xl mx-auto space-y-6">
       
       {/* HEADER & SELECTOR */}
-      <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col md:flex-row justify-between gap-6 transition-colors">
-        <div>
-          <h2 className="text-xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
-            <Shield className="text-blue-500" size={24} />
-            Gerenciar Times
-          </h2>
-          <p className="text-slate-500 dark:text-slate-400 text-sm mt-1">
-            Selecione a liga e marque os times favoritos.
-          </p>
+      <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col gap-6 transition-colors">
+        <div className="flex flex-col md:flex-row justify-between gap-6">
+          <div>
+            <h2 className="text-xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
+              <Shield className="text-blue-500" size={24} />
+              Gerenciar Times
+            </h2>
+            <p className="text-slate-500 dark:text-slate-400 text-sm mt-1">
+              Selecione a liga e marque os times favoritos.
+            </p>
+          </div>
+
+          <div className="relative w-full md:w-80">
+            <div className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none">
+              <Trophy size={16} />
+            </div>
+            <select
+              value={selectedLeagueId}
+              onChange={(e) => setSelectedLeagueId(e.target.value)}
+              className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-700 rounded-xl pl-10 pr-10 py-3 text-sm text-slate-900 dark:text-slate-100 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none appearance-none cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-900 transition-colors"
+              disabled={myActiveLeagues.length === 0}
+            >
+              {myActiveLeagues.length === 0 ? (
+                <option>Ative ligas primeiro...</option>
+              ) : (
+                myActiveLeagues.map(league => (
+                  <option key={league.id} value={league.id}>
+                    {league.name} ({league.country})
+                  </option>
+                ))
+              )}
+            </select>
+            <div className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none">
+              <ChevronDown size={16} />
+            </div>
+          </div>
         </div>
 
-        <div className="relative w-full md:w-80">
-          <div className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none">
-            <Trophy size={16} />
+        {/* AÇÕES EM MASSA */}
+        {myActiveLeagues.length > 0 && (
+          <div className="flex gap-3 pt-4 border-t border-slate-100 dark:border-slate-800">
+            <button 
+              onClick={handleSelectAll}
+              className="text-xs font-semibold text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 flex items-center gap-1.5 px-3 py-1.5 rounded-lg hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors"
+            >
+              <CheckSquare size={14} /> Selecionar Todos
+            </button>
+            <button 
+              onClick={handleDeselectAll}
+              className="text-xs font-semibold text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 flex items-center gap-1.5 px-3 py-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+            >
+              <Square size={14} /> Limpar Seleção
+            </button>
           </div>
-          <select
-            value={selectedLeagueId}
-            onChange={(e) => setSelectedLeagueId(e.target.value)}
-            className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-700 rounded-xl pl-10 pr-10 py-3 text-sm text-slate-900 dark:text-slate-100 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none appearance-none cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-900 transition-colors"
-            disabled={myActiveLeagues.length === 0}
-          >
-            {myActiveLeagues.length === 0 ? (
-              <option>Ative ligas primeiro...</option>
-            ) : (
-              myActiveLeagues.map(league => (
-                <option key={league.id} value={league.id}>
-                  {league.name} ({league.country})
-                </option>
-              ))
-            )}
-          </select>
-          <div className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none">
-            <ChevronDown size={16} />
-          </div>
-        </div>
+        )}
       </div>
 
       {/* GRID DE TIMES */}

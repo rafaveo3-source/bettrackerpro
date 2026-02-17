@@ -9,12 +9,13 @@ import {
   LayoutGrid,
   Download,
   Check,
-  CheckCircle2 // ✅ CORRIGIDO: Import adicionado para evitar o erro ReferenceError
+  CheckCircle2,
+  ChevronDown
 } from 'lucide-react';
 import { supabase } from '../store/useBetStore';
 import { useBetStore } from '../store/useBetStore';
 
-// Importação dos Novos Componentes de Gerenciamento
+// Importação dos Componentes
 import ManageLeagues from '../components/ManageLeagues';
 import ManageTeams from '../components/ManageTeams';
 
@@ -33,7 +34,7 @@ const SystemLibrary: React.FC = () => {
     importProgressionStrategy
   } = useBetStore();
 
-  // Estados Locais para Dados Globais
+  // Estados Locais
   const [globalMarkets, setGlobalMarkets] = useState<any[]>([]);
   const [globalMethods, setGlobalMethods] = useState<any[]>([]);
   const [globalStrategies, setGlobalStrategies] = useState<any[]>([]);
@@ -64,7 +65,7 @@ const SystemLibrary: React.FC = () => {
     { id: 'methods', label: 'Métodos', icon: Target, count: userMethods.length },
   ];
 
-  // Componente de Card Reutilizável (Estilo Premium Clean)
+  // Componente de Card Reutilizável
   const GlobalItemCard = ({ item, isImported, onImport }: any) => (
     <div className="flex items-center justify-between p-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl hover:border-emerald-500/50 transition-all shadow-sm">
       <div>
@@ -90,7 +91,7 @@ const SystemLibrary: React.FC = () => {
   return (
     <div className="min-h-screen bg-[#F8FAFC] dark:bg-[#020617] text-slate-900 dark:text-slate-200 pb-20 md:pl-20 pt-20 md:pt-8 px-4 md:px-8 transition-colors duration-300 font-sans">
       
-      {/* HEADER (Estilo Calendário) */}
+      {/* HEADER */}
       <div className="max-w-7xl mx-auto mb-8">
         <div className="flex items-center gap-2 text-emerald-600 dark:text-emerald-500 text-[10px] font-bold uppercase tracking-widest mb-1">
           <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full"></span>
@@ -109,76 +110,80 @@ const SystemLibrary: React.FC = () => {
 
       <div className="max-w-7xl mx-auto">
         
-        {/* FILTROS / ABAS (Estilo Clean) */}
-        <div className="bg-white dark:bg-slate-900 p-1.5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm inline-flex mb-8 overflow-x-auto max-w-full">
-          {tabs.map((tab) => {
-            const isActive = activeTab === tab.id;
-            return (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id as any)}
-                className={`
-                  flex items-center gap-2 px-4 py-2.5 rounded-xl font-bold text-sm whitespace-nowrap transition-all duration-200
-                  ${isActive 
-                    ? 'bg-emerald-500 text-white shadow-md shadow-emerald-500/20' 
-                    : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800'}
-                `}
-              >
-                <tab.icon size={16} />
-                {tab.label}
-                {tab.count > 0 && (
-                  <span className={`
-                    text-[10px] px-1.5 py-0.5 rounded-full font-black ml-1
-                    ${isActive ? 'bg-white/20 text-white' : 'bg-slate-100 dark:bg-slate-800 text-slate-500'}
-                  `}>
-                    {tab.count}
-                  </span>
-                )}
-              </button>
-            );
-          })}
+        {/* NAVEGAÇÃO HÍBRIDA (Desktop: Abas | Mobile: Select) */}
+        <div className="mb-8">
+          
+          {/* MOBILE: Select Dropdown (Mais limpo que scroll horizontal) */}
+          <div className="md:hidden relative">
+            <div className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none">
+              {React.createElement(tabs.find(t => t.id === activeTab)?.icon || Globe, { size: 18 })}
+            </div>
+            <select
+              value={activeTab}
+              onChange={(e) => setActiveTab(e.target.value as any)}
+              className="w-full appearance-none bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white py-3 pl-10 pr-10 rounded-xl font-bold focus:outline-none focus:ring-2 focus:ring-emerald-500 shadow-sm transition-colors"
+            >
+              {tabs.map(tab => (
+                <option key={tab.id} value={tab.id}>
+                  {tab.label} ({tab.count})
+                </option>
+              ))}
+            </select>
+            <div className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none">
+              <ChevronDown size={18} />
+            </div>
+          </div>
+
+          {/* DESKTOP: Abas Horizontais */}
+          <div className="hidden md:inline-flex bg-white dark:bg-slate-900 p-1.5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-x-auto max-w-full">
+            {tabs.map((tab) => {
+              const isActive = activeTab === tab.id;
+              return (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id as any)}
+                  className={`
+                    flex items-center gap-2 px-4 py-2.5 rounded-xl font-bold text-sm whitespace-nowrap transition-all duration-200
+                    ${isActive 
+                      ? 'bg-emerald-500 text-white shadow-md shadow-emerald-500/20' 
+                      : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800'}
+                  `}
+                >
+                  <tab.icon size={16} />
+                  {tab.label}
+                  {tab.count > 0 && (
+                    <span className={`
+                      text-[10px] px-1.5 py-0.5 rounded-full font-black ml-1
+                      ${isActive ? 'bg-white/20 text-white' : 'bg-slate-100 dark:bg-slate-800 text-slate-500'}
+                    `}>
+                      {tab.count}
+                    </span>
+                  )}
+                </button>
+              );
+            })}
+          </div>
         </div>
 
         {/* CONTEÚDO */}
         <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
           <AnimatePresence mode="wait">
             
-            {/* ABA: LIGAS */}
             {activeTab === 'leagues' && (
-              <motion.div
-                key="leagues"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                transition={{ duration: 0.1 }}
-              >
+              <motion.div key="leagues" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
                 <ManageLeagues />
               </motion.div>
             )}
 
-            {/* ABA: TIMES */}
             {activeTab === 'teams' && (
-              <motion.div
-                key="teams"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                transition={{ duration: 0.1 }}
-              >
+              <motion.div key="teams" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
                 <ManageTeams />
               </motion.div>
             )}
 
             {/* ABA: MERCADOS */}
             {activeTab === 'markets' && (
-              <motion.div
-                key="markets"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                className="grid grid-cols-1 lg:grid-cols-2 gap-6"
-              >
-                {/* Meus Mercados */}
+              <motion.div key="markets" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm">
                   <h3 className="text-lg font-black text-slate-800 dark:text-white mb-6 flex items-center gap-2 uppercase tracking-tight">
                     <CheckCircle2 size={18} className="text-emerald-500" /> Meus Mercados
@@ -198,17 +203,14 @@ const SystemLibrary: React.FC = () => {
                     )}
                   </div>
                 </div>
-
-                {/* Biblioteca Global */}
                 <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm">
                   <h3 className="text-lg font-black text-slate-800 dark:text-white mb-6 flex items-center gap-2 uppercase tracking-tight">
-                    <Globe size={18} className="text-blue-500" /> Explorar Global
+                    <Globe size={18} className="text-blue-500" /> Biblioteca Global
                   </h3>
                   <div className="space-y-3 max-h-[500px] overflow-y-auto pr-2 custom-scrollbar">
                     {loadingGlobal ? <p className="text-slate-500 text-sm">Carregando...</p> : globalMarkets.map(m => (
                       <GlobalItemCard 
-                        key={m.id} 
-                        item={m} 
+                        key={m.id} item={m} 
                         isImported={customMarkets.some(cm => cm.name === m.name)} 
                         onImport={() => importMarket(m.id)}
                       />
@@ -220,13 +222,7 @@ const SystemLibrary: React.FC = () => {
 
             {/* ABA: ESTRATÉGIAS */}
             {activeTab === 'strategies' && (
-              <motion.div
-                key="strategies"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                className="grid grid-cols-1 lg:grid-cols-2 gap-6"
-              >
+              <motion.div key="strategies" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm">
                   <h3 className="text-lg font-black text-slate-800 dark:text-white mb-6 flex items-center gap-2 uppercase tracking-tight">
                     <CheckCircle2 size={18} className="text-emerald-500" /> Minhas Estratégias
@@ -246,7 +242,6 @@ const SystemLibrary: React.FC = () => {
                     )}
                   </div>
                 </div>
-
                 <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm">
                   <h3 className="text-lg font-black text-slate-800 dark:text-white mb-6 flex items-center gap-2 uppercase tracking-tight">
                     <Globe size={18} className="text-blue-500" /> Modelos PRO
@@ -254,8 +249,7 @@ const SystemLibrary: React.FC = () => {
                   <div className="space-y-3 max-h-[500px] overflow-y-auto pr-2 custom-scrollbar">
                     {loadingGlobal ? <p className="text-slate-500 text-sm">Carregando...</p> : globalStrategies.map(s => (
                       <GlobalItemCard 
-                        key={s.id} 
-                        item={s} 
+                        key={s.id} item={s} 
                         isImported={customStrategies.some(cs => cs.name === s.name)}
                         onImport={() => importProgressionStrategy(s.id)}
                       />
@@ -267,13 +261,7 @@ const SystemLibrary: React.FC = () => {
 
             {/* ABA: MÉTODOS */}
             {activeTab === 'methods' && (
-              <motion.div
-                key="methods"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                className="grid grid-cols-1 lg:grid-cols-2 gap-6"
-              >
+              <motion.div key="methods" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm">
                   <h3 className="text-lg font-black text-slate-800 dark:text-white mb-6 flex items-center gap-2 uppercase tracking-tight">
                     <CheckCircle2 size={18} className="text-emerald-500" /> Meus Métodos
@@ -293,7 +281,6 @@ const SystemLibrary: React.FC = () => {
                     )}
                   </div>
                 </div>
-
                 <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm">
                   <h3 className="text-lg font-black text-slate-800 dark:text-white mb-6 flex items-center gap-2 uppercase tracking-tight">
                     <Globe size={18} className="text-blue-500" /> Métodos Validados
@@ -301,8 +288,7 @@ const SystemLibrary: React.FC = () => {
                   <div className="space-y-3 max-h-[500px] overflow-y-auto pr-2 custom-scrollbar">
                     {loadingGlobal ? <p className="text-slate-500 text-sm">Carregando...</p> : globalMethods.map(m => (
                       <GlobalItemCard 
-                        key={m.id} 
-                        item={m} 
+                        key={m.id} item={m} 
                         isImported={userMethods.some(um => um.name === m.name)}
                         onImport={() => importSystemMethod(m.id)}
                       />

@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useBetStore, League } from '../store/useBetStore';
-import { Search, Globe, Check, Loader2, MapPin } from 'lucide-react';
+import { Search, Globe, Check, Loader2, MapPin, CheckSquare, Square } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 const ManageLeagues = () => {
@@ -31,30 +31,64 @@ const ManageLeagues = () => {
 
   const sortedCountries = Object.keys(leaguesByCountry).sort();
 
+  // Lógica de Seleção em Massa
+  const handleSelectAll = async () => {
+    const toSelect = filteredLeagues.filter(l => !userLeagues.includes(l.id));
+    // Processa sequencialmente para garantir atualização do estado/banco
+    for (const league of toSelect) {
+      await toggleUserLeague(league.id);
+    }
+  };
+
+  const handleDeselectAll = async () => {
+    const toDeselect = filteredLeagues.filter(l => userLeagues.includes(l.id));
+    for (const league of toDeselect) {
+      await toggleUserLeague(league.id);
+    }
+  };
+
   return (
     <div className="w-full max-w-5xl mx-auto space-y-6">
       
       {/* HEADER CARD */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm transition-colors">
-        <div>
-          <h2 className="text-xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
-            <Globe className="text-emerald-500" size={24} />
-            Gerenciar Ligas
-          </h2>
-          <p className="text-slate-500 dark:text-slate-400 text-sm mt-1">
-            Ative as competições para agilizar suas apostas.
-          </p>
+      <div className="flex flex-col gap-4 bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm transition-colors">
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+          <div>
+            <h2 className="text-xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
+              <Globe className="text-emerald-500" size={24} />
+              Gerenciar Ligas
+            </h2>
+            <p className="text-slate-500 dark:text-slate-400 text-sm mt-1">
+              Ative as competições para agilizar suas apostas.
+            </p>
+          </div>
+
+          <div className="relative w-full md:w-72">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+            <input
+              type="text"
+              placeholder="Buscar país ou liga..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-700 rounded-xl pl-10 pr-4 py-2.5 text-sm text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500 outline-none transition-all placeholder:text-slate-400"
+            />
+          </div>
         </div>
 
-        <div className="relative w-full md:w-72">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-          <input
-            type="text"
-            placeholder="Buscar país ou liga..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-700 rounded-xl pl-10 pr-4 py-2.5 text-sm text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500 outline-none transition-all placeholder:text-slate-400"
-          />
+        {/* AÇÕES EM MASSA */}
+        <div className="flex gap-3 pt-2 border-t border-slate-100 dark:border-slate-800">
+          <button 
+            onClick={handleSelectAll}
+            className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 dark:hover:text-emerald-300 flex items-center gap-1.5 px-3 py-1.5 rounded-lg hover:bg-emerald-50 dark:hover:bg-emerald-900/20 transition-colors"
+          >
+            <CheckSquare size={14} /> Marcar Todos
+          </button>
+          <button 
+            onClick={handleDeselectAll}
+            className="text-xs font-semibold text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 flex items-center gap-1.5 px-3 py-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+          >
+            <Square size={14} /> Desmarcar Todos
+          </button>
         </div>
       </div>
 
