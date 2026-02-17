@@ -43,6 +43,12 @@ export interface League {
   sport: string;
 }
 
+export interface Team {
+  id: string;
+  name: string;
+  league_id: string;
+}
+
 export interface BetMethod {
   id: string;
   name: string;
@@ -137,6 +143,15 @@ interface BetState {
   mindsetHistory: MindsetEntry[];
   goals: Goal[];
   tiltLockUntil: string | null;
+
+  // 🔥 TEAM STATES
+  currentLeagueTeams: Team[]; // Times da liga selecionada no momento
+  userTeams: string[]; // IDs dos times que o usuário segue
+  isLoadingTeams: boolean;
+
+  // 🔥 TEAM ACTIONS
+  fetchLeagueTeams: (leagueId: string) => Promise<void>;
+  toggleUserTeam: (teamId: string) => Promise<void>;
 
   // Actions
   setSession: (session: any) => Promise<void>;
@@ -248,6 +263,10 @@ export const useBetStore = create<BetState>()(
       goals: [],
       tiltLockUntil: null,
       toast: null,
+
+      currentLeagueTeams: [],
+      userTeams: [],
+      isLoadingTeams: false,
 
       setSession: async (session) => {
         if (session?.user) {
@@ -391,6 +410,24 @@ export const useBetStore = create<BetState>()(
             set({ goals: formattedGoals });
           }
 
+          // 6. CARREGAR PREFERÊNCIAS DE LIGAS E TIMES
+          const { data: userLeaguesData } = await supabase
+            .from('user_leagues')
+            .select('league_id')
+            .eq('user_id', userId);
+
+          const { data: userTeamsData } = await supabase
+            .from('user_teams')
+            .select('team_id')
+            .eq('user_id', userId);
+
+          set({ 
+            userLeagues: userLeaguesData ? userLeaguesData.map((ul: any) => ul.league_id) : [],
+            userTeams: userTeamsData ? userTeamsData.map((ut: any) => ut.team_id) : []
+          });
+
+          // (Código existente continua abaixo...)
+          
           await get().loadUserSettings();
           get().recalculateBankroll();
         } else {
@@ -1459,6 +1496,55 @@ export const useBetStore = create<BetState>()(
           volatility,
           profitFactor
         };
+      },
+
+      // 🔥 TEAMS MANAGEMENT ACTIONS
+      fetchLeagueTeams: async (leagueId) => {
+        set({ isLoadingTeams: true });
+        try {
+          const { data } = await supabase
+            .from('teams')
+            .select('*')
+            .eq('league_id', leagueId)
+            .order('name', { ascending: true });
+            
+          set({ currentLeagueTeams: data || [] });
+        } catch (error) {
+          console.error('Erro ao buscar times:', error);
+        } finally {
+          set({ isLoadingTeams: false });
+        }
+      },
+
+      toggleUserTeam: async (teamId) => {
+        const { userTeams } = get();
+        const isActive = userTeams.includes(teamId);
+        
+        // Optimistic Update
+        const newUserTeams = isActive
+          ? userTeams.filter(id => id !== teamId)
+          : [...userTeams, teamId];
+        
+        set({ userTeams: newUserTeams });
+
+        try {
+          const { data: { user } } = await supabase.auth.getUser();
+          if (!user) return;
+
+          if (isActive) {
+            await supabase
+              .from('user_teams')
+              .delete()
+              .match({ user_id: user.id, team_id: teamId });
+          } else {
+            await supabase
+              .from('user_teams')
+              .insert({ user_id: user.id, team_id: teamId });
+          }
+        } catch (error) {
+          console.error('Erro ao atualizar time:', error);
+          set({ userTeams }); // Revert
+        }
       },
 
       // 🔥🔥🔥 MINDSET INTELLIGENCE 🔥🔥🔥
