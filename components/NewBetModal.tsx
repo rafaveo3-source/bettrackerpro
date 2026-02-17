@@ -191,7 +191,7 @@ const NewBetModal: React.FC<NewBetModalProps> = ({
     { id: 'lost', label: 'Red', icon: XCircle, color: 'bg-red-500 text-white', activeRing: 'ring-red-400' },
     { id: 'half-lost', label: '½ Red', icon: XCircle, color: 'bg-red-500/40 text-red-100', activeRing: 'ring-red-400' },
     { id: 'cashout', label: 'Cashout', icon: DollarSign, color: 'bg-amber-500 text-black', activeRing: 'ring-amber-400' },
-    { id: 'void', label: 'Reembolso', icon: Ban, color: 'bg-slate-500 text-white', activeRing: 'ring-slate-400' },
+    { id: 'refunded', label: 'Reembolso', icon: Ban, color: 'bg-slate-500 text-white', activeRing: 'ring-slate-400' },
   ];
 
   return (
