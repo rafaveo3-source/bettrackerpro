@@ -2,10 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { supabase } from '../store/useBetStore';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Mail, Lock, Loader2, ArrowRight, CheckCircle2, AlertTriangle } from 'lucide-react';
+import { Mail, Lock, Loader2, ArrowRight, CheckCircle2, AlertTriangle, KeyRound, ArrowLeft } from 'lucide-react';
 
 const AuthPage = () => {
-  const [isLogin, setIsLogin] = useState(true);
+  const [view, setView] = useState<'login' | 'signup' | 'forgot'>('login');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -19,7 +19,7 @@ const AuthPage = () => {
   useEffect(() => {
     const params = new URLSearchParams(location.search);
     if (params.get('mode') === 'signup') {
-      setIsLogin(false);
+      setView('signup');
     }
   }, [location]);
 
@@ -40,14 +40,24 @@ const AuthPage = () => {
     setLoading(true);
 
     try {
-      if (isLogin) {
+      if (view === 'forgot') {
+        // RECUPERAÇÃO DE SENHA
+        const { error } = await supabase.auth.resetPasswordForEmail(email, {
+            redirectTo: `${window.location.origin}/settings`, // Redireciona para settings para mudar a senha
+        });
+        if (error) throw error;
+        setSuccessMsg('E-mail de recuperação enviado! Verifique sua caixa de entrada.');
+      } 
+      else if (view === 'login') {
         // LOGIN
         const { error } = await supabase.auth.signInWithPassword({
           email,
           password,
         });
         if (error) throw error;
-      } else {
+        // Redirecionamento automático pelo App.tsx
+      } 
+      else {
         // CADASTRO
         const { error } = await supabase.auth.signUp({
           email,
@@ -90,12 +100,12 @@ const AuthPage = () => {
           </div>
           
           <h2 className="text-2xl font-black text-white mb-2 tracking-tight">
-            {isLogin ? 'Bem-vindo de volta' : 'Comece a lucrar hoje'}
+            {view === 'login' ? 'Bem-vindo de volta' : view === 'signup' ? 'Comece a lucrar hoje' : 'Recuperar Acesso'}
           </h2>
           <p className="text-slate-400 text-sm">
-            {isLogin 
-              ? 'Acesse seu dashboard profissional.' 
-              : 'Junte-se à elite dos apostadores profissionais.'}
+            {view === 'login' ? 'Acesse seu dashboard profissional.' 
+             : view === 'signup' ? 'Junte-se à elite dos apostadores profissionais.' 
+             : 'Digite seu e-mail para redefinir sua senha.'}
           </p>
         </div>
 
@@ -143,46 +153,72 @@ const AuthPage = () => {
             </div>
           </div>
 
-          <div className="space-y-2">
-            <label className="text-[10px] uppercase font-bold text-slate-500 ml-1 tracking-wider">Senha de Acesso</label>
-            <div className="relative">
-              <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500" size={18} />
-              <input 
-                type="password" 
-                required
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="••••••••"
-                className="w-full bg-slate-950 border border-slate-800 text-white rounded-xl py-3.5 pl-12 pr-4 outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all placeholder:text-slate-600 font-medium"
-              />
+          {view !== 'forgot' && (
+            <div className="space-y-2">
+              <div className="flex justify-between items-center ml-1">
+                <label className="text-[10px] uppercase font-bold text-slate-500 tracking-wider">Senha</label>
+                {view === 'login' && (
+                    <button 
+                        type="button"
+                        onClick={() => { setView('forgot'); setError(null); setSuccessMsg(null); }}
+                        className="text-[10px] font-bold text-emerald-500 hover:underline cursor-pointer"
+                    >
+                        Esqueci minha senha
+                    </button>
+                )}
+              </div>
+              <div className="relative">
+                <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500" size={18} />
+                <input 
+                  type="password" 
+                  required
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="••••••••"
+                  className="w-full bg-slate-950 border border-slate-800 text-white rounded-xl py-3.5 pl-12 pr-4 outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all placeholder:text-slate-600 font-medium"
+                />
+              </div>
             </div>
-          </div>
+          )}
 
           <button 
             type="submit" 
             disabled={loading}
-            className="w-full bg-emerald-500 hover:bg-emerald-400 text-black font-black py-4 rounded-xl uppercase tracking-widest text-xs transition-all shadow-lg shadow-emerald-900/20 hover:shadow-emerald-500/20 active:scale-[0.98] flex items-center justify-center gap-2 mt-4 disabled:opacity-70 disabled:cursor-not-allowed"
+            className="w-full bg-emerald-500 hover:bg-emerald-400 text-black font-black py-4 rounded-xl uppercase tracking-widest text-xs transition-all shadow-lg shadow-emerald-900/20 hover:shadow-emerald-500/20 active:scale-[0.98] flex items-center justify-center gap-2 mt-2 disabled:opacity-70 disabled:cursor-not-allowed"
           >
-            {loading ? <Loader2 className="animate-spin" size={18} /> : (isLogin ? 'Acessar Sistema' : 'Criar Conta Grátis')}
-            {!loading && <ArrowRight size={16} />}
+            {loading ? <Loader2 className="animate-spin" size={18} /> : (
+                view === 'login' ? 'Acessar Sistema' : 
+                view === 'signup' ? 'Criar Conta Grátis' : 
+                'Enviar Link de Recuperação'
+            )}
+            {!loading && (view === 'forgot' ? <KeyRound size={16} /> : <ArrowRight size={16} />)}
           </button>
         </form>
 
         {/* Footer Toggle */}
         <div className="mt-8 text-center pt-6 border-t border-slate-800/50">
-          <p className="text-slate-400 text-sm font-medium">
-            {isLogin ? 'Novo por aqui?' : 'Já é membro?'}
-            <button 
-              onClick={() => {
-                setIsLogin(!isLogin);
-                setError(null);
-                setSuccessMsg(null);
-              }}
-              className="ml-2 text-emerald-400 hover:text-emerald-300 font-bold hover:underline transition-all"
-            >
-              {isLogin ? 'Crie sua conta' : 'Fazer Login'}
-            </button>
-          </p>
+          {view === 'forgot' ? (
+              <button 
+                onClick={() => { setView('login'); setError(null); setSuccessMsg(null); }}
+                className="text-slate-400 hover:text-white text-sm font-medium flex items-center justify-center gap-2 w-full transition-colors"
+              >
+                <ArrowLeft size={14} /> Voltar ao Login
+              </button>
+          ) : (
+              <p className="text-slate-400 text-sm font-medium">
+                {view === 'login' ? 'Novo por aqui?' : 'Já é membro?'}
+                <button 
+                  onClick={() => {
+                    setView(view === 'login' ? 'signup' : 'login');
+                    setError(null);
+                    setSuccessMsg(null);
+                  }}
+                  className="ml-2 text-emerald-400 hover:text-emerald-300 font-bold hover:underline transition-all"
+                >
+                  {view === 'login' ? 'Crie sua conta' : 'Fazer Login'}
+                </button>
+              </p>
+          )}
         </div>
       </motion.div>
 

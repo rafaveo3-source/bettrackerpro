@@ -72,11 +72,8 @@ const NewBetModal: React.FC<NewBetModalProps> = ({
   });
 
   // 🔥 FILTRAGEM DE SEGURANÇA PRO/FREE
-  // Se não for PRO, ignora as estratégias/mercados/métodos customizados salvos
   const availableStrategies = isPro ? customStrategies : [];
   const availableMarkets = isPro ? customMarkets : []; 
-  // Métodos podem ser mantidos no Free se forem básicos, mas aqui vou assumir que métodos importados são PRO.
-  // Se quiser liberar métodos básicos, precisaria filtrar por type. Vou bloquear tudo importado se !isPro.
   const availableMethods = isPro ? methods : [];
 
   // Carrega ligas ao abrir
@@ -145,12 +142,13 @@ const NewBetModal: React.FC<NewBetModalProps> = ({
       });
       setManualMarket('');
       
-      setIsManualMode(userLeagues.length === 0);
+      // 🔥 Se não for PRO, força modo manual imediatamente
+      setIsManualMode(!isPro || userLeagues.length === 0);
       setSelectedLeagueId('');
       setSelectedHomeTeam('');
       setSelectedAwayTeam('');
     }
-  }, [betToEdit, isOpen, userLeagues.length]);
+  }, [betToEdit, isOpen, userLeagues.length, isPro]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -199,14 +197,12 @@ const NewBetModal: React.FC<NewBetModalProps> = ({
       await updateBet(betToEdit.id, payload);
       success = true;
     } else {
-      // addBet agora retorna boolean (true se sucesso, false se bloqueado)
       success = await addBet(payload); 
     }
 
     if (success) {
         onClose();
     }
-    // Se não sucesso (bloqueio de limite free), o Toast da store já avisou, não fecha o modal.
   };
 
   const calculateResult = () => {
@@ -320,7 +316,8 @@ const NewBetModal: React.FC<NewBetModalProps> = ({
                 </div>
               </div>
 
-              {!betToEdit && myActiveLeagues.length > 0 && (
+              {/* Botão de Toggle Manual - Desabilitado se !isPro */}
+              {!betToEdit && myActiveLeagues.length > 0 && isPro && (
                 <div className="flex justify-end">
                     <button 
                       type="button"
@@ -342,7 +339,8 @@ const NewBetModal: React.FC<NewBetModalProps> = ({
                         <Trophy size={12} /> Liga / Competição
                       </label>
                       
-                      {!isManualMode && myActiveLeagues.length > 0 ? (
+                      {/* 🔥 BLOQUEIO: Se não for PRO, ou se estiver em modo manual, ou sem ligas, cai no Select Simples */}
+                      {!isManualMode && myActiveLeagues.length > 0 && isPro ? (
                         <select
                           value={selectedLeagueId}
                           onChange={(e) => {
@@ -378,9 +376,11 @@ const NewBetModal: React.FC<NewBetModalProps> = ({
                     <div className="md:col-span-8 space-y-2">
                       <label className="text-xs uppercase text-slate-500 font-semibold tracking-wider ml-1 flex items-center gap-1">
                         <Shield size={12} /> Evento
+                        {!isPro && <span className="text-[9px] text-amber-500 flex items-center gap-1 ml-auto"><Lock size={8}/> Seleção Automática (PRO)</span>}
                       </label>
 
-                      {!isManualMode && selectedLeagueId && selectedLeagueId !== 'manual' ? (
+                      {/* 🔥 BLOQUEIO: Se não for PRO, não exibe o seletor de times */}
+                      {!isManualMode && selectedLeagueId && selectedLeagueId !== 'manual' && isPro ? (
                          <div className="flex flex-col md:flex-row gap-2 items-center">
                             <div className="flex-1 w-full">
                                <select 
@@ -419,7 +419,7 @@ const NewBetModal: React.FC<NewBetModalProps> = ({
                           type="text"
                           value={formData.event}
                           onChange={(e) => setFormData({ ...formData, event: e.target.value })}
-                          placeholder="Ex: Flamengo vs Palmeiras"
+                          placeholder={!isPro ? "Ex: Flamengo vs Palmeiras (Digite Manualmente)" : "Ex: Flamengo vs Palmeiras"}
                           className={inputStyle}
                         />
                       )}
@@ -490,7 +490,6 @@ const NewBetModal: React.FC<NewBetModalProps> = ({
                   </select>
                 </div>
 
-                {/* ✅ DROPWDOWN DE ESTRATÉGIAS (Blindado) */}
                 <div className="md:col-span-6 space-y-2">
                   <label className="text-xs uppercase text-slate-500 font-semibold tracking-wider ml-1 flex justify-between">
                       Estratégia
