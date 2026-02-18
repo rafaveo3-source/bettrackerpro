@@ -44,7 +44,6 @@ const ManageMethods = () => {
     if (value < 0) return 'text-red-500';
     return 'text-slate-400';
   };
-
   return (
     <div className="w-full max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-8">
       
@@ -56,18 +55,19 @@ const ManageMethods = () => {
             Meus Métodos
           </h2>
           
-          <form onSubmit={handleAddMethod} className="flex gap-2 mb-6">
+          {/* ✅ CORREÇÃO AQUI: Responsividade no Mobile */}
+          <form onSubmit={handleAddMethod} className="flex flex-col sm:flex-row gap-2 mb-6">
             <input 
               type="text" 
               value={newMethodName}
               onChange={(e) => setNewMethodName(e.target.value)}
               placeholder="Criar método personalizado..."
-              className="flex-1 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-2 text-sm focus:ring-2 focus:ring-emerald-500 outline-none transition-all dark:text-white"
+              className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 sm:py-2 text-sm focus:ring-2 focus:ring-emerald-500 outline-none transition-all dark:text-white"
             />
             <button 
               type="submit"
               disabled={!newMethodName.trim()}
-              className="bg-emerald-500 hover:bg-emerald-600 disabled:opacity-50 text-white font-bold px-4 py-2 rounded-xl text-sm transition-colors"
+              className="w-full sm:w-auto bg-emerald-500 hover:bg-emerald-600 disabled:opacity-50 text-white font-bold px-6 py-3 sm:py-2 rounded-xl text-sm transition-colors whitespace-nowrap"
             >
               Adicionar
             </button>
