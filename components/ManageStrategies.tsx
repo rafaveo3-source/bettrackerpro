@@ -1,14 +1,15 @@
 import React, { useEffect } from 'react';
 import { useBetStore } from '../store/useBetStore';
-import { TrendingUp, ArrowRight, Zap, BarChart3, Download, Check } from 'lucide-react';
+import { TrendingUp, ArrowRight, Zap, BarChart3, Download, Check, Lock } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 const ManageStrategies = () => {
   const { 
     globalStrategies, 
     fetchGlobalStrategies, 
-    customStrategies, // ✅ Importado para verificar se já existe
-    importProgressionStrategy // ✅ Importado para salvar na biblioteca
+    customStrategies, 
+    importProgressionStrategy,
+    isPro // 🔥 Pegue o estado isPro
   } = useBetStore();
   
   const navigate = useNavigate();
@@ -72,24 +73,35 @@ const ManageStrategies = () => {
               </div>
 
               <div className="flex flex-col gap-2 mt-4">
-                {/* BOTÃO 1: IMPORTAR PARA NOVA APOSTA */}
+                
+                {/* BOTÃO 1: IMPORTAR (COM BLOQUEIO PRO) */}
                 <button 
-                  onClick={() => importProgressionStrategy(strategy.id)}
-                  disabled={isImported}
+                  onClick={() => {
+                    if (!isPro) {
+                       alert("Funcionalidade exclusiva para Membros PRO 💎");
+                       return;
+                    }
+                    importProgressionStrategy(strategy.id);
+                  }}
+                  disabled={isImported} 
                   className={`w-full font-bold py-2 rounded-lg text-xs flex items-center justify-center gap-2 border transition-all
                     ${isImported 
                       ? 'bg-slate-100 dark:bg-slate-800 text-slate-400 border-transparent cursor-default' 
-                      : 'bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:border-blue-500 hover:text-blue-500'}
+                      : !isPro 
+                        ? 'bg-slate-100 dark:bg-slate-900 text-slate-500 border-slate-200 dark:border-slate-800 cursor-not-allowed opacity-70'
+                        : 'bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:border-blue-500 hover:text-blue-500'}
                   `}
                 >
                   {isImported ? (
                     <> <Check size={14} /> Ativo na Biblioteca </>
+                  ) : !isPro ? ( 
+                    <> <Lock size={14} /> Bloqueado (PRO) </>
                   ) : (
                     <> <Download size={14} /> Importar </>
                   )}
                 </button>
 
-                {/* BOTÃO 2: USAR COMO META */}
+                {/* BOTÃO 2: USAR COMO META (LIBERADO) */}
                 <button 
                   onClick={() => handleUseStrategy(strategy)}
                   className="w-full bg-slate-900 dark:bg-white text-white dark:text-slate-900 font-bold py-2.5 rounded-lg text-xs hover:opacity-90 transition-opacity flex items-center justify-center gap-2"
