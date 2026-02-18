@@ -12,7 +12,8 @@ import {
   Percent,
   Trophy,
   Shield,
-  ArrowRightLeft
+  ArrowRightLeft,
+  Lock
 } from 'lucide-react';
 import { useBetStore, BetStatus, Bet } from '../store/useBetStore';
 
@@ -33,9 +34,10 @@ const NewBetModal: React.FC<NewBetModalProps> = ({
     methods,
     currency,
     customMarkets,
-    customStrategies, // ✅ Lendo as estratégias importadas pelo usuário
+    customStrategies, 
     displayMode,
     unitSize,
+    isPro, // 🔥 Importante para a blindagem
     
     // Dados Globais
     globalLeagues,
@@ -68,6 +70,14 @@ const NewBetModal: React.FC<NewBetModalProps> = ({
     strategy: '',
     cashoutValue: ''
   });
+
+  // 🔥 FILTRAGEM DE SEGURANÇA PRO/FREE
+  // Se não for PRO, ignora as estratégias/mercados/métodos customizados salvos
+  const availableStrategies = isPro ? customStrategies : [];
+  const availableMarkets = isPro ? customMarkets : []; 
+  // Métodos podem ser mantidos no Free se forem básicos, mas aqui vou assumir que métodos importados são PRO.
+  // Se quiser liberar métodos básicos, precisaria filtrar por type. Vou bloquear tudo importado se !isPro.
+  const availableMethods = isPro ? methods : [];
 
   // Carrega ligas ao abrir
   useEffect(() => {
@@ -116,7 +126,7 @@ const NewBetModal: React.FC<NewBetModalProps> = ({
       
       setIsManualMode(true);
       
-      const isCustomMarket = !customMarkets.some(m => m.name === betToEdit.market);
+      const isCustomMarket = !availableMarkets.some(m => m.name === betToEdit.market);
       if (isCustomMarket && betToEdit.market) {
          setManualMarket(betToEdit.market);
       }
@@ -142,7 +152,7 @@ const NewBetModal: React.FC<NewBetModalProps> = ({
     }
   }, [betToEdit, isOpen, userLeagues.length]);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
 
@@ -183,14 +193,20 @@ const NewBetModal: React.FC<NewBetModalProps> = ({
       cashoutValue: formData.cashoutValue ? parseFloat(formData.cashoutValue) : 0
     };
 
+    let success = false;
+
     if (betToEdit) {
-      updateBet(betToEdit.id, payload);
+      await updateBet(betToEdit.id, payload);
+      success = true;
     } else {
-      // Data corrigida é gerada dentro do addBet na store agora
-      addBet(payload); 
+      // addBet agora retorna boolean (true se sucesso, false se bloqueado)
+      success = await addBet(payload); 
     }
 
-    onClose();
+    if (success) {
+        onClose();
+    }
+    // Se não sucesso (bloqueio de limite free), o Toast da store já avisou, não fecha o modal.
   };
 
   const calculateResult = () => {
@@ -306,119 +322,122 @@ const NewBetModal: React.FC<NewBetModalProps> = ({
 
               {!betToEdit && myActiveLeagues.length > 0 && (
                 <div className="flex justify-end">
-                   <button 
-                     type="button"
-                     onClick={() => setIsManualMode(!isManualMode)}
-                     className="text-xs text-emerald-500 hover:text-emerald-400 font-medium flex items-center gap-1 transition-colors px-3 py-1 bg-emerald-500/10 rounded-full border border-emerald-500/20"
-                   >
-                     {isManualMode ? 'Usar Seleção Inteligente' : 'Digitar Manualmente'}
-                     <ArrowRightLeft size={12} />
-                   </button>
+                    <button 
+                      type="button"
+                      onClick={() => setIsManualMode(!isManualMode)}
+                      className="text-xs text-emerald-500 hover:text-emerald-400 font-medium flex items-center gap-1 transition-colors px-3 py-1 bg-emerald-500/10 rounded-full border border-emerald-500/20"
+                    >
+                      {isManualMode ? 'Usar Seleção Inteligente' : 'Digitar Manualmente'}
+                      <ArrowRightLeft size={12} />
+                    </button>
                 </div>
               )}
 
               <div className="grid grid-cols-1 md:grid-cols-12 gap-5">
                 
                 <div className="md:col-span-12 grid grid-cols-1 md:grid-cols-12 gap-5 p-5 bg-slate-900/50 rounded-2xl border border-slate-800/50">
-                   
-                   <div className="md:col-span-4 space-y-2">
-                     <label className="text-xs uppercase text-slate-500 font-semibold tracking-wider ml-1 flex items-center gap-1">
-                       <Trophy size={12} /> Liga / Competição
-                     </label>
-                     
-                     {!isManualMode && myActiveLeagues.length > 0 ? (
-                       <select
-                         value={selectedLeagueId}
-                         onChange={(e) => {
+                    
+                    <div className="md:col-span-4 space-y-2">
+                      <label className="text-xs uppercase text-slate-500 font-semibold tracking-wider ml-1 flex items-center gap-1">
+                        <Trophy size={12} /> Liga / Competição
+                      </label>
+                      
+                      {!isManualMode && myActiveLeagues.length > 0 ? (
+                        <select
+                          value={selectedLeagueId}
+                          onChange={(e) => {
                             const val = e.target.value;
                             if (val === 'manual') setIsManualMode(true);
                             else setSelectedLeagueId(val);
-                         }}
-                         className={inputStyle}
-                       >
-                         <option value="">Selecione...</option>
-                         {myActiveLeagues.map(l => (
-                           <option key={l.id} value={l.id}>{l.name} ({l.country})</option>
-                         ))}
-                         <option value="manual" className="font-bold text-emerald-400">+ Digitar Manualmente</option>
-                       </select>
-                     ) : (
-                       <select
-                          value={formData.sport}
-                          onChange={(e) => setFormData({ ...formData, sport: e.target.value })}
+                          }}
                           className={inputStyle}
-                       >
-                          <option>Futebol</option>
-                          <option>Basquete</option>
-                          <option>Tênis</option>
-                          <option>eSports</option>
-                          <option>MMA</option>
-                          <option>Vôlei</option>
-                          <option>Outros</option>
-                       </select>
-                     )}
-                   </div>
+                        >
+                          <option value="">Selecione...</option>
+                          {myActiveLeagues.map(l => (
+                            <option key={l.id} value={l.id}>{l.name} ({l.country})</option>
+                          ))}
+                          <option value="manual" className="font-bold text-emerald-400">+ Digitar Manualmente</option>
+                        </select>
+                      ) : (
+                        <select
+                           value={formData.sport}
+                           onChange={(e) => setFormData({ ...formData, sport: e.target.value })}
+                           className={inputStyle}
+                        >
+                           <option>Futebol</option>
+                           <option>Basquete</option>
+                           <option>Tênis</option>
+                           <option>eSports</option>
+                           <option>MMA</option>
+                           <option>Vôlei</option>
+                           <option>Outros</option>
+                        </select>
+                      )}
+                    </div>
 
-                   <div className="md:col-span-8 space-y-2">
-                     <label className="text-xs uppercase text-slate-500 font-semibold tracking-wider ml-1 flex items-center gap-1">
-                       <Shield size={12} /> Evento
-                     </label>
+                    <div className="md:col-span-8 space-y-2">
+                      <label className="text-xs uppercase text-slate-500 font-semibold tracking-wider ml-1 flex items-center gap-1">
+                        <Shield size={12} /> Evento
+                      </label>
 
-                     {!isManualMode && selectedLeagueId && selectedLeagueId !== 'manual' ? (
-                        <div className="flex flex-col md:flex-row gap-2 items-center">
-                           <div className="flex-1 w-full">
-                              <select 
-                                value={selectedHomeTeam}
-                                onChange={(e) => setSelectedHomeTeam(e.target.value)}
-                                className={`${inputStyle} text-sm`}
-                                disabled={isLoadingTeams}
-                              >
-                                <option value="">Time da Casa</option>
-                                {currentLeagueTeams.map(t => (
-                                  <option key={t.id} value={t.id} className={userTeams.includes(t.id) ? 'font-bold text-emerald-400' : ''}>
-                                     {t.name} {userTeams.includes(t.id) ? '★' : ''}
-                                  </option>
-                                ))}
-                              </select>
-                           </div>
-                           <span className="text-slate-600 font-black text-xs">VS</span>
-                           <div className="flex-1 w-full">
-                              <select 
-                                value={selectedAwayTeam}
-                                onChange={(e) => setSelectedAwayTeam(e.target.value)}
-                                className={`${inputStyle} text-sm`}
-                                disabled={isLoadingTeams}
-                              >
-                                <option value="">Time Visitante</option>
-                                {currentLeagueTeams.map(t => (
-                                  <option key={t.id} value={t.id} className={userTeams.includes(t.id) ? 'font-bold text-emerald-400' : ''}>
-                                     {t.name} {userTeams.includes(t.id) ? '★' : ''}
-                                  </option>
-                                ))}
-                              </select>
-                           </div>
-                        </div>
-                     ) : (
-                       <input
-                         type="text"
-                         value={formData.event}
-                         onChange={(e) => setFormData({ ...formData, event: e.target.value })}
-                         placeholder="Ex: Flamengo vs Palmeiras"
-                         className={inputStyle}
-                       />
-                     )}
-                   </div>
+                      {!isManualMode && selectedLeagueId && selectedLeagueId !== 'manual' ? (
+                         <div className="flex flex-col md:flex-row gap-2 items-center">
+                            <div className="flex-1 w-full">
+                               <select 
+                                 value={selectedHomeTeam}
+                                 onChange={(e) => setSelectedHomeTeam(e.target.value)}
+                                 className={`${inputStyle} text-sm`}
+                                 disabled={isLoadingTeams}
+                               >
+                                 <option value="">Time da Casa</option>
+                                 {currentLeagueTeams.map(t => (
+                                   <option key={t.id} value={t.id} className={userTeams.includes(t.id) ? 'font-bold text-emerald-400' : ''}>
+                                      {t.name} {userTeams.includes(t.id) ? '★' : ''}
+                                   </option>
+                                 ))}
+                               </select>
+                            </div>
+                            <span className="text-slate-600 font-black text-xs">VS</span>
+                            <div className="flex-1 w-full">
+                               <select 
+                                 value={selectedAwayTeam}
+                                 onChange={(e) => setSelectedAwayTeam(e.target.value)}
+                                 className={`${inputStyle} text-sm`}
+                                 disabled={isLoadingTeams}
+                               >
+                                 <option value="">Time Visitante</option>
+                                 {currentLeagueTeams.map(t => (
+                                   <option key={t.id} value={t.id} className={userTeams.includes(t.id) ? 'font-bold text-emerald-400' : ''}>
+                                      {t.name} {userTeams.includes(t.id) ? '★' : ''}
+                                   </option>
+                                 ))}
+                               </select>
+                            </div>
+                         </div>
+                      ) : (
+                        <input
+                          type="text"
+                          value={formData.event}
+                          onChange={(e) => setFormData({ ...formData, event: e.target.value })}
+                          placeholder="Ex: Flamengo vs Palmeiras"
+                          className={inputStyle}
+                        />
+                      )}
+                    </div>
                 </div>
 
                 <div className="md:col-span-6 space-y-2">
-                  <label className="text-xs uppercase text-slate-500 font-semibold tracking-wider ml-1">Mercado</label>
+                  <label className="text-xs uppercase text-slate-500 font-semibold tracking-wider ml-1 flex justify-between">
+                      Mercado
+                      {!isPro && availableMarkets.length === 0 && <span className="text-[9px] text-amber-500 flex items-center gap-1"><Lock size={8}/> Personalização PRO</span>}
+                  </label>
                   <select
                     value={formData.market}
                     onChange={(e) => setFormData({ ...formData, market: e.target.value })}
                     className={inputStyle}
                   >
                     <option value="">Selecione...</option>
-                    {customMarkets.map((m) => (
+                    {availableMarkets.map((m) => (
                       <option key={m.id} value={m.name}>{m.name}</option>
                     ))}
                     <option value="__custom">Outro (Digitar Manualmente)</option>
@@ -454,29 +473,37 @@ const NewBetModal: React.FC<NewBetModalProps> = ({
                 </div>
 
                 <div className="md:col-span-6 space-y-2">
-                  <label className="text-xs uppercase text-slate-500 font-semibold tracking-wider ml-1">Método</label>
+                  <label className="text-xs uppercase text-slate-500 font-semibold tracking-wider ml-1 flex justify-between">
+                      Método
+                      {!isPro && availableMethods.length === 0 && <span className="text-[9px] text-amber-500 flex items-center gap-1"><Lock size={8}/> Personalização PRO</span>}
+                  </label>
                   <select
                     value={formData.method}
                     onChange={(e) => setFormData({ ...formData, method: e.target.value })}
                     className={inputStyle}
+                    disabled={!isPro && availableMethods.length === 0}
                   >
-                    <option value="">Opcional</option>
-                    {methods.map((m) => (
+                    <option value="">{(!isPro && availableMethods.length === 0) ? "Básico (Padrão)" : "Opcional"}</option>
+                    {availableMethods.map((m) => (
                       <option key={m.id} value={m.name}>{m.name}</option>
                     ))}
                   </select>
                 </div>
 
-                {/* ✅ DROPWDOWN DE ESTRATÉGIAS IMPORTADAS */}
+                {/* ✅ DROPWDOWN DE ESTRATÉGIAS (Blindado) */}
                 <div className="md:col-span-6 space-y-2">
-                  <label className="text-xs uppercase text-slate-500 font-semibold tracking-wider ml-1">Estratégia</label>
+                  <label className="text-xs uppercase text-slate-500 font-semibold tracking-wider ml-1 flex justify-between">
+                      Estratégia
+                      {!isPro && <span className="text-[9px] text-amber-500 flex items-center gap-1"><Lock size={8}/> Exclusivo PRO</span>}
+                  </label>
                   <select
                     value={formData.strategy}
                     onChange={(e) => setFormData({ ...formData, strategy: e.target.value })}
-                    className={inputStyle}
+                    className={`${inputStyle} ${!isPro ? 'opacity-50 cursor-not-allowed' : ''}`}
+                    disabled={!isPro || availableStrategies.length === 0}
                   >
-                    <option value="">Opcional</option>
-                    {customStrategies.map((s) => (
+                    <option value="">{(!isPro) ? "Bloqueado (Upgrade para usar)" : "Opcional"}</option>
+                    {availableStrategies.map((s) => (
                       <option key={s.id} value={s.name}>{s.name}</option>
                     ))}
                   </select>

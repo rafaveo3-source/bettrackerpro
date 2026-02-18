@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Info, 
   ChevronDown, 
@@ -10,13 +10,15 @@ import {
   ArrowRightLeft,
   Target,
   TrendingUp,
-  AlertTriangle
+  AlertTriangle,
+  Lock,
+  Crown
 } from 'lucide-react';
 import { useBetStore } from '../store/useBetStore';
 import { motion, AnimatePresence } from 'framer-motion';
 
 const Calculators: React.FC = () => {
-  const { currentBankrollBalance } = useBetStore();
+  const { currentBankrollBalance, isPro } = useBetStore();
   const [activeTab, setActiveTab] = useState<
     'dutching' | 
     'kelly' | 
@@ -30,6 +32,31 @@ const Calculators: React.FC = () => {
   const [expandedInfo, setExpandedInfo] = useState<string | null>(null);
 
   const toggleInfo = (id: string) => setExpandedInfo(expandedInfo === id ? null : id);
+
+  // ==========================================
+  // COMPONENTE DE BLOQUEIO PRO
+  // ==========================================
+  const ProLockScreen = () => (
+      <div className="bg-slate-900 border border-slate-800 rounded-[2rem] p-8 text-center flex flex-col items-center justify-center min-h-[300px] relative overflow-hidden">
+          <div className="absolute inset-0 bg-gradient-to-br from-purple-500/10 to-blue-500/10 opacity-50" />
+          
+          <div className="bg-slate-800 p-4 rounded-full mb-4 relative z-10">
+              <Crown size={32} className="text-amber-400" />
+          </div>
+          
+          <h2 className="text-2xl font-black text-white uppercase italic tracking-tighter mb-2 relative z-10">
+              Ferramenta Profissional
+          </h2>
+          
+          <p className="text-slate-400 max-w-md mx-auto mb-6 text-sm relative z-10">
+              Esta calculadora matemática avançada é exclusiva para membros PRO. Desbloqueie todo o potencial da sua gestão.
+          </p>
+
+          <button className="bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 text-slate-900 font-black py-3 px-8 rounded-xl shadow-lg shadow-amber-500/20 transition-all active:scale-95 relative z-10">
+              Quero ser PRO
+          </button>
+      </div>
+  );
 
   // ==========================================
   // 1. LÓGICA DUTCHING
@@ -187,6 +214,17 @@ const Calculators: React.FC = () => {
 
   const sidebarInfo = getSidebarInfo();
 
+  // Definição de quais abas são PRO
+  const tabs = [
+    { id: 'dutching', label: 'Dutching', pro: false },
+    { id: 'kelly', label: 'Kelly', pro: false },
+    { id: 'value', label: 'Value Bet', pro: true },
+    { id: 'arb', label: 'Arbitragem', pro: true },
+    { id: 'stake', label: 'Stake %', pro: false },
+    { id: 'odds', label: 'Odds Conv.', pro: false },
+    { id: 'breakeven', label: 'Break Even', pro: true },
+  ];
+
   return (
     <div className="space-y-6 pb-20 w-full overflow-x-hidden">
         {/* HEADER PADRÃO PREMIUM */}
@@ -207,24 +245,17 @@ const Calculators: React.FC = () => {
       
       {/* GRID DE ABAS RESPONSIVO E EXPANDIDO */}
       <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-2 mb-6">
-        {[
-          { id: 'dutching', label: 'Dutching' },
-          { id: 'kelly', label: 'Kelly' },
-          { id: 'value', label: 'Value Bet' },
-          { id: 'arb', label: 'Arbitragem' },
-          { id: 'stake', label: 'Stake %' },
-          { id: 'odds', label: 'Odds Conv.' },
-          { id: 'breakeven', label: 'Break Even' },
-        ].map(tab => (
+        {tabs.map(tab => (
           <button
             key={tab.id}
             onClick={() => setActiveTab(tab.id as any)}
-            className={`relative w-full flex items-center justify-center px-2 py-3 rounded-xl font-bold text-[10px] uppercase tracking-wider transition-all ${
+            className={`relative w-full flex items-center justify-center px-2 py-3 rounded-xl font-bold text-[10px] uppercase tracking-wider transition-all gap-1 ${
               activeTab === tab.id
                 ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/20'
                 : 'bg-white dark:bg-[#0f172a] text-slate-500 border border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-900'
             }`}
           >
+            {tab.pro && !isPro && <Lock size={10} className="mb-0.5" />}
             {tab.label}
             {activeTab === tab.id && (
               <span className="absolute bottom-0 left-0 w-full h-[3px] bg-white/40 animate-pulse rounded-b-xl" />
@@ -238,7 +269,7 @@ const Calculators: React.FC = () => {
         {/* COLUNA ESQUERDA (CALCULADORAS) */}
         <div className="lg:col-span-2 space-y-6 min-w-0 w-full">
             
-            {/* --- DUTCHING --- */}
+            {/* --- DUTCHING (FREE) --- */}
             {activeTab === 'dutching' && (
                 <div className="bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-800 rounded-[2rem] p-6 shadow-sm w-full overflow-hidden">
                     <h2 className="text-lg font-black text-slate-900 dark:text-white uppercase tracking-tighter italic mb-4">Calculadora Dutching</h2>
@@ -268,7 +299,7 @@ const Calculators: React.FC = () => {
                 </div>
             )}
 
-            {/* --- KELLY --- */}
+            {/* --- KELLY (FREE) --- */}
             {activeTab === 'kelly' && (
                 <div className="bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-800 rounded-[2rem] p-6 shadow-sm w-full overflow-hidden">
                     <h2 className="text-lg font-black text-slate-900 dark:text-white uppercase tracking-tighter italic mb-6">Critério de Kelly</h2>
@@ -303,8 +334,9 @@ const Calculators: React.FC = () => {
                 </div>
             )}
 
-            {/* --- VALUE BET --- */}
+            {/* --- VALUE BET (PRO) --- */}
             {activeTab === 'value' && (
+                !isPro ? <ProLockScreen /> : (
                 <div className="bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-800 rounded-[2rem] p-6 shadow-sm">
                    <h2 className="text-lg font-black text-slate-900 dark:text-white uppercase tracking-tighter italic mb-6 flex items-center gap-2"><Target size={20} className="text-emerald-500"/> Value Bet Finder</h2>
                    <div className="grid grid-cols-2 gap-4 mb-6">
@@ -326,10 +358,12 @@ const Calculators: React.FC = () => {
                       <p className="text-xs mt-2 font-bold">{valEV > 0 ? '✅ Aposta de Valor Encontrada' : '❌ Odds sem valor estatístico'}</p>
                    </div>
                 </div>
+                )
             )}
 
-            {/* --- ARBITRAGEM --- */}
+            {/* --- ARBITRAGEM (PRO) --- */}
             {activeTab === 'arb' && (
+                !isPro ? <ProLockScreen /> : (
                 <div className="bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-800 rounded-[2rem] p-6 shadow-sm">
                    <h2 className="text-lg font-black text-slate-900 dark:text-white uppercase tracking-tighter italic mb-6 flex items-center gap-2"><Scale size={20} className="text-blue-500"/> Arbitragem (2-Way)</h2>
                    
@@ -363,9 +397,10 @@ const Calculators: React.FC = () => {
                    </div>
                    {arbRoi > 0 && <p className="text-center text-xs text-slate-400 mt-2">Lucro líquido: R$ {arbProfit.toFixed(2)}</p>}
                 </div>
+                )
             )}
 
-            {/* --- STAKE % --- */}
+            {/* --- STAKE % (FREE) --- */}
             {activeTab === 'stake' && (
                 <div className="bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-800 rounded-[2rem] p-6 shadow-sm">
                    <h2 className="text-lg font-black text-slate-900 dark:text-white uppercase tracking-tighter italic mb-6 flex items-center gap-2"><Percent size={20} className="text-orange-500"/> Calculadora Stake Fixa</h2>
@@ -383,7 +418,7 @@ const Calculators: React.FC = () => {
                 </div>
             )}
 
-            {/* --- ODDS CONVERTER --- */}
+            {/* --- ODDS CONVERTER (FREE) --- */}
             {activeTab === 'odds' && (
                 <div className="bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-800 rounded-[2rem] p-6 shadow-sm">
                    <h2 className="text-lg font-black text-slate-900 dark:text-white uppercase tracking-tighter italic mb-6 flex items-center gap-2"><ArrowRightLeft size={20} className="text-indigo-500"/> Conversor Universal</h2>
@@ -405,8 +440,9 @@ const Calculators: React.FC = () => {
                 </div>
             )}
 
-            {/* --- BREAK EVEN --- */}
+            {/* --- BREAK EVEN (PRO) --- */}
             {activeTab === 'breakeven' && (
+                !isPro ? <ProLockScreen /> : (
                 <div className="bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-800 rounded-[2rem] p-6 shadow-sm">
                    <h2 className="text-lg font-black text-slate-900 dark:text-white uppercase tracking-tighter italic mb-6 flex items-center gap-2"><TrendingUp size={20} className="text-pink-500"/> Break Even Point</h2>
                    
@@ -421,6 +457,7 @@ const Calculators: React.FC = () => {
                       <p className="text-xs text-slate-500 mt-2">Para ficar no zero a zero (sem prejuízo)</p>
                    </div>
                 </div>
+                )
             )}
             
         </div> {/* FECHA lg:col-span-2 */}
