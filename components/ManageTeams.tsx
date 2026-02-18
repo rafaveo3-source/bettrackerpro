@@ -2,9 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { useBetStore } from '../store/useBetStore';
 import { Shield, Check, Loader2, ChevronDown, Trophy, CheckSquare, Square } from 'lucide-react';
 
-// REMOVIDO: imports do framer-motion para evitar o erro "TypeError: a is not a function" em produção
-// O componente agora usa CSS padrão para transições, o que é mais estável para listas grandes.
-
 const ManageTeams = () => {
   const { 
     globalLeagues, 
@@ -16,41 +13,36 @@ const ManageTeams = () => {
     isLoadingTeams 
   } = useBetStore();
 
-  // Blindagem de Dados: Garante que sempre tenhamos arrays, mesmo se a API falhar
+  // Blindagem contra dados undefined/null
   const safeGlobalLeagues = Array.isArray(globalLeagues) ? globalLeagues : [];
   const safeUserLeagues = Array.isArray(userLeagues) ? userLeagues : [];
   const safeCurrentTeams = Array.isArray(currentLeagueTeams) ? currentLeagueTeams : [];
   const safeUserTeams = Array.isArray(userTeams) ? userTeams : [];
 
-  // Filtra apenas as ligas ativas
   const myActiveLeagues = safeGlobalLeagues.filter(l => safeUserLeagues.includes(l.id));
-  
   const [selectedLeagueId, setSelectedLeagueId] = useState<string>('');
 
-  // Seleção automática da primeira liga
   useEffect(() => {
     if (myActiveLeagues.length > 0 && !selectedLeagueId) {
       setSelectedLeagueId(myActiveLeagues[0].id);
     }
   }, [safeUserLeagues.length, safeGlobalLeagues.length]);
 
-  // Busca times ao mudar a liga
   useEffect(() => {
     if (selectedLeagueId) {
       fetchLeagueTeams(selectedLeagueId);
     }
   }, [selectedLeagueId]);
 
-  // Ações em Massa
   const handleSelectAll = async () => {
     const toSelect = safeCurrentTeams.filter(t => !safeUserTeams.includes(t.id));
-    // Otimização: Promise.all para não travar a UI
-    await Promise.all(toSelect.map(team => toggleUserTeam(team.id)));
+    // Executa em paralelo para velocidade
+    await Promise.all(toSelect.map(t => toggleUserTeam(t.id)));
   };
 
   const handleDeselectAll = async () => {
     const toDeselect = safeCurrentTeams.filter(t => safeUserTeams.includes(t.id));
-    await Promise.all(toDeselect.map(team => toggleUserTeam(team.id)));
+    await Promise.all(toDeselect.map(t => toggleUserTeam(t.id)));
   };
 
   return (
@@ -114,7 +106,7 @@ const ManageTeams = () => {
         )}
       </div>
 
-      {/* GRID DE TIMES */}
+      {/* GRID DE TIMES - SEM ANIMAÇÕES */}
       <div className="min-h-[300px]">
         {myActiveLeagues.length === 0 ? (
           <div className="text-center py-20 bg-white dark:bg-slate-900 rounded-2xl border border-dashed border-slate-200 dark:border-slate-800">
