@@ -222,6 +222,7 @@ interface BetState {
 
   // 🔥 System Strategies Actions
   fetchGlobalStrategies: () => Promise<void>;
+  importProgressionStrategy: (strategyId: string) => Promise<boolean>;
 
   addBankroll: (name: string, currency: string, initialBalance: number) => Promise<void>;
   removeBankroll: (id: string) => Promise<void>;
@@ -966,6 +967,7 @@ export const useBetStore = create<BetState>()(
       },
 
       // --- BETS ---
+      // 🔥 CORREÇÃO DE DATA/FUSO HORÁRIO APLICADA AQUI
       addBet: async (newBetData) => {
         if (get().isTiltLocked()) return;
 
@@ -997,13 +999,20 @@ export const useBetStore = create<BetState>()(
 
         const { cashoutValue: _, ...cleanBetData } = newBetData;
 
+        // ✅ DATA CORRIGIDA: Usa o horário do PC do usuário e cria uma string ISO que "mente" ser UTC
+        // mas mantém os números do horário local (ex: 23:00 local vira 23:00 UTC no banco).
+        // Isso garante que no calendário/histórico apareça no dia certo.
+        const date = new Date();
+        const localIsoString = new Date(date.getTime() - (date.getTimezoneOffset() * 60000)).toISOString();
+
         const betToInsert = {
           ...cleanBetData,
           bankroll_id: activeBankrollId,
           stake,
           odds,
           profit,
-          user_id: user.id
+          user_id: user.id,
+          date: localIsoString
         };
 
         const { data, error } = await supabase
@@ -1211,13 +1220,11 @@ export const useBetStore = create<BetState>()(
       removeMethod: async (id) => {
         const user = get().user;
         if (!user) return;
-
-        // 1. Atualização Otimista
+        
         set((state) => ({
           methods: state.methods.filter(m => m.id !== id)
         }));
 
-        // 2. Remove do Banco
         const { error } = await supabase
           .from('methods')
           .delete()
@@ -1226,7 +1233,6 @@ export const useBetStore = create<BetState>()(
 
         if (error) {
           console.error("Erro ao remover método do banco:", error.message);
-          // Opcional: toast de erro aqui
         }
       },
 
@@ -1762,15 +1768,12 @@ export const useBetStore = create<BetState>()(
         };
       },
 
-      // ✅ NOVA FUNÇÃO: ROI REAL POR MÉTODO
       getMethodRealStats: (methodName: string) => {
         const { history } = get();
         const now = new Date();
         const thirtyDaysAgo = new Date();
         thirtyDaysAgo.setDate(now.getDate() - 30);
 
-        // Filtra apostas que usaram esse método (pelo nome)
-        // Ignora apostas pendentes, anuladas ou devolvidas
         const methodBets = history.filter(b => 
           b.method === methodName && 
           b.status !== 'pending' && 
@@ -1782,12 +1785,10 @@ export const useBetStore = create<BetState>()(
           return { roi30d: 0, roiTotal: 0, count: 0 };
         }
 
-        // --- CÁLCULO TOTAL ---
         const totalProfit = methodBets.reduce((acc, b) => acc + b.profit, 0);
         const totalStake = methodBets.reduce((acc, b) => acc + b.stake, 0);
         const roiTotal = totalStake > 0 ? (totalProfit / totalStake) * 100 : 0;
 
-        // --- CÁLCULO 30 DIAS ---
         const last30Bets = methodBets.filter(b => new Date(b.date) >= thirtyDaysAgo);
         const profit30 = last30Bets.reduce((acc, b) => acc + b.profit, 0);
         const stake30 = last30Bets.reduce((acc, b) => acc + b.stake, 0);
@@ -1795,57 +1796,8 @@ export const useBetStore = create<BetState>()(
 
         return { roi30d, roiTotal, count: methodBets.length };
       },
-
-      // 🔥 TEAMS MANAGEMENT ACTIONS
-      fetchLeagueTeams: async (leagueId) => {
-        set({ isLoadingTeams: true });
-        try {
-          const { data } = await supabase
-            .from('teams')
-            .select('*')
-            .eq('league_id', leagueId)
-            .order('name', { ascending: true });
-            
-          set({ currentLeagueTeams: data || [] });
-        } catch (error) {
-          console.error('Erro ao buscar times:', error);
-        } finally {
-          set({ isLoadingTeams: false });
-        }
-      },
-
-      toggleUserTeam: async (teamId) => {
-        const { userTeams } = get();
-        const isActive = userTeams.includes(teamId);
-        
-        // Optimistic Update
-        const newUserTeams = isActive
-          ? userTeams.filter(id => id !== teamId)
-          : [...userTeams, teamId];
-        
-        set({ userTeams: newUserTeams });
-
-        try {
-          const { data: { user } } = await supabase.auth.getUser();
-          if (!user) return;
-
-          if (isActive) {
-            await supabase
-              .from('user_teams')
-              .delete()
-              .match({ user_id: user.id, team_id: teamId });
-          } else {
-            await supabase
-              .from('user_teams')
-              .insert({ user_id: user.id, team_id: teamId });
-          }
-        } catch (error) {
-          console.error('Erro ao atualizar time:', error);
-          set({ userTeams }); // Revert
-        }
-      },
-
-      // 🔥🔥🔥 MINDSET INTELLIGENCE 🔥🔥🔥
+      
+      // Mindset Analytics
       getMindsetAnalytics: () => {
         const s = get();
         const stats: Record<string, { profit: number; staked: number; wins: number; total: number }> = {

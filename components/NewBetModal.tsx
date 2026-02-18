@@ -33,11 +33,11 @@ const NewBetModal: React.FC<NewBetModalProps> = ({
     methods,
     currency,
     customMarkets,
-    customStrategies,
+    customStrategies, // ✅ Lendo as estratégias importadas pelo usuário
     displayMode,
     unitSize,
     
-    // 🔥 NOVOS DADOS DA STORE (INTEGRAÇÃO)
+    // Dados Globais
     globalLeagues,
     userLeagues,
     currentLeagueTeams,
@@ -50,7 +50,7 @@ const NewBetModal: React.FC<NewBetModalProps> = ({
   const [error, setError] = useState('');
   const [manualMarket, setManualMarket] = useState('');
   
-  // 🔥 ESTADOS DO MODO HÍBRIDO (INTELIGENTE VS MANUAL)
+  // Modos de Seleção
   const [isManualMode, setIsManualMode] = useState(false);
   const [selectedLeagueId, setSelectedLeagueId] = useState('');
   const [selectedHomeTeam, setSelectedHomeTeam] = useState('');
@@ -69,18 +69,17 @@ const NewBetModal: React.FC<NewBetModalProps> = ({
     cashoutValue: ''
   });
 
-  // 1. Carrega as ligas se necessário ao abrir
+  // Carrega ligas ao abrir
   useEffect(() => {
     if (isOpen && globalLeagues.length === 0) {
       fetchLeagues();
     }
   }, [isOpen]);
 
-  // 2. Carrega times quando seleciona uma liga (Modo Inteligente)
+  // Carrega times da liga
   useEffect(() => {
     if (selectedLeagueId && selectedLeagueId !== 'manual') {
       fetchLeagueTeams(selectedLeagueId);
-      // Tenta ajustar o esporte automaticamente baseado na liga
       const league = globalLeagues.find(l => l.id === selectedLeagueId);
       if (league) {
         setFormData(prev => ({ ...prev, sport: league.sport }));
@@ -88,7 +87,7 @@ const NewBetModal: React.FC<NewBetModalProps> = ({
     }
   }, [selectedLeagueId]);
 
-  // 3. Gera o nome do evento automaticamente (Ex: "Arsenal vs Chelsea")
+  // Nome do evento automático
   useEffect(() => {
     if (!isManualMode && selectedHomeTeam && selectedAwayTeam) {
       const home = currentLeagueTeams.find(t => t.id === selectedHomeTeam)?.name || '';
@@ -99,10 +98,9 @@ const NewBetModal: React.FC<NewBetModalProps> = ({
     }
   }, [selectedHomeTeam, selectedAwayTeam, isManualMode, currentLeagueTeams]);
 
-  // 4. Inicialização dos dados (Edição ou Nova Aposta)
+  // Inicialização (Edit vs New)
   useEffect(() => {
     if (betToEdit) {
-      // --- MODO EDIÇÃO ---
       setFormData({
         sport: betToEdit.sport,
         event: betToEdit.event,
@@ -116,17 +114,13 @@ const NewBetModal: React.FC<NewBetModalProps> = ({
         cashoutValue: (betToEdit as any).cashoutValue?.toString() || ''
       });
       
-      // Edição sempre começa em modo manual para garantir que o usuário veja o texto original
       setIsManualMode(true);
       
-      // Verifica se é mercado customizado
       const isCustomMarket = !customMarkets.some(m => m.name === betToEdit.market);
       if (isCustomMarket && betToEdit.market) {
          setManualMarket(betToEdit.market);
-         // Nota: O select de mercado cuidará de mostrar "__custom" se não achar match
       }
     } else {
-      // --- NOVA APOSTA ---
       setFormData({
         sport: 'Futebol',
         event: '',
@@ -141,7 +135,6 @@ const NewBetModal: React.FC<NewBetModalProps> = ({
       });
       setManualMarket('');
       
-      // Se o usuário tem ligas ativas, começa no modo Inteligente
       setIsManualMode(userLeagues.length === 0);
       setSelectedLeagueId('');
       setSelectedHomeTeam('');
@@ -170,7 +163,6 @@ const NewBetModal: React.FC<NewBetModalProps> = ({
 
     let stakeValue = parseFloat(formData.stake);
 
-    // Conversão de Units
     if (displayMode === 'units') {
       stakeValue = stakeValue * unitSize;
     }
@@ -194,10 +186,8 @@ const NewBetModal: React.FC<NewBetModalProps> = ({
     if (betToEdit) {
       updateBet(betToEdit.id, payload);
     } else {
-      addBet({
-        ...payload,
-        date: new Date().toISOString() // Timestamp completo para ordenação correta
-      });
+      // Data corrigida é gerada dentro do addBet na store agora
+      addBet(payload); 
     }
 
     onClose();
@@ -232,10 +222,8 @@ const NewBetModal: React.FC<NewBetModalProps> = ({
   const inputStyle =
     'w-full bg-slate-950 border border-slate-700 text-slate-200 rounded-xl px-4 py-3 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/30 outline-none transition-all placeholder:text-slate-600 disabled:opacity-50 disabled:cursor-not-allowed';
 
-  // Ligas que o usuário ativou
   const myActiveLeagues = globalLeagues.filter(l => userLeagues.includes(l.id));
 
-  // Opções de Status (Com seu ajuste de Reembolso)
   const statusOptions = [
     { id: 'pending', label: 'Pendente', icon: Clock, color: 'bg-slate-700 text-slate-200', activeRing: 'ring-slate-500' },
     { id: 'won', label: 'Green', icon: CheckCircle2, color: 'bg-emerald-500 text-black', activeRing: 'ring-emerald-400' },
@@ -263,7 +251,6 @@ const NewBetModal: React.FC<NewBetModalProps> = ({
             onClick={(e) => e.stopPropagation()}
             className="bg-gradient-to-b from-slate-900 to-slate-950 border border-slate-800 w-full max-w-3xl rounded-3xl shadow-2xl my-8 flex flex-col"
           >
-            {/* HEADER */}
             <div className="px-6 py-5 border-b border-slate-800 flex justify-between items-center sticky top-0 bg-slate-900/95 backdrop-blur z-10 rounded-t-3xl">
               <div>
                 <h2 className="text-xl md:text-2xl font-black text-white tracking-tight flex items-center gap-2">
@@ -294,7 +281,6 @@ const NewBetModal: React.FC<NewBetModalProps> = ({
                 </motion.div>
               )}
 
-              {/* SELETOR DE STATUS VISUAL */}
               <div className="space-y-3">
                 <label className="text-xs uppercase text-slate-500 font-bold tracking-wider ml-1">
                   Status da Aposta
@@ -318,7 +304,6 @@ const NewBetModal: React.FC<NewBetModalProps> = ({
                 </div>
               </div>
 
-              {/* BOTÃO TOGGLE (MANUAL vs INTELIGENTE) */}
               {!betToEdit && myActiveLeagues.length > 0 && (
                 <div className="flex justify-end">
                    <button 
@@ -332,104 +317,99 @@ const NewBetModal: React.FC<NewBetModalProps> = ({
                 </div>
               )}
 
-              {/* ÁREA DE INPUTS PRINCIPAIS */}
               <div className="grid grid-cols-1 md:grid-cols-12 gap-5">
                 
-                {/* BLOCO 1: Esporte & Evento (HÍBRIDO) */}
                 <div className="md:col-span-12 grid grid-cols-1 md:grid-cols-12 gap-5 p-5 bg-slate-900/50 rounded-2xl border border-slate-800/50">
                    
-                   {/* SELEÇÃO DE LIGA */}
                    <div className="md:col-span-4 space-y-2">
-                      <label className="text-xs uppercase text-slate-500 font-semibold tracking-wider ml-1 flex items-center gap-1">
-                        <Trophy size={12} /> Liga / Competição
-                      </label>
-                      
-                      {!isManualMode && myActiveLeagues.length > 0 ? (
-                        <select
-                          value={selectedLeagueId}
-                          onChange={(e) => {
-                             const val = e.target.value;
-                             if (val === 'manual') setIsManualMode(true);
-                             else setSelectedLeagueId(val);
-                          }}
+                     <label className="text-xs uppercase text-slate-500 font-semibold tracking-wider ml-1 flex items-center gap-1">
+                       <Trophy size={12} /> Liga / Competição
+                     </label>
+                     
+                     {!isManualMode && myActiveLeagues.length > 0 ? (
+                       <select
+                         value={selectedLeagueId}
+                         onChange={(e) => {
+                            const val = e.target.value;
+                            if (val === 'manual') setIsManualMode(true);
+                            else setSelectedLeagueId(val);
+                         }}
+                         className={inputStyle}
+                       >
+                         <option value="">Selecione...</option>
+                         {myActiveLeagues.map(l => (
+                           <option key={l.id} value={l.id}>{l.name} ({l.country})</option>
+                         ))}
+                         <option value="manual" className="font-bold text-emerald-400">+ Digitar Manualmente</option>
+                       </select>
+                     ) : (
+                       <select
+                          value={formData.sport}
+                          onChange={(e) => setFormData({ ...formData, sport: e.target.value })}
                           className={inputStyle}
-                        >
-                          <option value="">Selecione...</option>
-                          {myActiveLeagues.map(l => (
-                            <option key={l.id} value={l.id}>{l.name} ({l.country})</option>
-                          ))}
-                          <option value="manual" className="font-bold text-emerald-400">+ Digitar Manualmente</option>
-                        </select>
-                      ) : (
-                        <select
-                           value={formData.sport}
-                           onChange={(e) => setFormData({ ...formData, sport: e.target.value })}
-                           className={inputStyle}
-                        >
-                           <option>Futebol</option>
-                           <option>Basquete</option>
-                           <option>Tênis</option>
-                           <option>eSports</option>
-                           <option>MMA</option>
-                           <option>Vôlei</option>
-                           <option>Outros</option>
-                        </select>
-                      )}
+                       >
+                          <option>Futebol</option>
+                          <option>Basquete</option>
+                          <option>Tênis</option>
+                          <option>eSports</option>
+                          <option>MMA</option>
+                          <option>Vôlei</option>
+                          <option>Outros</option>
+                       </select>
+                     )}
                    </div>
 
-                   {/* SELEÇÃO DE EVENTO (TIMES vs MANUAL) */}
                    <div className="md:col-span-8 space-y-2">
-                      <label className="text-xs uppercase text-slate-500 font-semibold tracking-wider ml-1 flex items-center gap-1">
-                        <Shield size={12} /> Evento
-                      </label>
+                     <label className="text-xs uppercase text-slate-500 font-semibold tracking-wider ml-1 flex items-center gap-1">
+                       <Shield size={12} /> Evento
+                     </label>
 
-                      {!isManualMode && selectedLeagueId && selectedLeagueId !== 'manual' ? (
-                         <div className="flex flex-col md:flex-row gap-2 items-center">
-                            <div className="flex-1 w-full">
-                               <select 
-                                 value={selectedHomeTeam}
-                                 onChange={(e) => setSelectedHomeTeam(e.target.value)}
-                                 className={`${inputStyle} text-sm`}
-                                 disabled={isLoadingTeams}
-                               >
-                                  <option value="">Time da Casa</option>
-                                  {currentLeagueTeams.map(t => (
-                                    <option key={t.id} value={t.id} className={userTeams.includes(t.id) ? 'font-bold text-emerald-400' : ''}>
-                                       {t.name} {userTeams.includes(t.id) ? '★' : ''}
-                                    </option>
-                                  ))}
-                               </select>
-                            </div>
-                            <span className="text-slate-600 font-black text-xs">VS</span>
-                            <div className="flex-1 w-full">
-                               <select 
-                                 value={selectedAwayTeam}
-                                 onChange={(e) => setSelectedAwayTeam(e.target.value)}
-                                 className={`${inputStyle} text-sm`}
-                                 disabled={isLoadingTeams}
-                               >
-                                  <option value="">Time Visitante</option>
-                                  {currentLeagueTeams.map(t => (
-                                    <option key={t.id} value={t.id} className={userTeams.includes(t.id) ? 'font-bold text-emerald-400' : ''}>
-                                       {t.name} {userTeams.includes(t.id) ? '★' : ''}
-                                    </option>
-                                  ))}
-                               </select>
-                            </div>
-                         </div>
-                      ) : (
-                        <input
-                          type="text"
-                          value={formData.event}
-                          onChange={(e) => setFormData({ ...formData, event: e.target.value })}
-                          placeholder="Ex: Flamengo vs Palmeiras"
-                          className={inputStyle}
-                        />
-                      )}
+                     {!isManualMode && selectedLeagueId && selectedLeagueId !== 'manual' ? (
+                        <div className="flex flex-col md:flex-row gap-2 items-center">
+                           <div className="flex-1 w-full">
+                              <select 
+                                value={selectedHomeTeam}
+                                onChange={(e) => setSelectedHomeTeam(e.target.value)}
+                                className={`${inputStyle} text-sm`}
+                                disabled={isLoadingTeams}
+                              >
+                                <option value="">Time da Casa</option>
+                                {currentLeagueTeams.map(t => (
+                                  <option key={t.id} value={t.id} className={userTeams.includes(t.id) ? 'font-bold text-emerald-400' : ''}>
+                                     {t.name} {userTeams.includes(t.id) ? '★' : ''}
+                                  </option>
+                                ))}
+                              </select>
+                           </div>
+                           <span className="text-slate-600 font-black text-xs">VS</span>
+                           <div className="flex-1 w-full">
+                              <select 
+                                value={selectedAwayTeam}
+                                onChange={(e) => setSelectedAwayTeam(e.target.value)}
+                                className={`${inputStyle} text-sm`}
+                                disabled={isLoadingTeams}
+                              >
+                                <option value="">Time Visitante</option>
+                                {currentLeagueTeams.map(t => (
+                                  <option key={t.id} value={t.id} className={userTeams.includes(t.id) ? 'font-bold text-emerald-400' : ''}>
+                                     {t.name} {userTeams.includes(t.id) ? '★' : ''}
+                                  </option>
+                                ))}
+                              </select>
+                           </div>
+                        </div>
+                     ) : (
+                       <input
+                         type="text"
+                         value={formData.event}
+                         onChange={(e) => setFormData({ ...formData, event: e.target.value })}
+                         placeholder="Ex: Flamengo vs Palmeiras"
+                         className={inputStyle}
+                       />
+                     )}
                    </div>
                 </div>
 
-                {/* BLOCO 2: Mercado & Seleção */}
                 <div className="md:col-span-6 space-y-2">
                   <label className="text-xs uppercase text-slate-500 font-semibold tracking-wider ml-1">Mercado</label>
                   <select
@@ -444,7 +424,6 @@ const NewBetModal: React.FC<NewBetModalProps> = ({
                     <option value="__custom">Outro (Digitar Manualmente)</option>
                   </select>
                   
-                  {/* INPUT MANUAL CONDICIONAL */}
                   {formData.market === '__custom' && (
                     <motion.div
                       initial={{ opacity: 0, height: 0 }}
@@ -474,7 +453,6 @@ const NewBetModal: React.FC<NewBetModalProps> = ({
                   />
                 </div>
 
-                {/* BLOCO 3: Metadados (Método, Estratégia) */}
                 <div className="md:col-span-6 space-y-2">
                   <label className="text-xs uppercase text-slate-500 font-semibold tracking-wider ml-1">Método</label>
                   <select
@@ -489,6 +467,7 @@ const NewBetModal: React.FC<NewBetModalProps> = ({
                   </select>
                 </div>
 
+                {/* ✅ DROPWDOWN DE ESTRATÉGIAS IMPORTADAS */}
                 <div className="md:col-span-6 space-y-2">
                   <label className="text-xs uppercase text-slate-500 font-semibold tracking-wider ml-1">Estratégia</label>
                   <select
@@ -503,7 +482,6 @@ const NewBetModal: React.FC<NewBetModalProps> = ({
                   </select>
                 </div>
 
-                {/* BLOCO 4: Valores e Cashout */}
                 <div className="md:col-span-12 border-t border-slate-800/50 pt-4 mt-2">
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4 items-end">
                       
@@ -536,7 +514,6 @@ const NewBetModal: React.FC<NewBetModalProps> = ({
                         />
                       </div>
 
-                      {/* CAMPO DE CASHOUT (DINÂMICO) */}
                       {formData.status === 'cashout' && (
                         <motion.div 
                           initial={{ opacity: 0, x: -10 }}
@@ -563,7 +540,6 @@ const NewBetModal: React.FC<NewBetModalProps> = ({
 
               </div>
 
-              {/* CARD DE RESULTADO EM TEMPO REAL */}
               <div className="bg-slate-950 border border-slate-800 rounded-2xl p-6 flex justify-between items-center shadow-inner relative overflow-hidden">
                 <div className="absolute top-0 left-0 w-1 h-full bg-gradient-to-b from-slate-700 to-slate-900"></div>
                 
