@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useBetStore } from '../store/useBetStore';
 import { Shield, Check, Loader2, ChevronDown, Trophy, CheckSquare, Square } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 
 const ManageTeams = () => {
   const { 
@@ -14,28 +14,32 @@ const ManageTeams = () => {
     isLoadingTeams 
   } = useBetStore();
 
-  // Garante que são arrays para evitar o erro "map is not a function"
+  // Blindagem de Dados (Safety Checks)
   const safeGlobalLeagues = Array.isArray(globalLeagues) ? globalLeagues : [];
   const safeUserLeagues = Array.isArray(userLeagues) ? userLeagues : [];
   const safeCurrentTeams = Array.isArray(currentLeagueTeams) ? currentLeagueTeams : [];
   const safeUserTeams = Array.isArray(userTeams) ? userTeams : [];
 
+  // Filtra apenas as ligas que o usuário ativou
   const myActiveLeagues = safeGlobalLeagues.filter(l => safeUserLeagues.includes(l.id));
+  
   const [selectedLeagueId, setSelectedLeagueId] = useState<string>('');
 
+  // Efeito para selecionar a primeira liga automaticamente ao carregar
   useEffect(() => {
     if (myActiveLeagues.length > 0 && !selectedLeagueId) {
       setSelectedLeagueId(myActiveLeagues[0].id);
     }
-  }, [safeUserLeagues.length, safeGlobalLeagues.length]); // Dependências primitivas para evitar loop
+  }, [safeUserLeagues.length, safeGlobalLeagues.length]);
 
+  // Efeito para buscar times quando a liga muda
   useEffect(() => {
     if (selectedLeagueId) {
       fetchLeagueTeams(selectedLeagueId);
     }
   }, [selectedLeagueId]);
 
-  // Lógica de Seleção em Massa
+  // Ações em Massa
   const handleSelectAll = async () => {
     const toSelect = safeCurrentTeams.filter(t => !safeUserTeams.includes(t.id));
     for (const team of toSelect) {
@@ -111,7 +115,7 @@ const ManageTeams = () => {
         )}
       </div>
 
-      {/* GRID DE TIMES */}
+      {/* GRID DE TIMES - SEM ANIMATE PRESENCE PARA EVITAR CRASH */}
       <div className="min-h-[300px]">
         {myActiveLeagues.length === 0 ? (
           <div className="text-center py-20 bg-white dark:bg-slate-900 rounded-2xl border border-dashed border-slate-200 dark:border-slate-800">
@@ -123,44 +127,40 @@ const ManageTeams = () => {
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-            <AnimatePresence>
-              {safeCurrentTeams.length > 0 ? (
-                safeCurrentTeams.map(team => {
-                  const isActive = safeUserTeams.includes(team.id);
-                  return (
-                    <motion.div
-                      key={team.id}
-                      initial={{ opacity: 0, scale: 0.95 }}
-                      animate={{ opacity: 1, scale: 1 }}
-                      onClick={() => toggleUserTeam(team.id)}
-                      className={`
-                        relative overflow-hidden cursor-pointer group rounded-xl border p-4 transition-all duration-200 flex justify-between items-center
-                        ${isActive 
-                          ? 'bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-500/30 shadow-md ring-1 ring-blue-500/20' 
-                          : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 hover:border-blue-300 dark:hover:border-slate-600 hover:shadow-sm'}
-                      `}
-                    >
-                      <span className={`font-semibold text-sm transition-colors ${isActive ? 'text-blue-700 dark:text-blue-300' : 'text-slate-600 dark:text-slate-400 group-hover:text-slate-900 dark:group-hover:text-slate-200'}`}>
-                        {team.name}
-                      </span>
-                      
-                      <div className={`
-                        w-6 h-6 rounded-full flex items-center justify-center transition-all duration-300 flex-shrink-0
-                        ${isActive 
-                          ? 'bg-blue-500 text-white scale-100 shadow-sm' 
-                          : 'bg-slate-100 dark:bg-slate-800 text-slate-300 dark:text-slate-600 scale-90 group-hover:scale-100'}
-                      `}>
-                        {isActive && <Check size={14} />}
-                      </div>
-                    </motion.div>
-                  );
-                })
-              ) : (
-                <div className="col-span-full text-center py-12 text-slate-500">
-                  <p>Nenhum time encontrado nesta liga.</p>
-                </div>
-              )}
-            </AnimatePresence>
+            {safeCurrentTeams.length > 0 ? (
+              safeCurrentTeams.map(team => {
+                const isActive = safeUserTeams.includes(team.id);
+                return (
+                  <div
+                    key={team.id}
+                    onClick={() => toggleUserTeam(team.id)}
+                    className={`
+                      relative overflow-hidden cursor-pointer group rounded-xl border p-4 transition-all duration-200 flex justify-between items-center
+                      ${isActive 
+                        ? 'bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-500/30 shadow-md ring-1 ring-blue-500/20' 
+                        : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 hover:border-blue-300 dark:hover:border-slate-600 hover:shadow-sm'}
+                    `}
+                  >
+                    <span className={`font-semibold text-sm transition-colors ${isActive ? 'text-blue-700 dark:text-blue-300' : 'text-slate-600 dark:text-slate-400 group-hover:text-slate-900 dark:group-hover:text-slate-200'}`}>
+                      {team.name}
+                    </span>
+                    
+                    <div className={`
+                      w-6 h-6 rounded-full flex items-center justify-center transition-all duration-300 flex-shrink-0
+                      ${isActive 
+                        ? 'bg-blue-500 text-white scale-100 shadow-sm' 
+                        : 'bg-slate-100 dark:bg-slate-800 text-slate-300 dark:text-slate-600 scale-90 group-hover:scale-100'}
+                    `}>
+                      {isActive && <Check size={14} />}
+                    </div>
+                  </div>
+                );
+              })
+            ) : (
+              <div className="col-span-full text-center py-12 text-slate-500">
+                <p>Nenhum time encontrado nesta liga.</p>
+              </div>
+            )}
           </div>
         )}
       </div>
