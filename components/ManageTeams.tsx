@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useBetStore } from '../store/useBetStore';
 import { Shield, Check, Loader2, ChevronDown, Trophy, CheckSquare, Square } from 'lucide-react';
-import { motion } from 'framer-motion';
+
+// REMOVIDO: imports do framer-motion para evitar o erro "TypeError: a is not a function" em produção
+// O componente agora usa CSS padrão para transições, o que é mais estável para listas grandes.
 
 const ManageTeams = () => {
   const { 
@@ -14,25 +16,25 @@ const ManageTeams = () => {
     isLoadingTeams 
   } = useBetStore();
 
-  // Blindagem de Dados (Safety Checks)
+  // Blindagem de Dados: Garante que sempre tenhamos arrays, mesmo se a API falhar
   const safeGlobalLeagues = Array.isArray(globalLeagues) ? globalLeagues : [];
   const safeUserLeagues = Array.isArray(userLeagues) ? userLeagues : [];
   const safeCurrentTeams = Array.isArray(currentLeagueTeams) ? currentLeagueTeams : [];
   const safeUserTeams = Array.isArray(userTeams) ? userTeams : [];
 
-  // Filtra apenas as ligas que o usuário ativou
+  // Filtra apenas as ligas ativas
   const myActiveLeagues = safeGlobalLeagues.filter(l => safeUserLeagues.includes(l.id));
   
   const [selectedLeagueId, setSelectedLeagueId] = useState<string>('');
 
-  // Efeito para selecionar a primeira liga automaticamente ao carregar
+  // Seleção automática da primeira liga
   useEffect(() => {
     if (myActiveLeagues.length > 0 && !selectedLeagueId) {
       setSelectedLeagueId(myActiveLeagues[0].id);
     }
   }, [safeUserLeagues.length, safeGlobalLeagues.length]);
 
-  // Efeito para buscar times quando a liga muda
+  // Busca times ao mudar a liga
   useEffect(() => {
     if (selectedLeagueId) {
       fetchLeagueTeams(selectedLeagueId);
@@ -42,16 +44,13 @@ const ManageTeams = () => {
   // Ações em Massa
   const handleSelectAll = async () => {
     const toSelect = safeCurrentTeams.filter(t => !safeUserTeams.includes(t.id));
-    for (const team of toSelect) {
-      await toggleUserTeam(team.id);
-    }
+    // Otimização: Promise.all para não travar a UI
+    await Promise.all(toSelect.map(team => toggleUserTeam(team.id)));
   };
 
   const handleDeselectAll = async () => {
     const toDeselect = safeCurrentTeams.filter(t => safeUserTeams.includes(t.id));
-    for (const team of toDeselect) {
-      await toggleUserTeam(team.id);
-    }
+    await Promise.all(toDeselect.map(team => toggleUserTeam(team.id)));
   };
 
   return (
@@ -115,7 +114,7 @@ const ManageTeams = () => {
         )}
       </div>
 
-      {/* GRID DE TIMES - SEM ANIMATE PRESENCE PARA EVITAR CRASH */}
+      {/* GRID DE TIMES */}
       <div className="min-h-[300px]">
         {myActiveLeagues.length === 0 ? (
           <div className="text-center py-20 bg-white dark:bg-slate-900 rounded-2xl border border-dashed border-slate-200 dark:border-slate-800">
@@ -135,7 +134,7 @@ const ManageTeams = () => {
                     key={team.id}
                     onClick={() => toggleUserTeam(team.id)}
                     className={`
-                      relative overflow-hidden cursor-pointer group rounded-xl border p-4 transition-all duration-200 flex justify-between items-center
+                      relative overflow-hidden cursor-pointer group rounded-xl border p-4 transition-all duration-200 flex justify-between items-center select-none
                       ${isActive 
                         ? 'bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-500/30 shadow-md ring-1 ring-blue-500/20' 
                         : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 hover:border-blue-300 dark:hover:border-slate-600 hover:shadow-sm'}
