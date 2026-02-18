@@ -838,7 +838,7 @@ toggleUserTeam: async (teamId: string) => {
         // mas mantém os números do horário local (ex: 23:00 local vira 23:00 UTC no banco).
         // Isso garante que no calendário/histórico apareça no dia certo.
         const date = new Date();
-        const localIsoString = new Date(date.getTime() - (date.getTimezoneOffset() * 60000)).toISOString();
+        const localIsoString = new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString();
 
         const betToInsert = {
           ...cleanBetData,
