@@ -1,37 +1,37 @@
 import React, { useState } from 'react';
-import { useBetStore } from '../store/useBetStore';
-import { Trash2, Save, AlertTriangle, PaintBucket, Coins, Layers, User, Image as ImageIcon, CheckCircle, PieChart, Hash } from 'lucide-react';
+import { useBetStore, supabase } from '../store/useBetStore'; // Importe supabase aqui
+import { Trash2, Save, AlertTriangle, PaintBucket, Coins, Layers, User, Image as ImageIcon, CheckCircle, PieChart, Hash, Skull } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 const Settings: React.FC = () => {
   const { 
-  methods, addMethod, removeMethod,
-  customMarkets, addCustomMarket, removeCustomMarket,
-  customStrategies, addCustomStrategy, removeCustomStrategy,
-  primaryColor, setPrimaryColor, 
-  currency, setCurrency, resetData, 
-  user, updateProfile,
-  displayMode, setDisplayMode, unitSize, setUnitSize 
+    methods, addMethod, removeMethod,
+    customMarkets, addCustomMarket, removeCustomMarket,
+    customStrategies, addCustomStrategy, removeCustomStrategy,
+    primaryColor, setPrimaryColor, 
+    currency, setCurrency, resetData, 
+    user, updateProfile, logout,
+    displayMode, setDisplayMode, unitSize, setUnitSize 
 } = useBetStore();
 
   const [newMethodName, setNewMethodName] = useState('');
   const [newMarketName, setNewMarketName] = useState('');
-const [newStrategyName, setNewStrategyName] = useState('');
+  const [newStrategyName, setNewStrategyName] = useState('');
   const [showSavedToast, setShowSavedToast] = useState(false);
   const [profileName, setProfileName] = useState('');
-const [profileAvatar, setProfileAvatar] = useState('');
-const [tempUnitSize, setTempUnitSize] = useState('100');
+  const [profileAvatar, setProfileAvatar] = useState('');
+  const [tempUnitSize, setTempUnitSize] = useState('100');
 
-React.useEffect(() => {
-  if (user) {
-    setProfileName(user.name || '');
-    setProfileAvatar(user.avatar || '');
-  }
-}, [user]);
+  React.useEffect(() => {
+    if (user) {
+      setProfileName(user.name || '');
+      setProfileAvatar(user.avatar || '');
+    }
+  }, [user]);
 
-React.useEffect(() => {
-  setTempUnitSize(unitSize.toString());
-}, [unitSize]);
+  React.useEffect(() => {
+    setTempUnitSize(unitSize.toString());
+  }, [unitSize]);
   
   const handleAddMethod = () => {
     if (newMethodName.trim()) {
@@ -41,22 +41,44 @@ React.useEffect(() => {
   };
 
   const handleUpdateProfile = async (e: React.FormEvent) => {
-  e.preventDefault();
+    e.preventDefault();
 
-  updateProfile({ name: profileName, avatar: profileAvatar });
+    updateProfile({ name: profileName, avatar: profileAvatar });
 
-  const parsed = parseFloat(tempUnitSize);
+    const parsed = parseFloat(tempUnitSize);
 
-  if (!parsed || parsed <= 0) {
-    setTempUnitSize(unitSize.toString());
-    return;
-  }
+    if (!parsed || parsed <= 0) {
+      setTempUnitSize(unitSize.toString());
+      return;
+    }
 
-  await setUnitSize(parsed);
+    await setUnitSize(parsed);
 
-  setShowSavedToast(true);
-  setTimeout(() => setShowSavedToast(false), 3000);
-};
+    setShowSavedToast(true);
+    setTimeout(() => setShowSavedToast(false), 3000);
+  };
+
+  const handleDeleteAccount = async () => {
+    const confirmed = window.confirm(
+        "ATENÇÃO CRÍTICA:\n\nEsta ação excluirá PERMANENTEMENTE sua conta, todas as suas apostas, bancas e histórico.\n\nNão há como desfazer. Tem certeza absoluta?"
+    );
+
+    if (confirmed) {
+        try {
+            // Chama a função RPC segura do banco de dados
+            const { error } = await supabase.rpc('delete_own_user');
+            
+            if (error) throw error;
+            
+            // Limpa dados locais e desloga
+            resetData();
+            logout();
+            window.location.href = '/'; // Força recarregamento na home
+        } catch (error: any) {
+            alert("Erro ao deletar conta: " + error.message);
+        }
+    }
+  };
 
   return (
     <div className="space-y-10 max-w-6xl mx-auto pb-20 w-full overflow-x-hidden">
@@ -131,14 +153,14 @@ React.useEffect(() => {
                                  <div className="flex-1">
                                      <label className="block text-[10px] font-bold text-slate-400 mb-1">Valor de 1 Unidade ({currency})</label>
                                      <div className="relative">
-                                        <Hash size={14} className="absolute left-3 top-3.5 text-slate-400" />
-                                        <input 
-                                            type="number" 
-                                            value={tempUnitSize} 
-                                            onChange={(e) => setTempUnitSize(e.target.value)} 
-                                            className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl pl-9 pr-4 py-3 font-mono font-bold text-emerald-600 dark:text-emerald-500 outline-none focus:ring-1 focus:ring-emerald-500" 
-                                        />
-                                     </div>
+                                         <Hash size={14} className="absolute left-3 top-3.5 text-slate-400" />
+                                         <input 
+                                             type="number" 
+                                             value={tempUnitSize} 
+                                             onChange={(e) => setTempUnitSize(e.target.value)} 
+                                             className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl pl-9 pr-4 py-3 font-mono font-bold text-emerald-600 dark:text-emerald-500 outline-none focus:ring-1 focus:ring-emerald-500" 
+                                         />
+                                      </div>
                                  </div>
                                  <div className="flex-1">
                                      <label className="block text-[10px] font-bold text-slate-400 mb-1">Modo de Exibição</label>
@@ -383,19 +405,27 @@ React.useEffect(() => {
             {/* Danger Zone */}
             <section className="bg-red-50 dark:bg-red-500/5 rounded-[2.5rem] p-6 md:p-10 border border-red-100 dark:border-red-500/10 lg:col-span-2 flex flex-col md:flex-row justify-between items-center gap-10 shadow-sm">
                 <div className="flex items-center gap-6 text-center md:text-left">
-                    <div className="p-5 bg-red-100 dark:bg-red-500/10 rounded-3xl text-red-600 dark:text-red-500 shadow-lg"><AlertTriangle size={36} /></div>
+                    <div className="p-5 bg-red-100 dark:bg-red-500/10 rounded-3xl text-red-600 dark:text-red-500 shadow-lg"><Skull size={36} /></div>
                     <div>
-                        <h3 className="text-2xl font-black text-slate-900 dark:text-white uppercase tracking-tighter italic">Nível de Segurança: Crítico</h3>
-                        <p className="text-red-600/80 dark:text-red-500/60 text-sm font-bold uppercase tracking-widest mt-1">Apaga permanentemente todo o histórico e bancos de dados.</p>
+                        <h3 className="text-2xl font-black text-slate-900 dark:text-white uppercase tracking-tighter italic">Zona de Perigo</h3>
+                        <p className="text-red-600/80 dark:text-red-500/60 text-sm font-bold uppercase tracking-widest mt-1">Excluir conta e todos os dados permanentemente.</p>
                     </div>
                 </div>
-                <button 
-                    onClick={() => window.confirm('Deseja RESETAR tudo? Esta ação não pode ser desfeita.') && resetData()} 
-                    className="bg-red-600 hover:bg-red-500 text-white px-10 py-5 rounded-2xl font-black text-xs shadow-xl shadow-red-500/20 active:scale-95 transition-all flex items-center gap-3 group w-full md:w-auto justify-center tracking-widest uppercase"
-                >
-                    PURGAR DADOS
-                    <Trash2 size={16} className="group-hover:animate-bounce" />
-                </button>
+                <div className="flex gap-4">
+                  <button 
+                      onClick={() => window.confirm('Deseja apenas LIMPAR os dados (histórico/bancas) mantendo sua conta?') && resetData()} 
+                      className="bg-slate-200 hover:bg-slate-300 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 px-8 py-5 rounded-2xl font-bold text-xs active:scale-95 transition-all flex items-center gap-3 tracking-widest uppercase"
+                  >
+                      Limpar Dados
+                  </button>
+                  <button 
+                      onClick={handleDeleteAccount} 
+                      className="bg-red-600 hover:bg-red-500 text-white px-10 py-5 rounded-2xl font-black text-xs shadow-xl shadow-red-500/20 active:scale-95 transition-all flex items-center gap-3 group justify-center tracking-widest uppercase"
+                  >
+                      EXCLUIR CONTA
+                      <Trash2 size={16} className="group-hover:animate-bounce" />
+                  </button>
+                </div>
             </section>
         </div>
 
@@ -404,7 +434,7 @@ React.useEffect(() => {
 </div>
         
         <footer className="pt-10 text-center">
-             <p className="text-[10px] text-slate-400 dark:text-slate-700 font-black uppercase tracking-[0.5em]">BetTracker Cloud Ecosystem • Build 4.6.0</p>
+             <p className="text-[10px] text-slate-400 dark:text-slate-700 font-black uppercase tracking-[0.5em]">BetTracker Cloud Ecosystem • Build 4.7.0</p>
         </footer>
     </div>
   );
