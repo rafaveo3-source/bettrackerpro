@@ -49,6 +49,7 @@ export interface Team {
   league_id: string;
 }
 
+// Interface para Mercados Globais
 export interface GlobalMarket {
   id: string;
   category: string;
@@ -56,14 +57,14 @@ export interface GlobalMarket {
   name: string;
 }
 
-// 🔥 NOVA INTERFACE PARA MÉTODOS DO SISTEMA
+// 🔥 Interface Atualizada para Métodos do Sistema
 export interface SystemMethod {
   id: string;
   name: string;
   market: string;
   type: string;
   risk: string;
-  description?: string;
+  description?: string; // ✅ Campo adicionado
   roi_history: { last_30: number; last_90: number; all_time: number };
 }
 
@@ -154,7 +155,7 @@ interface BetState {
   globalMarkets: GlobalMarket[];
   isLoadingMarkets: boolean;
 
-  // 🔥 SYSTEM METHOD STATES
+  // SYSTEM METHOD STATES
   globalSystemMethods: SystemMethod[];
   isLoadingSystemMethods: boolean;
 
@@ -200,7 +201,7 @@ interface BetState {
   fetchGlobalMarkets: () => Promise<void>;
   toggleUserMarket: (market: GlobalMarket) => Promise<void>;
 
-  // 🔥 System Methods Actions
+  // System Methods Actions
   fetchSystemMethods: () => Promise<void>;
   importSystemMethod: (methodId: string) => Promise<boolean>;
 
@@ -213,7 +214,7 @@ interface BetState {
   addTransaction: (transaction: Omit<Transaction, 'id' | 'bankrollId'>) => Promise<void>;
   removeTransaction: (id: string) => Promise<void>;
   addMethod: (name: string) => Promise<void>;
-  removeMethod: (id: string) => void;
+  removeMethod: (id: string) => Promise<void>; // ✅ Agora retorna Promise<void>
 
   addCustomMarket: (name: string) => Promise<void>;
   removeCustomMarket: (id: string) => Promise<void>;
@@ -247,6 +248,9 @@ interface BetState {
     volatility: number;
     profitFactor: number;
   };
+
+  // 🔥 NOVA FUNÇÃO: ROI Real por Método
+  getMethodRealStats: (methodName: string) => { roi30d: number; roiTotal: number; count: number };
   
   // Mindset Analytics
   getMindsetAnalytics: () => {
@@ -322,13 +326,12 @@ export const useBetStore = create<BetState>()(
           const userId = session.user.id;
 
           // 1. CARREGAR BETS
-          const { data: betsData, error: betsError } = await supabase
+          const { data: betsData } = await supabase
             .from('bets')
             .select('*')
             .eq('user_id', userId);
 
-          if (betsError) console.error("Erro ao carregar bets:", betsError.message);
-          else if (betsData) {
+          if (betsData) {
             const formattedBets = betsData.map((bet: any) => ({
               ...bet,
               bankrollId: bet.bankroll_id,
@@ -664,7 +667,6 @@ export const useBetStore = create<BetState>()(
           if (!user) return;
 
           if (exists) {
-            // Remover
             const newMarkets = customMarkets.filter(m => m.name !== market.name);
             set({ customMarkets: newMarkets }); 
 
@@ -674,7 +676,6 @@ export const useBetStore = create<BetState>()(
               .eq('user_id', user.id)
               .eq('name', market.name);
           } else {
-            // Adicionar
             const newMarket = { id: crypto.randomUUID(), name: market.name }; 
             set({ customMarkets: [...customMarkets, newMarket] }); 
 
@@ -712,7 +713,6 @@ export const useBetStore = create<BetState>()(
         const user = get().user;
         if (!user) return false;
 
-        // 1. Busca os dados do método global
         const { data, error } = await supabase
           .from('system_methods')
           .select('*')
@@ -724,7 +724,6 @@ export const useBetStore = create<BetState>()(
           return false;
         }
 
-        // 2. Verifica se o usuário já possui este método
         const { data: existing } = await supabase
             .from('methods')
             .select('id')
@@ -737,7 +736,6 @@ export const useBetStore = create<BetState>()(
              return false;
         }
 
-        // 3. Insere
         const { data: newMethod, error: insertError } = await supabase
           .from('methods')
           .insert({
@@ -1135,10 +1133,27 @@ export const useBetStore = create<BetState>()(
         }
       },
 
-      removeMethod: (id) => {
+      // ✅ CORREÇÃO 1: REMOVE DO BANCO DE DADOS E DA STORE
+      removeMethod: async (id) => {
+        const user = get().user;
+        if (!user) return;
+
+        // 1. Atualização Otimista
         set((state) => ({
           methods: state.methods.filter(m => m.id !== id)
         }));
+
+        // 2. Remove do Banco
+        const { error } = await supabase
+          .from('methods')
+          .delete()
+          .eq('id', id)
+          .eq('user_id', user.id);
+
+        if (error) {
+          console.error("Erro ao remover método do banco:", error.message);
+          // Opcional: toast de erro aqui
+        }
       },
 
       addCustomMarket: async (name) => {
@@ -1552,7 +1567,6 @@ export const useBetStore = create<BetState>()(
            return false;
         }
 
-        // Atualiza estado local
         set((state) => ({
             methods: [newMethod, ...state.methods]
         }));
@@ -1672,6 +1686,40 @@ export const useBetStore = create<BetState>()(
           volatility,
           profitFactor
         };
+      },
+
+      // ✅ NOVA FUNÇÃO: ROI REAL POR MÉTODO
+      getMethodRealStats: (methodName: string) => {
+        const { history } = get();
+        const now = new Date();
+        const thirtyDaysAgo = new Date();
+        thirtyDaysAgo.setDate(now.getDate() - 30);
+
+        // Filtra apostas que usaram esse método (pelo nome)
+        // Ignora apostas pendentes, anuladas ou devolvidas
+        const methodBets = history.filter(b => 
+          b.method === methodName && 
+          b.status !== 'pending' && 
+          b.status !== 'void' && 
+          b.status !== 'refunded'
+        );
+
+        if (methodBets.length === 0) {
+          return { roi30d: 0, roiTotal: 0, count: 0 };
+        }
+
+        // --- CÁLCULO TOTAL ---
+        const totalProfit = methodBets.reduce((acc, b) => acc + b.profit, 0);
+        const totalStake = methodBets.reduce((acc, b) => acc + b.stake, 0);
+        const roiTotal = totalStake > 0 ? (totalProfit / totalStake) * 100 : 0;
+
+        // --- CÁLCULO 30 DIAS ---
+        const last30Bets = methodBets.filter(b => new Date(b.date) >= thirtyDaysAgo);
+        const profit30 = last30Bets.reduce((acc, b) => acc + b.profit, 0);
+        const stake30 = last30Bets.reduce((acc, b) => acc + b.stake, 0);
+        const roi30d = stake30 > 0 ? (profit30 / stake30) * 100 : 0;
+
+        return { roi30d, roiTotal, count: methodBets.length };
       },
 
       // 🔥 TEAMS MANAGEMENT ACTIONS
