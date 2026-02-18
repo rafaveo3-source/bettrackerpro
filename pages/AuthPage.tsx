@@ -42,8 +42,9 @@ const AuthPage = () => {
     try {
       if (view === 'forgot') {
         // RECUPERAÇÃO DE SENHA
+        // 🔥 AQUI ESTÁ O TRUQUE: Apontamos para a nova rota
         const { error } = await supabase.auth.resetPasswordForEmail(email, {
-            redirectTo: `${window.location.origin}/settings`, // Redireciona para settings para mudar a senha
+            redirectTo: `${window.location.origin}/update-password`, 
         });
         if (error) throw error;
         setSuccessMsg('E-mail de recuperação enviado! Verifique sua caixa de entrada.');

@@ -1,7 +1,7 @@
 import React, { useEffect } from 'react';
 import { BrowserRouter, Routes, Route, useNavigate, useLocation, Navigate } from 'react-router-dom';
 
-// Layout do Sistema (Sidebar + Conteúdo)
+// Layout do Sistema
 import Layout from './layout';
 
 // Páginas do Sistema
@@ -18,23 +18,19 @@ import SystemLibrary from './pages/SystemLibrary';
 
 // Páginas Públicas
 import LandingPage from './pages/LandingPage';
-import AuthPage from './pages/AuthPage'; // Certifique-se de ter criado este arquivo
+import AuthPage from './pages/AuthPage';
+import UpdatePassword from './pages/UpdatePassword';
 
-// Store & Utils
 import { useBetStore, supabase } from './store/useBetStore';
-import { Toaster } from './components/ui/Toaster'; // Importe seu componente de Toast se tiver, ou remova
+import { Toaster } from './components/ui/Toaster';
 
 // ============================================================================
 // COMPONENTE: SYSTEM ROUTES (O Sistema Protegido)
 // ============================================================================
-// Este componente encapsula toda a lógica do Layout com Sidebar e o Adapter
-// de navegação que converte URLs em IDs de menu visual.
 const SystemRoutes: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
 
-  // --- ADAPTADOR DE NAVEGAÇÃO ---
-  // 1. Converte a URL atual para o ID que o Layout espera (para marcar o menu ativo)
   const getCurrentViewID = () => {
     const path = location.pathname;
     if (path.includes('/dashboard')) return 'dashboard';
@@ -50,7 +46,6 @@ const SystemRoutes: React.FC = () => {
     return 'dashboard';
   };
 
-  // 2. Converte o clique do Layout para navegação real
   const handleSetView = (viewId: string) => {
     switch (viewId) {
       case 'dashboard': navigate('/dashboard'); break;
@@ -80,8 +75,6 @@ const SystemRoutes: React.FC = () => {
         <Route path="/calculators" element={<Calculators />} />
         <Route path="/library" element={<SystemLibrary />} />
         <Route path="/settings" element={<Settings />} />
-        
-        {/* Redireciona qualquer rota desconhecida DENTRO do sistema para o dashboard */}
         <Route path="*" element={<Navigate to="/dashboard" replace />} />
       </Routes>
     </Layout>
@@ -89,12 +82,11 @@ const SystemRoutes: React.FC = () => {
 };
 
 // ============================================================================
-// COMPONENTE: APP CONTENT (Lógica de Autenticação e Rotas Principais)
+// COMPONENTE: APP CONTENT
 // ============================================================================
 const AppContent: React.FC = () => {
   const { setSession, isAuthenticated, checkProStatus, isDarkMode } = useBetStore();
 
-  // Controle do Tema
   useEffect(() => {
     if (isDarkMode) {
       document.documentElement.classList.add('dark');
@@ -103,18 +95,22 @@ const AppContent: React.FC = () => {
     }
   }, [isDarkMode]);
 
-  // Controle de Sessão e Status PRO
   useEffect(() => {
-    // 1. Verificar sessão inicial
+    // Check inicial
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
       if (session) {
-        checkProStatus(); // Checa se é PRO ao carregar
+        checkProStatus();
       }
     });
 
-    // 2. Escutar mudanças de auth (login/logout)
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    // Listener de mudanças
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      // O evento PASSWORD_RECOVERY é disparado quando o usuário clica no link do e-mail
+      if (event === 'PASSWORD_RECOVERY') {
+         // O Supabase injeta a sessão automaticamente, não precisamos forçar nada aqui,
+         // apenas garantir que o estado seja atualizado.
+      }
       setSession(session);
       if (session) {
         checkProStatus();
@@ -141,6 +137,16 @@ const AppContent: React.FC = () => {
           element={isAuthenticated ? <Navigate to="/dashboard" replace /> : <AuthPage />} 
         />
 
+        {/* ✅ CORREÇÃO CRÍTICA: Rota de Redefinição de Senha 
+            NÃO pode ser protegida por isAuthenticated ? ... : ... 
+            Pois o usuário chega aqui via link de e-mail (token na URL) e o Supabase
+            ainda está processando a sessão. Se bloquearmos, o token se perde.
+        */}
+        <Route 
+          path="/update-password" 
+          element={<UpdatePassword />} 
+        />
+
         {/* --- ROTAS PROTEGIDAS (SISTEMA) --- */}
         <Route 
           path="/*" 
@@ -148,14 +154,13 @@ const AppContent: React.FC = () => {
             isAuthenticated ? (
               <SystemRoutes />
             ) : (
-              // Se tentar acessar /dashboard sem logar, manda pro Login
+              // Qualquer tentativa de acesso interno sem logar vai pro Login
               <Navigate to="/login" replace />
             )
           } 
         />
       </Routes>
       
-      {/* Toast Global para notificações */}
       <Toaster />
     </>
   );
