@@ -536,9 +536,11 @@ if (kellyNumeric > 10) {
                     </p>
                 </div>
             </div>
-        </div>
-      </div>
-    </div>
+                </div> {/* FIM lg:col-span-1 */}
+
+      </div> {/* FIM GRID PRINCIPAL */}
+
+    </div> {/* FIM CONTAINER PRINCIPAL */}
   );
 };
 
