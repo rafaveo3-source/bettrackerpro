@@ -530,6 +530,35 @@ export const useBetStore = create<BetState>()(
         // ==========================
 // 🔥 TEAM ACTIONS (ADICIONAR AQUI)
 // ==========================
+        const { userLeagues } = get();
+        const isActive = userLeagues.includes(leagueId);
+        
+        // Optimistic Update
+        const newUserLeagues = isActive
+          ? userLeagues.filter(id => id !== leagueId)
+          : [...userLeagues, leagueId];
+        
+        set({ userLeagues: newUserLeagues });
+
+        try {
+          const { data: { user } } = await supabase.auth.getUser();
+          if (!user) return;
+
+          if (isActive) {
+            await supabase
+              .from('user_leagues')
+              .delete()
+              .match({ user_id: user.id, league_id: leagueId });
+          } else {
+            await supabase
+              .from('user_leagues')
+              .insert({ user_id: user.id, league_id: leagueId });
+          }
+        } catch (error) {
+          console.error('Erro ao atualizar liga:', error);
+          set({ userLeagues });
+        }
+      },
 
 fetchLeagueTeams: async (leagueId: string) => {
   set({ isLoadingTeams: true });
@@ -582,38 +611,9 @@ toggleUserTeam: async (teamId: string) => {
     }
   } catch (error) {
     console.error('Erro ao atualizar time:', error);
-    set({ userTeams }); // rollback
+    set({ userTeams });
   }
 },
-        const { userLeagues } = get();
-        const isActive = userLeagues.includes(leagueId);
-        
-        // Optimistic Update
-        const newUserLeagues = isActive
-          ? userLeagues.filter(id => id !== leagueId)
-          : [...userLeagues, leagueId];
-        
-        set({ userLeagues: newUserLeagues });
-
-        try {
-          const { data: { user } } = await supabase.auth.getUser();
-          if (!user) return;
-
-          if (isActive) {
-            await supabase
-              .from('user_leagues')
-              .delete()
-              .match({ user_id: user.id, league_id: leagueId });
-          } else {
-            await supabase
-              .from('user_leagues')
-              .insert({ user_id: user.id, league_id: leagueId });
-          }
-        } catch (error) {
-          console.error('Erro ao atualizar liga:', error);
-          set({ userLeagues });
-        }
-      },
 
       // 🔥 MARKET ACTIONS
       fetchGlobalMarkets: async () => {
