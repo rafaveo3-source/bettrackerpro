@@ -14,14 +14,20 @@ const ManageTeams = () => {
     isLoadingTeams 
   } = useBetStore();
 
-  const myActiveLeagues = globalLeagues.filter(l => userLeagues.includes(l.id));
+  // Garante que são arrays para evitar o erro "map is not a function"
+  const safeGlobalLeagues = Array.isArray(globalLeagues) ? globalLeagues : [];
+  const safeUserLeagues = Array.isArray(userLeagues) ? userLeagues : [];
+  const safeCurrentTeams = Array.isArray(currentLeagueTeams) ? currentLeagueTeams : [];
+  const safeUserTeams = Array.isArray(userTeams) ? userTeams : [];
+
+  const myActiveLeagues = safeGlobalLeagues.filter(l => safeUserLeagues.includes(l.id));
   const [selectedLeagueId, setSelectedLeagueId] = useState<string>('');
 
   useEffect(() => {
     if (myActiveLeagues.length > 0 && !selectedLeagueId) {
       setSelectedLeagueId(myActiveLeagues[0].id);
     }
-  }, [userLeagues, globalLeagues]);
+  }, [safeUserLeagues.length, safeGlobalLeagues.length]); // Dependências primitivas para evitar loop
 
   useEffect(() => {
     if (selectedLeagueId) {
@@ -31,14 +37,14 @@ const ManageTeams = () => {
 
   // Lógica de Seleção em Massa
   const handleSelectAll = async () => {
-    const toSelect = currentLeagueTeams.filter(t => !userTeams.includes(t.id));
+    const toSelect = safeCurrentTeams.filter(t => !safeUserTeams.includes(t.id));
     for (const team of toSelect) {
       await toggleUserTeam(team.id);
     }
   };
 
   const handleDeselectAll = async () => {
-    const toDeselect = currentLeagueTeams.filter(t => userTeams.includes(t.id));
+    const toDeselect = safeCurrentTeams.filter(t => safeUserTeams.includes(t.id));
     for (const team of toDeselect) {
       await toggleUserTeam(team.id);
     }
@@ -118,9 +124,9 @@ const ManageTeams = () => {
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
             <AnimatePresence>
-              {currentLeagueTeams.length > 0 ? (
-                currentLeagueTeams.map(team => {
-                  const isActive = userTeams.includes(team.id);
+              {safeCurrentTeams.length > 0 ? (
+                safeCurrentTeams.map(team => {
+                  const isActive = safeUserTeams.includes(team.id);
                   return (
                     <motion.div
                       key={team.id}
