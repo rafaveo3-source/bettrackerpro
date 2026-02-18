@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { useBetStore, supabase } from '../store/useBetStore'; // Importe supabase aqui
-import { Trash2, Save, AlertTriangle, PaintBucket, Coins, Layers, User, Image as ImageIcon, CheckCircle, PieChart, Hash, Skull } from 'lucide-react';
+import { useBetStore, supabase } from '../store/useBetStore';
+import { Trash2, Save, AlertTriangle, PaintBucket, Coins, Layers, User, Image as ImageIcon, CheckCircle, PieChart, Hash, Skull, Loader2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 const Settings: React.FC = () => {
@@ -21,6 +21,7 @@ const Settings: React.FC = () => {
   const [profileName, setProfileName] = useState('');
   const [profileAvatar, setProfileAvatar] = useState('');
   const [tempUnitSize, setTempUnitSize] = useState('100');
+  const [isResetting, setIsResetting] = useState(false); // Estado de loading para o reset
 
   React.useEffect(() => {
     if (user) {
@@ -58,6 +59,15 @@ const Settings: React.FC = () => {
     setTimeout(() => setShowSavedToast(false), 3000);
   };
 
+  const handleResetData = async () => {
+      const confirmed = window.confirm('TEM CERTEZA? Isso apagará TODO o seu histórico de apostas, bancas e configurações. Sua conta permanecerá ativa, mas vazia.');
+      if (confirmed) {
+          setIsResetting(true);
+          await resetData();
+          setIsResetting(false);
+      }
+  };
+
   const handleDeleteAccount = async () => {
     const confirmed = window.confirm(
         "ATENÇÃO CRÍTICA:\n\nEsta ação excluirá PERMANENTEMENTE sua conta, todas as suas apostas, bancas e histórico.\n\nNão há como desfazer. Tem certeza absoluta?"
@@ -65,15 +75,13 @@ const Settings: React.FC = () => {
 
     if (confirmed) {
         try {
-            // Chama a função RPC segura do banco de dados
             const { error } = await supabase.rpc('delete_own_user');
             
             if (error) throw error;
             
-            // Limpa dados locais e desloga
-            resetData();
-            logout();
-            window.location.href = '/'; // Força recarregamento na home
+            resetData(); // Limpa local
+            logout(); // Desloga
+            window.location.href = '/'; 
         } catch (error: any) {
             alert("Erro ao deletar conta: " + error.message);
         }
@@ -413,10 +421,11 @@ const Settings: React.FC = () => {
                 </div>
                 <div className="flex gap-4">
                   <button 
-                      onClick={() => window.confirm('Deseja apenas LIMPAR os dados (histórico/bancas) mantendo sua conta?') && resetData()} 
-                      className="bg-slate-200 hover:bg-slate-300 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 px-8 py-5 rounded-2xl font-bold text-xs active:scale-95 transition-all flex items-center gap-3 tracking-widest uppercase"
+                      onClick={handleResetData}
+                      disabled={isResetting}
+                      className="bg-slate-200 hover:bg-slate-300 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 px-8 py-5 rounded-2xl font-bold text-xs active:scale-95 transition-all flex items-center gap-3 tracking-widest uppercase disabled:opacity-50"
                   >
-                      Limpar Dados
+                      {isResetting ? <Loader2 className="animate-spin" size={16} /> : "Limpar Dados"}
                   </button>
                   <button 
                       onClick={handleDeleteAccount} 
@@ -434,7 +443,7 @@ const Settings: React.FC = () => {
 </div>
         
         <footer className="pt-10 text-center">
-             <p className="text-[10px] text-slate-400 dark:text-slate-700 font-black uppercase tracking-[0.5em]">BetTracker Cloud Ecosystem • Build 4.7.0</p>
+             <p className="text-[10px] text-slate-400 dark:text-slate-700 font-black uppercase tracking-[0.5em]">BetTracker Cloud Ecosystem • Build 4.8.0</p>
         </footer>
     </div>
   );
