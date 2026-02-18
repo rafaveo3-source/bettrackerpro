@@ -18,7 +18,8 @@ import { useBetStore } from '../store/useBetStore';
 // Importação dos Componentes de Gerenciamento
 import ManageLeagues from '../components/ManageLeagues';
 import ManageTeams from '../components/ManageTeams';
-import ManageMarkets from '../components/ManageMarkets'; // ✅ IMPORTADO
+import ManageMarkets from '../components/ManageMarkets';
+import ManageMethods from '../components/ManageMethods'; // ✅ IMPORTADO
 
 const SystemLibrary: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'leagues' | 'teams' | 'markets' | 'strategies' | 'methods'>('leagues');
@@ -182,14 +183,13 @@ const SystemLibrary: React.FC = () => {
               </motion.div>
             )}
 
-            {/* ✅ ABA: MERCADOS (ATUALIZADA) */}
             {activeTab === 'markets' && (
               <motion.div key="markets" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
                 <ManageMarkets />
               </motion.div>
             )}
 
-            {/* ABA: ESTRATÉGIAS */}
+            {/* ABA: ESTRATÉGIAS (Ainda usa lógica local, pois não criamos ManageStrategies) */}
             {activeTab === 'strategies' && (
               <motion.div key="strategies" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm">
@@ -228,42 +228,10 @@ const SystemLibrary: React.FC = () => {
               </motion.div>
             )}
 
-            {/* ABA: MÉTODOS */}
+            {/* ✅ ABA: MÉTODOS (ATUALIZADA) */}
             {activeTab === 'methods' && (
-              <motion.div key="methods" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm">
-                  <h3 className="text-lg font-black text-slate-800 dark:text-white mb-6 flex items-center gap-2 uppercase tracking-tight">
-                    <CheckCircle2 size={18} className="text-emerald-500" /> Meus Métodos
-                  </h3>
-                  <div className="space-y-2">
-                    {userMethods.length === 0 ? (
-                      <div className="text-center py-8 text-slate-400 text-sm bg-slate-50 dark:bg-slate-950/50 rounded-xl border border-dashed border-slate-200 dark:border-slate-800">
-                        Nenhum método cadastrado
-                      </div>
-                    ) : (
-                      userMethods.map(m => (
-                        <div key={m.id} className="px-4 py-3 bg-slate-50 dark:bg-slate-950 border border-slate-100 dark:border-slate-800 rounded-xl text-sm font-semibold text-slate-700 dark:text-slate-300 flex justify-between items-center">
-                          {m.name}
-                          <div className="w-2 h-2 rounded-full bg-emerald-500"></div>
-                        </div>
-                      ))
-                    )}
-                  </div>
-                </div>
-                <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm">
-                  <h3 className="text-lg font-black text-slate-800 dark:text-white mb-6 flex items-center gap-2 uppercase tracking-tight">
-                    <Globe size={18} className="text-blue-500" /> Métodos Validados
-                  </h3>
-                  <div className="space-y-3 max-h-[500px] overflow-y-auto pr-2 custom-scrollbar">
-                    {loadingGlobal ? <p className="text-slate-500 text-sm">Carregando...</p> : globalMethods.map(m => (
-                      <GlobalItemCard 
-                        key={m.id} item={m} 
-                        isImported={userMethods.some(um => um.name === m.name)}
-                        onImport={() => importSystemMethod(m.id)}
-                      />
-                    ))}
-                  </div>
-                </div>
+              <motion.div key="methods" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+                <ManageMethods />
               </motion.div>
             )}
 
