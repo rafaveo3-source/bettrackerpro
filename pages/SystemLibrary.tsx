@@ -1,63 +1,34 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
-  BookOpen, 
-  Target, 
-  TrendingUp, 
   Globe, 
   Shield, 
-  LayoutGrid,
-  Download,
-  Check,
+  LayoutGrid, 
+  TrendingUp, 
+  Target, 
   CheckCircle2,
-  ChevronDown
+  ChevronDown 
 } from 'lucide-react';
-import { supabase } from '../store/useBetStore';
 import { useBetStore } from '../store/useBetStore';
 
-// Importação dos Componentes de Gerenciamento
+// ✅ IMPORTAÇÃO DOS GERENCIADORES DEDICADOS
 import ManageLeagues from '../components/ManageLeagues';
 import ManageTeams from '../components/ManageTeams';
 import ManageMarkets from '../components/ManageMarkets';
-import ManageMethods from '../components/ManageMethods'; // ✅ IMPORTADO
+import ManageMethods from '../components/ManageMethods';
+import ManageStrategies from '../components/ManageStrategies'; // Novo Componente de Modelos
 
 const SystemLibrary: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'leagues' | 'teams' | 'markets' | 'strategies' | 'methods'>('leagues');
   
-  // Store Global
+  // Store Global (Apenas os dados necessários para contadores e lista de estratégias do usuário)
   const { 
     userLeagues, 
     userTeams, 
     customMarkets, 
     customStrategies, 
     methods: userMethods,
-    importMarket,
-    importSystemMethod,
-    importProgressionStrategy
   } = useBetStore();
-
-  // Estados Locais
-  const [globalMarkets, setGlobalMarkets] = useState<any[]>([]);
-  const [globalMethods, setGlobalMethods] = useState<any[]>([]);
-  const [globalStrategies, setGlobalStrategies] = useState<any[]>([]);
-  const [loadingGlobal, setLoadingGlobal] = useState(true);
-
-  useEffect(() => {
-    const fetchGlobalLibrary = async () => {
-      const [m, sm, ps] = await Promise.all([
-        supabase.from('markets').select('*').eq('is_active', true),
-        supabase.from('system_methods').select('*'),
-        supabase.from('progression_strategies').select('*'),
-      ]);
-
-      setGlobalMarkets(m.data || []);
-      setGlobalMethods(sm.data || []);
-      setGlobalStrategies(ps.data || []);
-      setLoadingGlobal(false);
-    };
-
-    fetchGlobalLibrary();
-  }, []);
 
   const tabs = [
     { id: 'leagues', label: 'Ligas', icon: Globe, count: userLeagues.length },
@@ -66,29 +37,6 @@ const SystemLibrary: React.FC = () => {
     { id: 'strategies', label: 'Estratégias', icon: TrendingUp, count: customStrategies.length },
     { id: 'methods', label: 'Métodos', icon: Target, count: userMethods.length },
   ];
-
-  // Componente de Card Reutilizável
-  const GlobalItemCard = ({ item, isImported, onImport }: any) => (
-    <div className="flex items-center justify-between p-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl hover:border-emerald-500/50 transition-all shadow-sm">
-      <div>
-        <h4 className="font-bold text-slate-900 dark:text-slate-100 text-sm">{item.name}</h4>
-        {item.description && <p className="text-xs text-slate-500 mt-1">{item.description}</p>}
-      </div>
-      
-      {isImported ? (
-        <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400 flex items-center gap-1 bg-emerald-50 dark:bg-emerald-500/10 px-3 py-1 rounded-full border border-emerald-100 dark:border-emerald-500/20">
-          <Check size={12} /> Ativo
-        </span>
-      ) : (
-        <button
-          onClick={() => onImport(item.id)}
-          className="text-xs font-bold text-slate-600 dark:text-slate-400 hover:text-white bg-slate-100 dark:bg-slate-800 hover:bg-emerald-500 dark:hover:bg-emerald-600 px-3 py-1.5 rounded-lg transition-all flex items-center gap-2 border border-slate-200 dark:border-slate-700 hover:border-transparent"
-        >
-          <Download size={14} /> Importar
-        </button>
-      )}
-    </div>
-  );
 
   return (
     <div className="min-h-screen bg-[#F8FAFC] dark:bg-[#020617] text-slate-900 dark:text-slate-200 pb-20 md:pl-20 pt-20 md:pt-8 px-4 md:px-8 transition-colors duration-300 font-sans">
@@ -167,7 +115,7 @@ const SystemLibrary: React.FC = () => {
           </div>
         </div>
 
-        {/* CONTEÚDO */}
+        {/* CONTEÚDO DINÂMICO */}
         <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
           <AnimatePresence mode="wait">
             
@@ -189,46 +137,40 @@ const SystemLibrary: React.FC = () => {
               </motion.div>
             )}
 
-            {/* ABA: ESTRATÉGIAS (Ainda usa lógica local, pois não criamos ManageStrategies) */}
+            {/* ✅ ABA ESTRATÉGIAS OTIMIZADA */}
             {activeTab === 'strategies' && (
-              <motion.div key="strategies" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <motion.div key="strategies" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="space-y-8">
+                
+                {/* 1. SEÇÃO: MINHAS ESTRATÉGIAS (Mantida para não perder dados) */}
                 <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm">
                   <h3 className="text-lg font-black text-slate-800 dark:text-white mb-6 flex items-center gap-2 uppercase tracking-tight">
-                    <CheckCircle2 size={18} className="text-emerald-500" /> Minhas Estratégias
+                    <CheckCircle2 size={18} className="text-emerald-500" /> Minhas Estratégias Ativas
                   </h3>
-                  <div className="space-y-2">
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                     {customStrategies.length === 0 ? (
-                      <div className="text-center py-8 text-slate-400 text-sm bg-slate-50 dark:bg-slate-950/50 rounded-xl border border-dashed border-slate-200 dark:border-slate-800">
-                        Nenhuma estratégia ativa
+                      <div className="col-span-full text-center py-8 text-slate-400 text-sm bg-slate-50 dark:bg-slate-950/50 rounded-xl border border-dashed border-slate-200 dark:border-slate-800">
+                        Nenhuma estratégia de progressão ativa no momento.
                       </div>
                     ) : (
                       customStrategies.map(s => (
-                        <div key={s.id} className="px-4 py-3 bg-slate-50 dark:bg-slate-950 border border-slate-100 dark:border-slate-800 rounded-xl text-sm font-semibold text-slate-700 dark:text-slate-300 flex justify-between items-center">
-                          {s.name}
-                          <div className="w-2 h-2 rounded-full bg-emerald-500"></div>
+                        <div key={s.id} className="px-5 py-4 bg-slate-50 dark:bg-slate-950 border border-slate-100 dark:border-slate-800 rounded-xl flex justify-between items-center shadow-sm">
+                          <span className="text-sm font-bold text-slate-700 dark:text-slate-200">{s.name}</span>
+                          <div className="flex items-center gap-2">
+                            <span className="text-[10px] bg-emerald-100 text-emerald-600 px-2 py-0.5 rounded font-bold uppercase">Ativa</span>
+                          </div>
                         </div>
                       ))
                     )}
                   </div>
                 </div>
-                <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm">
-                  <h3 className="text-lg font-black text-slate-800 dark:text-white mb-6 flex items-center gap-2 uppercase tracking-tight">
-                    <Globe size={18} className="text-blue-500" /> Modelos PRO
-                  </h3>
-                  <div className="space-y-3 max-h-[500px] overflow-y-auto pr-2 custom-scrollbar">
-                    {loadingGlobal ? <p className="text-slate-500 text-sm">Carregando...</p> : globalStrategies.map(s => (
-                      <GlobalItemCard 
-                        key={s.id} item={s} 
-                        isImported={customStrategies.some(cs => cs.name === s.name)}
-                        onImport={() => importProgressionStrategy(s.id)}
-                      />
-                    ))}
-                  </div>
-                </div>
+
+                {/* 2. SEÇÃO: MENU DE MODELOS (Novo Componente) */}
+                {/* Aqui carregamos o ManageStrategies que tem o botão para criar METAS */}
+                <ManageStrategies />
+
               </motion.div>
             )}
 
-            {/* ✅ ABA: MÉTODOS (ATUALIZADA) */}
             {activeTab === 'methods' && (
               <motion.div key="methods" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
                 <ManageMethods />

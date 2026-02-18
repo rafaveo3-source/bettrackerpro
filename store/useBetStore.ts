@@ -49,7 +49,6 @@ export interface Team {
   league_id: string;
 }
 
-// Interface para Mercados Globais
 export interface GlobalMarket {
   id: string;
   category: string;
@@ -57,15 +56,27 @@ export interface GlobalMarket {
   name: string;
 }
 
-// 🔥 Interface Atualizada para Métodos do Sistema
+// Interface para Métodos do Sistema
 export interface SystemMethod {
   id: string;
   name: string;
   market: string;
   type: string;
   risk: string;
-  description?: string; // ✅ Campo adicionado
+  description?: string;
   roi_history: { last_30: number; last_90: number; all_time: number };
+}
+
+// 🔥 NOVA INTERFACE PARA ESTRATÉGIAS DE PROGRESSÃO
+export interface ProgressionStrategy {
+  id: string;
+  name: string;
+  channel: string; // 'bookmaker' | 'exchange' | 'live'
+  risk: string;
+  description: string;
+  markets: string[];
+  roi_history?: any;
+  filters?: any;
 }
 
 export interface BetMethod {
@@ -159,6 +170,10 @@ interface BetState {
   globalSystemMethods: SystemMethod[];
   isLoadingSystemMethods: boolean;
 
+  // 🔥 SYSTEM STRATEGIES STATES
+  globalStrategies: ProgressionStrategy[];
+  isLoadingStrategies: boolean;
+
   bankrolls: Bankroll[];
   activeBankrollId: string;
   currentBankrollBalance: number;
@@ -205,6 +220,9 @@ interface BetState {
   fetchSystemMethods: () => Promise<void>;
   importSystemMethod: (methodId: string) => Promise<boolean>;
 
+  // 🔥 System Strategies Actions
+  fetchGlobalStrategies: () => Promise<void>;
+
   addBankroll: (name: string, currency: string, initialBalance: number) => Promise<void>;
   removeBankroll: (id: string) => Promise<void>;
   setActiveBankroll: (id: string) => void;
@@ -214,7 +232,7 @@ interface BetState {
   addTransaction: (transaction: Omit<Transaction, 'id' | 'bankrollId'>) => Promise<void>;
   removeTransaction: (id: string) => Promise<void>;
   addMethod: (name: string) => Promise<void>;
-  removeMethod: (id: string) => Promise<void>; // ✅ Agora retorna Promise<void>
+  removeMethod: (id: string) => Promise<void>;
 
   addCustomMarket: (name: string) => Promise<void>;
   removeCustomMarket: (id: string) => Promise<void>;
@@ -249,7 +267,6 @@ interface BetState {
     profitFactor: number;
   };
 
-  // 🔥 NOVA FUNÇÃO: ROI Real por Método
   getMethodRealStats: (methodName: string) => { roi30d: number; roiTotal: number; count: number };
   
   // Mindset Analytics
@@ -293,6 +310,9 @@ export const useBetStore = create<BetState>()(
 
       globalSystemMethods: [],
       isLoadingSystemMethods: false,
+
+      globalStrategies: [],
+      isLoadingStrategies: false,
 
       bankrolls: [],
       activeBankrollId: '',
@@ -480,7 +500,8 @@ export const useBetStore = create<BetState>()(
             globalLeagues: [],
             globalMarkets: [],
             customMarkets: [],
-            globalSystemMethods: []
+            globalSystemMethods: [],
+            globalStrategies: []
           });
         }
       },
@@ -667,6 +688,7 @@ export const useBetStore = create<BetState>()(
           if (!user) return;
 
           if (exists) {
+            // Remover
             const newMarkets = customMarkets.filter(m => m.name !== market.name);
             set({ customMarkets: newMarkets }); 
 
@@ -676,6 +698,7 @@ export const useBetStore = create<BetState>()(
               .eq('user_id', user.id)
               .eq('name', market.name);
           } else {
+            // Adicionar
             const newMarket = { id: crypto.randomUUID(), name: market.name }; 
             set({ customMarkets: [...customMarkets, newMarket] }); 
 
@@ -713,6 +736,7 @@ export const useBetStore = create<BetState>()(
         const user = get().user;
         if (!user) return false;
 
+        // 1. Busca os dados do método global
         const { data, error } = await supabase
           .from('system_methods')
           .select('*')
@@ -724,6 +748,7 @@ export const useBetStore = create<BetState>()(
           return false;
         }
 
+        // 2. Verifica se o usuário já possui este método
         const { data: existing } = await supabase
             .from('methods')
             .select('id')
@@ -736,6 +761,7 @@ export const useBetStore = create<BetState>()(
              return false;
         }
 
+        // 3. Insere
         const { data: newMethod, error: insertError } = await supabase
           .from('methods')
           .insert({
@@ -755,6 +781,55 @@ export const useBetStore = create<BetState>()(
         }));
 
         get().setToast({ type: 'success', message: 'Método importado com sucesso.' });
+        return true;
+      },
+
+      // 🔥 SYSTEM STRATEGIES ACTIONS (NOVO)
+      fetchGlobalStrategies: async () => {
+        set({ isLoadingStrategies: true });
+        try {
+          const { data } = await supabase
+            .from('progression_strategies')
+            .select('*')
+            .order('name', { ascending: true });
+          
+          set({ globalStrategies: data || [] });
+        } catch (error) {
+          console.error('Erro ao buscar estratégias:', error);
+        } finally {
+          set({ isLoadingStrategies: false });
+        }
+      },
+
+      importProgressionStrategy: async (strategyId) => {
+        const user = get().user;
+        if (!user) return false;
+
+        const { data, error } = await supabase
+          .from('progression_strategies')
+          .select('*')
+          .eq('id', strategyId)
+          .single();
+
+        if (error || !data) {
+          get().setToast({ type: 'error', message: 'Erro ao importar estratégia.' });
+          return false;
+        }
+
+        const { error: insertError } = await supabase
+          .from('user_strategies')
+          .insert({
+            user_id: user.id,
+            strategy_id: data.id,
+            name: data.name
+          });
+
+        if (insertError) {
+          get().setToast({ type: 'error', message: 'Estratégia já ativada.' });
+          return false;
+        }
+
+        get().setToast({ type: 'success', message: 'Estratégia ativada na sua conta.' });
         return true;
       },
 
@@ -1133,7 +1208,6 @@ export const useBetStore = create<BetState>()(
         }
       },
 
-      // ✅ CORREÇÃO 1: REMOVE DO BANCO DE DADOS E DA STORE
       removeMethod: async (id) => {
         const user = get().user;
         if (!user) return;

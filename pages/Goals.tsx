@@ -2,11 +2,15 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { useBetStore, Goal } from '../store/useBetStore';
 import { Target, ArrowLeft, Plus, Wallet, Sparkles, Trophy, Info, Edit3, Trash2, Lock, BarChart2 } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { useLocation } from 'react-router-dom'; // ✅ Importado para ler o estado da navegação
 
 const Goals: React.FC = () => {
   const { bankrolls, activeBankrollId, goals, history, addGoal, updateGoal, deleteGoal } = useBetStore();
   const [view, setView] = useState<'list' | 'config'>('list');
   const [editingGoalId, setEditingGoalId] = useState<string | null>(null);
+
+  // Hook de navegação para pegar dados da estratégia
+  const location = useLocation();
 
   // Form states
   const [goalName, setGoalName] = useState('');
@@ -15,7 +19,44 @@ const Goals: React.FC = () => {
   const [goalDeadline, setGoalDeadline] = useState('');
   const [linkedBankrollId, setLinkedBankrollId] = useState(activeBankrollId);
 
-  useEffect(() => { setLinkedBankrollId(activeBankrollId); }, [activeBankrollId]);
+  // Efeito para detectar se veio da página de Estratégias
+  useEffect(() => {
+    if (location.state && location.state.createFromStrategy) {
+      const strategy = location.state.createFromStrategy;
+      
+      // Abre o modo de edição
+      setView('config');
+      
+      // Preenche os dados automaticamente
+      setGoalName(`Meta: ${strategy.name}`);
+      setGoalCategory('Growth Strategy'); // Categoria especial
+      setLinkedBankrollId(activeBankrollId); // Usa a banca atual
+
+      // Sugestão Inteligente de Alvo
+      const currentBankroll = bankrolls.find(b => b.id === activeBankrollId);
+      if (currentBankroll) {
+        // Se for risco alto, sugere 5x a banca. Médio 2x. Baixo 1.5x.
+        let multiplier = 1.5;
+        if (strategy.risk === 'alto') multiplier = 5;
+        else if (strategy.risk === 'médio') multiplier = 2;
+        
+        const suggestedTarget = currentBankroll.initialBalance * multiplier;
+        setGoalTarget(suggestedTarget.toString());
+      }
+
+      // Sugere prazo de 30 dias por padrão
+      const date = new Date();
+      date.setDate(date.getDate() + 30);
+      setGoalDeadline(date.toISOString().split('T')[0]);
+
+      // Limpa o estado para não reabrir se navegar de volta
+      window.history.replaceState({}, document.title);
+    }
+  }, [location, activeBankrollId, bankrolls]);
+
+  useEffect(() => { 
+      if (!editingGoalId) setLinkedBankrollId(activeBankrollId); 
+  }, [activeBankrollId, editingGoalId]);
 
   const formatCurrency = (val: number, currency: string = 'BRL') => {
     return new Intl.NumberFormat('pt-BR', { style: 'currency', currency }).format(val);
@@ -32,8 +73,6 @@ const Goals: React.FC = () => {
     const currentBalance = bankroll.initialBalance + totalProfit;
     
     // Progresso baseado no alvo
-    // Se a meta é lucro, o alvo é relativo ao lucro. Se for saldo total, é relativo ao saldo.
-    // Assumindo Meta de Saldo Total para simplificar a visualização inicial
     const progress = Math.min(100, Math.max(0, (currentBalance / goal.target) * 100));
     const missing = Math.max(0, goal.target - currentBalance);
 
@@ -41,23 +80,18 @@ const Goals: React.FC = () => {
     const daysLeft = Math.max(0, Math.ceil((new Date(goal.deadline).getTime() - new Date().getTime()) / (1000 * 3600 * 24)));
     
     // Lucro médio diário histórico desta banca
-    // Pega o intervalo desde a primeira aposta até hoje
     const firstBet = bankrollBets[bankrollBets.length - 1]; // assumindo ordem desc
     const daysSinceStart = firstBet 
         ? Math.max(1, Math.ceil((new Date().getTime() - new Date(firstBet.date).getTime()) / (1000 * 3600 * 24))) 
         : 1;
     
     const avgDailyProfit = totalProfit / daysSinceStart;
-    const projectedBalance = currentBalance + (avgDailyProfit * daysLeft);
     
-    // Score de probabilidade: se a projeção bate a meta = 100%
-    // Se a projeção fica longe, o score cai.
+    // Score de probabilidade
     let probabilityScore = 0;
     if (goal.target > currentBalance) {
-        // Quanto da diferença a projeção cobre?
         const projectedGain = avgDailyProfit * daysLeft;
         probabilityScore = Math.min(100, Math.max(0, (projectedGain / missing) * 100));
-        // Se já tem lucro negativo médio, probabilidade é 0
         if (avgDailyProfit <= 0) probabilityScore = 0;
     } else {
         probabilityScore = 100; // Já bateu
@@ -128,7 +162,6 @@ const Goals: React.FC = () => {
     const days = Math.max(0, Math.ceil(diff / (1000 * 3600 * 24)));
     
     const br = bankrolls.find(b => b.id === linkedBankrollId);
-    // Saldo atual = inicial + lucro das apostas dessa banca
     const profit = history
         .filter(b => b.bankrollId === linkedBankrollId && b.status !== 'void' && b.status !== 'refunded')
         .reduce((acc, b) => acc + b.profit, 0);
@@ -145,10 +178,6 @@ const Goals: React.FC = () => {
   }, [goalDeadline, goalTarget, linkedBankrollId, bankrolls, history]);
 
   const activeGoals = goals.filter(g => g.status === 'active');
-  
-  // Uma meta é "concluída" se o saldo atual >= target (cálculo dinâmico)
-  // OU se o status no banco já for 'completed' (legado ou manual)
-  // Aqui vamos filtrar dinamicamente para mostrar na galeria
   const completedGoals = goals.filter(g => {
       const stats = getGoalAnalytics(g);
       return stats && stats.progress >= 100;
@@ -209,6 +238,7 @@ const Goals: React.FC = () => {
                       <option value="Long Term">Longo Prazo</option>
                       <option value="Short Term">Curto Prazo</option>
                       <option value="Safety">Blindagem</option>
+                      <option value="Growth Strategy">Estratégia de Crescimento</option>
                     </select>
                   </div>
                 </div>
@@ -293,26 +323,24 @@ const Goals: React.FC = () => {
     <div className="space-y-8 max-w-7xl mx-auto pb-20 w-full overflow-x-hidden">
       <header className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
-  <div className="space-y-3">
-  
-  {/* ENGINE LABEL (DISCRETO) */}
-  <div className="flex items-center gap-2 text-emerald-500 text-[9px] font-mono font-bold uppercase tracking-widest mb-1">
-    <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse shadow-[0_0_8px_#10b981]"></span>
-    Strategic Performance Engine
-</div>
+          <div className="space-y-3">
+            {/* ENGINE LABEL */}
+            <div className="flex items-center gap-2 text-emerald-500 text-[9px] font-mono font-bold uppercase tracking-widest mb-1">
+              <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse shadow-[0_0_8px_#10b981]"></span>
+              Strategic Performance Engine
+            </div>
 
-  {/* HEADLINE */}
-  <h1 className="text-3xl font-black text-slate-900 dark:text-white tracking-tighter uppercase italic">
-    Metas & Objetivos <span className="text-slate-400 dark:text-slate-700 text-lg">///</span>
-  </h1>
+            {/* HEADLINE */}
+            <h1 className="text-3xl font-black text-slate-900 dark:text-white tracking-tighter uppercase italic">
+              Metas & Objetivos <span className="text-slate-400 dark:text-slate-700 text-lg">///</span>
+            </h1>
 
-  {/* SUBTITLE */}
-  <p className="text-slate-500 dark:text-slate-400 text-xs font-bold uppercase tracking-widest">
-    Gestão de Performance Orientada a Resultados Nesta Banca.
-  </p>
-
-</div>
-</div>
+            {/* SUBTITLE */}
+            <p className="text-slate-500 dark:text-slate-400 text-xs font-bold uppercase tracking-widest">
+              Gestão de Performance Orientada a Resultados Nesta Banca.
+            </p>
+          </div>
+        </div>
         <button onClick={() => setView('config')} className="bg-emerald-600 hover:bg-emerald-500 text-white px-6 py-3 rounded-xl flex items-center gap-2 font-bold uppercase text-xs tracking-wider transition-all shadow-lg shadow-emerald-500/20 active:scale-95">
           <Plus size={16} /> Criar Nova Meta
         </button>
@@ -324,12 +352,12 @@ const Goals: React.FC = () => {
             <div className="bg-white dark:bg-[#0f172a]/60 border border-slate-200 dark:border-slate-800 rounded-[2rem] p-16 flex flex-col items-center justify-center text-center">
               <div className="w-16 h-16 rounded-full bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 flex items-center justify-center text-slate-400 dark:text-slate-600 mb-6"><Target size={32} /></div>
               <h3 className="text-slate-900 dark:text-white font-black text-lg mb-2 uppercase tracking-wider">
-  Nenhuma Meta Ativa
-</h3>
-<p className="text-slate-500 dark:text-slate-400 text-sm max-w-sm leading-relaxed">
-  Traders consistentes operam com direção clara.
-  Defina um alvo estratégico e acompanhe sua probabilidade em tempo real.
-</p>
+                Nenhuma Meta Ativa
+              </h3>
+              <p className="text-slate-500 dark:text-slate-400 text-sm max-w-sm leading-relaxed">
+                Traders consistentes operam com direção clara.
+                Defina um alvo estratégico e acompanhe sua probabilidade em tempo real.
+              </p>
             </div>
           ) : (
             activeGoals.map(goal => {
@@ -346,13 +374,13 @@ const Goals: React.FC = () => {
                         <div className="flex flex-wrap items-center gap-2 mt-1">
                           <span className="text-[10px] bg-slate-100 dark:bg-slate-900 text-slate-500 dark:text-slate-400 px-2 py-0.5 rounded border border-slate-200 dark:border-slate-800 font-bold uppercase">{goal.category}</span>
                           <div className={`px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest flex items-center gap-2 ${stats.statusColor}`}>
-  {stats.status === 'Improvável' && <Info size={12} />}
-  {stats.status === 'Em Risco' && <BarChart2 size={12} />}
-  {stats.status === 'Concluída' && <Trophy size={12} />}
-  {stats.status === 'No Caminho' && <Target size={12} />}
-  {stats.status}
-  <span className="opacity-70">• {stats.probabilityScore.toFixed(0)}%</span>
-</div>
+                            {stats.status === 'Improvável' && <Info size={12} />}
+                            {stats.status === 'Em Risco' && <BarChart2 size={12} />}
+                            {stats.status === 'Concluída' && <Trophy size={12} />}
+                            {stats.status === 'No Caminho' && <Target size={12} />}
+                            {stats.status}
+                            <span className="opacity-70">• {stats.probabilityScore.toFixed(0)}%</span>
+                          </div>
                         </div>
                       </div>
                     </div>
@@ -380,11 +408,11 @@ const Goals: React.FC = () => {
                       <div className="absolute flex flex-col items-center">
                         <span className="text-2xl font-black text-slate-900 dark:text-white tracking-tighter">{stats.progress.toFixed(0)}%</span>
                         <span className="text-[9px] font-black uppercase text-slate-500 dark:text-slate-500 tracking-widest">
-  {stats.daysLeft} Dias
-</span>
-<span className="text-[9px] text-slate-400 dark:text-slate-600 font-mono">
-  {new Date(goal.deadline).toLocaleDateString('pt-BR')}
-</span>
+                          {stats.daysLeft} Dias
+                        </span>
+                        <span className="text-[9px] text-slate-400 dark:text-slate-600 font-mono">
+                          {new Date(goal.deadline).toLocaleDateString('pt-BR')}
+                        </span>
                       </div>
                     </div>
 
@@ -392,31 +420,27 @@ const Goals: React.FC = () => {
                     <div className="flex-1 w-full space-y-5">
                       <div className="flex justify-between items-end pb-4 border-b border-slate-200 dark:border-slate-800">
                         {/* Linear Progress Bar */}
-<div className="space-y-2">
-  <div className="w-full h-2 bg-slate-200 dark:bg-slate-800 rounded-full overflow-hidden">
-    <motion.div
-      initial={{ width: 0 }}
-      animate={{ width: `${stats.progress}%` }}
-      transition={{ duration: 1 }}
-      className={`h-full ${
-        stats.status === 'Improvável'
-          ? 'bg-red-500'
-          : stats.status === 'Em Risco'
-          ? 'bg-yellow-500'
-          : 'bg-emerald-500'
-      }`}
-    />
-  </div>
-  <div className="flex justify-between text-[9px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500">
-    <span>Progresso</span>
-    <span>{stats.progress.toFixed(1)}%</span>
-  </div>
-</div>
-                        <div>
-                          <p className="text-[10px] text-slate-500 dark:text-slate-500 font-bold uppercase tracking-widest mb-1">Saldo Atual</p>
-                          <p className="text-2xl font-black text-slate-900 dark:text-white tracking-tighter">{formatCurrency(stats.current, stats.currency)}</p>
+                        <div className="space-y-2 w-full mr-4">
+                          <div className="w-full h-2 bg-slate-200 dark:bg-slate-800 rounded-full overflow-hidden">
+                            <motion.div
+                              initial={{ width: 0 }}
+                              animate={{ width: `${stats.progress}%` }}
+                              transition={{ duration: 1 }}
+                              className={`h-full ${
+                                stats.status === 'Improvável'
+                                  ? 'bg-red-500'
+                                  : stats.status === 'Em Risco'
+                                  ? 'bg-yellow-500'
+                                  : 'bg-emerald-500'
+                              }`}
+                            />
+                          </div>
+                          <div className="flex justify-between text-[9px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500">
+                            <span>Progresso</span>
+                            <span>{stats.progress.toFixed(1)}%</span>
+                          </div>
                         </div>
-                        <div className="text-right">
+                        <div className="text-right whitespace-nowrap">
                           <p className="text-[10px] text-slate-500 dark:text-slate-500 font-bold uppercase tracking-widest mb-1">Alvo</p>
                           <p className="text-xl font-bold text-slate-400 dark:text-slate-500 tracking-tighter">{formatCurrency(goal.target, stats.currency)}</p>
                         </div>
@@ -427,11 +451,10 @@ const Goals: React.FC = () => {
                           <Wallet size={12} className="text-emerald-500" /> 
                           <span className="uppercase tracking-wide text-[10px] font-bold">Banca: {stats.bankrollName}</span>
                         </div>
-                        {stats.missing > 0 ? (
-                          <span className="text-slate-400 dark:text-slate-500 font-bold uppercase text-[10px] tracking-wide">Faltam {formatCurrency(stats.missing, stats.currency)}</span>
-                        ) : (
-                          <span className="text-emerald-600 dark:text-emerald-400 font-bold uppercase text-[10px] tracking-wide flex items-center gap-1"><Trophy size={12} /> Meta Batida!</span>
-                        )}
+                        <div className="text-right">
+                            <p className="text-[10px] text-slate-500 dark:text-slate-500 font-bold uppercase tracking-widest mb-1">Saldo Atual</p>
+                            <p className="text-lg font-black text-slate-900 dark:text-white tracking-tighter">{formatCurrency(stats.current, stats.currency)}</p>
+                        </div>
                       </div>
                     </div>
                   </div>
