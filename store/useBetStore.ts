@@ -20,6 +20,17 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   }
 });
 
+// --- FUNÇÃO DE SANITIZAÇÃO (SEGURANÇA FRONTEND) ---
+// Remove tags HTML e scripts maliciosos de strings
+const sanitizeInput = (input: string): string => {
+  if (!input) return '';
+  return input
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/script/gi, "")
+    .trim();
+};
+
 // --- TIPAGEM ---
 
 export type BetStatus =
@@ -230,10 +241,10 @@ interface BetState {
   fetchGlobalStrategies: () => Promise<void>;
   importProgressionStrategy: (strategyId: string) => Promise<boolean>;
 
-  addBankroll: (name: string, currency: string, initialBalance: number) => Promise<boolean>; // Retorna boolean agora
+  addBankroll: (name: string, currency: string, initialBalance: number) => Promise<boolean>; 
   removeBankroll: (id: string) => Promise<void>;
   setActiveBankroll: (id: string) => void;
-  addBet: (bet: Omit<Bet, 'id' | 'profit' | 'bankrollId'> & { cashoutValue?: number }) => Promise<boolean>; // Retorna boolean
+  addBet: (bet: Omit<Bet, 'id' | 'profit' | 'bankrollId'> & { cashoutValue?: number }) => Promise<boolean>; 
   updateBet: (id: string, data: Partial<Bet> & { cashoutValue?: number }) => Promise<void>;
   removeBet: (id: string) => Promise<void>;
   addTransaction: (transaction: Omit<Transaction, 'id' | 'bankrollId'>) => Promise<void>;
@@ -813,22 +824,24 @@ export const useBetStore = create<BetState>()(
       },
 
       // --- BANKROLLS ---
-      // 🔥 LÓGICA DE LIMITE FREE: MÁX 1 BANCA
+      // 🔥 LÓGICA DE LIMITE FREE: MÁX 1 BANCA E SANITIZAÇÃO
       addBankroll: async (name, currency, initialBalance) => {
         const { user, isPro, bankrolls } = get();
         if (!user) return false;
 
         if (!isPro && bankrolls.length >= 1) {
             get().setToast({ type: 'error', message: 'Plano Grátis: Limite de 1 Banca atingido.' });
-            return false; // Bloqueia
+            return false;
         }
+
+        const cleanName = sanitizeInput(name);
 
         const { data, error } = await supabase
           .from('bankrolls')
           .insert([
             {
-              name,
-              currency,
+              name: cleanName,
+              currency: sanitizeInput(currency),
               initial_balance: Number(initialBalance),
               user_id: user.id
             }
@@ -953,7 +966,7 @@ export const useBetStore = create<BetState>()(
       },
 
       // --- BETS ---
-      // 🔥 CORREÇÃO DE DATA/FUSO HORÁRIO + LIMITE FREE
+      // 🔥 CORREÇÃO DE DATA/FUSO HORÁRIO + LIMITE FREE + SANITIZAÇÃO
       addBet: async (newBetData) => {
         if (get().isTiltLocked()) return false;
 
@@ -980,7 +993,6 @@ export const useBetStore = create<BetState>()(
         let profit = 0;
         const stake = Number(newBetData.stake);
         const odds = Number(newBetData.odds);
-        const cashoutValue = newBetData.cashoutValue ? Number(newBetData.cashoutValue) : 0;
         const { status } = newBetData;
 
         switch (status) {
@@ -989,19 +1001,22 @@ export const useBetStore = create<BetState>()(
           case 'half-won': profit = ((stake * odds) - stake) / 2; break;
           case 'half-lost': profit = -stake / 2; break;
           case 'void': profit = 0; break;
-          case 'cashout': profit = cashoutValue - stake; break;
+          case 'cashout': profit = (newBetData.cashoutValue || 0) - stake; break;
           case 'pending': profit = 0; break;
           case 'refunded': profit = 0; break;
         }
 
         const { cashoutValue: _, ...cleanBetData } = newBetData;
 
-        // ✅ DATA CORRIGIDA: Usa o horário do PC do usuário e cria uma string ISO que "mente" ser UTC
         const date = new Date();
         const localIsoString = new Date(date.getTime() - (date.getTimezoneOffset() * 60000)).toISOString();
 
         const betToInsert = {
           ...cleanBetData,
+          event: sanitizeInput(cleanBetData.event),
+          market: sanitizeInput(cleanBetData.market),
+          selection: sanitizeInput(cleanBetData.selection),
+          method: cleanBetData.method ? sanitizeInput(cleanBetData.method) : '',
           bankroll_id: activeBankrollId,
           stake,
           odds,
@@ -1052,7 +1067,6 @@ export const useBetStore = create<BetState>()(
         let profit = 0;
         const stake = Number(updated.stake);
         const odds = Number(updated.odds);
-        const cashoutValue = updated.cashoutValue ? Number(updated.cashoutValue) : 0;
         const { status } = updated;
 
         switch (status) {
@@ -1061,21 +1075,21 @@ export const useBetStore = create<BetState>()(
           case 'half-won': profit = ((stake * odds) - stake) / 2; break;
           case 'half-lost': profit = -stake / 2; break;
           case 'void': profit = 0; break;
-          case 'cashout': profit = cashoutValue - stake; break;
+          case 'cashout': profit = (updated.cashoutValue || 0) - stake; break;
           case 'pending': profit = 0; break;
           case 'refunded': profit = 0; break;
         }
 
         const payload = {
             sport: updated.sport,
-            market: updated.market,
-            event: updated.event,
-            selection: updated.selection,
+            market: sanitizeInput(updated.market),
+            event: sanitizeInput(updated.event),
+            selection: sanitizeInput(updated.selection),
+            method: updated.method ? sanitizeInput(updated.method) : '',
             odds,
             stake,
             status: updated.status,
             profit,
-            method: updated.method,
             date: updated.date
         };
 
@@ -1133,7 +1147,7 @@ export const useBetStore = create<BetState>()(
           bankroll_id: activeBankrollId,
           type: newTx.type,
           amount: Number(newTx.amount),
-          description: newTx.description || '',
+          description: newTx.description ? sanitizeInput(newTx.description) : '',
         };
 
         const { data, error } = await supabase
@@ -1190,12 +1204,13 @@ export const useBetStore = create<BetState>()(
       addMethod: async (name) => {
         const user = get().user;
         if (!user) return;
-
+        
+        const cleanName = sanitizeInput(name);
         const { data, error } = await supabase
           .from('methods')
           .insert([
             {
-              name,
+              name: cleanName,
               user_id: user.id
             }
           ])
@@ -1239,12 +1254,14 @@ export const useBetStore = create<BetState>()(
         const user = get().user;
         if (!user) return;
 
+        const cleanName = sanitizeInput(name);
+
         const { data, error } = await supabase
           .from('user_markets')
           .insert({
             user_id: user.id,
             market_id: null,
-            name
+            name: cleanName
           })
           .select()
           .single();
@@ -1285,12 +1302,14 @@ export const useBetStore = create<BetState>()(
         const user = get().user;
         if (!user) return;
 
+        const cleanName = sanitizeInput(name);
+        
         const { data, error } = await supabase
           .from('user_strategies')
           .insert({
             user_id: user.id,
             strategy_id: null,
-            name
+            name: cleanName
           })
           .select()
           .single();
@@ -1336,7 +1355,7 @@ export const useBetStore = create<BetState>()(
             date: entry.date,
             time: entry.time,
             mood: entry.mood,
-            note: entry.note || '',
+            note: entry.note ? sanitizeInput(entry.note) : '',
             tags: entry.tags || [],
             user_id: user.id
         };
@@ -1383,9 +1402,12 @@ export const useBetStore = create<BetState>()(
         const user = get().user;
         if (!user) return;
 
+        const cleanData = { ...data };
+        if (cleanData.note) cleanData.note = sanitizeInput(cleanData.note);
+
         const { error } = await supabase
           .from('mindset_entries')
-          .update(data)
+          .update(cleanData)
           .eq('id', id)
           .eq('user_id', user.id);
 
@@ -1415,7 +1437,7 @@ export const useBetStore = create<BetState>()(
 
         const payload = {
             bankroll_id: bankrollId,
-            title: goalData.title,
+            title: sanitizeInput(goalData.title),
             category: goalData.category || 'general',
             target: Number(goalData.target),
             current: 0,
@@ -1455,7 +1477,7 @@ export const useBetStore = create<BetState>()(
         if (!user) return;
 
         const cleanPayload: any = {};
-        if (data.title !== undefined) cleanPayload.title = data.title;
+        if (data.title !== undefined) cleanPayload.title = sanitizeInput(data.title);
         if (data.category !== undefined) cleanPayload.category = data.category;
         if (data.target !== undefined) cleanPayload.target = Number(data.target);
         if (data.current !== undefined) cleanPayload.current = Number(data.current);
