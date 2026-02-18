@@ -777,9 +777,12 @@ export const useBetStore = create<BetState>()(
            return false;
         }
 
-        set((state) => ({
-            methods: [newMethod, ...state.methods]
-        }));
+        // ✅ Atualiza o estado local para aparecer imediatamente
+        if (newMethod) {
+            set((state) => ({
+                methods: [newMethod, ...state.methods]
+            }));
+        }
 
         get().setToast({ type: 'success', message: 'Método importado com sucesso.' });
         return true;
@@ -817,17 +820,27 @@ export const useBetStore = create<BetState>()(
           return false;
         }
 
-        const { error: insertError } = await supabase
+        // Tenta inserir
+        const { data: inserted, error: insertError } = await supabase
           .from('user_strategies')
           .insert({
             user_id: user.id,
             strategy_id: data.id,
             name: data.name
-          });
+          })
+          .select()
+          .single();
 
         if (insertError) {
           get().setToast({ type: 'error', message: 'Estratégia já ativada.' });
           return false;
+        }
+
+        // ✅ ATUALIZAÇÃO IMEDIATA DO ESTADO LOCAL
+        if (inserted) {
+            set(state => ({
+                customStrategies: [...state.customStrategies, inserted]
+            }));
         }
 
         get().setToast({ type: 'success', message: 'Estratégia ativada na sua conta.' });
@@ -967,7 +980,6 @@ export const useBetStore = create<BetState>()(
       },
 
       // --- BETS ---
-      // 🔥 CORREÇÃO DE DATA/FUSO HORÁRIO APLICADA AQUI
       addBet: async (newBetData) => {
         if (get().isTiltLocked()) return;
 
@@ -999,9 +1011,8 @@ export const useBetStore = create<BetState>()(
 
         const { cashoutValue: _, ...cleanBetData } = newBetData;
 
-        // ✅ DATA CORRIGIDA: Usa o horário do PC do usuário e cria uma string ISO que "mente" ser UTC
-        // mas mantém os números do horário local (ex: 23:00 local vira 23:00 UTC no banco).
-        // Isso garante que no calendário/histórico apareça no dia certo.
+        // ✅ CORREÇÃO DE FUSO HORÁRIO: Gera uma data ISO "fake" baseada no horário local do browser
+        // Isso garante que se for 23:00 no Brasil, salve como 23:00 no banco, evitando mudança de dia.
         const date = new Date();
         const localIsoString = new Date(date.getTime() - (date.getTimezoneOffset() * 60000)).toISOString();
 
@@ -1012,7 +1023,7 @@ export const useBetStore = create<BetState>()(
           odds,
           profit,
           user_id: user.id,
-          date: localIsoString
+          date: localIsoString // Usa a data corrigida
         };
 
         const { data, error } = await supabase
@@ -1220,11 +1231,13 @@ export const useBetStore = create<BetState>()(
       removeMethod: async (id) => {
         const user = get().user;
         if (!user) return;
-        
+
+        // 1. Atualização Otimista
         set((state) => ({
           methods: state.methods.filter(m => m.id !== id)
         }));
 
+        // 2. Remove do Banco
         const { error } = await supabase
           .from('methods')
           .delete()
@@ -1670,17 +1683,25 @@ export const useBetStore = create<BetState>()(
           return false;
         }
 
-        const { error: insertError } = await supabase
+        const { data: inserted, error: insertError } = await supabase
           .from('user_strategies')
           .insert({
             user_id: user.id,
             strategy_id: data.id,
             name: data.name
-          });
+          })
+          .select()
+          .single();
 
         if (insertError) {
           get().setToast({ type: 'error', message: 'Estratégia já ativada.' });
           return false;
+        }
+
+        if (inserted) {
+            set(state => ({
+                customStrategies: [...state.customStrategies, inserted]
+            }));
         }
 
         get().setToast({ type: 'success', message: 'Estratégia ativada na sua conta.' });
