@@ -270,6 +270,8 @@ interface BetState {
   isTiltLocked: () => boolean;
 }
 
+// --- STORE IMPLEMENTATION ---
+
 export const useBetStore = create<BetState>()(
   persist(
     (set, get) => ({
@@ -526,10 +528,6 @@ export const useBetStore = create<BetState>()(
       },
 
       toggleUserLeague: async (leagueId) => {
-
-        // ==========================
-// 🔥 TEAM ACTIONS (ADICIONAR AQUI)
-// ==========================
         const { userLeagues } = get();
         const isActive = userLeagues.includes(leagueId);
         
@@ -560,60 +558,60 @@ export const useBetStore = create<BetState>()(
         }
       },
 
-fetchLeagueTeams: async (leagueId: string) => {
-  set({ isLoadingTeams: true });
+      fetchLeagueTeams: async (leagueId: string) => {
+        set({ isLoadingTeams: true });
 
-  try {
-    const { data, error } = await supabase
-      .from('teams')
-      .select('*')
-      .eq('league_id', leagueId)
-      .order('name', { ascending: true });
+        try {
+          const { data, error } = await supabase
+            .from('teams')
+            .select('*')
+            .eq('league_id', leagueId)
+            .order('name', { ascending: true });
 
-    if (error) {
-      console.error('Erro ao buscar times:', error.message);
-      set({ currentLeagueTeams: [] });
-      return;
-    }
+          if (error) {
+            console.error('Erro ao buscar times:', error.message);
+            set({ currentLeagueTeams: [] });
+            return;
+          }
 
-    set({ currentLeagueTeams: data || [] });
-  } catch (err) {
-    console.error('Erro inesperado ao buscar times:', err);
-    set({ currentLeagueTeams: [] });
-  } finally {
-    set({ isLoadingTeams: false });
-  }
-},
+          set({ currentLeagueTeams: data || [] });
+        } catch (err) {
+          console.error('Erro inesperado ao buscar times:', err);
+          set({ currentLeagueTeams: [] });
+        } finally {
+          set({ isLoadingTeams: false });
+        }
+      },
 
-toggleUserTeam: async (teamId: string) => {
-  const { userTeams } = get();
-  const isActive = userTeams.includes(teamId);
+      toggleUserTeam: async (teamId: string) => {
+        const { userTeams } = get();
+        const isActive = userTeams.includes(teamId);
 
-  const updatedTeams = isActive
-    ? userTeams.filter(id => id !== teamId)
-    : [...userTeams, teamId];
+        const updatedTeams = isActive
+          ? userTeams.filter(id => id !== teamId)
+          : [...userTeams, teamId];
 
-  set({ userTeams: updatedTeams });
+        set({ userTeams: updatedTeams });
 
-  try {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
+        try {
+          const { data: { user } } = await supabase.auth.getUser();
+          if (!user) return;
 
-    if (isActive) {
-      await supabase
-        .from('user_teams')
-        .delete()
-        .match({ user_id: user.id, team_id: teamId });
-    } else {
-      await supabase
-        .from('user_teams')
-        .insert({ user_id: user.id, team_id: teamId });
-    }
-  } catch (error) {
-    console.error('Erro ao atualizar time:', error);
-    set({ userTeams });
-  }
-},
+          if (isActive) {
+            await supabase
+              .from('user_teams')
+              .delete()
+              .match({ user_id: user.id, team_id: teamId });
+          } else {
+            await supabase
+              .from('user_teams')
+              .insert({ user_id: user.id, team_id: teamId });
+          }
+        } catch (error) {
+          console.error('Erro ao atualizar time:', error);
+          set({ userTeams });
+        }
+      },
 
       // 🔥 MARKET ACTIONS
       fetchGlobalMarkets: async () => {
@@ -836,9 +834,8 @@ toggleUserTeam: async (teamId: string) => {
 
         // ✅ DATA CORRIGIDA: Usa o horário do PC do usuário e cria uma string ISO que "mente" ser UTC
         // mas mantém os números do horário local (ex: 23:00 local vira 23:00 UTC no banco).
-        // Isso garante que no calendário/histórico apareça no dia certo.
         const date = new Date();
-        const localIsoString = new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString();
+        const localIsoString = new Date(date.getTime() - (date.getTimezoneOffset() * 60000)).toISOString();
 
         const betToInsert = {
           ...cleanBetData,
@@ -847,7 +844,7 @@ toggleUserTeam: async (teamId: string) => {
           odds,
           profit,
           user_id: user.id,
-          date: localIsoString // Usa a data corrigida
+          date: localIsoString
         };
 
         const { data, error } = await supabase
@@ -1565,6 +1562,31 @@ toggleUserTeam: async (teamId: string) => {
 
         get().setToast({ type: 'success', message: 'Estratégia ativada na sua conta.' });
         return true;
+      },
+
+      // 🔥 EXPORTANDO A FUNÇÃO isTiltLocked CORRETAMENTE
+      isTiltLocked: () => {
+        const state = get();
+        if (!state.tiltLockUntil) return false;
+        const now = new Date();
+        const unlock = new Date(state.tiltLockUntil);
+        if (now >= unlock) {
+          set({ tiltLockUntil: null });
+          return false;
+        }
+        return true;
+      },
+
+      resetData: () => {
+        set({
+          bankrolls: [],
+          activeBankrollId: '',
+          currentBankrollBalance: 0,
+          history: [],
+          transactions: [],
+          mindsetHistory: [],
+          goals: []
+        });
       },
 
       // 🔥🔥🔥 HEDGE FUND METRICS ENGINE 🔥🔥🔥
