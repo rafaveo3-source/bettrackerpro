@@ -526,6 +526,65 @@ export const useBetStore = create<BetState>()(
       },
 
       toggleUserLeague: async (leagueId) => {
+
+        // ==========================
+// 🔥 TEAM ACTIONS (ADICIONAR AQUI)
+// ==========================
+
+fetchLeagueTeams: async (leagueId: string) => {
+  set({ isLoadingTeams: true });
+
+  try {
+    const { data, error } = await supabase
+      .from('teams')
+      .select('*')
+      .eq('league_id', leagueId)
+      .order('name', { ascending: true });
+
+    if (error) {
+      console.error('Erro ao buscar times:', error.message);
+      set({ currentLeagueTeams: [] });
+      return;
+    }
+
+    set({ currentLeagueTeams: data || [] });
+  } catch (err) {
+    console.error('Erro inesperado ao buscar times:', err);
+    set({ currentLeagueTeams: [] });
+  } finally {
+    set({ isLoadingTeams: false });
+  }
+},
+
+toggleUserTeam: async (teamId: string) => {
+  const { userTeams } = get();
+  const isActive = userTeams.includes(teamId);
+
+  const updatedTeams = isActive
+    ? userTeams.filter(id => id !== teamId)
+    : [...userTeams, teamId];
+
+  set({ userTeams: updatedTeams });
+
+  try {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+
+    if (isActive) {
+      await supabase
+        .from('user_teams')
+        .delete()
+        .match({ user_id: user.id, team_id: teamId });
+    } else {
+      await supabase
+        .from('user_teams')
+        .insert({ user_id: user.id, team_id: teamId });
+    }
+  } catch (error) {
+    console.error('Erro ao atualizar time:', error);
+    set({ userTeams }); // rollback
+  }
+},
         const { userLeagues } = get();
         const isActive = userLeagues.includes(leagueId);
         
