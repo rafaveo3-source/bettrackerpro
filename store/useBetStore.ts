@@ -49,12 +49,22 @@ export interface Team {
   league_id: string;
 }
 
-// 🔥 NOVA INTERFACE PARA MERCADOS GLOBAIS
 export interface GlobalMarket {
   id: string;
   category: string;
   label: string;
   name: string;
+}
+
+// 🔥 NOVA INTERFACE PARA MÉTODOS DO SISTEMA
+export interface SystemMethod {
+  id: string;
+  name: string;
+  market: string;
+  type: string;
+  risk: string;
+  description?: string;
+  roi_history: { last_30: number; last_90: number; all_time: number };
 }
 
 export interface BetMethod {
@@ -140,9 +150,13 @@ interface BetState {
   userLeagues: string[];
   isLoadingLeagues: boolean;
 
-  // 🔥 MARKET STATES
+  // MARKET STATES
   globalMarkets: GlobalMarket[];
   isLoadingMarkets: boolean;
+
+  // 🔥 SYSTEM METHOD STATES
+  globalSystemMethods: SystemMethod[];
+  isLoadingSystemMethods: boolean;
 
   bankrolls: Bankroll[];
   activeBankrollId: string;
@@ -182,9 +196,13 @@ interface BetState {
   fetchLeagues: () => Promise<void>;
   toggleUserLeague: (leagueId: string) => Promise<void>;
 
-  // 🔥 MARKET ACTIONS
+  // Market Actions
   fetchGlobalMarkets: () => Promise<void>;
   toggleUserMarket: (market: GlobalMarket) => Promise<void>;
+
+  // 🔥 System Methods Actions
+  fetchSystemMethods: () => Promise<void>;
+  importSystemMethod: (methodId: string) => Promise<boolean>;
 
   addBankroll: (name: string, currency: string, initialBalance: number) => Promise<void>;
   removeBankroll: (id: string) => Promise<void>;
@@ -240,7 +258,6 @@ interface BetState {
   importMarket: (marketId: string) => Promise<boolean>;
   importLeague: (leagueId: string) => Promise<boolean>;
   importTeam: (teamId: string) => Promise<boolean>;
-  importSystemMethod: (methodId: string) => Promise<boolean>;
   importProgressionStrategy: (strategyId: string) => Promise<boolean>;
 
   // Toast System
@@ -269,6 +286,9 @@ export const useBetStore = create<BetState>()(
 
       globalMarkets: [],
       isLoadingMarkets: false,
+
+      globalSystemMethods: [],
+      isLoadingSystemMethods: false,
 
       bankrolls: [],
       activeBankrollId: '',
@@ -332,7 +352,7 @@ export const useBetStore = create<BetState>()(
           // Carregar User Markets
           const { data: userMarketsData } = await supabase
             .from('user_markets')
-            .select('id, name') // Importante pegar o nome para o estado local
+            .select('id, name') 
             .eq('user_id', userId);
 
           if (userMarketsData) {
@@ -456,7 +476,8 @@ export const useBetStore = create<BetState>()(
             userLeagues: [],
             globalLeagues: [],
             globalMarkets: [],
-            customMarkets: []
+            customMarkets: [],
+            globalSystemMethods: []
           });
         }
       },
@@ -616,7 +637,7 @@ export const useBetStore = create<BetState>()(
         }
       },
 
-      // 🔥 MARKET ACTIONS (IMPLEMENTAÇÃO)
+      // 🔥 MARKET ACTIONS
       fetchGlobalMarkets: async () => {
         set({ isLoadingMarkets: true });
         try {
@@ -668,6 +689,75 @@ export const useBetStore = create<BetState>()(
         } catch (error) {
           console.error('Erro ao atualizar mercado:', error);
         }
+      },
+
+      // 🔥 SYSTEM METHODS ACTIONS
+      fetchSystemMethods: async () => {
+        set({ isLoadingSystemMethods: true });
+        try {
+          const { data } = await supabase
+            .from('system_methods')
+            .select('*')
+            .order('name', { ascending: true });
+            
+          set({ globalSystemMethods: data || [] });
+        } catch (error) {
+          console.error('Erro ao buscar métodos do sistema:', error);
+        } finally {
+          set({ isLoadingSystemMethods: false });
+        }
+      },
+
+      importSystemMethod: async (methodId) => {
+        const user = get().user;
+        if (!user) return false;
+
+        // 1. Busca os dados do método global
+        const { data, error } = await supabase
+          .from('system_methods')
+          .select('*')
+          .eq('id', methodId)
+          .single();
+
+        if (error || !data) {
+          get().setToast({ type: 'error', message: 'Erro ao importar método.' });
+          return false;
+        }
+
+        // 2. Verifica se o usuário já possui este método
+        const { data: existing } = await supabase
+            .from('methods')
+            .select('id')
+            .eq('user_id', user.id)
+            .eq('name', data.name)
+            .single();
+            
+        if (existing) {
+             get().setToast({ type: 'error', message: 'Você já possui este método.' });
+             return false;
+        }
+
+        // 3. Insere
+        const { data: newMethod, error: insertError } = await supabase
+          .from('methods')
+          .insert({
+            name: data.name,
+            user_id: user.id
+          })
+          .select()
+          .single();
+
+        if (insertError) {
+           get().setToast({ type: 'error', message: 'Erro ao salvar método.' });
+           return false;
+        }
+
+        set((state) => ({
+            methods: [newMethod, ...state.methods]
+        }));
+
+        get().setToast({ type: 'success', message: 'Método importado com sucesso.' });
+        return true;
       },
 
       // --- BANKROLLS ---
@@ -1435,10 +1525,37 @@ export const useBetStore = create<BetState>()(
           return false;
         }
 
-        await supabase.from('methods').insert({
-          name: data.name,
-          user_id: user.id
-        });
+        // Verifica se já existe pelo nome para evitar duplicata
+        const { data: existing } = await supabase
+            .from('methods')
+            .select('id')
+            .eq('user_id', user.id)
+            .eq('name', data.name)
+            .single();
+            
+        if (existing) {
+             get().setToast({ type: 'error', message: 'Você já possui este método.' });
+             return false;
+        }
+
+        const { data: newMethod, error: insertError } = await supabase
+          .from('methods')
+          .insert({
+            name: data.name,
+            user_id: user.id
+          })
+          .select()
+          .single();
+
+        if (insertError) {
+           get().setToast({ type: 'error', message: 'Erro ao salvar método.' });
+           return false;
+        }
+
+        // Atualiza estado local
+        set((state) => ({
+            methods: [newMethod, ...state.methods]
+        }));
 
         get().setToast({ type: 'success', message: 'Método importado para sua conta.' });
         return true;
