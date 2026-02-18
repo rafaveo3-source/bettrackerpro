@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useBetStore } from '../store/useBetStore';
-import { Target, Check, Search, Loader2, Download, TrendingUp, Info, Trash2 } from 'lucide-react';
+import { Target, Check, Search, Loader2, Download, TrendingUp, Info, Trash2, Lock } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 const ManageMethods = () => {
@@ -12,7 +12,8 @@ const ManageMethods = () => {
     removeMethod,
     addMethod,
     isLoadingSystemMethods,
-    getMethodRealStats // ✅ Nova função importada da store
+    getMethodRealStats,
+    isPro // 🔥 Pegue o isPro
   } = useBetStore();
 
   const [newMethodName, setNewMethodName] = useState('');
@@ -38,16 +39,16 @@ const ManageMethods = () => {
     }
   };
 
-  // Helper para formatar cor do ROI
   const getRoiColor = (value: number) => {
     if (value > 0) return 'text-emerald-500';
     if (value < 0) return 'text-red-500';
     return 'text-slate-400';
   };
+
   return (
     <div className="w-full max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-8">
       
-      {/* COLUNA ESQUERDA: MEUS MÉTODOS */}
+      {/* COLUNA ESQUERDA: MEUS MÉTODOS (Liberado para todos, é criação manual) */}
       <div className="space-y-6">
         <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm">
           <h2 className="text-xl font-bold text-slate-900 dark:text-white flex items-center gap-2 mb-4">
@@ -55,7 +56,6 @@ const ManageMethods = () => {
             Meus Métodos
           </h2>
           
-          {/* ✅ CORREÇÃO AQUI: Responsividade no Mobile */}
           <form onSubmit={handleAddMethod} className="flex flex-col sm:flex-row gap-2 mb-6">
             <input 
               type="text" 
@@ -81,7 +81,6 @@ const ManageMethods = () => {
                 </div>
               ) : (
                 userMethods.map(m => {
-                  // Calcula Stats em Tempo Real para Meus Métodos
                   const stats = getMethodRealStats(m.name);
                   
                   return (
@@ -117,7 +116,7 @@ const ManageMethods = () => {
         </div>
       </div>
 
-      {/* COLUNA DIREITA: BIBLIOTECA VALIDADA */}
+      {/* COLUNA DIREITA: BIBLIOTECA VALIDADA (Bloqueio PRO na importação) */}
       <div className="space-y-6">
         <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm h-full">
           <h2 className="text-xl font-bold text-slate-900 dark:text-white flex items-center gap-2 mb-1">
@@ -134,10 +133,6 @@ const ManageMethods = () => {
             <div className="space-y-4 max-h-[600px] overflow-y-auto pr-2 custom-scrollbar">
               {globalSystemMethods.map(method => {
                 const isImported = userMethods.some(um => um.name === method.name);
-                
-                // 🔥 LÓGICA DE DADOS REAIS
-                // Se importado: Pega estatísticas reais do usuário
-                // Se não: Mostra ZERADO (conforme solicitado)
                 const realStats = isImported ? getMethodRealStats(method.name) : { roi30d: 0, roiTotal: 0 };
 
                 return (
@@ -159,7 +154,6 @@ const ManageMethods = () => {
                       </div>
                     )}
 
-                    {/* Stats Grid - AGORA COM DADOS REAIS OU ZERADOS */}
                     <div className="grid grid-cols-3 gap-2 mb-4">
                       <div className="bg-white dark:bg-slate-900 p-2 rounded-lg border border-slate-100 dark:border-slate-800 text-center">
                         <p className="text-[10px] text-slate-400 uppercase font-bold">Seu ROI 30d</p>
@@ -174,21 +168,31 @@ const ManageMethods = () => {
                         </p>
                       </div>
                       <div className="bg-white dark:bg-slate-900 p-2 rounded-lg border border-slate-100 dark:border-slate-800 text-center flex items-center justify-center">
-                         <TrendingUp size={16} className={isImported ? "text-blue-500" : "text-slate-200 dark:text-slate-700"} />
+                          <TrendingUp size={16} className={isImported ? "text-blue-500" : "text-slate-200 dark:text-slate-700"} />
                       </div>
                     </div>
 
                     <button 
-                      onClick={() => importSystemMethod(method.id)}
+                      onClick={() => {
+                        if (!isPro) {
+                           alert("Importação de Métodos Profissionais é exclusiva PRO 💎");
+                           return;
+                        }
+                        importSystemMethod(method.id);
+                      }}
                       disabled={isImported}
                       className={`w-full py-2 rounded-lg text-xs font-bold flex items-center justify-center gap-2 transition-all
                         ${isImported 
                           ? 'bg-emerald-500/10 text-emerald-600 border border-emerald-500/20 cursor-default' 
-                          : 'bg-blue-500 hover:bg-blue-600 text-white shadow-lg shadow-blue-500/20'}
+                          : !isPro
+                             ? 'bg-slate-100 dark:bg-slate-900 text-slate-400 cursor-not-allowed border border-slate-200 dark:border-slate-700'
+                             : 'bg-blue-500 hover:bg-blue-600 text-white shadow-lg shadow-blue-500/20'}
                       `}
                     >
                       {isImported ? (
                         <> <Check size={14} /> Ativo em Meus Métodos </>
+                      ) : !isPro ? (
+                        <> <Lock size={12} /> Bloqueado (PRO) </>
                       ) : (
                         <> <Download size={14} /> Importar Estratégia </>
                       )}

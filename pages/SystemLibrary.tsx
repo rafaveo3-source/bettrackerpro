@@ -7,7 +7,8 @@ import {
   TrendingUp, 
   Target, 
   CheckCircle2,
-  ChevronDown 
+  ChevronDown,
+  Lock
 } from 'lucide-react';
 import { useBetStore } from '../store/useBetStore';
 
@@ -16,26 +17,27 @@ import ManageLeagues from '../components/ManageLeagues';
 import ManageTeams from '../components/ManageTeams';
 import ManageMarkets from '../components/ManageMarkets';
 import ManageMethods from '../components/ManageMethods';
-import ManageStrategies from '../components/ManageStrategies'; // Novo Componente de Modelos
+import ManageStrategies from '../components/ManageStrategies';
 
 const SystemLibrary: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'leagues' | 'teams' | 'markets' | 'strategies' | 'methods'>('leagues');
   
-  // Store Global (Apenas os dados necessários para contadores e lista de estratégias do usuário)
+  // Store Global
   const { 
     userLeagues, 
     userTeams, 
     customMarkets, 
     customStrategies, 
     methods: userMethods,
+    isPro // 🔥 Pegue o estado isPro
   } = useBetStore();
 
   const tabs = [
-    { id: 'leagues', label: 'Ligas', icon: Globe, count: userLeagues.length },
-    { id: 'teams', label: 'Times', icon: Shield, count: userTeams.length },
-    { id: 'markets', label: 'Mercados', icon: LayoutGrid, count: customMarkets.length },
-    { id: 'strategies', label: 'Estratégias', icon: TrendingUp, count: customStrategies.length },
-    { id: 'methods', label: 'Métodos', icon: Target, count: userMethods.length },
+    { id: 'leagues', label: 'Ligas', icon: Globe, count: userLeagues.length, pro: false }, // Ligas liberado (básico)
+    { id: 'teams', label: 'Times', icon: Shield, count: userTeams.length, pro: true },
+    { id: 'markets', label: 'Mercados', icon: LayoutGrid, count: customMarkets.length, pro: true },
+    { id: 'strategies', label: 'Estratégias', icon: TrendingUp, count: customStrategies.length, pro: true },
+    { id: 'methods', label: 'Métodos', icon: Target, count: userMethods.length, pro: true },
   ];
 
   return (
@@ -60,7 +62,7 @@ const SystemLibrary: React.FC = () => {
 
       <div className="max-w-7xl mx-auto">
         
-        {/* NAVEGAÇÃO HÍBRIDA (Desktop: Abas | Mobile: Select) */}
+        {/* NAVEGAÇÃO HÍBRIDA */}
         <div className="mb-8">
           
           {/* MOBILE: Select Dropdown */}
@@ -75,7 +77,7 @@ const SystemLibrary: React.FC = () => {
             >
               {tabs.map(tab => (
                 <option key={tab.id} value={tab.id}>
-                  {tab.label} ({tab.count})
+                  {tab.label} ({tab.count}) {tab.pro && !isPro ? '(PRO)' : ''}
                 </option>
               ))}
             </select>
@@ -88,6 +90,9 @@ const SystemLibrary: React.FC = () => {
           <div className="hidden md:inline-flex bg-white dark:bg-slate-900 p-1.5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-x-auto max-w-full">
             {tabs.map((tab) => {
               const isActive = activeTab === tab.id;
+              // Visualmente mostra cadeado, mas permite clicar para ver o conteúdo (que estará com ações bloqueadas)
+              const showLock = tab.pro && !isPro; 
+
               return (
                 <button
                   key={tab.id}
@@ -101,6 +106,8 @@ const SystemLibrary: React.FC = () => {
                 >
                   <tab.icon size={16} />
                   {tab.label}
+                  
+                  {/* Badge de Contagem */}
                   {tab.count > 0 && (
                     <span className={`
                       text-[10px] px-1.5 py-0.5 rounded-full font-black ml-1
@@ -108,6 +115,11 @@ const SystemLibrary: React.FC = () => {
                     `}>
                       {tab.count}
                     </span>
+                  )}
+
+                  {/* Cadeado PRO */}
+                  {showLock && (
+                      <Lock size={12} className="ml-1 text-slate-400" />
                   )}
                 </button>
               );
@@ -137,11 +149,11 @@ const SystemLibrary: React.FC = () => {
               </motion.div>
             )}
 
-            {/* ✅ ABA ESTRATÉGIAS OTIMIZADA */}
+            {/* ABA ESTRATÉGIAS OTIMIZADA */}
             {activeTab === 'strategies' && (
               <motion.div key="strategies" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="space-y-8">
                 
-                {/* 1. SEÇÃO: MINHAS ESTRATÉGIAS (Mantida para não perder dados) */}
+                {/* 1. SEÇÃO: MINHAS ESTRATÉGIAS */}
                 <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm">
                   <h3 className="text-lg font-black text-slate-800 dark:text-white mb-6 flex items-center gap-2 uppercase tracking-tight">
                     <CheckCircle2 size={18} className="text-emerald-500" /> Minhas Estratégias Ativas
@@ -164,8 +176,7 @@ const SystemLibrary: React.FC = () => {
                   </div>
                 </div>
 
-                {/* 2. SEÇÃO: MENU DE MODELOS (Novo Componente) */}
-                {/* Aqui carregamos o ManageStrategies que tem o botão para criar METAS */}
+                {/* 2. SEÇÃO: MENU DE MODELOS */}
                 <ManageStrategies />
 
               </motion.div>

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useBetStore } from '../store/useBetStore';
-import { Shield, Check, Loader2, ChevronDown, Trophy, CheckSquare, Square } from 'lucide-react';
+import { Shield, Check, Loader2, ChevronDown, Trophy, CheckSquare, Square, Lock } from 'lucide-react';
 
 const ManageTeams = () => {
   const { 
@@ -10,10 +10,10 @@ const ManageTeams = () => {
     userTeams, 
     fetchLeagueTeams, 
     toggleUserTeam, 
-    isLoadingTeams 
+    isLoadingTeams,
+    isPro // 🔥 Pegue o isPro
   } = useBetStore();
 
-  // Blindagem contra dados undefined/null
   const safeGlobalLeagues = Array.isArray(globalLeagues) ? globalLeagues : [];
   const safeUserLeagues = Array.isArray(userLeagues) ? userLeagues : [];
   const safeCurrentTeams = Array.isArray(currentLeagueTeams) ? currentLeagueTeams : [];
@@ -34,15 +34,26 @@ const ManageTeams = () => {
     }
   }, [selectedLeagueId]);
 
+  const checkProAndExecute = (action: () => void) => {
+      if (!isPro) {
+          alert("Gerenciamento de Times Favoritos é exclusivo PRO 💎");
+          return;
+      }
+      action();
+  };
+
   const handleSelectAll = async () => {
-    const toSelect = safeCurrentTeams.filter(t => !safeUserTeams.includes(t.id));
-    // Executa em paralelo para velocidade
-    await Promise.all(toSelect.map(t => toggleUserTeam(t.id)));
+    checkProAndExecute(async () => {
+        const toSelect = safeCurrentTeams.filter(t => !safeUserTeams.includes(t.id));
+        await Promise.all(toSelect.map(t => toggleUserTeam(t.id)));
+    });
   };
 
   const handleDeselectAll = async () => {
-    const toDeselect = safeCurrentTeams.filter(t => safeUserTeams.includes(t.id));
-    await Promise.all(toDeselect.map(t => toggleUserTeam(t.id)));
+     checkProAndExecute(async () => {
+        const toDeselect = safeCurrentTeams.filter(t => safeUserTeams.includes(t.id));
+        await Promise.all(toDeselect.map(t => toggleUserTeam(t.id)));
+     });
   };
 
   return (
@@ -55,6 +66,7 @@ const ManageTeams = () => {
             <h2 className="text-xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
               <Shield className="text-blue-500" size={24} />
               Gerenciar Times
+              {!isPro && <span className="bg-slate-100 dark:bg-slate-800 text-slate-500 text-[10px] px-2 py-1 rounded-full uppercase ml-2 flex items-center gap-1"><Lock size={10}/> PRO</span>}
             </h2>
             <p className="text-slate-500 dark:text-slate-400 text-sm mt-1">
               Selecione a liga e marque os times favoritos.
@@ -92,21 +104,21 @@ const ManageTeams = () => {
           <div className="flex gap-3 pt-4 border-t border-slate-100 dark:border-slate-800">
             <button 
               onClick={handleSelectAll}
-              className="text-xs font-semibold text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 flex items-center gap-1.5 px-3 py-1.5 rounded-lg hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors"
+              className={`text-xs font-semibold flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition-colors ${!isPro ? 'text-slate-400 cursor-not-allowed' : 'text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 hover:bg-blue-50 dark:hover:bg-blue-900/20'}`}
             >
-              <CheckSquare size={14} /> Selecionar Todos
+               {!isPro && <Lock size={12}/>} <CheckSquare size={14} /> Selecionar Todos
             </button>
             <button 
               onClick={handleDeselectAll}
-              className="text-xs font-semibold text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 flex items-center gap-1.5 px-3 py-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+              className={`text-xs font-semibold flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition-colors ${!isPro ? 'text-slate-400 cursor-not-allowed' : 'text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800'}`}
             >
-              <Square size={14} /> Limpar Seleção
+              {!isPro && <Lock size={12}/>} <Square size={14} /> Limpar Seleção
             </button>
           </div>
         )}
       </div>
 
-      {/* GRID DE TIMES - SEM ANIMAÇÕES */}
+      {/* GRID DE TIMES */}
       <div className="min-h-[300px]">
         {myActiveLeagues.length === 0 ? (
           <div className="text-center py-20 bg-white dark:bg-slate-900 rounded-2xl border border-dashed border-slate-200 dark:border-slate-800">
@@ -124,12 +136,13 @@ const ManageTeams = () => {
                 return (
                   <div
                     key={team.id}
-                    onClick={() => toggleUserTeam(team.id)}
+                    onClick={() => checkProAndExecute(() => toggleUserTeam(team.id))}
                     className={`
                       relative overflow-hidden cursor-pointer group rounded-xl border p-4 transition-all duration-200 flex justify-between items-center select-none
                       ${isActive 
                         ? 'bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-500/30 shadow-md ring-1 ring-blue-500/20' 
                         : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 hover:border-blue-300 dark:hover:border-slate-600 hover:shadow-sm'}
+                      ${!isPro ? 'opacity-70 grayscale-[0.5]' : ''}
                     `}
                   >
                     <span className={`font-semibold text-sm transition-colors ${isActive ? 'text-blue-700 dark:text-blue-300' : 'text-slate-600 dark:text-slate-400 group-hover:text-slate-900 dark:group-hover:text-slate-200'}`}>
@@ -142,7 +155,7 @@ const ManageTeams = () => {
                         ? 'bg-blue-500 text-white scale-100 shadow-sm' 
                         : 'bg-slate-100 dark:bg-slate-800 text-slate-300 dark:text-slate-600 scale-90 group-hover:scale-100'}
                     `}>
-                      {isActive && <Check size={14} />}
+                      {isActive ? <Check size={14} /> : (!isPro && <Lock size={12}/>)}
                     </div>
                   </div>
                 );

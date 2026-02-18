@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useBetStore, GlobalMarket } from '../store/useBetStore';
-import { LayoutGrid, Check, Search, Loader2, Tag, CheckSquare, Square } from 'lucide-react';
+import { LayoutGrid, Check, Search, Loader2, Tag, CheckSquare, Square, Lock } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 const ManageMarkets = () => {
@@ -9,7 +9,8 @@ const ManageMarkets = () => {
     customMarkets, 
     fetchGlobalMarkets, 
     toggleUserMarket, 
-    isLoadingMarkets 
+    isLoadingMarkets,
+    isPro // 🔥 Pegue o isPro
   } = useBetStore();
 
   const [search, setSearch] = useState('');
@@ -18,13 +19,11 @@ const ManageMarkets = () => {
     fetchGlobalMarkets();
   }, []);
 
-  // 1. Filtragem
   const filteredMarkets = globalMarkets.filter(m => 
     m.name.toLowerCase().includes(search.toLowerCase()) || 
     m.label.toLowerCase().includes(search.toLowerCase())
   );
 
-  // 2. Agrupamento por Categoria (Label)
   const marketsByCategory = filteredMarkets.reduce((acc, market) => {
     if (!acc[market.label]) acc[market.label] = [];
     acc[market.label].push(market);
@@ -33,22 +32,31 @@ const ManageMarkets = () => {
 
   const categories = Object.keys(marketsByCategory).sort();
 
-  // 3. Ações em Massa (Por Categoria)
+  const checkProAndExecute = (action: () => void) => {
+    if (!isPro) {
+        alert("Personalização de Mercados é exclusiva PRO 💎");
+        return;
+    }
+    action();
+  };
+
   const handleSelectCategory = (categoryMarkets: GlobalMarket[]) => {
-    // Adiciona apenas os que não estão ativos
-    categoryMarkets.forEach(m => {
-      if (!customMarkets.some(cm => cm.name === m.name)) {
-        toggleUserMarket(m);
-      }
+    checkProAndExecute(() => {
+        categoryMarkets.forEach(m => {
+            if (!customMarkets.some(cm => cm.name === m.name)) {
+                toggleUserMarket(m);
+            }
+        });
     });
   };
 
   const handleDeselectCategory = (categoryMarkets: GlobalMarket[]) => {
-    // Remove os que estão ativos
-    categoryMarkets.forEach(m => {
-      if (customMarkets.some(cm => cm.name === m.name)) {
-        toggleUserMarket(m);
-      }
+    checkProAndExecute(() => {
+        categoryMarkets.forEach(m => {
+            if (customMarkets.some(cm => cm.name === m.name)) {
+                toggleUserMarket(m);
+            }
+        });
     });
   };
 
@@ -61,6 +69,7 @@ const ManageMarkets = () => {
           <h2 className="text-xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
             <LayoutGrid className="text-emerald-500" size={24} />
             Gerenciar Mercados
+            {!isPro && <span className="bg-slate-100 dark:bg-slate-800 text-slate-500 text-[10px] px-2 py-1 rounded-full uppercase ml-2 flex items-center gap-1"><Lock size={10}/> PRO</span>}
           </h2>
           <p className="text-slate-500 dark:text-slate-400 text-sm mt-1">
             Personalize os mercados disponíveis no menu de nova aposta.
@@ -90,7 +99,6 @@ const ManageMarkets = () => {
             {categories.length > 0 ? (
               categories.map(category => {
                 const markets = marketsByCategory[category];
-                // Verifica se todos desta categoria estão selecionados para estado visual
                 const allSelected = markets.every(m => customMarkets.some(cm => cm.name === m.name));
 
                 return (
@@ -117,16 +125,16 @@ const ManageMarkets = () => {
                         {!allSelected && (
                           <button 
                             onClick={() => handleSelectCategory(markets)}
-                            className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 px-2 py-1 rounded flex items-center gap-1 transition-colors"
+                            className={`text-[10px] font-bold flex items-center gap-1 px-2 py-1 rounded transition-colors ${!isPro ? 'text-slate-400 cursor-not-allowed' : 'text-emerald-600 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-900/20'}`}
                           >
-                            <CheckSquare size={12} /> Todos
+                            {!isPro && <Lock size={10}/>} <CheckSquare size={12} /> Todos
                           </button>
                         )}
                         <button 
                           onClick={() => handleDeselectCategory(markets)}
-                          className="text-[10px] font-bold text-slate-500 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 px-2 py-1 rounded flex items-center gap-1 transition-colors"
+                          className={`text-[10px] font-bold flex items-center gap-1 px-2 py-1 rounded transition-colors ${!isPro ? 'text-slate-400 cursor-not-allowed' : 'text-slate-500 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20'}`}
                         >
-                          <Square size={12} /> Nenhum
+                          {!isPro && <Lock size={10}/>} <Square size={12} /> Nenhum
                         </button>
                       </div>
                     </div>
@@ -138,12 +146,13 @@ const ManageMarkets = () => {
                         return (
                           <div
                             key={market.id}
-                            onClick={() => toggleUserMarket(market)}
+                            onClick={() => checkProAndExecute(() => toggleUserMarket(market))}
                             className={`
                               cursor-pointer relative rounded-xl border px-3 py-2.5 flex items-center justify-between gap-2 transition-all duration-200 group
                               ${isActive 
                                 ? 'bg-purple-50 dark:bg-purple-900/20 border-purple-200 dark:border-purple-500/30 shadow-sm' 
                                 : 'bg-slate-50 dark:bg-slate-950 border-slate-200 dark:border-slate-800 hover:border-purple-300 dark:hover:border-slate-700'}
+                              ${!isPro ? 'opacity-70 grayscale' : ''}
                             `}
                           >
                             <span className={`text-xs font-semibold leading-tight ${isActive ? 'text-purple-700 dark:text-purple-300' : 'text-slate-600 dark:text-slate-400'}`}>
@@ -154,7 +163,7 @@ const ManageMarkets = () => {
                               w-5 h-5 rounded-full flex items-center justify-center transition-all duration-200 flex-shrink-0
                               ${isActive ? 'bg-purple-500 text-white scale-100' : 'bg-slate-200 dark:bg-slate-800 text-transparent scale-90 group-hover:scale-100 group-hover:bg-slate-300 dark:group-hover:bg-slate-700'}
                             `}>
-                              <Check size={12} strokeWidth={3} />
+                              {isActive ? <Check size={12} strokeWidth={3} /> : (!isPro && <Lock size={10} className="text-slate-400" />)}
                             </div>
                           </div>
                         );
