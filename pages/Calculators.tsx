@@ -4,8 +4,7 @@ import {
   ChevronDown, 
   Sparkles, 
   Trash2, 
-  Plus, 
-  ArrowRightLeft 
+  Plus
 } from 'lucide-react';
 import { useBetStore } from '../store/useBetStore';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -73,27 +72,51 @@ const Calculators: React.FC = () => {
   const kellyResult = calculateKelly();
   const kellyMoney = (parseFloat(kellyResult) / 100) * currentBankrollBalance;
 
-  // --- CONVERTER ---
-  const [decimalOdd, setDecimalOdd] = useState('2.00');
-  
-  const toAmerican = (dec: number) => {
-    if (dec >= 2) return `+${Math.round((dec - 1) * 100)}`;
-    return `-${Math.round(100 / (dec - 1))}`;
-  };
+  // --- MÉTRICAS AVANÇADAS KELLY ---
 
-  const toFractional = (dec: number) => {
-    const tolerance = 1.0E-6;
-    let h1 = 1, h2 = 0, k1 = 0, k2 = 1;
-    if (!dec || dec <= 1) return '--';
-let b = dec - 1;
-    do {
-        let a = Math.floor(b);
-        let aux = h1; h1 = a * h1 + h2; h2 = aux;
-        aux = k1; k1 = a * k1 + k2; k2 = aux;
-        b = 1 / (b - a);
-    } while (Math.abs(dec - 1 - h1 / k1) > dec * tolerance);
-    return k1 !== 0 ? `${h1}/${k1}` : '--';
-  };
+const decimalOdds = parseFloat(kellyOdds);
+const userProb = parseFloat(kellyProb) / 100;
+
+const impliedProb = decimalOdds > 1 ? 1 / decimalOdds : 0;
+const impliedPercent = impliedProb * 100;
+
+const edgePercent = (userProb - impliedProb) * 100;
+
+// Expected Value
+const ev = decimalOdds > 1 ? (userProb * decimalOdds) - 1 : 0;
+const evPercent = ev * 100;
+
+// Classificação de Agressividade
+let aggressionLabel = "Sem Aposta";
+let aggressionColor = "text-slate-400";
+
+const kellyNumeric = parseFloat(kellyResult);
+
+// --- SIMULADOR DE CRESCIMENTO ---
+const [simulationBets, setSimulationBets] = useState('100');
+
+const betsCount = parseInt(simulationBets) || 0;
+
+const projectedBankroll =
+  ev > 0 && betsCount > 0
+    ? currentBankrollBalance * Math.pow(1 + ev, betsCount)
+    : currentBankrollBalance;
+
+const growthPercent =
+  ev > 0 && betsCount > 0
+    ? ((projectedBankroll / currentBankrollBalance - 1) * 100)
+    : 0;
+
+if (kellyNumeric > 10) {
+  aggressionLabel = "Agressiva";
+  aggressionColor = "text-red-500";
+} else if (kellyNumeric > 5) {
+  aggressionLabel = "Moderada";
+  aggressionColor = "text-yellow-500";
+} else if (kellyNumeric > 0) {
+  aggressionLabel = "Conservadora";
+  aggressionColor = "text-emerald-500";
+}
 
   return (
     <div className="space-y-6 pb-20 w-full overflow-x-hidden">
@@ -121,9 +144,8 @@ let b = dec - 1;
 </div>
 
 </div>
-
       {/* ✅ SOLUÇÃO DEFINITIVA: Grid Responsivo (Stack no Mobile, Linha no Desktop) */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-6">
 
   {/* DUTCHING */}
   <button
@@ -151,21 +173,6 @@ let b = dec - 1;
   >
     Critério de Kelly
     {activeTab === 'kelly' && (
-      <span className="absolute bottom-0 left-0 w-full h-[3px] bg-white/40 animate-pulse rounded-b-xl" />
-    )}
-  </button>
-
-  {/* CONVERTER */}
-  <button
-    onClick={() => setActiveTab('converter')}
-    className={`relative w-full flex items-center justify-center px-4 py-4 rounded-xl font-black text-xs uppercase tracking-widest transition-all ${
-      activeTab === 'converter'
-        ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/20'
-        : 'bg-white dark:bg-[#0f172a] text-slate-500 border border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-900'
-    }`}
-  >
-    Conversor Odds
-    {activeTab === 'converter' && (
       <span className="absolute bottom-0 left-0 w-full h-[3px] bg-white/40 animate-pulse rounded-b-xl" />
     )}
   </button>
@@ -404,54 +411,120 @@ let b = dec - 1;
     </p>
   </div>
 )}
+
+{/* MÉTRICAS AVANÇADAS */}
+<div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-4">
+
+  {/* EV */}
+  <div className="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-4">
+    <p className="text-[10px] uppercase font-bold text-slate-400 mb-1 tracking-widest">
+      Expected Value (EV)
+    </p>
+    <p className={`text-lg font-black ${
+      evPercent > 0 ? 'text-emerald-500' : 'text-red-500'
+    }`}>
+      {evPercent.toFixed(2)}%
+    </p>
+  </div>
+
+  {/* EDGE */}
+  <div className="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-4">
+    <p className="text-[10px] uppercase font-bold text-slate-400 mb-1 tracking-widest">
+      Sua Vantagem
+    </p>
+    <p className={`text-lg font-black ${
+      edgePercent > 0 ? 'text-emerald-500' : 'text-red-500'
+    }`}>
+      {edgePercent.toFixed(2)}%
+    </p>
+  </div>
+
+  {/* Prob Implícita */}
+  <div className="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-4">
+    <p className="text-[10px] uppercase font-bold text-slate-400 mb-1 tracking-widest">
+      Prob. Implícita da Odd
+    </p>
+    <p className="text-lg font-black text-slate-700 dark:text-slate-300">
+      {impliedPercent.toFixed(2)}%
+    </p>
+  </div>
+
+  {/* Agressividade */}
+  <div className="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-4">
+    <p className="text-[10px] uppercase font-bold text-slate-400 mb-1 tracking-widest">
+      Perfil da Aposta
+    </p>
+    <p className={`text-lg font-black ${aggressionColor}`}>
+      {kellyNumeric > 0 ? aggressionLabel : "Sem Edge"}
+    </p>
+  </div>
+
+</div>
+
+{/* SIMULADOR DE CRESCIMENTO */}
+<div className="mt-10 bg-gradient-to-r from-emerald-50 to-white dark:from-emerald-900/10 dark:to-slate-900/50 border border-emerald-100 dark:border-emerald-500/10 rounded-2xl p-6">
+
+  <div className="flex justify-between items-center mb-6">
+    <div>
+      <p className="text-[10px] uppercase font-black tracking-widest text-emerald-600">
+        Simulação de Crescimento
+      </p>
+      <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">
+        Projeção baseada no EV atual
+      </p>
+    </div>
+
+    <div className="flex items-center gap-2">
+      <input
+        type="number"
+        value={simulationBets}
+        onChange={(e) => setSimulationBets(e.target.value)}
+        className="w-20 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg px-3 py-2 text-sm font-mono font-bold text-center outline-none focus:border-emerald-500"
+      />
+      <span className="text-[10px] font-bold uppercase text-slate-400">
+        Apostas
+      </span>
+    </div>
+  </div>
+
+  {ev > 0 ? (
+    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-center">
+      <div>
+        <p className="text-[10px] uppercase font-bold text-slate-400 mb-1">
+          Banca Inicial
+        </p>
+        <p className="text-lg font-black text-slate-800 dark:text-white font-mono">
+          R$ {currentBankrollBalance.toFixed(2)}
+        </p>
+      </div>
+
+      <div>
+        <p className="text-[10px] uppercase font-bold text-slate-400 mb-1">
+          Banca Projetada
+        </p>
+        <p className="text-lg font-black text-emerald-600 dark:text-emerald-400 font-mono">
+          R$ {projectedBankroll.toFixed(2)}
+        </p>
+      </div>
+
+      <div>
+        <p className="text-[10px] uppercase font-bold text-slate-400 mb-1">
+          Crescimento
+        </p>
+        <p className="text-lg font-black text-emerald-600 dark:text-emerald-400">
+          +{growthPercent.toFixed(2)}%
+        </p>
+      </div>
+    </div>
+  ) : (
+    <div className="text-center text-red-500 text-sm font-bold">
+      Simulação indisponível (EV ≤ 0)
+    </div>
+  )}
+
+</div>
                 </div>
             )}
-
-             {activeTab === 'converter' && (
-                <div className="bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-800 rounded-[1.5rem] md:rounded-[2rem] p-5 md:p-8 shadow-sm w-full overflow-hidden">
-                    {/* ACCORDION INFO */}
-                    <div className="bg-orange-50 dark:bg-orange-900/10 p-4 rounded-xl border border-orange-100 dark:border-orange-500/10 mb-6">
-                        <button onClick={() => toggleInfo('converter')} className="flex justify-between items-center w-full text-left">
-                            <div className="flex items-center gap-2">
-                                <Info size={16} className="text-orange-500 shrink-0" />
-                                <span className="text-xs md:text-sm font-black text-orange-700 dark:text-orange-400 uppercase tracking-wide">Conversor</span>
-                            </div>
-                            <ChevronDown size={16} className={`text-orange-500 transition-transform ${expandedInfo === 'converter' ? 'rotate-180' : ''}`} />
-                        </button>
-                        <AnimatePresence>
-                            {expandedInfo === 'converter' && (
-                                <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
-                                    <p className="text-xs text-orange-600 dark:text-orange-300 mt-3 leading-relaxed font-medium">
-                                        Converta odds Decimais para Americanas/Fracionárias.
-                                    </p>
-                                </motion.div>
-                            )}
-                        </AnimatePresence>
-                    </div>
-
-                    <h2 className="text-lg md:text-xl font-black text-slate-900 dark:text-white uppercase tracking-tighter italic mb-8">Conversor de Odds</h2>
-                      <div className="space-y-6">
-                        <div>
-                            <label className="text-[10px] text-purple-600 dark:text-purple-400 font-black uppercase mb-2 block tracking-widest">Decimal (EU)</label>
-                            <input type="number" value={decimalOdd} onChange={e => setDecimalOdd(e.target.value)} className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-4 text-slate-900 dark:text-white font-mono font-bold text-lg focus:border-purple-500 outline-none transition-colors" />
-                        </div>
-                        
-                        <div className="flex justify-center text-slate-300 dark:text-slate-600"><ArrowRightLeft size={24} /></div>
-                        
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
-                            <div>
-                                <label className="text-[10px] text-slate-400 font-black uppercase mb-2 block tracking-widest">Americana (US)</label>
-                                <div className="w-full bg-slate-100 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 rounded-xl p-4 text-slate-600 dark:text-slate-300 font-mono font-bold text-lg truncate">{parseFloat(decimalOdd) > 1 ? toAmerican(parseFloat(decimalOdd)) : '--'}</div>
-                            </div>
-                            <div>
-                                <label className="text-[10px] text-slate-400 font-black uppercase mb-2 block tracking-widest">Fracionária (UK)</label>
-                                <div className="w-full bg-slate-100 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 rounded-xl p-4 text-slate-600 dark:text-slate-300 font-mono font-bold text-lg truncate">{parseFloat(decimalOdd) > 1 ? toFractional(parseFloat(decimalOdd)) : '--'}</div>
-                            </div>
-                        </div>
-                      </div>
-                </div>
-            )}
-        </div>
         
         <div className="lg:col-span-1 space-y-6 w-full min-w-0">
             <div className="bg-white dark:bg-[#0f172a] rounded-[1.5rem] md:rounded-[2rem] border border-slate-200 dark:border-slate-800 p-6 md:p-8 shadow-sm">
