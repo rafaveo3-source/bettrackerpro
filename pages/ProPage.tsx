@@ -46,7 +46,7 @@ const ProPage: React.FC = () => {
       ],
       missing: [],
       // 👇 MANTENHA O SEU LINK DA KIWIFY AQUI
-      link: 'COLE_AQUI_O_LINK_DO_TRIMESTRAL_DA_KIWIFY', 
+      link: 'https://pay.kiwify.com.br/RTVLbxr', 
       recommended: false,
       color: 'blue',
       isFree: false
@@ -66,7 +66,7 @@ const ProPage: React.FC = () => {
       ],
       missing: [],
       // 👇 MANTENHA O SEU LINK DA KIWIFY AQUI
-      link: 'COLE_AQUI_O_LINK_DO_ANUAL_DA_KIWIFY', 
+      link: 'https://pay.kiwify.com.br/gsD3KTv', 
       recommended: true,
       color: 'emerald',
       isFree: false
@@ -87,7 +87,7 @@ const ProPage: React.FC = () => {
       ],
       missing: [],
       // 👇 MANTENHA O SEU LINK DA KIWIFY AQUI
-      link: 'COLE_AQUI_O_LINK_DO_SEMESTRAL_DA_KIWIFY', 
+      link: 'https://pay.kiwify.com.br/LbPU3YC', 
       recommended: false,
       color: 'purple',
       isFree: false
