@@ -21,7 +21,7 @@ import { useBetStore } from '../store/useBetStore';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 
-// Componente de Logo (Pequeno helper interno)
+// Componente de Logo
 const Logo = () => (
   <div className="flex items-center gap-2 px-2">
     <div className="w-8 h-8 bg-emerald-500 rounded-lg flex items-center justify-center font-black text-[#020617] text-xl italic shadow-lg shadow-emerald-500/20">
@@ -43,16 +43,17 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, setView }) => {
   const [isOpen, setIsOpen] = useState(false);
   const navigate = useNavigate();
 
+  // 🔥 NOMENCLATURA INSTITUCIONAL (BLINDAGEM KIWIFY)
   const menuItems = [
-    { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
-    { id: 'analytics', label: 'Análise', icon: BarChart2 },
-    { id: 'metas', label: 'Metas', icon: Target },
-    { id: 'mindset', label: 'Mindset', icon: BrainCircuit },
-    { id: 'historico', label: 'Histórico', icon: History },
-    { id: 'bancas', label: 'Bancas', icon: Wallet },
+    { id: 'dashboard', label: 'Visão Geral', icon: LayoutDashboard },
+    { id: 'analytics', label: 'Análise de Dados', icon: BarChart2 },
+    { id: 'metas', label: 'Metas (Take Profit)', icon: Target },
+    { id: 'mindset', label: 'Psicologia', icon: BrainCircuit },
+    { id: 'historico', label: 'Diário de Operações', icon: History },
+    { id: 'bancas', label: 'Portfólios', icon: Wallet },
     { id: 'calendar', label: 'Calendário', icon: CalendarDays },
     { id: 'calculators', label: 'Calculadoras', icon: Calculator },
-    { id: 'biblioteca', label: 'Biblioteca', icon: BookOpen },
+    { id: 'biblioteca', label: 'Playbooks PRO', icon: BookOpen },
     { id: 'settings', label: 'Configurações', icon: Settings },
   ];
 
@@ -62,7 +63,7 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, setView }) => {
   };
 
   const handleLogout = () => {
-    if(window.confirm('Deseja realmente sair?')) {
+    if(window.confirm('Deseja encerrar a sessão segura?')) {
         logout();
         navigate('/');
     }
@@ -93,7 +94,7 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, setView }) => {
         {/* User Profile Snippet */}
         <div className="p-6 border-b border-slate-200 dark:border-slate-800/50 transition-colors duration-300">
             <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-slate-100 dark:bg-slate-800 overflow-hidden border border-slate-200 dark:border-slate-700">
+                <div className="w-10 h-10 rounded-full bg-slate-100 dark:bg-slate-800 overflow-hidden border border-slate-200 dark:border-slate-700 shrink-0">
                     <img 
                         src={user?.avatar || `https://ui-avatars.com/api/?name=${user?.name || 'User'}&background=10b981&color=fff`} 
                         alt="Profile" 
@@ -101,7 +102,7 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, setView }) => {
                     />
                 </div>
                 <div className="flex-1 min-w-0">
-                    <p className="text-sm font-bold text-slate-900 dark:text-white truncate">{user?.name || 'Apostador'}</p>
+                    <p className="text-sm font-bold text-slate-900 dark:text-white truncate">{user?.name || 'Trader'}</p>
                     <p className="text-[10px] text-slate-500 uppercase tracking-wider font-bold">
                         {isPro ? (
                             <span className="text-emerald-500 flex items-center gap-1"><Crown size={10}/> Membro PRO</span>
@@ -169,7 +170,7 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, setView }) => {
                 onClick={handleLogout}
                 className="w-full flex items-center justify-center gap-2 text-slate-500 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 py-3 rounded-xl transition-all text-xs font-bold uppercase tracking-widest"
             >
-                <LogOut size={16} /> Sair
+                <LogOut size={16} /> Sair do Sistema
             </button>
         </div>
 
