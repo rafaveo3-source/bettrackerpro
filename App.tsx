@@ -15,6 +15,7 @@ import Calculators from './pages/Calculators';
 import Mindset from './pages/Mindset';
 import Goals from './pages/Goals';
 import SystemLibrary from './pages/SystemLibrary';
+import ProPage from './pages/ProPage'; // ✅ Nova Página Importada
 
 // Páginas Públicas
 import LandingPage from './pages/LandingPage';
@@ -24,9 +25,6 @@ import UpdatePassword from './pages/UpdatePassword';
 import { useBetStore, supabase } from './store/useBetStore';
 import { Toaster } from './components/ui/Toaster';
 
-// ============================================================================
-// COMPONENTE: SYSTEM ROUTES (O Sistema Protegido)
-// ============================================================================
 const SystemRoutes: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
@@ -43,6 +41,7 @@ const SystemRoutes: React.FC = () => {
     if (path.includes('/calculators')) return 'calculators';
     if (path.includes('/library')) return 'biblioteca';
     if (path.includes('/settings')) return 'settings';
+    if (path.includes('/pro')) return 'pro'; // ✅ Novo ID
     return 'dashboard';
   };
 
@@ -58,6 +57,7 @@ const SystemRoutes: React.FC = () => {
       case 'calculators': navigate('/calculators'); break;
       case 'biblioteca': navigate('/library'); break;
       case 'settings': navigate('/settings'); break;
+      case 'pro': navigate('/pro'); break; // ✅ Nova Navegação
       default: navigate('/dashboard'); break;
     }
   };
@@ -75,15 +75,13 @@ const SystemRoutes: React.FC = () => {
         <Route path="/calculators" element={<Calculators />} />
         <Route path="/library" element={<SystemLibrary />} />
         <Route path="/settings" element={<Settings />} />
+        <Route path="/pro" element={<ProPage />} /> {/* ✅ Nova Rota */}
         <Route path="*" element={<Navigate to="/dashboard" replace />} />
       </Routes>
     </Layout>
   );
 };
 
-// ============================================================================
-// COMPONENTE: APP CONTENT
-// ============================================================================
 const AppContent: React.FC = () => {
   const { setSession, isAuthenticated, checkProStatus, isDarkMode } = useBetStore();
 
@@ -96,7 +94,6 @@ const AppContent: React.FC = () => {
   }, [isDarkMode]);
 
   useEffect(() => {
-    // Check inicial
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
       if (session) {
@@ -104,13 +101,7 @@ const AppContent: React.FC = () => {
       }
     });
 
-    // Listener de mudanças
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      // O evento PASSWORD_RECOVERY é disparado quando o usuário clica no link do e-mail
-      if (event === 'PASSWORD_RECOVERY') {
-         // O Supabase injeta a sessão automaticamente, não precisamos forçar nada aqui,
-         // apenas garantir que o estado seja atualizado.
-      }
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session);
       if (session) {
         checkProStatus();
@@ -123,52 +114,16 @@ const AppContent: React.FC = () => {
   return (
     <>
       <Routes>
-        {/* --- ROTAS PÚBLICAS --- */}
-        
-        {/* Raiz: Se logado -> Dashboard, Senão -> Landing Page */}
-        <Route 
-          path="/" 
-          element={isAuthenticated ? <Navigate to="/dashboard" replace /> : <LandingPage />} 
-        />
-
-        {/* Login: Se logado -> Dashboard, Senão -> Auth Page */}
-        <Route 
-          path="/login" 
-          element={isAuthenticated ? <Navigate to="/dashboard" replace /> : <AuthPage />} 
-        />
-
-        {/* ✅ CORREÇÃO CRÍTICA: Rota de Redefinição de Senha 
-            NÃO pode ser protegida por isAuthenticated ? ... : ... 
-            Pois o usuário chega aqui via link de e-mail (token na URL) e o Supabase
-            ainda está processando a sessão. Se bloquearmos, o token se perde.
-        */}
-        <Route 
-          path="/update-password" 
-          element={<UpdatePassword />} 
-        />
-
-        {/* --- ROTAS PROTEGIDAS (SISTEMA) --- */}
-        <Route 
-          path="/*" 
-          element={
-            isAuthenticated ? (
-              <SystemRoutes />
-            ) : (
-              // Qualquer tentativa de acesso interno sem logar vai pro Login
-              <Navigate to="/login" replace />
-            )
-          } 
-        />
+        <Route path="/" element={isAuthenticated ? <Navigate to="/dashboard" replace /> : <LandingPage />} />
+        <Route path="/login" element={isAuthenticated ? <Navigate to="/dashboard" replace /> : <AuthPage />} />
+        <Route path="/update-password" element={<UpdatePassword />} />
+        <Route path="/*" element={isAuthenticated ? <SystemRoutes /> : <Navigate to="/login" replace />} />
       </Routes>
-      
       <Toaster />
     </>
   );
 };
 
-// ============================================================================
-// COMPONENTE PRINCIPAL
-// ============================================================================
 const App: React.FC = () => {
   return (
     <BrowserRouter>
