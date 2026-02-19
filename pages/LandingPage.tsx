@@ -10,9 +10,11 @@ import {
   ChevronRight,
   ShieldCheck,
   TrendingUp,
-  BarChart3,
-  CheckCircle2
+  BarChart3
 } from 'lucide-react';
+
+// Import do componente de Cookies (Crie o arquivo acima primeiro)
+import CookieConsent from '../components/ui/CookieConsent';
 
 const LandingPage = () => {
   const navigate = useNavigate();
@@ -28,6 +30,9 @@ const LandingPage = () => {
   return (
     <div className="min-h-screen bg-[#020617] text-white font-sans selection:bg-emerald-500/30 overflow-x-hidden">
       
+      {/* Componente de Cookies LGPD */}
+      <CookieConsent />
+
       {/* --- NAVBAR --- */}
       <nav className="fixed w-full z-50 bg-[#020617]/80 backdrop-blur-xl border-b border-white/5 transition-all duration-300">
         <div className="max-w-7xl mx-auto px-6 h-20 flex justify-between items-center">
@@ -59,7 +64,6 @@ const LandingPage = () => {
 
       {/* --- HERO SECTION --- */}
       <section className="relative pt-36 pb-20 md:pt-48 md:pb-40 px-6 overflow-hidden">
-        {/* Efeitos de Fundo */}
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[1000px] h-[600px] bg-emerald-500/10 blur-[120px] rounded-full -z-10 opacity-60 pointer-events-none" />
         
         <div className="max-w-6xl mx-auto text-center relative z-10">
@@ -140,7 +144,6 @@ const LandingPage = () => {
                     className="w-full h-full object-cover object-top opacity-100 hover:scale-[1.01] transition-transform duration-1000"
                     loading="eager"
                   />
-                  {/* Overlay Gradiente Inferior para fusão suave */}
                   <div className="absolute bottom-0 left-0 right-0 h-40 bg-gradient-to-t from-[#020617] to-transparent pointer-events-none" />
                </div>
             </div>
@@ -159,12 +162,10 @@ const LandingPage = () => {
             </p>
           </div>
 
-          {/* Grid Layout */}
           <div className="grid grid-cols-1 md:grid-cols-6 lg:grid-cols-12 gap-6 auto-rows-[350px]">
             
-            {/* 1. GESTÃO DE BANCAS (Largo - Layout Flex para evitar sobreposição) */}
+            {/* 1. GESTÃO DE BANCAS */}
             <div className="md:col-span-6 lg:col-span-8 bg-[#0b101e] border border-white/5 rounded-[2rem] overflow-hidden group hover:border-emerald-500/30 transition-all duration-500 flex flex-col md:flex-row relative z-10">
-              {/* Coluna de Texto */}
               <div className="p-8 md:p-10 flex flex-col justify-between relative z-20 md:w-5/12 bg-gradient-to-b md:bg-gradient-to-r from-[#0b101e] via-[#0b101e]/90 to-transparent">
                  <div>
                     <div className="w-10 h-10 bg-emerald-500/10 rounded-lg flex items-center justify-center mb-4 text-emerald-500 border border-emerald-500/20">
@@ -176,8 +177,6 @@ const LandingPage = () => {
                     </p>
                  </div>
               </div>
-              
-              {/* Coluna da Imagem */}
               <div className="relative flex-1 h-64 md:h-auto overflow-hidden md:rounded-tl-2xl border-t md:border-l border-white/10 z-10">
                  <img 
                     src="https://i.ibb.co/4vScY8q/banca.webp" 
@@ -185,12 +184,11 @@ const LandingPage = () => {
                     className="w-full h-full object-cover object-left-top transform translate-x-4 translate-y-4 group-hover:translate-x-2 group-hover:translate-y-2 transition-transform duration-500"
                     loading="lazy"
                  />
-                 {/* Overlay para mobile - Garante leitura do texto em telas pequenas */}
                  <div className="absolute inset-0 bg-gradient-to-t from-[#0b101e] via-transparent to-transparent md:hidden z-20 pointer-events-none" />
               </div>
             </div>
 
-            {/* 2. CALCULADORAS (Alto - Padding inferior para texto) */}
+            {/* 2. CALCULADORAS */}
             <div className="md:col-span-3 lg:col-span-4 bg-[#0b101e] border border-white/5 rounded-[2rem] relative overflow-hidden group hover:border-purple-500/30 transition-all duration-500 flex flex-col justify-between">
                <div className="p-8 z-20 relative bg-gradient-to-b from-[#0b101e] via-[#0b101e]/80 to-transparent">
                   <div className="w-10 h-10 bg-purple-500/10 rounded-lg flex items-center justify-center mb-4 text-purple-500 border border-purple-500/20">
@@ -201,7 +199,6 @@ const LandingPage = () => {
                     Arbitragem, Dutching, Kelly e +EV integradas ao fluxo de aposta.
                   </p>
                </div>
-               
                <div className="w-full h-[50%] mt-auto relative z-10 overflow-hidden border-t border-white/10">
                  <img 
                     src="https://i.ibb.co/PzhLQQR6/calculator.webp" 
@@ -213,7 +210,7 @@ const LandingPage = () => {
                </div>
             </div>
 
-            {/* 3. HISTÓRICO (Alto - Padding inferior para texto) */}
+            {/* 3. HISTÓRICO */}
             <div className="md:col-span-3 lg:col-span-4 bg-[#0b101e] border border-white/5 rounded-[2rem] relative overflow-hidden group hover:border-blue-500/30 transition-all duration-500 flex flex-col justify-between">
                <div className="p-8 z-20 relative bg-gradient-to-b from-[#0b101e] via-[#0b101e]/80 to-transparent">
                   <div className="w-10 h-10 bg-blue-500/10 rounded-lg flex items-center justify-center mb-4 text-blue-500 border border-blue-500/20">
@@ -224,7 +221,6 @@ const LandingPage = () => {
                     Filtros avançados e visualização clara de cada operação pendente ou finalizada.
                   </p>
                </div>
-               
                <div className="w-full h-[50%] mt-auto relative z-10 overflow-hidden border-t border-white/10">
                  <img 
                     src="https://i.ibb.co/PsyXgqkf/HIST-RICO.webp" 
@@ -236,7 +232,7 @@ const LandingPage = () => {
                </div>
             </div>
 
-            {/* 4. ESTRATÉGIAS (Largo - Layout Flex) */}
+            {/* 4. ESTRATÉGIAS */}
             <div className="md:col-span-6 lg:col-span-8 bg-[#0b101e] border border-white/5 rounded-[2rem] overflow-hidden group hover:border-orange-500/30 transition-all duration-500 flex flex-col md:flex-row relative z-10">
               <div className="p-8 md:p-10 flex flex-col justify-between relative z-20 md:w-5/12 bg-gradient-to-b md:bg-gradient-to-r from-[#0b101e] via-[#0b101e]/90 to-transparent">
                  <div>
@@ -249,7 +245,6 @@ const LandingPage = () => {
                     </p>
                  </div>
               </div>
-              
               <div className="relative flex-1 h-64 md:h-auto overflow-hidden md:rounded-tl-2xl border-t md:border-l border-white/10 z-10">
                  <img 
                     src="https://i.ibb.co/rR2T5ZWr/ESTRATEGY.webp" 
@@ -261,7 +256,7 @@ const LandingPage = () => {
               </div>
             </div>
 
-             {/* 5. PERFORMANCE (Square - Padding inferior) */}
+             {/* 5. PERFORMANCE */}
              <div className="md:col-span-3 lg:col-span-4 bg-[#0b101e] border border-white/5 rounded-[2rem] relative overflow-hidden group hover:border-cyan-500/30 transition-all duration-500 flex flex-col justify-between">
                <div className="p-8 z-20 relative bg-gradient-to-b from-[#0b101e] via-[#0b101e]/80 to-transparent">
                   <div className="w-10 h-10 bg-cyan-500/10 rounded-lg flex items-center justify-center mb-4 text-cyan-500 border border-cyan-500/20">
@@ -272,7 +267,6 @@ const LandingPage = () => {
                     Calendário de Greens e Reds para visualizar consistência.
                   </p>
                </div>
-               
                <div className="w-full h-[45%] mt-auto relative z-10 overflow-hidden border-t border-white/10">
                  <img 
                     src="https://i.ibb.co/yFjLBfVF/CALENDAR.webp" 
@@ -284,7 +278,7 @@ const LandingPage = () => {
                </div>
             </div>
 
-            {/* 6. MOBILE FIRST (Full Width - Copy Ajustada) */}
+            {/* 6. MOBILE FIRST */}
             <div className="md:col-span-6 lg:col-span-12 min-h-[500px] md:h-[500px] bg-gradient-to-br from-[#0b101e] to-emerald-950/20 border border-white/5 rounded-[2rem] p-8 md:p-12 relative overflow-hidden flex flex-col md:flex-row items-center gap-10 group">
                 
                 {/* Content */}
@@ -309,19 +303,13 @@ const LandingPage = () => {
                 {/* Mobile Mockup REAL */}
                 <div className="flex-1 w-full flex justify-center relative z-10 order-1 md:order-2 mb-4 md:mb-0 pointer-events-none">
                     <div className="relative w-[240px] md:w-[280px] h-[500px] md:h-[580px] bg-[#020617] border-[8px] border-[#1e293b] rounded-[3rem] shadow-2xl overflow-hidden ring-1 ring-white/10 rotate-[-3deg] group-hover:rotate-0 transition-transform duration-700">
-                        
-                        {/* Dynamic Island / Notch */}
                         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-24 h-6 bg-[#1e293b] rounded-b-2xl z-30"></div>
-                        
-                        {/* Imagem do App Mobile Real */}
                         <img 
                             src="https://i.ibb.co/YFQFFLvY/mobile.webp" 
                             alt="BetTracker Mobile App" 
                             className="w-full h-full object-cover"
                             loading="lazy"
                         />
-                        
-                        {/* Reflection/Glow Overlay */}
                         <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-white/5 to-transparent pointer-events-none z-20" />
                     </div>
                     
@@ -375,14 +363,14 @@ const LandingPage = () => {
                 <span className="font-bold text-slate-300 tracking-tight text-sm">BETTRACKER PRO</span>
             </div>
             
-            <div className="flex gap-8 text-sm text-slate-500 font-medium">
-                <a href="#" className="hover:text-white transition-colors">Termos de Uso</a>
-                <a href="#" className="hover:text-white transition-colors">Privacidade</a>
-                <a href="#" className="hover:text-white transition-colors">Contato</a>
+            <div className="flex flex-wrap gap-8 text-sm text-slate-500 font-medium justify-center md:justify-start">
+                <a href="https://docs.google.com/document/d/1wDahOoeTtlRRj5QXLuxyEEGaIXD24P10ixak5I6fpT4/edit?usp=sharing" target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors">Termos de Uso</a>
+                <a href="https://docs.google.com/document/d/1oqh1V6PAQybR3wPWlRu_9UZ9yzrW48tTsTVubwy6S6k/edit?usp=sharing" target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors">Políticas de Privacidade</a>
+                <a href="https://t.me/magraodotrafego" target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors">Contato</a>
             </div>
 
-            <p className="text-slate-600 text-xs font-medium">
-                © {new Date().getFullYear()} BetTracker Pro.
+            <p className="text-slate-600 text-xs font-medium text-center md:text-right">
+                © {new Date().getFullYear()} BetTracker Pro. Todos os direitos reservados a simplifica.dev.
             </p>
         </div>
       </footer>
