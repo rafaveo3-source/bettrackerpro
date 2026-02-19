@@ -194,7 +194,9 @@ const PerformanceCalendar: React.FC = () => {
                     {day}
                   </span>
                   {hasData && (
-                    <div className={`w-1 h-1 rounded-full ${isPositive ? 'bg-emerald-500' : 'bg-red-500'} opacity-50`}></div>
+                    <span className={`text-[9px] font-bold mt-0.5 ${isPositive ? 'text-emerald-600 dark:text-emerald-500' : 'text-red-600 dark:text-red-500'}`}>
+                      {stats.profit > 0 ? '+' : ''}{formatValue(stats.profit)}
+                    </span>
                   )}
                 </motion.button>
               );
