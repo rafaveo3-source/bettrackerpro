@@ -75,7 +75,7 @@ export interface SystemMethod {
   risk: string;
   description?: string;
   roi_history: { last_30: number; last_90: number; all_time: number };
-  // 🔥 NOVOS CAMPOS DO PLAYBOOK ADICIONADOS AQUI
+  // CAMPOS DO PLAYBOOK DE MÉTODOS
   entry_rules?: string[];
   validation_checklist?: string[];
   exit_plan?: string;
@@ -90,6 +90,12 @@ export interface ProgressionStrategy {
   markets: string[];
   roi_history?: any;
   filters?: any;
+  // 🔥 NOVOS CAMPOS DO BLUEPRINT DE GESTÃO ADICIONADOS AQUI
+  setup_odd_target?: string;
+  setup_steps?: string;
+  setup_type?: string;
+  roadmap?: string[];
+  stop_loss?: string;
 }
 
 export interface BetMethod {
@@ -566,7 +572,7 @@ export const useBetStore = create<BetState>()(
         }
       },
 
-      toggleUserTeam: async (teamId: string) => {
+      toggleUserTeam: async (teamId) => {
         const { userTeams } = get();
         const isActive = userTeams.includes(teamId);
         const updatedTeams = isActive ? userTeams.filter(id => id !== teamId) : [...userTeams, teamId];
