@@ -45,7 +45,8 @@ const ProPage: React.FC = () => {
         'Suporte Prioritário'
       ],
       missing: [],
-      link: 'LINK_KIWIFY_TRIMESTRAL', // Coloque o link do checkout aqui
+      // 👇 COLE O LINK DO SEU PLANO TRIMESTRAL AQUI 👇
+      link: 'COLE_AQUI_O_LINK_DO_TRIMESTRAL_DA_KIWIFY', 
       recommended: false,
       color: 'blue',
       isFree: false
@@ -64,7 +65,8 @@ const ProPage: React.FC = () => {
         'Selo VIP no perfil'
       ],
       missing: [],
-      link: 'LINK_KIWIFY_ANUAL', // Coloque o link do checkout aqui
+      // 👇 COLE O LINK DO SEU PLANO ANUAL AQUI 👇
+      link: 'COLE_AQUI_O_LINK_DO_ANUAL_DA_KIWIFY', 
       recommended: true,
       color: 'emerald',
       isFree: false
@@ -84,7 +86,8 @@ const ProPage: React.FC = () => {
         'Suporte Prioritário'
       ],
       missing: [],
-      link: 'LINK_KIWIFY_SEMESTRAL', // Coloque o link do checkout aqui
+      // 👇 COLE O LINK DO SEU PLANO SEMESTRAL AQUI 👇
+      link: 'COLE_AQUI_O_LINK_DO_SEMESTRAL_DA_KIWIFY', 
       recommended: false,
       color: 'purple',
       isFree: false
