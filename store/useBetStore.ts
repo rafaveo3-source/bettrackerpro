@@ -135,7 +135,7 @@ export interface Bet {
   status: BetStatus;
   profit: number;
   method?: string;
-  strategy?: string; // 🔥 Vínculo com a Estratégia de Gestão
+  strategy?: string; // 🔥 Vínculo com a Estratégia de Gestão adicionado
 }
 
 export interface Transaction {
@@ -914,7 +914,7 @@ export const useBetStore = create<BetState>()(
       addBet: async (newBetData) => {
         if (get().isTiltLocked()) return false;
 
-        const { user, isPro, history, activeBankrollId, setToast, checkAndLockGoals } = get(); // 🔥 checkAndLockGoals adicionado
+        const { user, isPro, history, activeBankrollId, setToast, checkAndLockGoals } = get();
         
         if (!activeBankrollId) {
           console.warn("⚠️ Crie ou selecione uma banca antes de registrar uma aposta.");
@@ -961,7 +961,7 @@ export const useBetStore = create<BetState>()(
           market: sanitizeInput(cleanBetData.market),
           selection: sanitizeInput(cleanBetData.selection),
           method: cleanBetData.method ? sanitizeInput(cleanBetData.method) : '',
-          strategy: cleanBetData.strategy ? sanitizeInput(cleanBetData.strategy) : '', // 🔥 Estratégia salva no banco
+          strategy: cleanBetData.strategy ? sanitizeInput(cleanBetData.strategy) : '',
           bankroll_id: activeBankrollId,
           stake,
           odds,
@@ -997,75 +997,12 @@ export const useBetStore = create<BetState>()(
           get().recalculateBankroll();
           
           if (profit > 0) {
-              await checkAndLockGoals(); // 🔥 Checa se bateu a meta
+              await checkAndLockGoals();
           }
 
           return true;
         }
         return false;
-      },
-
-      updateBet: async (id, data) => {
-        const user = get().user;
-        if (!user) return;
-
-        const currentBet = get().history.find(b => b.id === id);
-        if (!currentBet) return;
-
-        const updated = { ...currentBet, ...data };
-
-        let profit = 0;
-        const stake = Number(updated.stake);
-        const odds = Number(updated.odds);
-        const { status } = updated;
-
-        switch (status) {
-          case 'won': profit = (stake * odds) - stake; break;
-          case 'lost': profit = -stake; break;
-          case 'half-won': profit = ((stake * odds) - stake) / 2; break;
-          case 'half-lost': profit = -stake / 2; break;
-          case 'void': profit = 0; break;
-          case 'cashout': profit = (updated.cashoutValue || 0) - stake; break;
-          case 'pending': profit = 0; break;
-          case 'refunded': profit = 0; break;
-        }
-
-        const payload = {
-            sport: updated.sport,
-            market: sanitizeInput(updated.market),
-            event: sanitizeInput(updated.event),
-            selection: sanitizeInput(updated.selection),
-            method: updated.method ? sanitizeInput(updated.method) : '',
-            strategy: updated.strategy ? sanitizeInput(updated.strategy) : '', // 🔥 Estratégia salva no banco
-            odds,
-            stake,
-            status: updated.status,
-            profit,
-            date: updated.date
-        };
-
-        const { error } = await supabase
-          .from('bets')
-          .update(payload)
-          .eq('id', id)
-          .eq('user_id', user.id);
-
-        if (error) {
-          console.error("Erro ao atualizar aposta:", error.message);
-          return;
-        }
-
-        set((state) => ({
-          history: state.history.map(b =>
-            b.id === id ? { ...updated, profit, stake, odds } : b
-          )
-        }));
-
-        get().recalculateBankroll();
-        
-        if (profit > 0 || updated.status === 'won') {
-            await get().checkAndLockGoals(); // 🔥 Checa se bateu a meta
-        }
       },
 
       updateBet: async (id, data) => {

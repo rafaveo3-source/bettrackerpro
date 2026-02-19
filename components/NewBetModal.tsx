@@ -117,7 +117,7 @@ const NewBetModal: React.FC<NewBetModalProps> = ({
         stake: betToEdit.stake.toString(),
         status: betToEdit.status,
         method: betToEdit.method || '',
-        strategy: betToEdit.strategy || '', // 🔥 Campo Oficializado
+        strategy: betToEdit.strategy || '',
         cashoutValue: (betToEdit as any).cashoutValue?.toString() || ''
       });
       
@@ -176,7 +176,7 @@ const NewBetModal: React.FC<NewBetModalProps> = ({
     }
 
     if (stakeValue < 0) {
-      setError('A stake não pode ser negativa.');
+      setError('A exposição (stake) não pode ser negativa.');
       return;
     }
 
@@ -237,13 +237,13 @@ const NewBetModal: React.FC<NewBetModalProps> = ({
   const myActiveLeagues = globalLeagues.filter(l => userLeagues.includes(l.id));
 
   const statusOptions = [
-    { id: 'pending', label: 'Pendente', icon: Clock, color: 'bg-slate-700 text-slate-200', activeRing: 'ring-slate-500' },
-    { id: 'won', label: 'Green', icon: CheckCircle2, color: 'bg-emerald-500 text-black', activeRing: 'ring-emerald-400' },
-    { id: 'half-won', label: '½ Green', icon: CheckCircle2, color: 'bg-emerald-500/40 text-emerald-100', activeRing: 'ring-emerald-400' },
-    { id: 'lost', label: 'Red', icon: XCircle, color: 'bg-red-500 text-white', activeRing: 'ring-red-400' },
-    { id: 'half-lost', label: '½ Red', icon: XCircle, color: 'bg-red-500/40 text-red-100', activeRing: 'ring-red-400' },
+    { id: 'pending', label: 'Em Aberto', icon: Clock, color: 'bg-slate-700 text-slate-200', activeRing: 'ring-slate-500' },
+    { id: 'won', label: 'Lucro', icon: CheckCircle2, color: 'bg-emerald-500 text-black', activeRing: 'ring-emerald-400' },
+    { id: 'half-won', label: '½ Lucro', icon: CheckCircle2, color: 'bg-emerald-500/40 text-emerald-100', activeRing: 'ring-emerald-400' },
+    { id: 'lost', label: 'Prejuízo', icon: XCircle, color: 'bg-red-500 text-white', activeRing: 'ring-red-400' },
+    { id: 'half-lost', label: '½ Prej.', icon: XCircle, color: 'bg-red-500/40 text-red-100', activeRing: 'ring-red-400' },
     { id: 'cashout', label: 'Cashout', icon: DollarSign, color: 'bg-amber-500 text-black', activeRing: 'ring-amber-400' },
-    { id: 'refunded', label: 'Reembolso', icon: Ban, color: 'bg-slate-500 text-white', activeRing: 'ring-slate-400' },
+    { id: 'refunded', label: 'Devolvido', icon: Ban, color: 'bg-slate-500 text-white', activeRing: 'ring-slate-400' },
   ];
 
   return (
@@ -269,7 +269,7 @@ const NewBetModal: React.FC<NewBetModalProps> = ({
                   {betToEdit ? 'Editar Operação' : 'Nova Operação'}
                 </h2>
                 <p className="text-slate-500 text-xs md:text-sm mt-0.5">
-                  Preencha os detalhes do registro no diário de bordo
+                  Preencha os detalhes do registro no diário
                 </p>
               </div>
               <button
@@ -474,7 +474,7 @@ const NewBetModal: React.FC<NewBetModalProps> = ({
 
                 <div className="md:col-span-6 space-y-2">
                   <label className="text-xs uppercase text-slate-500 font-semibold tracking-wider ml-1 flex justify-between">
-                      Método
+                      Método Analítico
                       {!isPro && availableMethods.length === 0 && <span className="text-[9px] text-amber-500 flex items-center gap-1"><Lock size={8}/> Personalização PRO</span>}
                   </label>
                   <select
@@ -492,7 +492,7 @@ const NewBetModal: React.FC<NewBetModalProps> = ({
 
                 <div className="md:col-span-6 space-y-2">
                   <label className="text-xs uppercase text-slate-500 font-semibold tracking-wider ml-1 flex justify-between">
-                      Estratégia / Gestão
+                      Gestão de Risco / Setup
                       {!isPro && <span className="text-[9px] text-amber-500 flex items-center gap-1"><Lock size={8}/> Exclusivo PRO</span>}
                   </label>
                   <select
@@ -512,7 +512,7 @@ const NewBetModal: React.FC<NewBetModalProps> = ({
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4 items-end">
                       
                       <div className="space-y-2">
-                        <label className="text-xs uppercase text-slate-500 font-semibold tracking-wider ml-1">Odd</label>
+                        <label className="text-xs uppercase text-slate-500 font-semibold tracking-wider ml-1">Cotação (Odd)</label>
                         <div className="relative">
                           <input
                             type="number"
@@ -530,6 +530,7 @@ const NewBetModal: React.FC<NewBetModalProps> = ({
                         <label className="text-xs uppercase text-slate-500 font-semibold tracking-wider ml-1">
                           Exposição ({displayMode === 'units' ? 'Unidades' : currency})
                         </label>
+                        <input
                           type="number"
                           step={displayMode === 'units' ? "0.1" : "1"}
                           value={formData.stake}
@@ -546,7 +547,7 @@ const NewBetModal: React.FC<NewBetModalProps> = ({
                           className="space-y-2 col-span-2 md:col-span-2"
                         >
                           <label className="text-xs uppercase text-amber-500 font-bold tracking-wider ml-1 flex items-center gap-1">
-                            <DollarSign size={12} /> Valor do Cashout
+                            <DollarSign size={12} /> Valor de Fechamento (Cashout)
                           </label>
                           <input
                             type="number"
@@ -574,9 +575,9 @@ const NewBetModal: React.FC<NewBetModalProps> = ({
                   </p>
                   <p className="text-xs text-slate-600 mt-1">
                     {formData.status === 'pending' 
-                      ? 'Se a aposta for vencedora' 
+                      ? 'Se a operação atingir o Take Profit' 
                       : formData.status === 'cashout' 
-                        ? 'Baseado no valor de cashout'
+                        ? 'Baseado no valor de fechamento antecipado'
                         : 'Baseado no status selecionado'}
                   </p>
                 </div>
