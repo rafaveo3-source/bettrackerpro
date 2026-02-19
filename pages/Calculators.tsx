@@ -37,7 +37,7 @@ const Calculators: React.FC = () => {
   const toggleInfo = (id: string) => setExpandedInfo(expandedInfo === id ? null : id);
 
   // ==========================================
-  // COMPONENTE DE BLOQUEIO PRO (Atualizado com tema claro e redirecionamento)
+  // COMPONENTE DE BLOQUEIO PRO 
   // ==========================================
   const ProLockScreen = () => (
       <div className="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-[2rem] p-8 text-center flex flex-col items-center justify-center min-h-[300px] relative overflow-hidden shadow-sm">
@@ -121,42 +121,12 @@ const Calculators: React.FC = () => {
   
   const kellyResult = calculateKelly();
   const kellyMoney = (parseFloat(kellyResult) / 100) * currentBankrollBalance;
-  
-  // Métricas Kelly
-  const decimalOdds = parseFloat(kellyOdds);
-  const userProb = parseFloat(kellyProb) / 100;
-  const impliedProb = decimalOdds > 1 ? 1 / decimalOdds : 0;
-  const impliedPercent = impliedProb * 100;
-  const edgePercent = (userProb - impliedProb) * 100;
-  const ev = decimalOdds > 1 ? (userProb * decimalOdds) - 1 : 0;
-  const evPercent = ev * 100;
-  
-  let aggressionLabel = "Sem Aposta";
-  let aggressionColor = "text-slate-400";
-  const kellyNumeric = parseFloat(kellyResult);
-
-  if (kellyNumeric > 10) {
-    aggressionLabel = "Agressiva";
-    aggressionColor = "text-red-500";
-  } else if (kellyNumeric > 5) {
-    aggressionLabel = "Moderada";
-    aggressionColor = "text-yellow-500";
-  } else if (kellyNumeric > 0) {
-    aggressionLabel = "Conservadora";
-    aggressionColor = "text-emerald-500";
-  }
-
-  // Simulador de Crescimento Kelly
-  const [simulationBets, setSimulationBets] = useState('100');
-  const betsCount = parseInt(simulationBets) || 0;
-  const projectedBankroll = ev > 0 && betsCount > 0 ? currentBankrollBalance * Math.pow(1 + ev, betsCount) : currentBankrollBalance;
-  const growthPercent = ev > 0 && betsCount > 0 ? ((projectedBankroll / currentBankrollBalance - 1) * 100) : 0;
 
   // ==========================================
   // 3. LÓGICA VALUE BET
   // ==========================================
   const [valOdds, setValOdds] = useState('2.10');
-  const [valProb, setValProb] = useState('50'); // %
+  const [valProb, setValProb] = useState('50'); 
   
   const valEV = (parseFloat(valProb) / 100 * parseFloat(valOdds)) - 1;
   const valEVPercent = valEV * 100;
@@ -203,11 +173,10 @@ const Calculators: React.FC = () => {
   const [beOdds, setBeOdds] = useState('1.90');
   const beWinRate = parseFloat(beOdds) > 1 ? (1 / parseFloat(beOdds)) * 100 : 0;
 
-
   // --- SIDEBAR INFO HELPERS ---
   const getSidebarInfo = () => {
     switch(activeTab) {
-      case 'dutching': return { title: 'Dica de Gestão', text: 'Dutching é ideal para cobrir placares exatos ou múltiplos cavalos em uma corrida.' };
+      case 'dutching': return { title: 'Dica de Gestão', text: 'O Dutching é ideal para cobrir múltiplos placares exatos (ex: 1x0, 2x0 e 2x1) ou dividir o risco ao apoiar mais de uma equipe no mesmo evento esportivo.' };
       case 'kelly': return { title: 'Gestão de Risco', text: 'Use o Kelly Fracionário (0.25x) para reduzir a volatilidade e proteger sua banca.' };
       case 'value': return { title: 'Conceito Chave', text: 'Só existe lucro no longo prazo se você apostar em odds maiores que a probabilidade real (EV+).' };
       case 'arb': return { title: 'Atenção', text: 'Casas de apostas podem limitar contas que fazem arbitragem com frequência. Arredonde as stakes.' };
@@ -468,7 +437,7 @@ const Calculators: React.FC = () => {
                 )
             )}
             
-        </div> {/* FECHA lg:col-span-2 */}
+        </div>
 
         {/* COLUNA DIREITA (SIDEBAR DINÂMICA) */}
         <div className="lg:col-span-1 space-y-6 w-full min-w-0">
@@ -492,9 +461,8 @@ const Calculators: React.FC = () => {
             </div>
         </div> 
 
-      </div> {/* FECHA grid grid-cols-1 lg:grid-cols-3 */}
-
-    </div> /* FECHA container principal */
+      </div> 
+    </div> 
   );
 };
 
