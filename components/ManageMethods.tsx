@@ -50,23 +50,98 @@ const ManageMethods = () => {
     return 'text-slate-400';
   };
 
-  // Simulação de Dados de Playbook (Caso não exista no banco)
+  // =========================================================
+  // 🧠 CÉREBRO DO PLAYBOOK (Inteligência Específica por Método)
+  // =========================================================
   const getPlaybookData = (method: SystemMethod) => {
+      // 1. Se vier do banco (no futuro), usa o do banco
+      if (method.entry_rules && method.entry_rules.length > 0) {
+        return {
+          entry: method.entry_rules,
+          checklist: method.validation_checklist || [],
+          exit: method.exit_plan || ""
+        }
+      }
+
+      // 2. Playbooks Específicos e Detalhados
+      const name = method.name.toLowerCase();
+
+      if (name.includes('gol precoce') || name.includes('back favorito')) {
+        return {
+          entry: ["Minuto ideal: 15' ao 35' do 1T", "Odd do Favorito: @1.70 a @2.20", "Favorito sofreu gol em contra-ataque ou bola parada (zebra momentânea)"],
+          checklist: ["Posse de bola do Favorito > 65%", "Finalizações > 5 após sofrer o gol", "Linha defensiva do adversário recuada"],
+          exit: "Cashout imediato de proteção se o favorito tomar cartão vermelho ou não empatar até os 75'."
+        };
+      }
+      if (name.includes('surebet') || name.includes('arbitragem')) {
+         return {
+          entry: ["Encontrar spread > 1% entre casas de apostas", "Odds invertidas (ex: Over 2.5 @2.10 na Casa A, Under 2.5 @2.05 na Casa B)", "Alta liquidez no mercado"],
+          checklist: ["Limites de aposta da sua conta verificados", "Saldo disponível em ambas as casas", "Odds não configuram erro evidente da casa (palpable error)"],
+          exit: "Sem cashout. Operação fechada matematicamente no pré-live, garantindo o lucro independentemente do resultado final da partida."
+        };
+      }
+      if (name.includes('kelly')) {
+         return {
+          entry: ["Aposta possui EV Positivo (+EV) matemático", "Odd oferecida pela casa > Odd Justa precificada", "Confiança alta na sua precificação base"],
+          checklist: ["Usar Kelly Fracionado (0.25x a 0.5x) para reduzir variância", "Banca exata atualizada na calculadora", "Risco máximo não ultrapassa 5% da banca total"],
+          exit: "Aposta levada até o fim (Full Time). O foco é a vantagem matemática a longo prazo e não o resultado individual da partida."
+        };
+      }
+      if (name.includes('expected goals') || name.includes('xg')) {
+         return {
+          entry: ["xG Acumulado > 1.5 e zero gols na partida", "Odd de Over 0.5 HT ou FT desajustada pelo tempo", "Pressão contínua nos últimos 10 minutos"],
+          checklist: ["Diferença de xG (Time A - Time B) > 1.0", "Goleiro adversário com alta nota (fazendo milagres)", "Ataques Perigosos por Minuto (APPM) > 1.2"],
+          exit: "Cashout aos 85' se a intensidade de chutes e cantos cair drasticamente, caso contrário, assumir o red final."
+        };
+      }
+      if (name.includes('btts') || name.includes('ambas marcam')) {
+         return {
+          entry: ["Odd justa @1.70+", "Times com média histórica de BTTS > 65% na temporada", "Confronto de Defesa Fraca x Ataque Forte"],
+          checklist: ["Ambos times têm forte motivação (Must Win alto)", "Desfalques chave na linha defensiva", "Gramado e clima em excelentes condições de jogo"],
+          exit: "Geralmente levado até o final. Considerar cashout apenas se houver expulsão prematura do principal atacante ou criador de jogadas."
+        };
+      }
+      if (name.includes('cartões') || name.includes('disciplina')) {
+         return {
+          entry: ["Árbitro com perfil rigoroso (Média > 5 cartões/jogo)", "Clássicos regionais ou jogos de alto risco de rebaixamento", "Odd de Over Cartões desajustada no pré-live"],
+          checklist: ["Times com histórico de faltas > 25/jogo", "Rivalidade histórica alta (H2H pegado)", "Jogadores com histórico indisciplinar escalados (ex: volantes pegadores)"],
+          exit: "Levado até o fim da partida. Historicamente, os minutos finais (acréscimos) concentram a maior taxa de cartões por cera ou reclamação."
+        };
+      }
+      if (name.includes('clv') || name.includes('closing line')) {
+         return {
+          entry: ["Apostar na abertura das odds (Early Market)", "Identificação de informação privilegiada (ex: desfalque não precificado pela casa)", "Tendência de queda clara (Drop) em exchanges asiáticas"],
+          checklist: ["Monitorar odds em casas de referência (Pinnacle/ISN)", "Apostar antes do mercado recreativo ajustar a linha", "Registrar o CLV exato no momento do fechamento da partida"],
+          exit: "Sem cashout. O lucro é oriundo da vantagem estatística de longo prazo batendo a linha de fechamento."
+        };
+      }
+      if (name.includes('asiático progressivo')) {
+         return {
+          entry: ["Minuto 15' a 25' do 1T se o jogo estiver muito agitado", "Odd @1.80+ na linha Over 2.0 (proteção de void no 2 gols)", "Gol precoce de um underdog alterando o cenário"],
+          checklist: ["Chutes no alvo > 3 nos primeiros minutos", "Times jogando para frente em transição rápida (pouco toque de lado)", "Linhas de zaga altas"],
+          exit: "Cashout de proteção ou fechamento em void (devolução) se o jogo esfriar bruscamente e a posse de bola ficar lenta no meio campo."
+        };
+      }
+      if (name.includes('late goals') || name.includes('gols ao vivo')) {
+         return {
+          entry: ["Minuto 80'+ da partida", "Odd @1.80 a @2.50 para sair mais 1 gol", "Time favorito perdendo e sufocando o adversário dentro da área"],
+          checklist: ["Sequência de escanteios nos últimos 5 mins", "Adversário totalmente recuado (linha de defesa dentro da grande área)", "Bolas cruzadas/rebatidas constantes gerando rebote"],
+          exit: "Sem cashout. Operação com perfil de alto risco e alta recompensa voltada estritamente para o famoso gol nos acréscimos."
+        };
+      }
+
+      // 3. Fallback Genérico (Caso adicione um método não mapeado acima)
       const fallbackEntry = method.type === 'in_play' 
-        ? ["Minuto ideal: 70' ao 85'", "Odd Mínima: @1.80", "Favorito atacando muito mas empatando/perdendo"]
-        : ["Analisar H2H recente", "Odd de Abertura (Drop)", "Desfalques importantes do adversário"];
+        ? ["Minuto ideal de operação: 70' ao 85'", "Odd Mínima aceitável: @1.80+", "Cenário de jogo favorável, intenso e com volume"]
+        : ["Analisar histórico recente (H2H)", "Buscar odd desajustada no mercado (Drop)", "Confirmar escalações e possíveis desfalques impactantes"];
         
-      const fallbackChecklist = ["Posse de bola > 60%", "Chutes no alvo > 5", "APPM > 1.2"];
+      const fallbackChecklist = ["Posse de bola dominante > 60%", "Mais de 5 finalizações no alvo", "Ataques Perigosos por Minuto (APPM) > 1.2"];
       
       const fallbackExit = method.risk.toLowerCase() === 'alto' 
-        ? "Não há cashout. Deixar a aposta correr até o final ou red (Gestão de risco na stake)." 
-        : "Cashout imediato caso o time adversário marque um gol ou haja expulsão no nosso time.";
+        ? "Não há cashout sugerido. Operar com gestão de stake rigorosa (baixa unidade) e levar até a resolução." 
+        : "Realizar cashout imediato caso o cenário do jogo mude contra a análise (ex: expulsão, perda abrupta de intensidade).";
 
-      return {
-          entry: method.entry_rules && method.entry_rules.length > 0 ? method.entry_rules : fallbackEntry,
-          checklist: method.validation_checklist && method.validation_checklist.length > 0 ? method.validation_checklist : fallbackChecklist,
-          exit: method.exit_plan || fallbackExit
-      };
+      return { entry: fallbackEntry, checklist: fallbackChecklist, exit: fallbackExit };
   };
 
   return (
@@ -151,7 +226,7 @@ const ManageMethods = () => {
         <div className="bg-white dark:bg-slate-900 p-6 rounded-[2rem] border border-slate-200 dark:border-slate-800 shadow-sm h-full flex flex-col">
           <h2 className="text-xl font-black text-slate-900 dark:text-white uppercase italic tracking-tighter flex items-center gap-2 mb-1">
             <Target className="text-blue-500" />
-            Estratégias PRO
+            Métodos Validados
           </h2>
           <p className="text-xs font-medium text-slate-500 mb-6">Playbooks completos e validados por especialistas.</p>
 
