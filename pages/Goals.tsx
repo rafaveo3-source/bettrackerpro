@@ -447,7 +447,7 @@ const Goals: React.FC = () => {
                                {stats.linkedStrategyName && customStrategies.some(cs => cs.name.toLowerCase() === stats.linkedStrategyName.toLowerCase()) ? (
                                    <div className="bg-slate-50 dark:bg-slate-900/50 rounded-xl p-4 border border-slate-200 dark:border-slate-800">
                                        <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed font-medium mb-3">
-                                          Siga o modelo importado para bater essa meta de forma consistente. Ao lançar uma nova aposta, marque a estratégia "{stats.linkedStrategyName}" para que o sistema amarre os dados.
+                                          Siga o modelo importado para atingir este objetivo com previsibilidade. Ao criar um novo registro, selecione a gestão "{stats.linkedStrategyName}" para que o sistema consolide os dados.
                                        </p>
                                        <ul className="space-y-2 border-t border-slate-200 dark:border-slate-700 pt-3">
                                            <li className="flex items-center gap-2 text-xs font-bold text-slate-700 dark:text-slate-300"><CheckCircle2 size={14} className="text-emerald-500"/> Respeite a Stake do Plano</li>
@@ -458,7 +458,7 @@ const Goals: React.FC = () => {
                                ) : (
                                    <div className="bg-slate-50 dark:bg-slate-900/50 rounded-xl p-4 border border-slate-200 dark:border-slate-800">
                                        <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed font-medium">
-                                          Esta meta é de crescimento livre. Selecione um método ou estratégia ao enviar as apostas para que o sistema mostre o histórico linkado aqui.
+                                          Crescimento de Patrimônio Livre. Vincule um método ao registrar a operação para que o sistema apresente a auditoria detalhada abaixo.
                                        </p>
                                    </div>
                                )}
@@ -485,7 +485,7 @@ const Goals: React.FC = () => {
                                <div className="space-y-2 max-h-[220px] overflow-y-auto pr-2 custom-scrollbar">
                                    {stats.strategyBets.length === 0 ? (
                                        <div className="text-center py-6 text-[10px] font-bold uppercase tracking-widest text-slate-400 border border-dashed border-slate-200 dark:border-slate-800 rounded-xl">
-                                          Nenhuma aposta linkada a esta estratégia/método.
+                                          Nenhum registro atrelado a este portfólio/método.
                                        </div>
                                    ) : (
                                        stats.strategyBets.map((bet: Bet) => (

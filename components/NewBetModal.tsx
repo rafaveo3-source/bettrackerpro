@@ -266,10 +266,10 @@ const NewBetModal: React.FC<NewBetModalProps> = ({
             <div className="px-6 py-5 border-b border-slate-800 flex justify-between items-center sticky top-0 bg-slate-900/95 backdrop-blur z-10 rounded-t-3xl">
               <div>
                 <h2 className="text-xl md:text-2xl font-black text-white tracking-tight flex items-center gap-2">
-                  {betToEdit ? 'Editar Aposta' : 'Nova Aposta'}
+                  {betToEdit ? 'Editar Operação' : 'Nova Operação'}
                 </h2>
                 <p className="text-slate-500 text-xs md:text-sm mt-0.5">
-                  Preencha os detalhes da sua entrada
+                  Preencha os detalhes do registro no diário de bordo
                 </p>
               </div>
               <button
@@ -295,7 +295,7 @@ const NewBetModal: React.FC<NewBetModalProps> = ({
 
               <div className="space-y-3">
                 <label className="text-xs uppercase text-slate-500 font-bold tracking-wider ml-1">
-                  Status da Aposta
+                  Status da Operação
                 </label>
                 <div className="flex flex-wrap gap-2">
                   {statusOptions.map((opt) => (
@@ -462,7 +462,7 @@ const NewBetModal: React.FC<NewBetModalProps> = ({
                 </div>
 
                 <div className="md:col-span-6 space-y-2">
-                  <label className="text-xs uppercase text-slate-500 font-semibold tracking-wider ml-1">Seleção (Aposta)</label>
+                  <label className="text-xs uppercase text-slate-500 font-semibold tracking-wider ml-1">Posição (Seleção)</label>
                   <input
                     type="text"
                     value={formData.selection}
@@ -528,9 +528,8 @@ const NewBetModal: React.FC<NewBetModalProps> = ({
 
                       <div className="space-y-2">
                         <label className="text-xs uppercase text-slate-500 font-semibold tracking-wider ml-1">
-                          Stake ({displayMode === 'units' ? 'Unidades' : currency})
+                          Exposição ({displayMode === 'units' ? 'Unidades' : currency})
                         </label>
-                        <input
                           type="number"
                           step={displayMode === 'units' ? "0.1" : "1"}
                           value={formData.stake}
@@ -571,7 +570,7 @@ const NewBetModal: React.FC<NewBetModalProps> = ({
                 
                 <div className="z-10">
                   <p className="text-slate-500 text-sm font-medium">
-                    {formData.status === 'pending' ? 'Potencial de Lucro' : 'Resultado da Aposta'}
+                    {formData.status === 'pending' ? 'Potencial de Lucro' : 'Resultado da Operação'}
                   </p>
                   <p className="text-xs text-slate-600 mt-1">
                     {formData.status === 'pending' 
@@ -600,12 +599,12 @@ const NewBetModal: React.FC<NewBetModalProps> = ({
                 {betToEdit ? (
                   <>
                     <Save size={20} />
-                    Atualizar Aposta
+                    Atualizar Registro
                   </>
                 ) : (
                   <>
                     <CheckCircle2 size={20} />
-                    Salvar Aposta
+                    Salvar Operação
                   </>
                 )}
               </button>
