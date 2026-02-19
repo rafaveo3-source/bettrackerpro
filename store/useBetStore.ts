@@ -75,6 +75,10 @@ export interface SystemMethod {
   risk: string;
   description?: string;
   roi_history: { last_30: number; last_90: number; all_time: number };
+  // 🔥 NOVOS CAMPOS DO PLAYBOOK ADICIONADOS AQUI
+  entry_rules?: string[];
+  validation_checklist?: string[];
+  exit_plan?: string;
 }
 
 export interface ProgressionStrategy {
