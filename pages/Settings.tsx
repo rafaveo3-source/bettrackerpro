@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useBetStore, supabase } from '../store/useBetStore';
-import { Trash2, Save, AlertTriangle, PaintBucket, Coins, Layers, User, Image as ImageIcon, CheckCircle, PieChart, Hash, Skull, Loader2, Crown, Calendar, AlertCircle, ArrowRight } from 'lucide-react';
+import { Trash2, Save, AlertTriangle, PaintBucket, Coins, Layers, User, Image as ImageIcon, CheckCircle, PieChart, Hash, Skull, Loader2, Crown, Calendar, AlertCircle, ArrowRight, ExternalLink } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 const Settings: React.FC = () => {
@@ -14,7 +14,7 @@ const Settings: React.FC = () => {
     currency, setCurrency, resetData, 
     user, updateProfile, logout,
     displayMode, setDisplayMode, unitSize, setUnitSize,
-    isPro // Puxando o status PRO
+    isPro
   } = useBetStore();
 
   const [newMethodName, setNewMethodName] = useState('');
@@ -26,7 +26,6 @@ const Settings: React.FC = () => {
   const [tempUnitSize, setTempUnitSize] = useState('100');
   const [isResetting, setIsResetting] = useState(false);
   
-  // Status de Assinatura
   const [validUntil, setValidUntil] = useState<Date | null>(null);
   const [daysRemaining, setDaysRemaining] = useState<number | null>(null);
 
@@ -35,7 +34,6 @@ const Settings: React.FC = () => {
       setProfileName(user.name || '');
       setProfileAvatar(user.avatar || '');
       
-      // Busca a data de expiração no banco
       const fetchSubscriptionData = async () => {
         if (!user.id) return;
         const { data } = await supabase.from('profiles').select('valid_until').eq('id', user.id).single();
@@ -66,16 +64,13 @@ const Settings: React.FC = () => {
 
   const handleUpdateProfile = async (e: React.FormEvent) => {
     e.preventDefault();
-
     updateProfile({ name: profileName, avatar: profileAvatar });
-
     const parsed = parseFloat(tempUnitSize);
     if (!parsed || parsed <= 0) {
       setTempUnitSize(unitSize.toString());
       return;
     }
     await setUnitSize(parsed);
-
     setShowSavedToast(true);
     setTimeout(() => setShowSavedToast(false), 3000);
   };
@@ -93,12 +88,10 @@ const Settings: React.FC = () => {
     const confirmed = window.confirm(
         "ATENÇÃO CRÍTICA:\n\nEsta ação excluirá PERMANENTEMENTE sua conta, todas as suas apostas, bancas e histórico.\n\nNão há como desfazer. Tem certeza absoluta?"
     );
-
     if (confirmed) {
         try {
             const { error } = await supabase.rpc('delete_own_user');
             if (error) throw error;
-            
             resetData(); 
             logout(); 
             window.location.href = '/'; 
@@ -162,26 +155,44 @@ const Settings: React.FC = () => {
                 </div>
             </div>
 
-            <div className="w-full md:w-auto flex flex-col md:items-end gap-3 border-t md:border-t-0 md:border-l border-slate-200 dark:border-slate-800 pt-6 md:pt-0 md:pl-8">
+            <div className="w-full md:w-auto flex flex-col md:items-end gap-4 border-t md:border-t-0 md:border-l border-slate-200 dark:border-slate-800 pt-6 md:pt-0 md:pl-8">
                 {isPro && validUntil ? (
                     <>
-                        <div className="flex items-center gap-2 text-slate-600 dark:text-slate-300 font-medium bg-slate-50 dark:bg-slate-900/50 px-4 py-2 rounded-xl border border-slate-200 dark:border-slate-800">
+                        <div className="flex items-center gap-2 text-slate-600 dark:text-slate-300 font-medium bg-slate-50 dark:bg-slate-900/50 px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-800 w-full md:w-auto justify-center">
                             <Calendar size={16} className="text-slate-400" />
                             Válido até: <span className="font-bold text-slate-900 dark:text-white">{validUntil.toLocaleDateString('pt-BR')}</span>
                         </div>
+                        
                         {daysRemaining !== null && daysRemaining <= 15 && (
                             <div className="flex items-start gap-2 bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/20 text-amber-700 dark:text-amber-400 p-3 rounded-xl max-w-sm">
                                 <AlertCircle size={16} className="shrink-0 mt-0.5" />
-                                <p className="text-xs font-bold leading-relaxed">
-                                    Faltam apenas {daysRemaining} dias. O pagamento na Kiwify costuma ser automático para cartões, garanta o limite ou pague o PIX para não perder o acesso!
+                                <p className="text-[10px] font-bold leading-relaxed">
+                                    Faltam apenas {daysRemaining} dias. O pagamento na Kiwify costuma ser automático, garanta o limite para não perder o acesso!
                                 </p>
                             </div>
                         )}
+
+                        <div className="flex gap-2 w-full mt-1">
+                            <button 
+                                onClick={() => navigate('/pro')}
+                                className="flex-1 md:flex-none bg-emerald-500 hover:bg-emerald-400 text-white dark:text-slate-950 px-4 py-2.5 rounded-xl font-bold text-[10px] uppercase tracking-widest transition-all shadow-lg shadow-emerald-500/20 active:scale-95 text-center"
+                            >
+                                Estender Plano
+                            </button>
+                            <a 
+                                href="https://dashboard.kiwify.com.br/purchases"
+                                target="_blank"
+                                rel="noreferrer"
+                                className="flex-1 md:flex-none bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 px-4 py-2.5 rounded-xl font-bold text-[10px] uppercase tracking-widest transition-all active:scale-95 text-center border border-slate-200 dark:border-slate-700 flex items-center justify-center gap-1.5"
+                            >
+                                Kiwify <ExternalLink size={12} />
+                            </a>
+                        </div>
                     </>
                 ) : (
                     <button 
                         onClick={() => navigate('/pro')}
-                        className="bg-emerald-500 hover:bg-emerald-400 text-white dark:text-slate-950 font-black py-3 px-8 rounded-xl shadow-lg shadow-emerald-500/20 transition-all active:scale-95 flex items-center justify-center gap-2 uppercase tracking-widest text-xs"
+                        className="bg-emerald-500 hover:bg-emerald-400 text-white dark:text-slate-950 font-black py-3 px-8 rounded-xl shadow-lg shadow-emerald-500/20 transition-all active:scale-95 flex items-center justify-center gap-2 uppercase tracking-widest text-xs w-full md:w-auto"
                     >
                         Quero ser PRO <ArrowRight size={16} />
                     </button>

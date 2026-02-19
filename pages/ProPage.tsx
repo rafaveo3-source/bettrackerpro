@@ -1,7 +1,7 @@
 import React from 'react';
 import { useBetStore } from '../store/useBetStore';
 import { motion } from 'framer-motion';
-import { CheckCircle2, Crown, Zap, Shield, Star, X } from 'lucide-react';
+import { CheckCircle2, Crown, Zap, Shield, Star, X, ExternalLink } from 'lucide-react';
 
 const ProPage: React.FC = () => {
   const { isPro } = useBetStore();
@@ -45,8 +45,8 @@ const ProPage: React.FC = () => {
         'Suporte Prioritário'
       ],
       missing: [],
-      // 👇 COLE O LINK DO SEU PLANO TRIMESTRAL AQUI 👇
-      link: 'https://pay.kiwify.com.br/RTVLbxr', 
+      // 👇 MANTENHA O SEU LINK DA KIWIFY AQUI
+      link: 'COLE_AQUI_O_LINK_DO_TRIMESTRAL_DA_KIWIFY', 
       recommended: false,
       color: 'blue',
       isFree: false
@@ -65,8 +65,8 @@ const ProPage: React.FC = () => {
         'Selo VIP no perfil'
       ],
       missing: [],
-      // 👇 COLE O LINK DO SEU PLANO ANUAL AQUI 👇
-      link: 'https://pay.kiwify.com.br/gsD3KTv', 
+      // 👇 MANTENHA O SEU LINK DA KIWIFY AQUI
+      link: 'COLE_AQUI_O_LINK_DO_ANUAL_DA_KIWIFY', 
       recommended: true,
       color: 'emerald',
       isFree: false
@@ -86,8 +86,8 @@ const ProPage: React.FC = () => {
         'Suporte Prioritário'
       ],
       missing: [],
-      // 👇 COLE O LINK DO SEU PLANO SEMESTRAL AQUI 👇
-      link: 'https://pay.kiwify.com.br/LbPU3YC', 
+      // 👇 MANTENHA O SEU LINK DA KIWIFY AQUI
+      link: 'COLE_AQUI_O_LINK_DO_SEMESTRAL_DA_KIWIFY', 
       recommended: false,
       color: 'purple',
       isFree: false
@@ -128,9 +128,14 @@ const ProPage: React.FC = () => {
                 </div>
             </div>
             <div className="relative z-10">
-                <button className="bg-slate-200 hover:bg-slate-300 text-slate-700 dark:bg-white/10 dark:hover:bg-white/20 dark:text-white px-6 py-3 rounded-xl font-bold text-xs uppercase tracking-widest transition-all">
-                    Plano Ativo
-                </button>
+                <a 
+                    href="https://dashboard.kiwify.com.br/purchases"
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex items-center gap-2 bg-slate-200 hover:bg-slate-300 text-slate-700 dark:bg-white/10 dark:hover:bg-white/20 dark:text-white px-6 py-3 rounded-xl font-bold text-xs uppercase tracking-widest transition-all"
+                >
+                    Gerenciar na Kiwify <ExternalLink size={14} />
+                </a>
             </div>
         </div>
       )}
@@ -199,18 +204,16 @@ const ProPage: React.FC = () => {
                     
                     {!plan.isFree ? (
                         <a 
-                            href={isPro ? "#" : plan.link}
-                            target={isPro ? "_self" : "_blank"}
+                            href={plan.link}
+                            target="_blank"
                             rel="noreferrer"
                             className={`w-full block text-center py-3.5 rounded-xl font-black uppercase tracking-widest text-[10px] transition-all ${
-                                isPro
-                                ? 'bg-slate-100 text-slate-400 dark:bg-slate-800 dark:text-slate-500 cursor-not-allowed'
-                                : plan.recommended 
+                                plan.recommended 
                                     ? 'bg-emerald-500 hover:bg-emerald-400 text-white dark:text-slate-950 shadow-lg shadow-emerald-500/25' 
                                     : 'bg-slate-900 text-white hover:bg-slate-800 dark:bg-white dark:text-slate-950 dark:hover:bg-slate-200'
                             }`}
                         >
-                            {isPro ? 'Ativo' : 'Assinar PRO'}
+                            {isPro ? 'Renovar / Upgrade' : 'Assinar PRO'}
                         </a>
                     ) : (
                         <div className="w-full text-center py-3.5 rounded-xl font-black uppercase tracking-widest text-[10px] bg-slate-100 text-slate-400 dark:bg-slate-800 dark:text-slate-500 cursor-default">
