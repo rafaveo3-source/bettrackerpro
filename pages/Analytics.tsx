@@ -170,7 +170,7 @@ const Analytics: React.FC = () => {
 
       {!activeBR ? (
           <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-10 text-center">
-              <p className="text-slate-500 font-bold uppercase tracking-widest text-sm">Selecione uma banca para ver os gráficos.</p>
+              <p className="text-slate-500 font-bold uppercase tracking-widest text-sm">Selecione um portfólio para visualizar os dados.</p>
           </div>
       ) : (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
@@ -281,7 +281,7 @@ const Analytics: React.FC = () => {
                     <PieChartIcon size={16} className="text-orange-500" />
                     Distribuição
                   </h3>
-                  <p className="text-xs text-slate-500 font-medium">Proporção de resultados (Greens x Reds x Devolvidas) em todo o histórico da banca.</p>
+                  <p className="text-xs text-slate-500 font-medium">Proporção de resultados operacionais (Lucros x Prejuízos x Estornos) no portfólio.</p>
               </div>
 
               {/* CORREÇÃO DO TAMANHO DA PIZZA E LEGENDA AQUI 👇 */}

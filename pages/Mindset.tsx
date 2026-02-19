@@ -61,7 +61,7 @@ const Mindset: React.FC = () => {
           </h2>
           
           <p className="text-slate-600 dark:text-slate-400 max-w-lg mx-auto mb-8 text-base leading-relaxed relative z-10">
-              A maioria quebra banca por descontrole, não por falta de técnica. O Módulo Mindset correlaciona seu estado emocional com seus lucros e possui uma <strong>Trava de Emergência</strong> para evitar dias de fúria.
+              O descontrole emocional é o maior responsável por perdas de capital. O Módulo de Psicologia correlaciona seu estado mental aos seus resultados e possui um sistema de <strong>Trava de Segurança (Circuit Breaker)</strong> para proteger seus ativos.
           </p>
 
           <button 
@@ -208,7 +208,7 @@ const Mindset: React.FC = () => {
                         <div className="flex items-start gap-3 mb-4 text-red-500">
                             <AlertTriangle size={24} className="shrink-0" />
                             <p className="text-xs text-slate-600 dark:text-slate-300 font-medium leading-relaxed">
-                                Tilted? O sistema bloqueará o registro de novas apostas pelo período selecionado. Isso evita que você quebre a banca na emoção.
+                                Perda de Controle? O sistema bloqueará novas operações pelo período selecionado, ativando um bloqueio forçado para preservar sua liquidez e proteger seu capital.
                             </p>
                         </div>
                         <div className="grid grid-cols-2 gap-2">
@@ -274,7 +274,7 @@ const Mindset: React.FC = () => {
         <textarea
           value={note}
           onChange={e => setNote(e.target.value)}
-          placeholder="Descreva seu estado mental, gatilhos, e justificativas para as entradas de hoje..."
+          placeholder="Descreva seu estado mental, fatores de risco e motivações analíticas das operações de hoje..."
           className="w-full p-6 rounded-2xl border bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-800 min-h-[140px] text-slate-700 dark:text-slate-200 outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all resize-none"
         />
 
