@@ -1,9 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useBetStore, supabase } from '../store/useBetStore';
-import { Trash2, Save, AlertTriangle, PaintBucket, Coins, Layers, User, Image as ImageIcon, CheckCircle, PieChart, Hash, Skull, Loader2 } from 'lucide-react';
+import { Trash2, Save, AlertTriangle, PaintBucket, Coins, Layers, User, Image as ImageIcon, CheckCircle, PieChart, Hash, Skull, Loader2, Crown, Calendar, AlertCircle, ArrowRight } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 const Settings: React.FC = () => {
+  const navigate = useNavigate();
   const { 
     methods, addMethod, removeMethod,
     customMarkets, addCustomMarket, removeCustomMarket,
@@ -11,7 +13,8 @@ const Settings: React.FC = () => {
     primaryColor, setPrimaryColor, 
     currency, setCurrency, resetData, 
     user, updateProfile, logout,
-    displayMode, setDisplayMode, unitSize, setUnitSize 
+    displayMode, setDisplayMode, unitSize, setUnitSize,
+    isPro // Puxando o status PRO
   } = useBetStore();
 
   const [newMethodName, setNewMethodName] = useState('');
@@ -22,15 +25,35 @@ const Settings: React.FC = () => {
   const [profileAvatar, setProfileAvatar] = useState('');
   const [tempUnitSize, setTempUnitSize] = useState('100');
   const [isResetting, setIsResetting] = useState(false);
+  
+  // Status de Assinatura
+  const [validUntil, setValidUntil] = useState<Date | null>(null);
+  const [daysRemaining, setDaysRemaining] = useState<number | null>(null);
 
-  React.useEffect(() => {
+  useEffect(() => {
     if (user) {
       setProfileName(user.name || '');
       setProfileAvatar(user.avatar || '');
+      
+      // Busca a data de expiração no banco
+      const fetchSubscriptionData = async () => {
+        if (!user.id) return;
+        const { data } = await supabase.from('profiles').select('valid_until').eq('id', user.id).single();
+        if (data?.valid_until) {
+          const expirationDate = new Date(data.valid_until);
+          setValidUntil(expirationDate);
+          
+          const today = new Date();
+          const diffTime = expirationDate.getTime() - today.getTime();
+          const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+          setDaysRemaining(diffDays > 0 ? diffDays : 0);
+        }
+      };
+      fetchSubscriptionData();
     }
   }, [user]);
 
-  React.useEffect(() => {
+  useEffect(() => {
     setTempUnitSize(unitSize.toString());
   }, [unitSize]);
   
@@ -47,12 +70,10 @@ const Settings: React.FC = () => {
     updateProfile({ name: profileName, avatar: profileAvatar });
 
     const parsed = parseFloat(tempUnitSize);
-
     if (!parsed || parsed <= 0) {
       setTempUnitSize(unitSize.toString());
       return;
     }
-
     await setUnitSize(parsed);
 
     setShowSavedToast(true);
@@ -76,7 +97,6 @@ const Settings: React.FC = () => {
     if (confirmed) {
         try {
             const { error } = await supabase.rpc('delete_own_user');
-            
             if (error) throw error;
             
             resetData(); 
@@ -91,40 +111,89 @@ const Settings: React.FC = () => {
   return (
     <div className="space-y-10 max-w-6xl mx-auto pb-20 w-full overflow-x-hidden transition-colors duration-300">
         <div className="border-b border-slate-200 dark:border-slate-800 pb-8 flex flex-col md:flex-row md:items-end md:justify-between gap-6">
-  <div>
-    <div className="flex items-center gap-2 text-emerald-600 dark:text-emerald-500 text-[9px] font-mono font-bold uppercase tracking-widest mb-1">
-      <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse shadow-[0_0_8px_#10b981]"></span>
-      System Control Engine
-    </div>
+          <div>
+            <div className="flex items-center gap-2 text-emerald-600 dark:text-emerald-500 text-[9px] font-mono font-bold uppercase tracking-widest mb-1">
+              <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse shadow-[0_0_8px_#10b981]"></span>
+              System Control Engine
+            </div>
+            <h1 className="text-3xl font-black text-slate-900 dark:text-white tracking-tighter uppercase italic">
+              Configurações <span className="text-slate-400 dark:text-slate-700 text-lg">///</span>
+            </h1>
+            <p className="text-slate-500 dark:text-slate-400 text-xs font-bold mt-2 uppercase tracking-widest">
+              Controle total da interface, preferências e arquitetura do sistema.
+            </p>
+          </div>
 
-    <h1 className="text-3xl font-black text-slate-900 dark:text-white tracking-tighter uppercase italic">
-      Configurações <span className="text-slate-400 dark:text-slate-700 text-lg">///</span>
-    </h1>
+          <AnimatePresence>
+            {showSavedToast && (
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0 }}
+                className="flex items-center gap-2 bg-emerald-100 dark:bg-emerald-500/10 border border-emerald-200 dark:border-emerald-500/20 text-emerald-700 dark:text-emerald-500 px-6 py-3 rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] shadow-xl"
+              >
+                <CheckCircle size={16} /> Configurações Salvas
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
 
-    <p className="text-slate-500 dark:text-slate-400 text-xs font-bold mt-2 uppercase tracking-widest">
-      Controle total da interface, preferências e arquitetura do sistema.
-    </p>
-  </div>
+        {/* --- NOVO CARD DE ASSINATURA --- */}
+        <section className="bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-800 rounded-[2.5rem] p-6 md:p-10 shadow-sm flex flex-col md:flex-row items-center justify-between gap-6">
+            <div className="flex items-center gap-5 w-full md:w-auto">
+                <div className={`p-4 rounded-2xl shadow-inner ${isPro ? 'bg-emerald-100 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-500' : 'bg-slate-100 dark:bg-slate-800 text-slate-500'}`}>
+                    <Crown size={28} />
+                </div>
+                <div>
+                    <h3 className="text-xl font-black text-slate-900 dark:text-white uppercase tracking-tighter italic mb-1">
+                        Status da Assinatura
+                    </h3>
+                    {isPro ? (
+                        <div className="flex items-center gap-2 text-sm text-emerald-600 dark:text-emerald-400 font-bold">
+                            <span className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></span>
+                            Plano PRO Ativo
+                        </div>
+                    ) : (
+                        <div className="flex items-center gap-2 text-sm text-slate-500 font-bold">
+                            <span className="w-2 h-2 bg-slate-400 rounded-full"></span>
+                            Plano Gratuito (Limitado)
+                        </div>
+                    )}
+                </div>
+            </div>
 
-  <AnimatePresence>
-    {showSavedToast && (
-      <motion.div
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
-        exit={{ opacity: 0 }}
-        className="flex items-center gap-2 bg-emerald-100 dark:bg-emerald-500/10 border border-emerald-200 dark:border-emerald-500/20 text-emerald-700 dark:text-emerald-500 px-6 py-3 rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] shadow-xl"
-      >
-        <CheckCircle size={16} /> Configurações Salvas
-      </motion.div>
-    )}
-  </AnimatePresence>
-</div>
+            <div className="w-full md:w-auto flex flex-col md:items-end gap-3 border-t md:border-t-0 md:border-l border-slate-200 dark:border-slate-800 pt-6 md:pt-0 md:pl-8">
+                {isPro && validUntil ? (
+                    <>
+                        <div className="flex items-center gap-2 text-slate-600 dark:text-slate-300 font-medium bg-slate-50 dark:bg-slate-900/50 px-4 py-2 rounded-xl border border-slate-200 dark:border-slate-800">
+                            <Calendar size={16} className="text-slate-400" />
+                            Válido até: <span className="font-bold text-slate-900 dark:text-white">{validUntil.toLocaleDateString('pt-BR')}</span>
+                        </div>
+                        {daysRemaining !== null && daysRemaining <= 15 && (
+                            <div className="flex items-start gap-2 bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/20 text-amber-700 dark:text-amber-400 p-3 rounded-xl max-w-sm">
+                                <AlertCircle size={16} className="shrink-0 mt-0.5" />
+                                <p className="text-xs font-bold leading-relaxed">
+                                    Faltam apenas {daysRemaining} dias. O pagamento na Kiwify costuma ser automático para cartões, garanta o limite ou pague o PIX para não perder o acesso!
+                                </p>
+                            </div>
+                        )}
+                    </>
+                ) : (
+                    <button 
+                        onClick={() => navigate('/pro')}
+                        className="bg-emerald-500 hover:bg-emerald-400 text-white dark:text-slate-950 font-black py-3 px-8 rounded-xl shadow-lg shadow-emerald-500/20 transition-all active:scale-95 flex items-center justify-center gap-2 uppercase tracking-widest text-xs"
+                    >
+                        Quero ser PRO <ArrowRight size={16} />
+                    </button>
+                )}
+            </div>
+        </section>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
             {/* Identity Card */}
             <section className="bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-800 rounded-[2.5rem] p-6 md:p-10 shadow-sm transition-shadow hover:shadow-md">
                 <div className="flex items-center gap-4 mb-10">
-                    <div className="p-3 bg-emerald-100 dark:bg-emerald-500/10 rounded-2xl text-emerald-600 dark:text-emerald-500 shadow-inner"><User size={24} /></div>
+                    <div className="p-3 bg-blue-100 dark:bg-blue-500/10 rounded-2xl text-blue-600 dark:text-blue-500 shadow-inner"><User size={24} /></div>
                     <h2 className="text-xl font-black text-slate-900 dark:text-white uppercase tracking-tighter italic">Perfil & Preferências</h2>
                 </div>
                 
@@ -151,7 +220,6 @@ const Settings: React.FC = () => {
                              </div>
                         </div>
 
-                        {/* ✅ Configuração de Unidade */}
                         <div className="p-5 bg-slate-50 dark:bg-slate-900/30 rounded-2xl border border-slate-200 dark:border-slate-800/50">
                              <h3 className="text-xs font-black text-slate-600 dark:text-slate-400 uppercase tracking-widest mb-4 flex items-center gap-2"><PieChart size={14} /> Gestão de Unidade</h3>
                              <div className="flex flex-col sm:flex-row gap-4">
@@ -207,28 +275,26 @@ const Settings: React.FC = () => {
             {/* Methods Card */}
             <section className="bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-800 rounded-[2.5rem] p-6 md:p-10 shadow-sm transition-shadow hover:shadow-md">
                  <div className="flex items-center gap-4 mb-10">
-                    <div className="p-3 bg-blue-100 dark:bg-blue-500/10 rounded-2xl text-blue-600 dark:text-blue-500 shadow-inner"><Layers size={24} /></div>
+                    <div className="p-3 bg-indigo-100 dark:bg-indigo-500/10 rounded-2xl text-indigo-600 dark:text-indigo-500 shadow-inner"><Layers size={24} /></div>
                     <h2 className="text-xl font-black text-slate-900 dark:text-white uppercase tracking-tighter italic">Arquitetura de Métodos</h2>
                 </div>
                 <div className="flex flex-col sm:flex-row gap-3 mb-8">
-                    <input type="text" value={newMethodName} onChange={(e) => setNewMethodName(e.target.value)} placeholder="Ex: Alavancagem" className="flex-1 bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 rounded-2xl px-6 py-4 outline-none focus:border-blue-500 transition-all text-slate-900 dark:text-white font-bold shadow-inner placeholder:text-slate-400" />
-                    <button onClick={handleAddMethod} className="bg-blue-600 hover:bg-blue-500 text-white px-8 py-4 sm:py-0 rounded-2xl font-black text-xs transition-all shadow-lg active:scale-95 uppercase tracking-widest">ADD</button>
+                    <input type="text" value={newMethodName} onChange={(e) => setNewMethodName(e.target.value)} placeholder="Ex: Alavancagem" className="flex-1 bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 rounded-2xl px-6 py-4 outline-none focus:border-indigo-500 transition-all text-slate-900 dark:text-white font-bold shadow-inner placeholder:text-slate-400" />
+                    <button onClick={handleAddMethod} className="bg-indigo-600 hover:bg-indigo-500 text-white px-8 py-4 sm:py-0 rounded-2xl font-black text-xs transition-all shadow-lg active:scale-95 uppercase tracking-widest">ADD</button>
                 </div>
                 <div className="grid grid-cols-1 gap-3 max-h-[250px] overflow-y-auto pr-2 custom-scrollbar">
                     {methods.map(method => (
                       <div
                         key={method.id}
-                        className="flex justify-between items-center p-4 bg-slate-50 dark:bg-slate-900/30 rounded-2xl border border-slate-200 dark:border-slate-800/50 group hover:border-blue-500/30 transition-all shadow-sm"
+                        className="flex justify-between items-center p-4 bg-slate-50 dark:bg-slate-900/30 rounded-2xl border border-slate-200 dark:border-slate-800/50 group hover:border-indigo-500/30 transition-all shadow-sm"
                       >
                         <span className="text-slate-700 dark:text-slate-200 font-bold text-sm flex items-center gap-3">
-                          <div className="w-2 h-2 rounded-full bg-blue-500"></div>
+                          <div className="w-2 h-2 rounded-full bg-indigo-500"></div>
                           {method.name}
                         </span>
-
                         <button
                           onClick={() => {
-                            const confirmed = window.confirm('Deseja realmente excluir este método?');
-                            if (confirmed) {
+                            if (window.confirm('Deseja realmente excluir este método?')) {
                               removeMethod(method.id);
                             }
                           }}
@@ -244,14 +310,13 @@ const Settings: React.FC = () => {
                 </div>
             </section>
 
-            {/* Custom Markets - Agora com Scroll e Limite de Altura */}
+            {/* Custom Markets */}
             <section className="bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-800 rounded-[2.5rem] p-6 md:p-10 shadow-sm flex flex-col">
               <div className="flex items-center gap-4 mb-8">
                 <h2 className="text-xl font-black text-slate-900 dark:text-white uppercase italic">
                   Mercados Personalizados
                 </h2>
               </div>
-
               <div className="flex gap-3 mb-6">
                 <input
                   type="text"
@@ -272,19 +337,13 @@ const Settings: React.FC = () => {
                   ADD
                 </button>
               </div>
-
               <div className="space-y-2 flex-1 max-h-[200px] overflow-y-auto pr-2 custom-scrollbar">
                 {customMarkets.map((m) => (
-                  <div
-                    key={m.id}
-                    className="flex justify-between items-center p-3 bg-slate-50 dark:bg-slate-900 rounded-xl border border-slate-100 dark:border-slate-800"
-                  >
+                  <div key={m.id} className="flex justify-between items-center p-3 bg-slate-50 dark:bg-slate-900 rounded-xl border border-slate-100 dark:border-slate-800">
                     <span className="text-slate-700 dark:text-slate-300 text-sm font-medium">{m.name}</span>
-
                     <button
                       onClick={() => {
-                        const confirmed = window.confirm('Deseja realmente excluir este mercado?');
-                        if (confirmed) {
+                        if (window.confirm('Deseja realmente excluir este mercado?')) {
                           removeCustomMarket(m.id);
                         }
                       }}
@@ -294,20 +353,16 @@ const Settings: React.FC = () => {
                     </button>
                   </div>
                 ))}
-                {customMarkets.length === 0 && (
-                   <p className="text-center py-6 text-slate-400 text-[10px] font-black uppercase tracking-widest italic">Nenhum mercado cadastrado</p>
-                )}
               </div>
             </section>
 
-            {/* Strategies - Agora com Scroll e Limite de Altura */}
+            {/* Strategies */}
             <section className="bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-800 rounded-[2.5rem] p-6 md:p-10 shadow-sm flex flex-col">
               <div className="flex items-center gap-4 mb-8">
                 <h2 className="text-xl font-black text-slate-900 dark:text-white uppercase italic">
                   Estratégias de Progressão
                 </h2>
               </div>
-
               <div className="flex gap-3 mb-6">
                 <input
                   type="text"
@@ -328,19 +383,13 @@ const Settings: React.FC = () => {
                   ADD
                 </button>
               </div>
-
               <div className="space-y-2 flex-1 max-h-[200px] overflow-y-auto pr-2 custom-scrollbar">
                 {customStrategies.map((s) => (
-                  <div
-                    key={s.id}
-                    className="flex justify-between items-center p-3 bg-slate-50 dark:bg-slate-900 rounded-xl border border-slate-100 dark:border-slate-800"
-                  >
+                  <div key={s.id} className="flex justify-between items-center p-3 bg-slate-50 dark:bg-slate-900 rounded-xl border border-slate-100 dark:border-slate-800">
                     <span className="text-slate-700 dark:text-slate-300 text-sm font-medium">{s.name}</span>
-
                     <button
                       onClick={() => {
-                        const confirmed = window.confirm('Deseja realmente excluir esta estratégia?');
-                        if (confirmed) {
+                        if (window.confirm('Deseja realmente excluir esta estratégia?')) {
                           removeCustomStrategy(s.id);
                         }
                       }}
@@ -350,18 +399,15 @@ const Settings: React.FC = () => {
                     </button>
                   </div>
                 ))}
-                {customStrategies.length === 0 && (
-                   <p className="text-center py-6 text-slate-400 text-[10px] font-black uppercase tracking-widest italic">Nenhuma estratégia cadastrada</p>
-                )}
               </div>
             </section>
 
-             {/* Preferences */}
+             {/* Preferences Colors */}
             <section className="bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-800 rounded-[2.5rem] p-6 md:p-10 lg:col-span-2 shadow-sm transition-shadow hover:shadow-md">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-16">
                     <div className="space-y-8">
                         <div className="flex items-center gap-4">
-                            <div className="p-3 bg-emerald-100 dark:bg-emerald-500/10 rounded-2xl text-emerald-600 dark:text-emerald-500"><PaintBucket size={22} /></div>
+                            <div className="p-3 bg-amber-100 dark:bg-amber-500/10 rounded-2xl text-amber-600 dark:text-amber-500"><PaintBucket size={22} /></div>
                             <h3 className="font-black text-slate-900 dark:text-white uppercase tracking-tighter text-lg italic">Acentuação Visual</h3>
                         </div>
                         <div className="flex gap-4 flex-wrap">
@@ -389,7 +435,7 @@ const Settings: React.FC = () => {
                     </div>
                     <div className="space-y-8">
                         <div className="flex items-center gap-4">
-                            <div className="p-3 bg-blue-100 dark:bg-blue-500/10 rounded-2xl text-blue-600 dark:text-blue-500"><Coins size={22} /></div>
+                            <div className="p-3 bg-purple-100 dark:bg-purple-500/10 rounded-2xl text-purple-600 dark:text-purple-500"><Coins size={22} /></div>
                             <h3 className="font-black text-slate-900 dark:text-white uppercase tracking-tighter text-lg italic">Moeda do Sistema</h3>
                         </div>
                         <div className="flex flex-wrap gap-3">

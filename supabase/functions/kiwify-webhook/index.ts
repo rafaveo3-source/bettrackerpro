@@ -3,69 +3,84 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3"
 
 serve(async (req) => {
   try {
-    // 1. Receber os dados enviados pela Kiwify
     const payload = await req.json()
-    console.log("Kiwify Webhook Payload recebido!")
+    console.log("🔥 PAYLOAD KIWIFY RECEBIDO:", JSON.stringify(payload))
 
-    // 2. Extrair E-mail do cliente e o Status do Pedido
-    // A Kiwify manda os dados do cliente dentro do objeto "Customer"
-    const email = payload?.Customer?.email
-    const status = payload?.order_status // 'paid', 'refunded', 'chargedback'
+    const email = payload?.Customer?.email || payload?.email
+    const orderStatus = payload?.order_status 
+    const subStatus = payload?.Subscription?.status
+    
+    // Pega as informações do plano que a Kiwify envia
+    const planFrequency = payload?.Subscription?.plan?.frequency || ''
+    const planName = payload?.Subscription?.plan?.name || payload?.product_name || ''
+    const nameLower = planName.toLowerCase()
 
     if (!email) {
-      return new Response("Email não encontrado no payload", { status: 400 })
+      console.error("❌ ERRO: E-mail não encontrado no webhook.")
+      return new Response("Email não encontrado", { status: 400 })
     }
 
-    // 3. Conectar ao banco de dados usando a Service Role (Admin)
-    // Isso garante permissão para alterar o perfil do usuário
+    console.log(`✅ Processando cliente: ${email} | Pedido: ${orderStatus} | Assinatura: ${subStatus}`)
+
     const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? ''
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     const supabaseAdmin = createClient(supabaseUrl, supabaseKey)
 
-    // 4. Lógica de Atualização no Banco de Dados
-    if (status === 'paid') {
-      
-      // Pagamento Aprovado -> Vira PRO (Ativo por 1 ano como exemplo de margem segura, ajuste se quiser mensal)
-      const validUntil = new Date()
-      validUntil.setFullYear(validUntil.getFullYear() + 1)
-
-      const { error } = await supabaseAdmin
-        .from('profiles')
-        .update({ 
-          subscription_status: 'active',
-          valid_until: validUntil.toISOString()
-        })
-        .eq('email', email) // Acha o usuário pelo e-mail de compra da Kiwify
-
-      if (error) throw error
-      console.log(`✅ Acesso PRO liberado com sucesso para: ${email}`)
-
-    } else if (status === 'refunded' || status === 'chargedback') {
-      
-      // Reembolso/Chargeback -> Vira FREE novamente
-      const { error } = await supabaseAdmin
-        .from('profiles')
-        .update({ 
-          subscription_status: 'free',
-          valid_until: null
-        })
-        .eq('email', email)
-
-      if (error) throw error
-      console.log(`❌ Acesso PRO revogado para: ${email}`)
-      
+    let isPro = false;
+    
+    if (orderStatus === 'paid' || subStatus === 'active') {
+        isPro = true;
+    } else if (orderStatus === 'refunded' || orderStatus === 'chargedback' || subStatus === 'canceled') {
+        isPro = false;
     } else {
-       console.log(`Status ignorado: ${status}`)
+        console.log(`⚠️ Status intermediário. Ignorando.`)
+        return new Response("Ignorado", { status: 200 })
     }
 
-    // 5. Retornar SUCESSO para a Kiwify parar de enviar a notificação
-    return new Response(JSON.stringify({ success: true, message: "Processado" }), { 
-        headers: { "Content-Type": "application/json" },
-        status: 200 
-    })
+    if (isPro) {
+      const validUntil = new Date()
+      
+      // MÁGICA DOS PLANOS: Soma o tempo exato com base no nome do plano ou frequência
+      if (planFrequency === 'yearly' || nameLower.includes('anual')) {
+          validUntil.setFullYear(validUntil.getFullYear() + 1)
+      } else if (planFrequency === 'semiannually' || planFrequency === 'semiannual' || nameLower.includes('semestral')) {
+          validUntil.setMonth(validUntil.getMonth() + 6)
+      } else if (planFrequency === 'quarterly' || nameLower.includes('trimestral')) {
+          validUntil.setMonth(validUntil.getMonth() + 3)
+      } else if (planFrequency === 'monthly' || nameLower.includes('mensal')) {
+          validUntil.setMonth(validUntil.getMonth() + 1)
+      } else {
+          // Fallback de segurança (se a Kiwify não mandar nada, libera 3 meses por padrão)
+          validUntil.setMonth(validUntil.getMonth() + 3) 
+      }
+
+      console.log(`🔄 Liberando PRO via Ponte SQL para: ${email} até ${validUntil.toISOString()}`)
+      
+      const { error } = await supabaseAdmin.rpc('update_pro_status_by_email', {
+        p_email: email,
+        p_status: 'active',
+        p_valid_until: validUntil.toISOString()
+      })
+
+      if (error) throw error
+      console.log(`✅ Sucesso! Usuário atualizado para PRO.`)
+
+    } else {
+      console.log(`🔄 Rebaixando para FREE (Estorno/Cancelamento)...`)
+      
+      const { error } = await supabaseAdmin.rpc('update_pro_status_by_email', {
+        p_email: email,
+        p_status: 'free',
+        p_valid_until: null
+      })
+      
+      if (error) throw error
+    }
+
+    return new Response(JSON.stringify({ success: true }), { headers: { "Content-Type": "application/json" }, status: 200 })
 
   } catch (err) {
-    console.error("Erro interno no Webhook:", err.message)
+    console.error("❌ ERRO NA FUNÇÃO:", err.message)
     return new Response(JSON.stringify({ error: err.message }), { status: 500 })
   }
 })
