@@ -11,9 +11,9 @@ import {
   BrainCircuit,
   Lock,
   ChevronRight,
-  LayoutDashboard,
   ShieldCheck,
-  TrendingUp
+  TrendingUp,
+  BarChart3
 } from 'lucide-react';
 
 const LandingPage = () => {
@@ -34,8 +34,7 @@ const LandingPage = () => {
       <nav className="fixed w-full z-50 bg-[#020617]/80 backdrop-blur-xl border-b border-white/5 transition-all duration-300">
         <div className="max-w-7xl mx-auto px-6 h-20 flex justify-between items-center">
           <div className="flex items-center gap-2 cursor-pointer group" onClick={() => window.scrollTo(0,0)}>
-            {/* Logo usando o conceito do Favicon */}
-            <div className="w-8 h-8 bg-emerald-500 rounded-lg flex items-center justify-center font-black text-[#020617] text-xl shadow-[0_0_15px_rgba(16,185,129,0.4)] group-hover:shadow-[0_0_25px_rgba(16,185,129,0.6)] transition-all">
+            <div className="w-9 h-9 bg-emerald-500 rounded-xl flex items-center justify-center font-black text-[#020617] text-xl shadow-[0_0_20px_rgba(16,185,129,0.3)] group-hover:shadow-[0_0_30px_rgba(16,185,129,0.5)] transition-all duration-300">
               B
             </div>
             <span className="font-bold text-lg tracking-tight hidden md:block group-hover:text-emerald-50 transition-colors">
@@ -54,14 +53,14 @@ const LandingPage = () => {
               onClick={handleSignUp} 
               className="bg-white text-slate-950 px-5 md:px-7 py-2.5 rounded-full font-black text-[10px] md:text-xs uppercase tracking-widest hover:bg-emerald-400 hover:scale-105 transition-all shadow-lg hover:shadow-emerald-500/20 active:scale-95"
             >
-              Criar Conta
+              Criar Conta Grátis
             </button>
           </div>
         </div>
       </nav>
 
       {/* --- HERO SECTION --- */}
-      <section className="relative pt-36 pb-20 md:pt-48 md:pb-32 px-6 overflow-hidden">
+      <section className="relative pt-36 pb-20 md:pt-48 md:pb-40 px-6 overflow-hidden">
         {/* Efeitos de Fundo */}
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[1000px] h-[600px] bg-emerald-500/10 blur-[120px] rounded-full -z-10 opacity-60 pointer-events-none" />
         
@@ -71,7 +70,7 @@ const LandingPage = () => {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6 }}
-            className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 mb-8 backdrop-blur-md cursor-default"
+            className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 mb-8 backdrop-blur-md cursor-default hover:bg-emerald-500/20 transition-colors"
           >
             <span className="relative flex h-2 w-2">
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
@@ -88,9 +87,9 @@ const LandingPage = () => {
             transition={{ duration: 0.6, delay: 0.1 }}
             className="text-5xl md:text-7xl lg:text-8xl font-black tracking-tighter leading-[1.05] mb-6"
           >
-            Acompanhe. Analise. <br className="hidden md:block"/>
+            Profissionalize suas <br className="hidden md:block"/>
             <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 via-teal-200 to-emerald-400 animate-gradient bg-300%">
-              Escale seus lucros.
+              apostas esportivas.
             </span>
           </motion.h1>
 
@@ -100,7 +99,7 @@ const LandingPage = () => {
             transition={{ duration: 0.6, delay: 0.2 }}
             className="text-lg md:text-xl text-slate-400 max-w-2xl mx-auto mb-10 leading-relaxed font-medium"
           >
-            A plataforma definitiva para apostadores que cansaram de perder dinheiro por falta de organização. Gestão, análise e disciplina em um só lugar.
+            A plataforma definitiva para gestão de bancas, validação de métodos e controle emocional. Saia do amadorismo e tenha a infraestrutura de um investidor.
           </motion.p>
 
           <motion.div
@@ -136,15 +135,16 @@ const LandingPage = () => {
             className="mt-16 md:mt-24 relative z-10"
           >
             <div className="relative rounded-2xl md:rounded-[2rem] p-1.5 md:p-3 bg-gradient-to-b from-white/10 to-transparent border border-white/10 shadow-2xl shadow-emerald-900/40">
-               <div className="aspect-[16/9] w-full bg-slate-950 rounded-xl md:rounded-[1.5rem] overflow-hidden relative">
+               <div className="aspect-[16/9] w-full bg-slate-950 rounded-xl md:rounded-[1.5rem] overflow-hidden relative shadow-inner">
                   {/* Print Principal - Dashboard */}
                   <img 
                     src="https://i.ibb.co/G44jBSdj/DASHBOARD-SYSTEM.webp" 
-                    alt="BetTracker Pro Dashboard" 
-                    className="w-full h-full object-cover object-top opacity-100 hover:scale-[1.02] transition-transform duration-1000"
+                    alt="Dashboard do Sistema de Gestão de Bancas" 
+                    className="w-full h-full object-cover object-top opacity-100 hover:scale-[1.01] transition-transform duration-1000"
+                    loading="eager"
                   />
                   {/* Overlay Gradiente Inferior para fusão suave */}
-                  <div className="absolute bottom-0 left-0 right-0 h-40 bg-gradient-to-t from-[#020617] to-transparent" />
+                  <div className="absolute bottom-0 left-0 right-0 h-40 bg-gradient-to-t from-[#020617] to-transparent pointer-events-none" />
                </div>
             </div>
           </motion.div>
@@ -172,7 +172,7 @@ const LandingPage = () => {
                     <div className="w-10 h-10 bg-emerald-500/10 rounded-lg flex items-center justify-center mb-4 text-emerald-500 border border-emerald-500/20">
                        <ShieldCheck size={20} />
                     </div>
-                    <h3 className="text-2xl font-bold text-white mb-2">Múltiplas Bancas</h3>
+                    <h3 className="text-2xl font-bold text-white mb-2">Gestão de Banca Blindada</h3>
                     <p className="text-slate-400 text-sm leading-relaxed">
                        Gerencie saldos de diferentes casas (Bet365, Pinnacle) simultaneamente. Registre aportes, saques e visualize o crescimento real do seu capital.
                     </p>
@@ -182,14 +182,15 @@ const LandingPage = () => {
               {/* Imagem posicionada para mostrar o conteúdo relevante */}
               <div className="absolute right-0 bottom-0 w-[65%] h-[85%] z-10 rounded-tl-2xl overflow-hidden shadow-2xl transform translate-y-4 translate-x-4 group-hover:translate-y-2 group-hover:translate-x-2 transition-transform duration-500 border-t border-l border-white/10">
                  <img 
-                    src="https://i.ibb.co/e52eff.png" 
-                    alt="Gestão de Bancas" 
-                    className="w-full h-full object-cover object-left-top"
+                    src="https://i.ibb.co/4vScY8q/banca.webp" 
+                    alt="Tela de Gestão de Banca" 
+                    className="w-full h-full object-cover object-top"
+                    loading="lazy"
                  />
               </div>
               
               {/* Gradiente de proteção de texto */}
-              <div className="absolute inset-0 bg-gradient-to-r from-[#0b101e] via-[#0b101e]/80 to-transparent z-15" />
+              <div className="absolute inset-0 bg-gradient-to-r from-[#0b101e] via-[#0b101e]/80 to-transparent z-15 pointer-events-none" />
             </div>
 
             {/* 2. CALCULADORAS (Alto) */}
@@ -206,19 +207,20 @@ const LandingPage = () => {
                
                <div className="absolute -bottom-10 -right-10 w-full h-[60%] z-10 transform group-hover:scale-105 transition-transform duration-500 shadow-2xl">
                  <img 
-                    src="https://i.ibb.co/e52f20.png" 
-                    alt="Calculadoras" 
-                    className="w-full h-full object-cover object-top rounded-tl-2xl border-t border-l border-white/10" 
+                    src="https://i.ibb.co/PzhLQQR6/calculator.webp" 
+                    alt="Calculadoras de Apostas" 
+                    className="w-full h-full object-cover object-top rounded-tl-2xl border-t border-l border-white/10"
+                    loading="lazy" 
                  />
                </div>
-               <div className="absolute inset-0 bg-gradient-to-b from-[#0b101e] via-transparent to-transparent z-15" />
+               <div className="absolute inset-0 bg-gradient-to-b from-[#0b101e] via-transparent to-transparent z-15 pointer-events-none" />
             </div>
 
             {/* 3. HISTÓRICO (Alto) */}
             <div className="md:col-span-3 lg:col-span-4 bg-[#0b101e] border border-white/5 rounded-[2rem] relative overflow-hidden group hover:border-blue-500/30 transition-all duration-500">
                <div className="absolute inset-0 p-8 z-20 pointer-events-none">
                   <div className="w-10 h-10 bg-blue-500/10 rounded-lg flex items-center justify-center mb-4 text-blue-500 border border-blue-500/20">
-                    <LayoutDashboard size={20} />
+                    <BarChart3 size={20} />
                   </div>
                   <h3 className="text-2xl font-bold text-white mb-2">Histórico Auditável</h3>
                   <p className="text-slate-400 text-sm">
@@ -228,12 +230,13 @@ const LandingPage = () => {
                
                <div className="absolute -bottom-5 -right-5 w-[110%] h-[55%] z-10 transform rotate-[-2deg] group-hover:rotate-0 transition-transform duration-500 shadow-2xl">
                  <img 
-                    src="https://i.ibb.co/e52bb8.png" 
-                    alt="Histórico" 
-                    className="w-full h-full object-cover object-top rounded-tl-2xl border-t border-l border-white/10" 
+                    src="https://i.ibb.co/PsyXgqkf/HIST-RICO.webp" 
+                    alt="Histórico de Apostas" 
+                    className="w-full h-full object-cover object-top rounded-tl-2xl border-t border-l border-white/10"
+                    loading="lazy" 
                  />
                </div>
-               <div className="absolute inset-0 bg-gradient-to-b from-[#0b101e] via-transparent to-transparent z-15" />
+               <div className="absolute inset-0 bg-gradient-to-b from-[#0b101e] via-transparent to-transparent z-15 pointer-events-none" />
             </div>
 
             {/* 4. ESTRATÉGIAS (Largo) */}
@@ -252,27 +255,51 @@ const LandingPage = () => {
               
               <div className="absolute right-0 bottom-0 w-[60%] h-[90%] z-10 rounded-tl-2xl overflow-hidden shadow-2xl transform translate-y-6 translate-x-6 group-hover:translate-y-4 group-hover:translate-x-4 transition-transform duration-500 border-t border-l border-white/10">
                  <img 
-                    src="https://i.ibb.co/e4d947.png" 
+                    src="https://i.ibb.co/rR2T5ZWr/ESTRATEGY.webp" 
                     alt="Biblioteca Estratégica" 
-                    className="w-full h-full object-cover object-top"
+                    className="w-full h-full object-cover object-left-top"
+                    loading="lazy"
                  />
               </div>
               
-              <div className="absolute inset-0 bg-gradient-to-r from-[#0b101e] via-[#0b101e]/90 to-transparent z-15" />
+              <div className="absolute inset-0 bg-gradient-to-r from-[#0b101e] via-[#0b101e]/90 to-transparent z-15 pointer-events-none" />
             </div>
 
-            {/* 5. MINDSET & MOBILE (Full Width) */}
-            <div className="md:col-span-6 lg:col-span-12 min-h-[400px] bg-gradient-to-br from-[#0b101e] to-emerald-950/20 border border-white/5 rounded-[2rem] p-8 md:p-12 relative overflow-hidden flex flex-col md:flex-row items-center gap-12 group">
+             {/* 5. CALENDAR & MINDSET (Square) */}
+             <div className="md:col-span-3 lg:col-span-4 bg-[#0b101e] border border-white/5 rounded-[2rem] relative overflow-hidden group hover:border-cyan-500/30 transition-all duration-500">
+               <div className="absolute inset-0 p-8 z-20 pointer-events-none">
+                  <div className="w-10 h-10 bg-cyan-500/10 rounded-lg flex items-center justify-center mb-4 text-cyan-500 border border-cyan-500/20">
+                    <TrendingUp size={20} />
+                  </div>
+                  <h3 className="text-2xl font-bold text-white mb-2">Performance Diária</h3>
+                  <p className="text-slate-400 text-sm">
+                    Calendário de Greens e Reds para visualizar sua consistência.
+                  </p>
+               </div>
+               
+               <div className="absolute -right-4 -bottom-4 w-full h-48 z-10 opacity-80 group-hover:opacity-100 transition-all duration-500">
+                 <img 
+                    src="https://i.ibb.co/yFjLBfVF/CALENDAR.webp" 
+                    alt="Calendário de Performance" 
+                    className="w-full h-full object-cover object-top rounded-tl-2xl border-t border-l border-white/5"
+                    loading="lazy" 
+                 />
+               </div>
+               <div className="absolute inset-0 bg-gradient-to-b from-[#0b101e] via-transparent to-transparent z-15 pointer-events-none" />
+            </div>
+
+            {/* 6. MOBILE FIRST (Full Width) */}
+            <div className="md:col-span-6 lg:col-span-12 min-h-[400px] md:h-[500px] bg-gradient-to-br from-[#0b101e] to-emerald-950/20 border border-white/5 rounded-[2rem] p-8 md:p-12 relative overflow-hidden flex flex-col md:flex-row items-center gap-12 group">
                 
                 {/* Content */}
                 <div className="flex-1 relative z-20 text-center md:text-left">
                     <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-[10px] font-bold uppercase tracking-widest mb-6">
-                        <Smartphone size={12} /> Mobile First
+                        <Smartphone size={12} /> App Nativo (PWA)
                     </div>
                     <h3 className="text-3xl md:text-5xl font-black text-white mb-6 leading-tight">
                         SEU ESCRITÓRIO <br/> <span className="text-emerald-500">NO SEU BOLSO.</span>
                     </h3>
-                    <p className="text-slate-400 text-lg mb-8 max-w-lg">
+                    <p className="text-slate-400 text-lg mb-8 max-w-lg mx-auto md:mx-0">
                         Desenvolvido como PWA (Progressive Web App). Instale no iPhone ou Android sem loja de apps e lance suas apostas em segundos, onde estiver.
                     </p>
                     <button onClick={handleSignUp} className="bg-emerald-500 text-slate-950 px-8 py-4 rounded-xl font-black text-xs uppercase tracking-widest hover:bg-emerald-400 transition-all shadow-lg hover:shadow-emerald-500/30">
@@ -280,18 +307,19 @@ const LandingPage = () => {
                     </button>
                 </div>
 
-                {/* Mobile Mockup - Ajustado para usar a imagem real fornecida */}
+                {/* Mobile Mockup REAL */}
                 <div className="flex-1 w-full flex justify-center relative z-10">
-                    <div className="relative w-[280px] h-[550px] bg-[#020617] border-[10px] border-[#1e293b] rounded-[3rem] shadow-2xl overflow-hidden ring-1 ring-white/10 rotate-[-5deg] group-hover:rotate-0 transition-transform duration-700">
+                    <div className="relative w-[280px] h-[580px] bg-[#020617] border-[8px] border-[#1e293b] rounded-[3rem] shadow-2xl overflow-hidden ring-1 ring-white/10 rotate-[-3deg] group-hover:rotate-0 transition-transform duration-700">
                         
                         {/* Dynamic Island / Notch */}
                         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-24 h-6 bg-[#1e293b] rounded-b-2xl z-30"></div>
                         
-                        {/* Imagem do App Mobile */}
+                        {/* Imagem do App Mobile Real */}
                         <img 
                             src="https://i.ibb.co/YFQFFLvY/mobile.webp" 
-                            alt="BetTracker Mobile" 
+                            alt="BetTracker Mobile App" 
                             className="w-full h-full object-cover"
+                            loading="lazy"
                         />
                         
                         {/* Reflection/Glow Overlay */}
@@ -309,16 +337,17 @@ const LandingPage = () => {
 
       {/* --- CTA FINAL --- */}
       <section className="py-20 px-6">
-        <div className="max-w-5xl mx-auto bg-gradient-to-r from-emerald-950/50 to-slate-900 border border-emerald-500/20 rounded-[3rem] p-10 md:p-20 text-center relative overflow-hidden">
+        <div className="max-w-5xl mx-auto bg-gradient-to-r from-emerald-900/40 to-slate-900 border border-emerald-500/20 rounded-[3rem] p-10 md:p-20 text-center relative overflow-hidden group">
           
           <div className="absolute top-0 left-0 w-full h-full bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')] opacity-10 pointer-events-none" />
+          <div className="absolute -top-24 -right-24 w-64 h-64 bg-emerald-500/20 blur-[80px] rounded-full group-hover:bg-emerald-500/30 transition-colors duration-700" />
           
           <div className="relative z-10">
             <div className="w-16 h-16 bg-emerald-500 rounded-2xl flex items-center justify-center text-slate-950 mx-auto mb-8 shadow-[0_0_30px_rgba(16,185,129,0.4)]">
                 <Trophy size={32} strokeWidth={3} />
             </div>
             
-            <h2 className="text-3xl md:text-5xl font-black mb-6 text-white tracking-tight">Pare de perder dinheiro.</h2>
+            <h2 className="text-3xl md:text-5xl font-black mb-6 text-white tracking-tight">Pare de perder dinheiro hoje.</h2>
             <p className="text-emerald-100/70 text-lg mb-10 max-w-2xl mx-auto font-medium">
               Crie sua conta gratuita em menos de 30 segundos. Acesso imediato a todas as ferramentas básicas.
             </p>
