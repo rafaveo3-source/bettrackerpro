@@ -21,7 +21,6 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
 });
 
 // --- FUNÇÃO DE SANITIZAÇÃO (SEGURANÇA FRONTEND) ---
-// Remove tags HTML e scripts maliciosos de strings antes de enviar ao banco
 const sanitizeInput = (input: string): string => {
   if (!input) return '';
   return input
@@ -136,6 +135,7 @@ export interface Bet {
   status: BetStatus;
   profit: number;
   method?: string;
+  strategy?: string; // 🔥 Vínculo com a Estratégia de Gestão
 }
 
 export interface Transaction {
@@ -237,9 +237,11 @@ interface BetState {
   addBankroll: (name: string, currency: string, initialBalance: number) => Promise<boolean>; 
   removeBankroll: (id: string) => Promise<void>;
   setActiveBankroll: (id: string) => void;
+  
   addBet: (bet: Omit<Bet, 'id' | 'profit' | 'bankrollId'> & { cashoutValue?: number }) => Promise<boolean>; 
   updateBet: (id: string, data: Partial<Bet> & { cashoutValue?: number }) => Promise<void>;
   removeBet: (id: string) => Promise<void>;
+  
   addTransaction: (transaction: Omit<Transaction, 'id' | 'bankrollId'>) => Promise<void>;
   removeTransaction: (id: string) => Promise<void>;
   addMethod: (name: string) => Promise<void>;
@@ -258,6 +260,7 @@ interface BetState {
   addGoal: (goal: Omit<Goal, 'id' | 'createdAt' | 'current' | 'status'>) => Promise<void>;
   updateGoal: (id: string, data: Partial<Goal>) => Promise<void>;
   deleteGoal: (id: string) => Promise<void>;
+  checkAndLockGoals: () => Promise<void>; // 🔥 NOVO: Auto-Lock de Metas
 
   activateTiltLock: (hours: number) => void;
   resetData: () => Promise<void>;
@@ -357,8 +360,6 @@ export const useBetStore = create<BetState>()(
                 (data.subscription_status === 'lifetime'); 
             
             set({ isPro: isActive, subscriptionValidUntil: data.valid_until });
-            
-            console.log("💎 STATUS PRO:", isActive ? "ATIVO" : "INATIVO", data.subscription_status);
           }
         } catch (e) {
           console.error("Erro ao checar PRO:", e);
@@ -504,7 +505,7 @@ export const useBetStore = create<BetState>()(
         const user = get().user;
         if (!user) return;
         const { data, error } = await supabase.from('user_settings').select('*').eq('user_id', user.id).single();
-        if (error && error.code !== 'PGRST116') { console.error("Erro ao carregar settings:", error.message); return; }
+        if (error && error.code !== 'PGRST116') return;
         if (data) { set({ primaryColor: data.primary_color || 'gold', currency: data.currency || 'BRL', displayMode: data.display_mode || 'currency', unitSize: Number(data.unit_size) || 100 }); } else { await supabase.from('user_settings').insert([{ user_id: user.id, primary_color: 'gold', currency: 'BRL', display_mode: 'currency', unit_size: 100 }]); }
       },
       
@@ -742,7 +743,6 @@ export const useBetStore = create<BetState>()(
         return true;
       },
 
-      // --- BANKROLLS ---
       addBankroll: async (name, currency, initialBalance) => {
         const { user, isPro, bankrolls } = get();
         if (!user) return false;
@@ -882,11 +882,39 @@ export const useBetStore = create<BetState>()(
         set({ currentBankrollBalance: Number(activeBR.initialBalance) + betsProfit + deposits - withdrawals });
       },
 
+      // 🔥 AUTO-LOCK DE METAS (CÉREBRO)
+      checkAndLockGoals: async () => {
+        const state = get();
+        if (!state.activeBankrollId) return;
+
+        const activeGoals = state.goals.filter(g => g.status === 'active' && g.bankroll_id === state.activeBankrollId);
+        if (activeGoals.length === 0) return;
+
+        const activeBR = state.bankrolls.find(b => b.id === state.activeBankrollId);
+        if (!activeBR) return;
+
+        // Calcula o saldo atual dinamicamente
+        const bankrollBets = state.history.filter(b => b.bankroll_id === state.activeBankrollId && b.status !== 'void' && b.status !== 'refunded');
+        const betsProfit = bankrollBets.reduce((acc, b) => acc + (Number(b.profit) || 0), 0);
+        
+        const deposits = state.transactions.filter(t => t.bankrollId === state.activeBankrollId && t.type === 'deposit').reduce((acc, t) => acc + (Number(t.amount) || 0), 0);
+        const withdrawals = state.transactions.filter(t => t.bankrollId === state.activeBankrollId && t.type === 'withdrawal').reduce((acc, t) => acc + (Number(t.amount) || 0), 0);
+        
+        const currentBalance = Number(activeBR.initialBalance) + betsProfit + deposits - withdrawals;
+
+        for (const goal of activeGoals) {
+           if (currentBalance >= goal.target) {
+               await get().updateGoal(goal.id, { status: 'completed' });
+               get().setToast({ type: 'success', message: `🏆 TAKE PROFIT: Meta "${goal.title}" atingida e travada com sucesso!` });
+           }
+        }
+      },
+
       // --- BETS ---
       addBet: async (newBetData) => {
         if (get().isTiltLocked()) return false;
 
-        const { user, isPro, history, activeBankrollId, setToast } = get();
+        const { user, isPro, history, activeBankrollId, setToast, checkAndLockGoals } = get();
         
         if (!activeBankrollId) {
           console.warn("⚠️ Crie ou selecione uma banca antes de registrar uma aposta.");
@@ -933,6 +961,7 @@ export const useBetStore = create<BetState>()(
           market: sanitizeInput(cleanBetData.market),
           selection: sanitizeInput(cleanBetData.selection),
           method: cleanBetData.method ? sanitizeInput(cleanBetData.method) : '',
+          strategy: cleanBetData.strategy ? sanitizeInput(cleanBetData.strategy) : '',
           bankroll_id: activeBankrollId,
           stake,
           odds,
@@ -966,6 +995,11 @@ export const useBetStore = create<BetState>()(
           }));
 
           get().recalculateBankroll();
+          
+          if (profit > 0) {
+              await checkAndLockGoals();
+          }
+
           return true;
         }
         return false;
@@ -1002,6 +1036,7 @@ export const useBetStore = create<BetState>()(
             event: sanitizeInput(updated.event),
             selection: sanitizeInput(updated.selection),
             method: updated.method ? sanitizeInput(updated.method) : '',
+            strategy: updated.strategy ? sanitizeInput(updated.strategy) : '',
             odds,
             stake,
             status: updated.status,
@@ -1027,6 +1062,10 @@ export const useBetStore = create<BetState>()(
         }));
 
         get().recalculateBankroll();
+        
+        if (profit > 0 || updated.status === 'won') {
+            await get().checkAndLockGoals();
+        }
       },
 
       removeBet: async (id) => {

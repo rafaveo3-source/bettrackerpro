@@ -37,7 +37,7 @@ const NewBetModal: React.FC<NewBetModalProps> = ({
     customStrategies, 
     displayMode,
     unitSize,
-    isPro, // 🔥 Importante para a blindagem
+    isPro, 
     
     // Dados Globais
     globalLeagues,
@@ -117,7 +117,7 @@ const NewBetModal: React.FC<NewBetModalProps> = ({
         stake: betToEdit.stake.toString(),
         status: betToEdit.status,
         method: betToEdit.method || '',
-        strategy: (betToEdit as any).strategy || '',
+        strategy: betToEdit.strategy || '', // 🔥 Campo Oficializado
         cashoutValue: (betToEdit as any).cashoutValue?.toString() || ''
       });
       
@@ -492,7 +492,7 @@ const NewBetModal: React.FC<NewBetModalProps> = ({
 
                 <div className="md:col-span-6 space-y-2">
                   <label className="text-xs uppercase text-slate-500 font-semibold tracking-wider ml-1 flex justify-between">
-                      Estratégia
+                      Estratégia / Gestão
                       {!isPro && <span className="text-[9px] text-amber-500 flex items-center gap-1"><Lock size={8}/> Exclusivo PRO</span>}
                   </label>
                   <select
