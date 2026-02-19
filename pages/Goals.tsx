@@ -24,7 +24,7 @@ const Goals: React.FC = () => {
     if (location.state && location.state.createFromStrategy) {
       const strategy = location.state.createFromStrategy;
       setView('config');
-      setGoalName(`Missão: ${strategy.name}`); // Nome inteligente
+      setGoalName(`META: ${strategy.name}`); // Nome inteligente mantendo seu padrão
       setGoalCategory('Growth Strategy');
       setLinkedBankrollId(activeBankrollId);
 
@@ -54,7 +54,7 @@ const Goals: React.FC = () => {
     return new Intl.NumberFormat('pt-BR', { style: 'currency', currency }).format(val);
   };
 
-  // --- LÓGICA DE CÁLCULO AUTOMÁTICO ---
+  // --- LÓGICA DE CÁLCULO AUTOMÁTICO E LINK DE APOSTAS ---
   const getGoalAnalytics = (goal: Goal) => {
     const bankroll = bankrolls.find(b => b.id === goal.bankroll_id);
     if (!bankroll) return null;
@@ -95,9 +95,24 @@ const Goals: React.FC = () => {
         statusColor = 'text-yellow-600 dark:text-yellow-400 bg-yellow-100 dark:bg-yellow-500/10'; 
     }
 
-    // Identifica qual estratégia o usuário tentou linkar baseado no nome da meta
-    const linkedStrategyName = goal.title.replace('Missão: ', '').trim();
-    const strategyBets = bankrollBets.filter(b => b.strategy === linkedStrategyName || b.method === linkedStrategyName);
+    // 🔥 FILTRO CORRIGIDO: Ignora os prefixos "META:" ou "MISSÃO:" de forma inteligente
+    const titleLower = goal.title.toLowerCase();
+    let linkedStrategyName = goal.title;
+    
+    if (titleLower.startsWith('meta:')) {
+        linkedStrategyName = goal.title.substring(5).trim();
+    } else if (titleLower.startsWith('missão:')) {
+        linkedStrategyName = goal.title.substring(7).trim();
+    }
+    
+    const targetName = linkedStrategyName.toLowerCase();
+
+    // Filtra no histórico as apostas vinculadas a essa estratégia ou método
+    const strategyBets = bankrollBets.filter(b => {
+        const betStrategy = (b.strategy || '').toLowerCase();
+        const betMethod = (b.method || '').toLowerCase();
+        return (betStrategy === targetName) || (betMethod === targetName);
+    });
 
     return { 
       current: currentBalance, progress, currency: bankroll.currency, missing, daysLeft, probabilityScore, status, statusColor, bankrollName: bankroll.name,
@@ -176,7 +191,7 @@ const Goals: React.FC = () => {
                     type="text" 
                     value={goalName} 
                     onChange={e => setGoalName(e.target.value)} 
-                    placeholder="Ex: Alavancagem 10k" 
+                    placeholder="Ex: META: Alavancagem 10k" 
                     className="w-full bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 focus:border-emerald-500 rounded-xl px-5 py-4 text-slate-900 dark:text-white font-bold outline-none transition-all placeholder:text-slate-400" 
                   />
                 </div>
@@ -429,7 +444,7 @@ const Goals: React.FC = () => {
                                <h4 className="text-[10px] font-black uppercase tracking-widest text-blue-500 mb-4 flex items-center gap-2">
                                   <Zap size={14}/> Instruções da Operação
                                </h4>
-                               {stats.linkedStrategyName && customStrategies.some(cs => cs.name === stats.linkedStrategyName) ? (
+                               {stats.linkedStrategyName && customStrategies.some(cs => cs.name.toLowerCase() === stats.linkedStrategyName.toLowerCase()) ? (
                                    <div className="bg-slate-50 dark:bg-slate-900/50 rounded-xl p-4 border border-slate-200 dark:border-slate-800">
                                        <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed font-medium mb-3">
                                           Siga o modelo importado para bater essa meta de forma consistente. Ao lançar uma nova aposta, marque a estratégia "{stats.linkedStrategyName}" para que o sistema amarre os dados.
@@ -443,7 +458,7 @@ const Goals: React.FC = () => {
                                ) : (
                                    <div className="bg-slate-50 dark:bg-slate-900/50 rounded-xl p-4 border border-slate-200 dark:border-slate-800">
                                        <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed font-medium">
-                                          Esta meta é de crescimento livre. Selecione um método ao enviar as apostas para que o sistema mostre o histórico linkado aqui.
+                                          Esta meta é de crescimento livre. Selecione um método ou estratégia ao enviar as apostas para que o sistema mostre o histórico linkado aqui.
                                        </p>
                                    </div>
                                )}
