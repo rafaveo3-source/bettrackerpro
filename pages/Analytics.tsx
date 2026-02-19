@@ -1,19 +1,22 @@
-import React from 'react'
-import { useBetStore } from '../store/useBetStore'
+import React, { useMemo } from 'react';
+import { useBetStore } from '../store/useBetStore';
 import {
   BarChart,
   Bar,
   XAxis,
   YAxis,
   CartesianGrid,
-  Tooltip,
+  Tooltip as RechartsTooltip,
   ResponsiveContainer,
   Cell,
   PieChart,
   Pie,
-  Legend
-} from 'recharts'
-import { BarChart4 } from 'lucide-react'
+  Legend,
+  AreaChart,
+  Area
+} from 'recharts';
+import { BarChart4, PieChart as PieChartIcon, TrendingUp, Activity } from 'lucide-react';
+import { motion } from 'framer-motion';
 
 const Analytics: React.FC = () => {
   const {
@@ -21,361 +24,289 @@ const Analytics: React.FC = () => {
     activeBankrollId,
     displayMode,
     unitSize,
-    bankrolls
-  } = useBetStore()
+    bankrolls,
+    isDarkMode
+  } = useBetStore();
 
-  const activeBR = bankrolls.find(
-    b => b.id === activeBankrollId
-  )
+  const activeBR = bankrolls.find(b => b.id === activeBankrollId);
 
+  // --- formatação centralizada ---
   const formatValue = (value: number) => {
     if (displayMode === 'units') {
-      const units = value / (unitSize || 100)
-      return `${units >= 0 ? '+' : ''}${units.toFixed(2)}u`
+      const units = value / (unitSize || 100);
+      return `${units >= 0 ? '+' : ''}${units.toFixed(2)}u`;
     }
-
     return new Intl.NumberFormat('pt-BR', {
       style: 'currency',
       currency: activeBR?.currency || 'BRL'
-    }).format(value)
-  }
+    }).format(value);
+  };
 
-  /* -----------------------------
-   THEME DETECTION (UX FIX)
------------------------------ */
-const [isDark, setIsDark] = React.useState(false)
+  // --- THEME VARIABLES (Responde ao Zustand Store `isDarkMode`) ---
+  const axisColor = isDarkMode ? '#64748b' : '#94a3b8'; 
+  const gridColor = isDarkMode ? '#1e293b' : '#e2e8f0';
+  const tooltipBg = isDarkMode ? '#0f172a' : '#ffffff';
+  const tooltipBorder = isDarkMode ? '#1e293b' : '#e2e8f0';
+  const tooltipText = isDarkMode ? '#f8fafc' : '#0f172a';
 
-React.useEffect(() => {
-  const checkTheme = () => {
-    setIsDark(
-      document.documentElement.classList.contains('dark')
-    )
-  }
+  // --- DADOS BASE ---
+  const bankrollBets = useMemo(() => {
+    return history
+      .filter(b => b.bankroll_id === activeBankrollId && b.status !== 'void' && b.status !== 'refunded')
+      .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+  }, [history, activeBankrollId]);
 
-  checkTheme()
+  // --- 1. GRÁFICO EVOLUÇÃO (LINHA DO TEMPO) ---
+  const timelineData = useMemo(() => {
+    let runningBalance = activeBR?.initialBalance || 0;
+    const data = [{ date: 'Início', balance: runningBalance }];
+    
+    // Agrupar por dia para evitar excesso de pontos se houver muitas apostas
+    const groupedByDay: Record<string, number> = {};
+    
+    bankrollBets.forEach(bet => {
+        if (bet.status === 'pending') return;
+        const dateStr = new Date(bet.date).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
+        if (!groupedByDay[dateStr]) groupedByDay[dateStr] = 0;
+        groupedByDay[dateStr] += bet.profit;
+    });
 
-  const observer = new MutationObserver(checkTheme)
+    Object.keys(groupedByDay).forEach(date => {
+        runningBalance += groupedByDay[date];
+        data.push({ date, balance: runningBalance });
+    });
 
-  observer.observe(document.documentElement, {
-    attributes: true,
-    attributeFilter: ['class']
-  })
+    return data;
+  }, [bankrollBets, activeBR]);
 
-  return () => observer.disconnect()
-}, [])
+  // --- 2. LUCRO POR ESPORTE ---
+  const sportBarData = useMemo(() => {
+    const perf: Record<string, number> = {};
+    bankrollBets.forEach(bet => {
+      if (bet.status === 'pending') return;
+      perf[bet.sport] = (perf[bet.sport] || 0) + bet.profit;
+    });
+    return Object.keys(perf)
+        .map(sport => ({ name: sport, profit: perf[sport] }))
+        .sort((a,b) => b.profit - a.profit); // Ordena do maior pro menor
+  }, [bankrollBets]);
 
-const axisColor = isDark ? '#94a3b8' : '#475569'
-const gridColor = isDark ? '#1e293b' : '#e2e8f0'
-const tooltipBg = isDark ? '#0f172a' : '#ffffff'
-const tooltipBorder = isDark ? '#1e293b' : '#e2e8f0'
-const tooltipText = isDark ? '#ffffff' : '#0f172a'
+  // --- 3. LUCRO POR MÉTODO ---
+  const methodBarData = useMemo(() => {
+    const perf: Record<string, number> = {};
+    bankrollBets.forEach(bet => {
+      if (bet.status === 'pending') return;
+      const m = bet.method || 'S/ Método';
+      perf[m] = (perf[m] || 0) + bet.profit;
+    });
+    return Object.keys(perf)
+        .map(method => ({ name: method, profit: perf[method] }))
+        .sort((a,b) => b.profit - a.profit); 
+  }, [bankrollBets]);
 
-  const bankrollBets = history.filter(
-    b =>
-      b.bankrollId === activeBankrollId &&
-      b.status !== 'void' &&
-      b.status !== 'refunded'
-  )
+  // --- 4. DISTRIBUIÇÃO (PIE) ---
+  const pieData = useMemo(() => {
+    const counts = { won: 0, lost: 0, pending: 0, refunded: 0 };
+    history.filter(b => b.bankroll_id === activeBankrollId).forEach(bet => {
+      if (['won', 'half-won'].includes(bet.status)) counts.won++;
+      else if (['lost', 'half-lost'].includes(bet.status)) counts.lost++;
+      else if (['refunded', 'void'].includes(bet.status)) counts.refunded++;
+      else if (bet.status === 'pending') counts.pending++;
+      else if (bet.status === 'cashout') {
+        bet.profit >= 0 ? counts.won++ : counts.lost++;
+      }
+    });
 
-  /* =============================
-     PROFIT BY SPORT
-  ============================== */
+    return [
+      { name: 'Green', value: counts.won, color: '#10b981' },
+      { name: 'Red', value: counts.lost, color: '#ef4444' },
+      { name: 'Devolvido', value: counts.refunded, color: '#64748b' },
+      { name: 'Aberto', value: counts.pending, color: '#f59e0b' }
+    ].filter(d => d.value > 0);
+  }, [history, activeBankrollId]);
 
-  const sportPerformance: Record<string, number> = {}
 
-  bankrollBets.forEach(bet => {
-    if (bet.status === 'pending') return
-    if (!sportPerformance[bet.sport])
-      sportPerformance[bet.sport] = 0
-    sportPerformance[bet.sport] += bet.profit
-  })
-
-  const barData = Object.keys(
-    sportPerformance
-  ).map(sport => ({
-    name: sport,
-    profit: sportPerformance[sport]
-  }))
-
-  /* =============================
-     PROFIT BY METHOD
-  ============================== */
-
-  const methodPerformance: Record<string, number> =
-    {}
-
-  bankrollBets.forEach(bet => {
-    if (bet.status === 'pending') return
-    const method = bet.method || 'Sem Método'
-    if (!methodPerformance[method])
-      methodPerformance[method] = 0
-    methodPerformance[method] += bet.profit
-  })
-
-  const methodBarData = Object.keys(
-    methodPerformance
-  ).map(method => ({
-    name: method,
-    profit: methodPerformance[method]
-  }))
-
-  /* =============================
-     STATUS DISTRIBUTION
-  ============================== */
-
-  const statusCount = {
-    won: 0,
-    lost: 0,
-    pending: 0,
-    refunded: 0
-  }
-
-  const allBets = history.filter(
-    b => b.bankrollId === activeBankrollId
-  )
-
-  allBets.forEach(bet => {
-    if (['won', 'half-won'].includes(bet.status))
-      statusCount.won++
-    else if (
-      ['lost', 'half-lost'].includes(bet.status)
-    )
-      statusCount.lost++
-    else if (
-      bet.status === 'refunded' ||
-      bet.status === 'void'
-    )
-      statusCount.refunded++
-    else if (bet.status === 'pending')
-      statusCount.pending++
-    else if (bet.status === 'cashout') {
-      bet.profit >= 0
-        ? statusCount.won++
-        : statusCount.lost++
+  // Custom Tooltip Component
+  const CustomTooltip = ({ active, payload, label }: any) => {
+    if (active && payload && payload.length) {
+      return (
+        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-3 rounded-xl shadow-xl">
+          <p className="text-xs font-bold text-slate-500 mb-2 uppercase tracking-wider">{label}</p>
+          <p className={`text-lg font-black ${payload[0].value >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
+            {formatValue(payload[0].value)}
+          </p>
+        </div>
+      );
     }
-  })
-
-  const pieData = [
-    { name: 'Green', value: statusCount.won, color: '#10b981' },
-    { name: 'Red', value: statusCount.lost, color: '#ef4444' },
-    { name: 'Reembolso', value: statusCount.refunded, color: '#64748b' },
-    { name: 'Pendente', value: statusCount.pending, color: '#eab308' }
-  ].filter(d => d.value > 0)
+    return null;
+  };
 
   return (
-    <div className="space-y-10 pb-20 max-w-7xl mx-auto bg-slate-50 dark:bg-[#0b1220]">
+    <div className="space-y-8 pb-20 max-w-7xl mx-auto px-4 md:px-8 pt-8 transition-colors duration-300">
 
       {/* HEADER */}
-      <header className="border-b border-slate-200 dark:border-slate-800 pb-6">
-
-        <div className="flex items-center gap-2 text-emerald-500 text-[10px] font-mono font-bold uppercase tracking-widest mb-2">
-          <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse"></span>
-          Intelligence Module
-        </div>
-
-        <h1 className="text-3xl font-black text-slate-900 dark:text-white tracking-tighter uppercase italic">
-          Análise de Dados
-          <span className="text-slate-400 dark:text-slate-700 text-lg ml-2">
-            ///
-          </span>
-        </h1>
-
-        <p className="text-xs text-slate-500 dark:text-slate-400 font-semibold uppercase tracking-widest mt-2">
-          Métricas detalhadas da sua performance nesta banca
-        </p>
-      </header>
-
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-
-        {/* LUCRO POR ESPORTE */}
-        <div className="rounded-3xl bg-white dark:bg-[#0f172a] ring-1 ring-slate-200 dark:ring-slate-800 shadow-sm p-8">
-
-          <h3 className="text-xs font-black uppercase tracking-widest text-slate-400 mb-6 flex items-center gap-2">
-            <BarChart4 size={14} />
-            Lucro por Esporte
-          </h3>
-
-          <div className="h-[320px]">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={barData}>
-                <CartesianGrid
-  stroke={gridColor}
-  strokeDasharray="3 3"
-  vertical={false}
-/>
-
-<XAxis
-  dataKey="name"
-  stroke={axisColor}
-  fontSize={11}
-  tickLine={false}
-  axisLine={false}
-/>
-
-<YAxis
-  stroke={axisColor}
-  fontSize={11}
-  tickLine={false}
-  axisLine={false}
-  tickFormatter={val =>
-    displayMode === 'units'
-      ? `${(val / unitSize).toFixed(0)}u`
-      : val
-  }
-/>
-
-<Tooltip
-  contentStyle={{
-    backgroundColor: tooltipBg,
-    border: `1px solid ${tooltipBorder}`,
-    borderRadius: '12px',
-    color: tooltipText
-  }}
-  itemStyle={{ color: tooltipText }}
-  labelStyle={{ color: axisColor }}
-  formatter={(value: number) => [
-    formatValue(value),
-    'Lucro'
-  ]}
-/>
-
-                <Bar dataKey="profit" radius={[10, 10, 0, 0]}>
-                  {barData.map((entry, index) => (
-                    <Cell
-                      key={index}
-                      fill={
-                        entry.profit >= 0
-                          ? '#10b981'
-                          : '#ef4444'
-                      }
-                    />
-                  ))}
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
+      <div className="flex flex-col gap-2">
+          <div className="flex items-center gap-2 text-emerald-500 text-[9px] font-mono font-bold uppercase tracking-widest">
+            <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse shadow-[0_0_8px_#10b981]"></span>
+            Intelligence Module
           </div>
+          <div>
+          <h1 className="text-3xl font-black text-slate-900 dark:text-white tracking-tighter uppercase italic">
+            Data Analytics <span className="text-slate-400 dark:text-slate-700 text-lg">///</span>
+          </h1>
+          <p className="text-slate-500 dark:text-slate-400 text-xs font-bold mt-2 uppercase tracking-widest">
+            Visão microscópica do seu desempenho financeiro.
+          </p>
         </div>
-
-        {/* LUCRO POR MÉTODO */}
-        <div className="rounded-3xl bg-white dark:bg-[#0f172a] ring-1 ring-slate-200 dark:ring-slate-800 shadow-sm p-8">
-
-          <h3 className="text-xs font-black uppercase tracking-widest text-slate-400 mb-6">
-            Lucro por Método
-          </h3>
-
-          <div className="h-[320px]">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={methodBarData} layout="vertical">
-
-                <CartesianGrid
-  stroke={gridColor}
-  strokeDasharray="3 3"
-  horizontal={false}
-/>
-
-<XAxis
-  type="number"
-  stroke={axisColor}
-  fontSize={11}
-  tickLine={false}
-  axisLine={false}
-  tickFormatter={val =>
-    displayMode === 'units'
-      ? `${(val / unitSize).toFixed(0)}u`
-      : val
-  }
-/>
-
-<YAxis
-  dataKey="name"
-  type="category"
-  stroke={axisColor}
-  fontSize={11}
-  tickLine={false}
-  axisLine={false}
-  width={140}
-/>
-
-<Tooltip
-  contentStyle={{
-    backgroundColor: tooltipBg,
-    border: `1px solid ${tooltipBorder}`,
-    borderRadius: '12px',
-    color: tooltipText
-  }}
-  itemStyle={{ color: tooltipText }}
-  labelStyle={{ color: axisColor }}
-  formatter={(value: number) => [
-    formatValue(value),
-    'Lucro'
-  ]}
-/>
-
-                <Bar dataKey="profit" radius={[0, 10, 10, 0]}>
-                  {methodBarData.map((entry, index) => (
-                    <Cell
-                      key={index}
-                      fill={
-                        entry.profit >= 0
-                          ? '#10b981'
-                          : '#ef4444'
-                      }
-                    />
-                  ))}
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
-
-        {/* DISTRIBUIÇÃO */}
-        <div className="rounded-3xl bg-white dark:bg-[#0f172a] ring-1 ring-slate-200 dark:ring-slate-800 shadow-sm p-8 lg:col-span-2">
-
-          <h3 className="text-xs font-black uppercase tracking-widest text-slate-400 mb-6">
-            Distribuição de Resultados
-          </h3>
-
-          <div className="h-[340px]">
-            <ResponsiveContainer width="100%" height="100%">
-              <PieChart>
-                <Pie
-                  data={pieData}
-                  cx="50%"
-                  cy="50%"
-                  innerRadius={80}
-                  outerRadius={120}
-                  paddingAngle={3}
-                  dataKey="value"
-                >
-                  {pieData.map((entry, index) => (
-                    <Cell
-                      key={index}
-                      fill={entry.color}
-                      stroke="none"
-                    />
-                  ))}
-                </Pie>
-
-                <Tooltip
-  contentStyle={{
-    backgroundColor: tooltipBg,
-    border: `1px solid ${tooltipBorder}`,
-    borderRadius: '12px',
-    color: tooltipText
-  }}
-  itemStyle={{ color: tooltipText }}
-  labelStyle={{ color: axisColor }}
-/>
-
-                <Legend verticalAlign="bottom" />
-              </PieChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
-
       </div>
+
+      {!activeBR ? (
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-10 text-center">
+              <p className="text-slate-500 font-bold uppercase tracking-widest text-sm">Selecione uma banca para ver os gráficos.</p>
+          </div>
+      ) : (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+
+            {/* 1. GRÁFICO: EVOLUÇÃO DE BANCA (Largo) */}
+            <motion.div 
+                initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
+                className="lg:col-span-2 bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-800 rounded-[2rem] p-6 md:p-8 shadow-sm"
+            >
+              <h3 className="text-sm font-black uppercase tracking-widest text-slate-800 dark:text-white mb-6 flex items-center gap-2">
+                <TrendingUp size={16} className="text-emerald-500" />
+                Evolução do Capital
+              </h3>
+
+              <div className="h-[300px] w-full">
+                <ResponsiveContainer width="100%" height="100%">
+                  <AreaChart data={timelineData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                    <defs>
+                      <linearGradient id="colorBalance" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="#10b981" stopOpacity={0.3}/>
+                        <stop offset="95%" stopColor="#10b981" stopOpacity={0}/>
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid stroke={gridColor} strokeDasharray="3 3" vertical={false} />
+                    <XAxis dataKey="date" stroke={axisColor} fontSize={10} tickLine={false} axisLine={false} dy={10} />
+                    <YAxis 
+                        stroke={axisColor} 
+                        fontSize={10} 
+                        tickLine={false} 
+                        axisLine={false}
+                        tickFormatter={(val) => displayMode === 'units' ? `${(val/unitSize).toFixed(0)}u` : `R$${val}`}
+                    />
+                    <RechartsTooltip content={<CustomTooltip />} />
+                    <Area 
+                        type="monotone" 
+                        dataKey="balance" 
+                        stroke="#10b981" 
+                        strokeWidth={3}
+                        fillOpacity={1} 
+                        fill="url(#colorBalance)" 
+                    />
+                  </AreaChart>
+                </ResponsiveContainer>
+              </div>
+            </motion.div>
+
+            {/* 2. GRÁFICO: ESPORTES */}
+            <motion.div 
+                initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}
+                className="bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-800 rounded-[2rem] p-6 md:p-8 shadow-sm"
+            >
+              <h3 className="text-sm font-black uppercase tracking-widest text-slate-800 dark:text-white mb-6 flex items-center gap-2">
+                <BarChart4 size={16} className="text-blue-500" />
+                Lucro por Esporte
+              </h3>
+
+              <div className="h-[280px]">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={sportBarData} margin={{ top: 0, right: 0, left: -20, bottom: 0 }}>
+                    <CartesianGrid stroke={gridColor} strokeDasharray="3 3" vertical={false} />
+                    <XAxis dataKey="name" stroke={axisColor} fontSize={10} tickLine={false} axisLine={false} dy={10} />
+                    <YAxis stroke={axisColor} fontSize={10} tickLine={false} axisLine={false} tickFormatter={val => displayMode === 'units' ? `${(val / unitSize).toFixed(0)}u` : val} />
+                    <RechartsTooltip content={<CustomTooltip />} />
+                    <Bar dataKey="profit" radius={[6, 6, 0, 0]} maxBarSize={50}>
+                      {sportBarData.map((entry, index) => (
+                        <Cell key={index} fill={entry.profit >= 0 ? '#10b981' : '#ef4444'} />
+                      ))}
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            </motion.div>
+
+            {/* 3. GRÁFICO: MÉTODOS */}
+            <motion.div 
+                initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}
+                className="bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-800 rounded-[2rem] p-6 md:p-8 shadow-sm"
+            >
+              <h3 className="text-sm font-black uppercase tracking-widest text-slate-800 dark:text-white mb-6 flex items-center gap-2">
+                <Activity size={16} className="text-purple-500" />
+                Lucro por Método
+              </h3>
+
+              <div className="h-[280px]">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={methodBarData} layout="vertical" margin={{ top: 0, right: 20, left: 0, bottom: 0 }}>
+                    <CartesianGrid stroke={gridColor} strokeDasharray="3 3" horizontal={false} />
+                    <XAxis type="number" stroke={axisColor} fontSize={10} tickLine={false} axisLine={false} tickFormatter={val => displayMode === 'units' ? `${(val / unitSize).toFixed(0)}u` : val} />
+                    <YAxis dataKey="name" type="category" stroke={axisColor} fontSize={10} tickLine={false} axisLine={false} width={100} />
+                    <RechartsTooltip content={<CustomTooltip />} />
+                    <Bar dataKey="profit" radius={[0, 6, 6, 0]} maxBarSize={30}>
+                      {methodBarData.map((entry, index) => (
+                        <Cell key={index} fill={entry.profit >= 0 ? '#3b82f6' : '#ef4444'} />
+                      ))}
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            </motion.div>
+
+            {/* 4. GRÁFICO: DISTRIBUIÇÃO PIE */}
+            <motion.div 
+                initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}
+                className="lg:col-span-2 bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-800 rounded-[2rem] p-6 md:p-8 shadow-sm flex flex-col md:flex-row items-center"
+            >
+              <div className="md:w-1/3 mb-6 md:mb-0">
+                  <h3 className="text-sm font-black uppercase tracking-widest text-slate-800 dark:text-white mb-2 flex items-center gap-2">
+                    <PieChartIcon size={16} className="text-orange-500" />
+                    Distribuição
+                  </h3>
+                  <p className="text-xs text-slate-500 font-medium">Proporção de resultados (Greens x Reds x Devolvidas) em todo o histórico da banca.</p>
+              </div>
+
+              <div className="h-[250px] w-full md:w-2/3">
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={pieData}
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={60}
+                      outerRadius={100}
+                      paddingAngle={5}
+                      dataKey="value"
+                      stroke="none"
+                    >
+                      {pieData.map((entry, index) => (
+                        <Cell key={index} fill={entry.color} />
+                      ))}
+                    </Pie>
+                    <RechartsTooltip 
+                        contentStyle={{ backgroundColor: tooltipBg, border: `1px solid ${tooltipBorder}`, borderRadius: '12px', color: tooltipText, fontSize: '12px', fontWeight: 'bold' }}
+                        itemStyle={{ color: tooltipText }}
+                    />
+                    <Legend verticalAlign="middle" align="right" layout="vertical" iconType="circle" wrapperStyle={{ fontSize: '12px', fontWeight: 'bold', color: axisColor }} />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
+            </motion.div>
+
+          </div>
+      )}
     </div>
-  )
+  );
 }
 
-export default Analytics
+export default Analytics;

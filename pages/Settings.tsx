@@ -12,7 +12,7 @@ const Settings: React.FC = () => {
     currency, setCurrency, resetData, 
     user, updateProfile, logout,
     displayMode, setDisplayMode, unitSize, setUnitSize 
-} = useBetStore();
+  } = useBetStore();
 
   const [newMethodName, setNewMethodName] = useState('');
   const [newMarketName, setNewMarketName] = useState('');
@@ -21,7 +21,7 @@ const Settings: React.FC = () => {
   const [profileName, setProfileName] = useState('');
   const [profileAvatar, setProfileAvatar] = useState('');
   const [tempUnitSize, setTempUnitSize] = useState('100');
-  const [isResetting, setIsResetting] = useState(false); // Estado de loading para o reset
+  const [isResetting, setIsResetting] = useState(false);
 
   React.useEffect(() => {
     if (user) {
@@ -79,8 +79,8 @@ const Settings: React.FC = () => {
             
             if (error) throw error;
             
-            resetData(); // Limpa local
-            logout(); // Desloga
+            resetData(); 
+            logout(); 
             window.location.href = '/'; 
         } catch (error: any) {
             alert("Erro ao deletar conta: " + error.message);
@@ -89,21 +89,18 @@ const Settings: React.FC = () => {
   };
 
   return (
-    <div className="space-y-10 max-w-6xl mx-auto pb-20 w-full overflow-x-hidden">
+    <div className="space-y-10 max-w-6xl mx-auto pb-20 w-full overflow-x-hidden transition-colors duration-300">
         <div className="border-b border-slate-200 dark:border-slate-800 pb-8 flex flex-col md:flex-row md:items-end md:justify-between gap-6">
   <div>
-    {/* Label superior discreta */}
-    <div className="flex items-center gap-2 text-emerald-500 text-[9px] font-mono font-bold uppercase tracking-widest mb-1">
+    <div className="flex items-center gap-2 text-emerald-600 dark:text-emerald-500 text-[9px] font-mono font-bold uppercase tracking-widest mb-1">
       <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse shadow-[0_0_8px_#10b981]"></span>
       System Control Engine
     </div>
 
-    {/* Headline principal */}
     <h1 className="text-3xl font-black text-slate-900 dark:text-white tracking-tighter uppercase italic">
       Configurações <span className="text-slate-400 dark:text-slate-700 text-lg">///</span>
     </h1>
 
-    {/* Subheadline */}
     <p className="text-slate-500 dark:text-slate-400 text-xs font-bold mt-2 uppercase tracking-widest">
       Controle total da interface, preferências e arquitetura do sistema.
     </p>
@@ -127,7 +124,7 @@ const Settings: React.FC = () => {
             {/* Identity Card */}
             <section className="bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-800 rounded-[2.5rem] p-6 md:p-10 shadow-sm transition-shadow hover:shadow-md">
                 <div className="flex items-center gap-4 mb-10">
-                    <div className="p-3 bg-emerald-500/10 rounded-2xl text-emerald-600 dark:text-emerald-500 shadow-inner"><User size={24} /></div>
+                    <div className="p-3 bg-emerald-100 dark:bg-emerald-500/10 rounded-2xl text-emerald-600 dark:text-emerald-500 shadow-inner"><User size={24} /></div>
                     <h2 className="text-xl font-black text-slate-900 dark:text-white uppercase tracking-tighter italic">Perfil & Preferências</h2>
                 </div>
                 
@@ -144,22 +141,22 @@ const Settings: React.FC = () => {
                              </div>
                              <div className="flex-1 w-full">
                                 <div className="mb-4">
-                                    <label className="block text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em] mb-2 ml-1">Nome de Operador</label>
+                                    <label className="block text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-[0.2em] mb-2 ml-1">Nome de Operador</label>
                                     <input type="text" value={profileName} onChange={(e) => setProfileName(e.target.value)} className="w-full bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-3 outline-none focus:border-emerald-500 transition-all text-slate-900 dark:text-white font-bold text-sm" />
                                 </div>
                                 <div>
-                                    <label className="block text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em] mb-2 ml-1">Avatar URL</label>
+                                    <label className="block text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-[0.2em] mb-2 ml-1">Avatar URL</label>
                                     <input type="text" value={profileAvatar} onChange={(e) => setProfileAvatar(e.target.value)} placeholder="https://..." className="w-full bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-3 outline-none focus:border-emerald-500 transition-all text-slate-900 dark:text-white text-xs font-medium" />
                                 </div>
                              </div>
                         </div>
 
                         {/* ✅ Configuração de Unidade */}
-                        <div className="p-5 bg-slate-50 dark:bg-slate-900/30 rounded-2xl border border-slate-100 dark:border-white/5">
-                             <h3 className="text-xs font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-4 flex items-center gap-2"><PieChart size={14} /> Gestão de Unidade</h3>
+                        <div className="p-5 bg-slate-50 dark:bg-slate-900/30 rounded-2xl border border-slate-200 dark:border-slate-800/50">
+                             <h3 className="text-xs font-black text-slate-600 dark:text-slate-400 uppercase tracking-widest mb-4 flex items-center gap-2"><PieChart size={14} /> Gestão de Unidade</h3>
                              <div className="flex flex-col sm:flex-row gap-4">
                                  <div className="flex-1">
-                                     <label className="block text-[10px] font-bold text-slate-400 mb-1">Valor de 1 Unidade ({currency})</label>
+                                     <label className="block text-[10px] font-bold text-slate-500 dark:text-slate-400 mb-1">Valor de 1 Unidade ({currency})</label>
                                      <div className="relative">
                                          <Hash size={14} className="absolute left-3 top-3.5 text-slate-400" />
                                          <input 
@@ -171,27 +168,27 @@ const Settings: React.FC = () => {
                                       </div>
                                  </div>
                                  <div className="flex-1">
-                                     <label className="block text-[10px] font-bold text-slate-400 mb-1">Modo de Exibição</label>
+                                     <label className="block text-[10px] font-bold text-slate-500 dark:text-slate-400 mb-1">Modo de Exibição</label>
                                      <div className="flex bg-white dark:bg-slate-900 rounded-xl p-1 border border-slate-200 dark:border-slate-800 h-[46px]">
                                          <button 
                                             type="button"
                                             onClick={async () => {
-  await setDisplayMode('currency');
-  setShowSavedToast(true);
-  setTimeout(() => setShowSavedToast(false), 2000);
-}}
-                                            className={`flex-1 rounded-lg text-xs font-bold transition-all ${displayMode === 'currency' ? 'bg-emerald-500 text-white shadow-md' : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-300'}`}
+                                              await setDisplayMode('currency');
+                                              setShowSavedToast(true);
+                                              setTimeout(() => setShowSavedToast(false), 2000);
+                                            }}
+                                            className={`flex-1 rounded-lg text-xs font-bold transition-all ${displayMode === 'currency' ? 'bg-emerald-500 text-white shadow-md' : 'text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-300'}`}
                                          >
                                             {currency}
                                          </button>
                                          <button 
                                             type="button"
                                             onClick={async () => {
-  await setDisplayMode('units');
-  setShowSavedToast(true);
-  setTimeout(() => setShowSavedToast(false), 2000);
-}}
-                                            className={`flex-1 rounded-lg text-xs font-bold transition-all ${displayMode === 'units' ? 'bg-blue-500 text-white shadow-md' : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-300'}`}
+                                              await setDisplayMode('units');
+                                              setShowSavedToast(true);
+                                              setTimeout(() => setShowSavedToast(false), 2000);
+                                            }}
+                                            className={`flex-1 rounded-lg text-xs font-bold transition-all ${displayMode === 'units' ? 'bg-blue-500 text-white shadow-md' : 'text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-300'}`}
                                          >
                                             Unid.
                                          </button>
@@ -210,7 +207,7 @@ const Settings: React.FC = () => {
             {/* Methods Card */}
             <section className="bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-800 rounded-[2.5rem] p-6 md:p-10 shadow-sm transition-shadow hover:shadow-md">
                  <div className="flex items-center gap-4 mb-10">
-                    <div className="p-3 bg-blue-500/10 rounded-2xl text-blue-600 dark:text-blue-500 shadow-inner"><Layers size={24} /></div>
+                    <div className="p-3 bg-blue-100 dark:bg-blue-500/10 rounded-2xl text-blue-600 dark:text-blue-500 shadow-inner"><Layers size={24} /></div>
                     <h2 className="text-xl font-black text-slate-900 dark:text-white uppercase tracking-tighter italic">Arquitetura de Métodos</h2>
                 </div>
                 <div className="flex flex-col sm:flex-row gap-3 mb-8">
@@ -219,144 +216,152 @@ const Settings: React.FC = () => {
                 </div>
                 <div className="grid grid-cols-1 gap-3 max-h-[250px] overflow-y-auto pr-2 custom-scrollbar">
                     {methods.map(method => (
-  <div
-    key={method.id}
-    className="flex justify-between items-center p-4 bg-slate-50 dark:bg-slate-900/30 rounded-2xl border border-slate-100 dark:border-white/5 group hover:border-blue-500/30 transition-all shadow-sm"
-  >
-    <span className="text-slate-700 dark:text-slate-200 font-bold text-sm flex items-center gap-3">
-      <div className="w-2 h-2 rounded-full bg-blue-500"></div>
-      {method.name}
-    </span>
+                      <div
+                        key={method.id}
+                        className="flex justify-between items-center p-4 bg-slate-50 dark:bg-slate-900/30 rounded-2xl border border-slate-200 dark:border-slate-800/50 group hover:border-blue-500/30 transition-all shadow-sm"
+                      >
+                        <span className="text-slate-700 dark:text-slate-200 font-bold text-sm flex items-center gap-3">
+                          <div className="w-2 h-2 rounded-full bg-blue-500"></div>
+                          {method.name}
+                        </span>
 
-    <button
-      onClick={() => {
-        const confirmed = window.confirm('Deseja realmente excluir este método?');
-        if (confirmed) {
-          removeMethod(method.id);
-        }
-      }}
-      className="text-slate-400 hover:text-red-500 transition-colors p-2"
-    >
-      <Trash2 size={16} />
-    </button>
-  </div>
-))}
+                        <button
+                          onClick={() => {
+                            const confirmed = window.confirm('Deseja realmente excluir este método?');
+                            if (confirmed) {
+                              removeMethod(method.id);
+                            }
+                          }}
+                          className="text-slate-400 hover:text-red-500 transition-colors p-2"
+                        >
+                          <Trash2 size={16} />
+                        </button>
+                      </div>
+                    ))}
                     {methods.length === 0 && (
                         <p className="text-center py-10 text-slate-400 text-[10px] font-black uppercase tracking-widest italic">Nenhum método cadastrado</p>
                     )}
                 </div>
             </section>
 
-            <section className="bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-800 rounded-[2.5rem] p-6 md:p-10 shadow-sm">
-  <div className="flex items-center gap-4 mb-8">
-    <h2 className="text-xl font-black uppercase italic">
-      Mercados Personalizados
-    </h2>
-  </div>
+            {/* Custom Markets - Agora com Scroll e Limite de Altura */}
+            <section className="bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-800 rounded-[2.5rem] p-6 md:p-10 shadow-sm flex flex-col">
+              <div className="flex items-center gap-4 mb-8">
+                <h2 className="text-xl font-black text-slate-900 dark:text-white uppercase italic">
+                  Mercados Personalizados
+                </h2>
+              </div>
 
-  <div className="flex gap-3 mb-6">
-    <input
-      type="text"
-      value={newMarketName}
-      onChange={(e) => setNewMarketName(e.target.value)}
-      placeholder="Ex: Escanteios HT"
-      className="flex-1 bg-slate-50 dark:bg-slate-900 border rounded-2xl px-4 py-3"
-    />
-    <button
-      onClick={() => {
-        if (newMarketName.trim()) {
-          addCustomMarket(newMarketName.trim());
-          setNewMarketName('');
-        }
-      }}
-      className="bg-emerald-600 text-white px-6 rounded-2xl text-xs font-bold"
-    >
-      ADD
-    </button>
-  </div>
+              <div className="flex gap-3 mb-6">
+                <input
+                  type="text"
+                  value={newMarketName}
+                  onChange={(e) => setNewMarketName(e.target.value)}
+                  placeholder="Ex: Escanteios HT"
+                  className="flex-1 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl px-4 py-3 outline-none focus:border-emerald-500 transition-colors text-slate-900 dark:text-white"
+                />
+                <button
+                  onClick={() => {
+                    if (newMarketName.trim()) {
+                      addCustomMarket(newMarketName.trim());
+                      setNewMarketName('');
+                    }
+                  }}
+                  className="bg-emerald-600 hover:bg-emerald-500 text-white px-6 rounded-2xl text-xs font-bold transition-colors"
+                >
+                  ADD
+                </button>
+              </div>
 
-  <div className="space-y-2">
-    {customMarkets.map((m) => (
-  <div
-    key={m.id}
-    className="flex justify-between items-center p-3 bg-slate-50 dark:bg-slate-900 rounded-xl"
-  >
-    <span>{m.name}</span>
+              <div className="space-y-2 flex-1 max-h-[200px] overflow-y-auto pr-2 custom-scrollbar">
+                {customMarkets.map((m) => (
+                  <div
+                    key={m.id}
+                    className="flex justify-between items-center p-3 bg-slate-50 dark:bg-slate-900 rounded-xl border border-slate-100 dark:border-slate-800"
+                  >
+                    <span className="text-slate-700 dark:text-slate-300 text-sm font-medium">{m.name}</span>
 
-    <button
-      onClick={() => {
-        const confirmed = window.confirm('Deseja realmente excluir este mercado?');
-        if (confirmed) {
-          removeCustomMarket(m.id);
-        }
-      }}
-      className="text-slate-400 hover:text-red-500 transition-colors"
-    >
-      <Trash2 size={14} />
-    </button>
-  </div>
-))}
-  </div>
-</section>
+                    <button
+                      onClick={() => {
+                        const confirmed = window.confirm('Deseja realmente excluir este mercado?');
+                        if (confirmed) {
+                          removeCustomMarket(m.id);
+                        }
+                      }}
+                      className="text-slate-400 hover:text-red-500 transition-colors p-1"
+                    >
+                      <Trash2 size={14} />
+                    </button>
+                  </div>
+                ))}
+                {customMarkets.length === 0 && (
+                   <p className="text-center py-6 text-slate-400 text-[10px] font-black uppercase tracking-widest italic">Nenhum mercado cadastrado</p>
+                )}
+              </div>
+            </section>
 
-<section className="bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-800 rounded-[2.5rem] p-6 md:p-10 shadow-sm">
-  <div className="flex items-center gap-4 mb-8">
-    <h2 className="text-xl font-black uppercase italic">
-      Estratégias de Progressão
-    </h2>
-  </div>
+            {/* Strategies - Agora com Scroll e Limite de Altura */}
+            <section className="bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-800 rounded-[2.5rem] p-6 md:p-10 shadow-sm flex flex-col">
+              <div className="flex items-center gap-4 mb-8">
+                <h2 className="text-xl font-black text-slate-900 dark:text-white uppercase italic">
+                  Estratégias de Progressão
+                </h2>
+              </div>
 
-  <div className="flex gap-3 mb-6">
-    <input
-      type="text"
-      value={newStrategyName}
-      onChange={(e) => setNewStrategyName(e.target.value)}
-      placeholder="Ex: Progressão 2x conservadora"
-      className="flex-1 bg-slate-50 dark:bg-slate-900 border rounded-2xl px-4 py-3"
-    />
-    <button
-      onClick={() => {
-        if (newStrategyName.trim()) {
-          addCustomStrategy(newStrategyName.trim());
-          setNewStrategyName('');
-        }
-      }}
-      className="bg-blue-600 text-white px-6 rounded-2xl text-xs font-bold"
-    >
-      ADD
-    </button>
-  </div>
+              <div className="flex gap-3 mb-6">
+                <input
+                  type="text"
+                  value={newStrategyName}
+                  onChange={(e) => setNewStrategyName(e.target.value)}
+                  placeholder="Ex: Martingale Adaptativo"
+                  className="flex-1 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl px-4 py-3 outline-none focus:border-blue-500 transition-colors text-slate-900 dark:text-white"
+                />
+                <button
+                  onClick={() => {
+                    if (newStrategyName.trim()) {
+                      addCustomStrategy(newStrategyName.trim());
+                      setNewStrategyName('');
+                    }
+                  }}
+                  className="bg-blue-600 hover:bg-blue-500 text-white px-6 rounded-2xl text-xs font-bold transition-colors"
+                >
+                  ADD
+                </button>
+              </div>
 
-  <div className="space-y-2">
-    {customStrategies.map((s) => (
-  <div
-    key={s.id}
-    className="flex justify-between items-center p-3 bg-slate-50 dark:bg-slate-900 rounded-xl"
-  >
-    <span>{s.name}</span>
+              <div className="space-y-2 flex-1 max-h-[200px] overflow-y-auto pr-2 custom-scrollbar">
+                {customStrategies.map((s) => (
+                  <div
+                    key={s.id}
+                    className="flex justify-between items-center p-3 bg-slate-50 dark:bg-slate-900 rounded-xl border border-slate-100 dark:border-slate-800"
+                  >
+                    <span className="text-slate-700 dark:text-slate-300 text-sm font-medium">{s.name}</span>
 
-    <button
-      onClick={() => {
-        const confirmed = window.confirm('Deseja realmente excluir esta estratégia?');
-        if (confirmed) {
-          removeCustomStrategy(s.id);
-        }
-      }}
-      className="text-slate-400 hover:text-red-500 transition-colors"
-    >
-      <Trash2 size={14} />
-    </button>
-  </div>
-))}
-  </div>
-</section>
+                    <button
+                      onClick={() => {
+                        const confirmed = window.confirm('Deseja realmente excluir esta estratégia?');
+                        if (confirmed) {
+                          removeCustomStrategy(s.id);
+                        }
+                      }}
+                      className="text-slate-400 hover:text-red-500 transition-colors p-1"
+                    >
+                      <Trash2 size={14} />
+                    </button>
+                  </div>
+                ))}
+                {customStrategies.length === 0 && (
+                   <p className="text-center py-6 text-slate-400 text-[10px] font-black uppercase tracking-widest italic">Nenhuma estratégia cadastrada</p>
+                )}
+              </div>
+            </section>
 
              {/* Preferences */}
             <section className="bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-800 rounded-[2.5rem] p-6 md:p-10 lg:col-span-2 shadow-sm transition-shadow hover:shadow-md">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-16">
                     <div className="space-y-8">
                         <div className="flex items-center gap-4">
-                            <div className="p-3 bg-emerald-500/10 rounded-2xl text-emerald-600 dark:text-emerald-500"><PaintBucket size={22} /></div>
+                            <div className="p-3 bg-emerald-100 dark:bg-emerald-500/10 rounded-2xl text-emerald-600 dark:text-emerald-500"><PaintBucket size={22} /></div>
                             <h3 className="font-black text-slate-900 dark:text-white uppercase tracking-tighter text-lg italic">Acentuação Visual</h3>
                         </div>
                         <div className="flex gap-4 flex-wrap">
@@ -370,11 +375,11 @@ const Settings: React.FC = () => {
                                 <button 
                                     key={c.id} 
                                     onClick={async () => {
-  await setPrimaryColor(c.id);
-  setShowSavedToast(true);
-  setTimeout(() => setShowSavedToast(false), 2000);
-}} 
-                                    className={`w-14 h-14 rounded-2xl border-4 transition-all flex items-center justify-center ${primaryColor === c.id ? 'border-emerald-500 dark:border-white scale-110 shadow-xl' : 'border-transparent opacity-50 hover:opacity-100'}`} 
+                                      await setPrimaryColor(c.id);
+                                      setShowSavedToast(true);
+                                      setTimeout(() => setShowSavedToast(false), 2000);
+                                    }} 
+                                    className={`w-14 h-14 rounded-2xl border-4 transition-all flex items-center justify-center ${primaryColor === c.id ? 'border-slate-900 dark:border-white scale-110 shadow-xl' : 'border-transparent opacity-50 hover:opacity-100'}`} 
                                     style={{ backgroundColor: c.color }}
                                 >
                                     {primaryColor === c.id && <div className="w-2 h-2 rounded-full bg-white shadow-lg animate-pulse"></div>}
@@ -384,7 +389,7 @@ const Settings: React.FC = () => {
                     </div>
                     <div className="space-y-8">
                         <div className="flex items-center gap-4">
-                            <div className="p-3 bg-blue-500/10 rounded-2xl text-blue-600 dark:text-blue-500"><Coins size={22} /></div>
+                            <div className="p-3 bg-blue-100 dark:bg-blue-500/10 rounded-2xl text-blue-600 dark:text-blue-500"><Coins size={22} /></div>
                             <h3 className="font-black text-slate-900 dark:text-white uppercase tracking-tighter text-lg italic">Moeda do Sistema</h3>
                         </div>
                         <div className="flex flex-wrap gap-3">
@@ -392,14 +397,14 @@ const Settings: React.FC = () => {
                                 <button 
                                     key={curr} 
                                     onClick={async () => {
-  await setCurrency(curr);
-  setShowSavedToast(true);
-  setTimeout(() => setShowSavedToast(false), 2000);
-}} 
+                                      await setCurrency(curr);
+                                      setShowSavedToast(true);
+                                      setTimeout(() => setShowSavedToast(false), 2000);
+                                    }} 
                                     className={`px-8 py-4 rounded-2xl font-black text-xs transition-all border ${
                                         currency === curr 
                                         ? 'bg-slate-900 dark:bg-white text-white dark:text-black border-slate-900 dark:border-white shadow-xl transform scale-105' 
-                                        : 'bg-transparent border-slate-200 dark:border-white/10 text-slate-400 dark:text-slate-500 hover:border-slate-300 dark:hover:border-white/30'
+                                        : 'bg-white dark:bg-transparent border-slate-200 dark:border-white/10 text-slate-500 hover:border-slate-300 dark:hover:border-white/30'
                                     }`}
                                 >
                                     {curr}
@@ -411,25 +416,25 @@ const Settings: React.FC = () => {
             </section>
 
             {/* Danger Zone */}
-            <section className="bg-red-50 dark:bg-red-500/5 rounded-[2.5rem] p-6 md:p-10 border border-red-100 dark:border-red-500/10 lg:col-span-2 flex flex-col md:flex-row justify-between items-center gap-10 shadow-sm">
+            <section className="bg-red-50 dark:bg-red-500/5 rounded-[2.5rem] p-6 md:p-10 border border-red-200 dark:border-red-500/10 lg:col-span-2 flex flex-col md:flex-row justify-between items-center gap-10 shadow-sm">
                 <div className="flex items-center gap-6 text-center md:text-left">
-                    <div className="p-5 bg-red-100 dark:bg-red-500/10 rounded-3xl text-red-600 dark:text-red-500 shadow-lg"><Skull size={36} /></div>
+                    <div className="p-5 bg-red-100 dark:bg-red-500/10 rounded-3xl text-red-600 dark:text-red-500 shadow-sm"><Skull size={36} /></div>
                     <div>
                         <h3 className="text-2xl font-black text-slate-900 dark:text-white uppercase tracking-tighter italic">Zona de Perigo</h3>
-                        <p className="text-red-600/80 dark:text-red-500/60 text-sm font-bold uppercase tracking-widest mt-1">Excluir conta e todos os dados permanentemente.</p>
+                        <p className="text-red-600 dark:text-red-400 text-sm font-bold uppercase tracking-widest mt-1">Excluir conta e todos os dados permanentemente.</p>
                     </div>
                 </div>
-                <div className="flex gap-4">
+                <div className="flex flex-col sm:flex-row gap-4 w-full md:w-auto">
                   <button 
                       onClick={handleResetData}
                       disabled={isResetting}
-                      className="bg-slate-200 hover:bg-slate-300 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 px-8 py-5 rounded-2xl font-bold text-xs active:scale-95 transition-all flex items-center gap-3 tracking-widest uppercase disabled:opacity-50"
+                      className="bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 px-8 py-5 rounded-2xl font-bold text-xs active:scale-95 transition-all flex justify-center items-center gap-3 tracking-widest uppercase disabled:opacity-50"
                   >
                       {isResetting ? <Loader2 className="animate-spin" size={16} /> : "Limpar Dados"}
                   </button>
                   <button 
                       onClick={handleDeleteAccount} 
-                      className="bg-red-600 hover:bg-red-500 text-white px-10 py-5 rounded-2xl font-black text-xs shadow-xl shadow-red-500/20 active:scale-95 transition-all flex items-center gap-3 group justify-center tracking-widest uppercase"
+                      className="bg-red-600 hover:bg-red-500 text-white px-10 py-5 rounded-2xl font-black text-xs shadow-lg shadow-red-600/20 active:scale-95 transition-all flex justify-center items-center gap-3 group tracking-widest uppercase"
                   >
                       EXCLUIR CONTA
                       <Trash2 size={16} className="group-hover:animate-bounce" />
@@ -438,12 +443,12 @@ const Settings: React.FC = () => {
             </section>
         </div>
 
-        <div className="text-center text-[9px] uppercase tracking-widest text-emerald-500 font-bold">
-  Cloud Sync Active
-</div>
+        <div className="text-center text-[9px] uppercase tracking-widest text-emerald-600 dark:text-emerald-500 font-bold">
+          Cloud Sync Active
+        </div>
         
         <footer className="pt-10 text-center">
-             <p className="text-[10px] text-slate-400 dark:text-slate-700 font-black uppercase tracking-[0.5em]">BetTracker Cloud Ecosystem • Build 4.8.0</p>
+             <p className="text-[10px] text-slate-500 dark:text-slate-600 font-black uppercase tracking-[0.5em]">BetTracker Cloud Ecosystem • Build 5.0.0</p>
         </footer>
     </div>
   );
