@@ -42,7 +42,7 @@ const Analytics: React.FC = () => {
     }).format(value);
   };
 
-  // --- THEME VARIABLES (Responde ao Zustand Store `isDarkMode`) ---
+  // --- THEME VARIABLES ---
   const axisColor = isDarkMode ? '#64748b' : '#94a3b8'; 
   const gridColor = isDarkMode ? '#1e293b' : '#e2e8f0';
   const tooltipBg = isDarkMode ? '#0f172a' : '#ffffff';
@@ -56,24 +56,34 @@ const Analytics: React.FC = () => {
       .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
   }, [history, activeBankrollId]);
 
-  // --- 1. GRÁFICO EVOLUÇÃO (LINHA DO TEMPO) ---
+  // --- 1. GRÁFICO EVOLUÇÃO (LINHA DO TEMPO) - BUG DE FUSO HORÁRIO CORRIGIDO ---
   const timelineData = useMemo(() => {
     let runningBalance = activeBR?.initialBalance || 0;
     const data = [{ date: 'Início', balance: runningBalance }];
     
-    // Agrupar por dia para evitar excesso de pontos se houver muitas apostas
-    const groupedByDay: Record<string, number> = {};
+    // Usando Map para preservar a ordem de inserção cronológica exata
+    const groupedByDay = new Map<string, number>();
     
     bankrollBets.forEach(bet => {
         if (bet.status === 'pending') return;
-        const dateStr = new Date(bet.date).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
-        if (!groupedByDay[dateStr]) groupedByDay[dateStr] = 0;
-        groupedByDay[dateStr] += bet.profit;
+        
+        // CORREÇÃO DO FUSO HORÁRIO: Pega a string original (YYYY-MM-DD) sem converter para fuso local
+        // Assim, dia 18 não vira dia 17 as 21:00.
+        const datePart = bet.date.split('T')[0]; 
+        const parts = datePart.split('-');
+        let dateStr = datePart;
+        
+        if (parts.length === 3) {
+            dateStr = `${parts[2]}/${parts[1]}`; // Formato DD/MM seguro
+        }
+
+        const currentProfit = groupedByDay.get(dateStr) || 0;
+        groupedByDay.set(dateStr, currentProfit + bet.profit);
     });
 
-    Object.keys(groupedByDay).forEach(date => {
-        runningBalance += groupedByDay[date];
-        data.push({ date, balance: runningBalance });
+    groupedByDay.forEach((profit, dateStr) => {
+        runningBalance += profit;
+        data.push({ date: dateStr, balance: runningBalance });
     });
 
     return data;
@@ -88,7 +98,7 @@ const Analytics: React.FC = () => {
     });
     return Object.keys(perf)
         .map(sport => ({ name: sport, profit: perf[sport] }))
-        .sort((a,b) => b.profit - a.profit); // Ordena do maior pro menor
+        .sort((a,b) => b.profit - a.profit); 
   }, [bankrollBets]);
 
   // --- 3. LUCRO POR MÉTODO ---
@@ -125,8 +135,6 @@ const Analytics: React.FC = () => {
     ].filter(d => d.value > 0);
   }, [history, activeBankrollId]);
 
-
-  // Custom Tooltip Component
   const CustomTooltip = ({ active, payload, label }: any) => {
     if (active && payload && payload.length) {
       return (
@@ -263,28 +271,29 @@ const Analytics: React.FC = () => {
               </div>
             </motion.div>
 
-            {/* 4. GRÁFICO: DISTRIBUIÇÃO PIE */}
+            {/* 4. GRÁFICO: DISTRIBUIÇÃO PIE (MOBILE FIX APLICADO) */}
             <motion.div 
                 initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}
                 className="lg:col-span-2 bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-800 rounded-[2rem] p-6 md:p-8 shadow-sm flex flex-col md:flex-row items-center"
             >
-              <div className="md:w-1/3 mb-6 md:mb-0">
-                  <h3 className="text-sm font-black uppercase tracking-widest text-slate-800 dark:text-white mb-2 flex items-center gap-2">
+              <div className="md:w-1/3 mb-6 md:mb-0 w-full text-center md:text-left">
+                  <h3 className="text-sm font-black uppercase tracking-widest text-slate-800 dark:text-white mb-2 flex items-center justify-center md:justify-start gap-2">
                     <PieChartIcon size={16} className="text-orange-500" />
                     Distribuição
                   </h3>
                   <p className="text-xs text-slate-500 font-medium">Proporção de resultados (Greens x Reds x Devolvidas) em todo o histórico da banca.</p>
               </div>
 
-              <div className="h-[250px] w-full md:w-2/3">
+              {/* CORREÇÃO DO TAMANHO DA PIZZA E LEGENDA AQUI 👇 */}
+              <div className="h-[280px] w-full md:w-2/3">
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
                     <Pie
                       data={pieData}
                       cx="50%"
-                      cy="50%"
-                      innerRadius={60}
-                      outerRadius={100}
+                      cy="45%" 
+                      innerRadius={55} 
+                      outerRadius={85} 
                       paddingAngle={5}
                       dataKey="value"
                       stroke="none"
@@ -297,7 +306,13 @@ const Analytics: React.FC = () => {
                         contentStyle={{ backgroundColor: tooltipBg, border: `1px solid ${tooltipBorder}`, borderRadius: '12px', color: tooltipText, fontSize: '12px', fontWeight: 'bold' }}
                         itemStyle={{ color: tooltipText }}
                     />
-                    <Legend verticalAlign="middle" align="right" layout="vertical" iconType="circle" wrapperStyle={{ fontSize: '12px', fontWeight: 'bold', color: axisColor }} />
+                    <Legend 
+                        verticalAlign="bottom" 
+                        align="center" 
+                        layout="horizontal" 
+                        iconType="circle" 
+                        wrapperStyle={{ fontSize: '12px', fontWeight: 'bold', color: axisColor, paddingTop: '10px' }} 
+                    />
                   </PieChart>
                 </ResponsiveContainer>
               </div>

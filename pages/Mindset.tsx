@@ -37,7 +37,7 @@ const Mindset: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [filterMood, setFilterMood] = useState<MoodType | 'all'>('all');
   const [showTiltModal, setShowTiltModal] = useState(false);
-  const [showLockConfirm, setShowLockConfirm] = useState(false); // Estado para o botão de emergência
+  const [showLockConfirm, setShowLockConfirm] = useState(false);
 
   // ==========================================
   // COMPONENTE DE BLOQUEIO PRO
@@ -122,7 +122,6 @@ const Mindset: React.FC = () => {
     mindsetHistory.forEach(e => counts[e.mood]++);
 
     const score = (counts.confident * 2) + (counts.disciplined * 1.5) - (counts.anxious * 1.2) - (counts.tilted * 2);
-    // Normaliza de 0 a 100 base para facilitar leitura
     let normalized = 50 + score * 5;
     if (normalized > 100) normalized = 100;
     if (normalized < 0) normalized = 0;
@@ -158,7 +157,6 @@ const Mindset: React.FC = () => {
     setNote('');
   };
 
-  // Trava de Emergência (Tilt Lock)
   const isLocked = tiltLockUntil && new Date() < new Date(tiltLockUntil);
   const handleEmergencyLock = (hours: number) => {
       activateTiltLock(hours);
@@ -295,29 +293,30 @@ const Mindset: React.FC = () => {
         </div>
       </section>
 
-      {/* TIMELINE DE DIÁRIOS */}
+      {/* TIMELINE DE DIÁRIOS (MOBILE FIX APLICADO) */}
       <section className="bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-800 p-6 md:p-8 rounded-[2rem] shadow-sm flex flex-col">
         
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
             <h3 className="text-sm font-black uppercase tracking-widest text-slate-900 dark:text-white">Diário de Bordo</h3>
             
-            <div className="flex gap-3 w-full sm:w-auto">
-            <input
-                placeholder="Buscar palavra-chave..."
-                value={searchQuery}
-                onChange={e => setSearchQuery(e.target.value)}
-                className="flex-1 sm:w-48 px-4 py-2.5 rounded-xl border text-sm font-medium bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-800 outline-none focus:border-emerald-500"
-            />
-            <select
-                value={filterMood}
-                onChange={e => setFilterMood(e.target.value as any)}
-                className="px-4 py-2.5 rounded-xl border text-sm font-bold bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-800 outline-none focus:border-emerald-500 cursor-pointer"
-            >
-                <option value="all">Todas Emoções</option>
-                {moods.map(m => (
-                <option key={m.id} value={m.id}>{m.label}</option>
-                ))}
-            </select>
+            {/* CORREÇÃO DO LAYOUT VAZANDO NO MOBILE AQUI 👇 */}
+            <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
+                <input
+                    placeholder="Buscar palavra-chave..."
+                    value={searchQuery}
+                    onChange={e => setSearchQuery(e.target.value)}
+                    className="w-full sm:w-48 px-4 py-3 sm:py-2.5 rounded-xl border text-sm font-medium bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-800 outline-none focus:border-emerald-500"
+                />
+                <select
+                    value={filterMood}
+                    onChange={e => setFilterMood(e.target.value as any)}
+                    className="w-full sm:w-auto px-4 py-3 sm:py-2.5 rounded-xl border text-sm font-bold bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-800 outline-none focus:border-emerald-500 cursor-pointer"
+                >
+                    <option value="all">Todas Emoções</option>
+                    {moods.map(m => (
+                        <option key={m.id} value={m.id}>{m.label}</option>
+                    ))}
+                </select>
             </div>
         </div>
 
@@ -350,28 +349,28 @@ const Mindset: React.FC = () => {
                                 </div>
                             </div>
 
-                            <div className="opacity-0 group-hover:opacity-100 transition-opacity flex gap-2">
+                            <div className="opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity flex gap-2">
                                 <button
-                                onClick={() => {
-                                    setEditingId(entry.id);
-                                    setSelectedMood(entry.mood);
-                                    setNote(entry.note);
-                                    window.scrollTo({ top: 0, behavior: 'smooth' });
-                                }}
-                                className="p-2 bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-400 rounded-lg hover:text-emerald-500 transition-colors"
+                                    onClick={() => {
+                                        setEditingId(entry.id);
+                                        setSelectedMood(entry.mood);
+                                        setNote(entry.note);
+                                        window.scrollTo({ top: 0, behavior: 'smooth' });
+                                    }}
+                                    className="p-2 bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-400 rounded-lg hover:text-emerald-500 transition-colors"
                                 >
-                                <Pencil size={14} />
+                                    <Pencil size={14} />
                                 </button>
                                 <button
-                                onClick={() => deleteMindsetEntry(entry.id)}
-                                className="p-2 bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-400 rounded-lg hover:text-red-500 transition-colors"
+                                    onClick={() => deleteMindsetEntry(entry.id)}
+                                    className="p-2 bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-400 rounded-lg hover:text-red-500 transition-colors"
                                 >
-                                <Trash2 size={14} />
+                                    <Trash2 size={14} />
                                 </button>
                             </div>
                         </div>
 
-                        <p className="text-sm text-slate-700 dark:text-slate-300 leading-relaxed pl-13 md:pl-0">
+                        <p className="text-sm text-slate-700 dark:text-slate-300 leading-relaxed pl-0">
                             {entry.note}
                         </p>
                     </motion.div>
