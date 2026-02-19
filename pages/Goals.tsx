@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { useBetStore, Goal, Bet } from '../store/useBetStore';
-import { Target, ArrowLeft, Plus, Wallet, Sparkles, Trophy, Info, Edit3, Trash2, Lock, BarChart2, ChevronDown, CheckCircle2, XCircle, Clock, Zap } from 'lucide-react';
+import { Target, ArrowLeft, Plus, Wallet, Sparkles, Trophy, Info, Edit3, Trash2, Lock, BarChart2, ChevronDown, CheckCircle2, XCircle, Clock, Zap, AlertCircle } from 'lucide-react'; // 🔥 AlertCircle importado aqui!
 import { motion, AnimatePresence } from 'framer-motion';
 import { useLocation } from 'react-router-dom';
 
