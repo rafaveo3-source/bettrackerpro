@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useNavigate } from 'react-router-dom';
 import { 
   Globe, 
   Shield, 
@@ -21,6 +22,7 @@ import ManageStrategies from '../components/ManageStrategies';
 
 const SystemLibrary: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'leagues' | 'teams' | 'markets' | 'strategies' | 'methods'>('leagues');
+  const navigate = useNavigate();
   
   // Store Global
   const { 
@@ -39,6 +41,15 @@ const SystemLibrary: React.FC = () => {
     { id: 'strategies', label: 'Estratégias', icon: TrendingUp, count: customStrategies.length, pro: true },
     { id: 'methods', label: 'Métodos', icon: Target, count: userMethods.length, pro: true },
   ];
+
+  // Intercepta o clique na aba: se for PRO e não tiver acesso, manda pra página de upgrade
+  const handleTabClick = (tabId: string, isProTab: boolean) => {
+    if (isProTab && !isPro) {
+        navigate('/pro');
+        return;
+    }
+    setActiveTab(tabId as any);
+  };
 
   return (
     <div className="min-h-screen bg-[#F8FAFC] dark:bg-[#020617] text-slate-900 dark:text-slate-200 pb-20 md:pl-20 pt-20 md:pt-8 px-4 md:px-8 transition-colors duration-300 font-sans">
@@ -72,7 +83,10 @@ const SystemLibrary: React.FC = () => {
             </div>
             <select
               value={activeTab}
-              onChange={(e) => setActiveTab(e.target.value as any)}
+              onChange={(e) => {
+                  const selectedTab = tabs.find(t => t.id === e.target.value);
+                  handleTabClick(e.target.value, selectedTab?.pro || false);
+              }}
               className="w-full appearance-none bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white py-3 pl-10 pr-10 rounded-xl font-bold focus:outline-none focus:ring-2 focus:ring-emerald-500 shadow-sm transition-colors"
             >
               {tabs.map(tab => (
@@ -87,18 +101,17 @@ const SystemLibrary: React.FC = () => {
           </div>
 
           {/* DESKTOP: Abas Horizontais */}
-          <div className="hidden md:inline-flex bg-white dark:bg-slate-900 p-1.5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-x-auto max-w-full">
+          <div className="hidden md:flex bg-white dark:bg-slate-900 p-1.5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-x-auto max-w-full custom-scrollbar">
             {tabs.map((tab) => {
               const isActive = activeTab === tab.id;
-              // Visualmente mostra cadeado, mas permite clicar para ver o conteúdo (que estará com ações bloqueadas)
               const showLock = tab.pro && !isPro; 
 
               return (
                 <button
                   key={tab.id}
-                  onClick={() => setActiveTab(tab.id as any)}
+                  onClick={() => handleTabClick(tab.id, tab.pro)}
                   className={`
-                    flex items-center gap-2 px-4 py-2.5 rounded-xl font-bold text-sm whitespace-nowrap transition-all duration-200
+                    flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-sm whitespace-nowrap transition-all duration-200 shrink-0
                     ${isActive 
                       ? 'bg-emerald-500 text-white shadow-md shadow-emerald-500/20' 
                       : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800'}
@@ -110,7 +123,7 @@ const SystemLibrary: React.FC = () => {
                   {/* Badge de Contagem */}
                   {tab.count > 0 && (
                     <span className={`
-                      text-[10px] px-1.5 py-0.5 rounded-full font-black ml-1
+                      text-[10px] px-2 py-0.5 rounded-full font-black ml-1
                       ${isActive ? 'bg-white/20 text-white' : 'bg-slate-100 dark:bg-slate-800 text-slate-500'}
                     `}>
                       {tab.count}

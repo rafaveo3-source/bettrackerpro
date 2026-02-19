@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { 
   Info, 
   ChevronDown, 
@@ -19,6 +20,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 
 const Calculators: React.FC = () => {
   const { currentBankrollBalance, isPro } = useBetStore();
+  const navigate = useNavigate();
+
   const [activeTab, setActiveTab] = useState<
     'dutching' | 
     'kelly' | 
@@ -34,25 +37,28 @@ const Calculators: React.FC = () => {
   const toggleInfo = (id: string) => setExpandedInfo(expandedInfo === id ? null : id);
 
   // ==========================================
-  // COMPONENTE DE BLOQUEIO PRO
+  // COMPONENTE DE BLOQUEIO PRO (Atualizado com tema claro e redirecionamento)
   // ==========================================
   const ProLockScreen = () => (
-      <div className="bg-slate-900 border border-slate-800 rounded-[2rem] p-8 text-center flex flex-col items-center justify-center min-h-[300px] relative overflow-hidden">
-          <div className="absolute inset-0 bg-gradient-to-br from-purple-500/10 to-blue-500/10 opacity-50" />
+      <div className="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-[2rem] p-8 text-center flex flex-col items-center justify-center min-h-[300px] relative overflow-hidden shadow-sm">
+          <div className="absolute inset-0 bg-gradient-to-br from-purple-500/5 to-blue-500/5 dark:from-purple-500/10 dark:to-blue-500/10 opacity-50" />
           
-          <div className="bg-slate-800 p-4 rounded-full mb-4 relative z-10">
-              <Crown size={32} className="text-amber-400" />
+          <div className="bg-white dark:bg-slate-800 p-4 rounded-full mb-4 relative z-10 shadow-sm">
+              <Crown size={32} className="text-amber-500 dark:text-amber-400" />
           </div>
           
-          <h2 className="text-2xl font-black text-white uppercase italic tracking-tighter mb-2 relative z-10">
+          <h2 className="text-2xl font-black text-slate-900 dark:text-white uppercase italic tracking-tighter mb-2 relative z-10">
               Ferramenta Profissional
           </h2>
           
-          <p className="text-slate-400 max-w-md mx-auto mb-6 text-sm relative z-10">
+          <p className="text-slate-600 dark:text-slate-400 max-w-md mx-auto mb-6 text-sm relative z-10">
               Esta calculadora matemática avançada é exclusiva para membros PRO. Desbloqueie todo o potencial da sua gestão.
           </p>
 
-          <button className="bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 text-slate-900 font-black py-3 px-8 rounded-xl shadow-lg shadow-amber-500/20 transition-all active:scale-95 relative z-10">
+          <button 
+             onClick={() => navigate('/pro')}
+             className="bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 text-slate-900 font-black py-3 px-8 rounded-xl shadow-lg shadow-amber-500/20 transition-all active:scale-95 relative z-10"
+          >
               Quero ser PRO
           </button>
       </div>
@@ -228,7 +234,7 @@ const Calculators: React.FC = () => {
   return (
     <div className="space-y-6 pb-20 w-full overflow-x-hidden">
         {/* HEADER PADRÃO PREMIUM */}
-        <div className="flex flex-col gap-2">
+        <div className="flex flex-col gap-2 px-4 md:px-0">
           <div className="flex items-center gap-2 text-emerald-500 text-[9px] font-mono font-bold uppercase tracking-widest">
             <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse shadow-[0_0_8px_#10b981]"></span>
             Strategic Math Engine
@@ -244,7 +250,7 @@ const Calculators: React.FC = () => {
       </div>
       
       {/* GRID DE ABAS RESPONSIVO E EXPANDIDO */}
-      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-2 mb-6">
+      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-2 mb-6 px-4 md:px-0">
         {tabs.map(tab => (
           <button
             key={tab.id}
@@ -252,7 +258,7 @@ const Calculators: React.FC = () => {
             className={`relative w-full flex items-center justify-center px-2 py-3 rounded-xl font-bold text-[10px] uppercase tracking-wider transition-all gap-1 ${
               activeTab === tab.id
                 ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/20'
-                : 'bg-white dark:bg-[#0f172a] text-slate-500 border border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-900'
+                : 'bg-white dark:bg-[#0f172a] text-slate-600 dark:text-slate-500 border border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-900'
             }`}
           >
             {tab.pro && !isPro && <Lock size={10} className="mb-0.5" />}
@@ -264,7 +270,7 @@ const Calculators: React.FC = () => {
         ))}
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 px-4 md:px-0">
         
         {/* COLUNA ESQUERDA (CALCULADORAS) */}
         <div className="lg:col-span-2 space-y-6 min-w-0 w-full">
@@ -274,27 +280,27 @@ const Calculators: React.FC = () => {
                 <div className="bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-800 rounded-[2rem] p-6 shadow-sm w-full overflow-hidden">
                     <h2 className="text-lg font-black text-slate-900 dark:text-white uppercase tracking-tighter italic mb-4">Calculadora Dutching</h2>
                     <div className="flex items-center gap-3 bg-slate-50 dark:bg-slate-900 p-3 rounded-xl border border-slate-200 dark:border-slate-800 w-full mb-6">
-                        <span className="text-[10px] text-slate-400 uppercase font-black tracking-widest pl-1">Total Stake</span>
+                        <span className="text-[10px] text-slate-500 dark:text-slate-400 uppercase font-black tracking-widest pl-1">Total Stake</span>
                         <input type="number" value={dutchTotalStake} onChange={(e) => setDutchTotalStake(e.target.value)} className="bg-transparent text-right w-full font-mono font-bold outline-none text-slate-900 dark:text-white text-lg" />
                     </div>
 
                     <div className="space-y-3">
                         {dutchSelections.map((sel, idx) => (
-                            <div key={sel.id} className="bg-slate-50 dark:bg-slate-900/50 p-4 rounded-xl border border-slate-100 dark:border-slate-800/50 grid grid-cols-12 gap-2 items-center">
+                            <div key={sel.id} className="bg-slate-50 dark:bg-slate-900/50 p-4 rounded-xl border border-slate-200 dark:border-slate-800/50 grid grid-cols-12 gap-2 items-center">
                                 <div className="col-span-1 text-xs font-bold text-slate-400">{String.fromCharCode(65 + idx)}</div>
                                 <div className="col-span-5"><input type="text" value={sel.name} onChange={e => { const n = [...dutchSelections]; n[idx].name = e.target.value; setDutchSelections(n); }} className="w-full bg-transparent outline-none text-sm font-bold text-slate-700 dark:text-slate-200" /></div>
-                                <div className="col-span-3"><input type="number" value={sel.odds} onChange={e => { const n = [...dutchSelections]; n[idx].odds = e.target.value; setDutchSelections(n); }} className="w-full bg-white dark:bg-slate-800 rounded px-2 py-1 text-sm font-mono text-center" placeholder="Odds" /></div>
+                                <div className="col-span-3"><input type="number" value={sel.odds} onChange={e => { const n = [...dutchSelections]; n[idx].odds = e.target.value; setDutchSelections(n); }} className="w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded px-2 py-1 text-sm font-mono text-center text-slate-900 dark:text-white" placeholder="Odds" /></div>
                                 <div className="col-span-3 text-right">
                                     <p className="text-emerald-600 dark:text-emerald-400 font-bold text-xs">R$ {sel.stake.toFixed(2)}</p>
-                                    <button onClick={() => removeDutchSelection(sel.id)} className="text-[9px] text-red-400">Remover</button>
+                                    <button onClick={() => removeDutchSelection(sel.id)} className="text-[9px] text-red-500 dark:text-red-400 hover:underline">Remover</button>
                                 </div>
                             </div>
                         ))}
                     </div>
 
                     <div className="mt-6 flex gap-3">
-                        <button onClick={addDutchSelection} className="flex-1 py-3 rounded-xl border border-dashed border-slate-300 dark:border-slate-700 text-slate-500 text-xs font-bold uppercase"><Plus size={14} className="inline mr-1"/> Add Seleção</button>
-                        <button onClick={calculateDutching} className="flex-1 py-3 rounded-xl bg-emerald-600 text-white text-xs font-bold uppercase shadow-lg shadow-emerald-600/20">Calcular</button>
+                        <button onClick={addDutchSelection} className="flex-1 py-3 rounded-xl border border-dashed border-slate-300 dark:border-slate-700 text-slate-600 dark:text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-800/50 text-xs font-bold uppercase transition-colors"><Plus size={14} className="inline mr-1"/> Add Seleção</button>
+                        <button onClick={calculateDutching} className="flex-1 py-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold uppercase shadow-lg shadow-emerald-600/20 transition-all active:scale-95">Calcular</button>
                     </div>
                 </div>
             )}
@@ -305,31 +311,31 @@ const Calculators: React.FC = () => {
                     <h2 className="text-lg font-black text-slate-900 dark:text-white uppercase tracking-tighter italic mb-6">Critério de Kelly</h2>
                     <div className="grid grid-cols-2 gap-4 mb-6">
                         <div>
-                             <label className="text-[10px] font-bold text-slate-400 uppercase block mb-2">Banca</label>
-                             <div className="p-3 bg-slate-50 dark:bg-slate-900 rounded-xl font-mono font-bold text-slate-900 dark:text-white">R$ {currentBankrollBalance.toFixed(2)}</div>
+                             <label className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase block mb-2">Banca</label>
+                             <div className="p-3 bg-slate-50 dark:bg-slate-900 rounded-xl font-mono font-bold text-slate-900 dark:text-white border border-slate-200 dark:border-transparent">R$ {currentBankrollBalance.toFixed(2)}</div>
                         </div>
                         <div>
-                             <label className="text-[10px] font-bold text-slate-400 uppercase block mb-2">Fração</label>
-                             <select value={kellyFraction} onChange={e => setKellyFraction(e.target.value)} className="w-full p-3 bg-slate-50 dark:bg-slate-900 rounded-xl font-bold text-sm outline-none">
+                             <label className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase block mb-2">Fração</label>
+                             <select value={kellyFraction} onChange={e => setKellyFraction(e.target.value)} className="w-full p-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-transparent text-slate-900 dark:text-white rounded-xl font-bold text-sm outline-none">
                                 <option value="1">100%</option>
                                 <option value="0.5">50%</option>
                                 <option value="0.25">25%</option>
                              </select>
                         </div>
                         <div>
-                             <label className="text-[10px] font-bold text-slate-400 uppercase block mb-2">Odds</label>
-                             <input type="number" value={kellyOdds} onChange={e => setKellyOdds(e.target.value)} className="w-full p-3 bg-slate-50 dark:bg-slate-900 rounded-xl font-mono font-bold outline-none border border-slate-200 dark:border-slate-800" />
+                             <label className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase block mb-2">Odds</label>
+                             <input type="number" value={kellyOdds} onChange={e => setKellyOdds(e.target.value)} className="w-full p-3 bg-slate-50 dark:bg-slate-900 rounded-xl font-mono font-bold outline-none border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white" />
                         </div>
                         <div>
-                             <label className="text-[10px] font-bold text-slate-400 uppercase block mb-2">Probabilidade %</label>
-                             <input type="number" value={kellyProb} onChange={e => setKellyProb(e.target.value)} className="w-full p-3 bg-slate-50 dark:bg-slate-900 rounded-xl font-mono font-bold outline-none border border-slate-200 dark:border-slate-800" />
+                             <label className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase block mb-2">Probabilidade %</label>
+                             <input type="number" value={kellyProb} onChange={e => setKellyProb(e.target.value)} className="w-full p-3 bg-slate-50 dark:bg-slate-900 rounded-xl font-mono font-bold outline-none border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white" />
                         </div>
                     </div>
 
-                    <div className="bg-purple-50 dark:bg-purple-900/10 p-6 rounded-2xl text-center border border-purple-100 dark:border-purple-500/20">
-                        <p className="text-xs font-bold text-purple-400 uppercase tracking-widest mb-1">Stake Recomendada</p>
+                    <div className="bg-purple-50 dark:bg-purple-900/10 p-6 rounded-2xl text-center border border-purple-200 dark:border-purple-500/20">
+                        <p className="text-xs font-bold text-purple-500 dark:text-purple-400 uppercase tracking-widest mb-1">Stake Recomendada</p>
                         <h3 className="text-4xl font-black text-purple-600 dark:text-purple-400">{parseFloat(kellyResult) > 0 ? kellyResult : '0.00'}%</h3>
-                        <p className="text-sm font-mono text-purple-800 dark:text-purple-300 mt-2 bg-purple-100 dark:bg-purple-500/20 inline-block px-3 py-1 rounded">R$ {parseFloat(kellyResult) > 0 ? kellyMoney.toFixed(2) : '0.00'}</p>
+                        <p className="text-sm font-mono text-purple-800 dark:text-purple-300 mt-2 bg-purple-200 dark:bg-purple-500/20 inline-block px-3 py-1 rounded font-bold">R$ {parseFloat(kellyResult) > 0 ? kellyMoney.toFixed(2) : '0.00'}</p>
                     </div>
                 </div>
             )}
@@ -341,21 +347,23 @@ const Calculators: React.FC = () => {
                    <h2 className="text-lg font-black text-slate-900 dark:text-white uppercase tracking-tighter italic mb-6 flex items-center gap-2"><Target size={20} className="text-emerald-500"/> Value Bet Finder</h2>
                    <div className="grid grid-cols-2 gap-4 mb-6">
                       <div>
-                          <label className="text-[10px] font-bold text-slate-400 uppercase block mb-2">Sua Odds</label>
-                          <input type="number" value={valOdds} onChange={e => setValOdds(e.target.value)} className="w-full p-3 bg-slate-50 dark:bg-slate-900 rounded-xl font-mono font-bold outline-none border border-slate-200 dark:border-slate-800" />
+                          <label className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase block mb-2">Sua Odds</label>
+                          <input type="number" value={valOdds} onChange={e => setValOdds(e.target.value)} className="w-full p-3 bg-slate-50 dark:bg-slate-900 rounded-xl font-mono font-bold outline-none border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white" />
                       </div>
                       <div>
-                          <label className="text-[10px] font-bold text-slate-400 uppercase block mb-2">Probabilidade Real %</label>
-                          <input type="number" value={valProb} onChange={e => setValProb(e.target.value)} className="w-full p-3 bg-slate-50 dark:bg-slate-900 rounded-xl font-mono font-bold outline-none border border-slate-200 dark:border-slate-800" />
+                          <label className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase block mb-2">Probabilidade Real %</label>
+                          <input type="number" value={valProb} onChange={e => setValProb(e.target.value)} className="w-full p-3 bg-slate-50 dark:bg-slate-900 rounded-xl font-mono font-bold outline-none border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white" />
                       </div>
                    </div>
                    
                    <div className={`p-6 rounded-2xl border text-center ${valEV > 0 ? 'bg-emerald-50 dark:bg-emerald-900/10 border-emerald-200 dark:border-emerald-500/20' : 'bg-red-50 dark:bg-red-900/10 border-red-200 dark:border-red-500/20'}`}>
-                      <p className="text-xs font-bold uppercase tracking-widest mb-1 opacity-70">Valor Esperado (EV)</p>
+                      <p className="text-xs font-bold uppercase tracking-widest mb-1 opacity-70 text-slate-700 dark:text-slate-300">Valor Esperado (EV)</p>
                       <h3 className={`text-4xl font-black ${valEV > 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-500'}`}>
                         {valEV > 0 ? '+' : ''}{valEVPercent.toFixed(2)}%
                       </h3>
-                      <p className="text-xs mt-2 font-bold">{valEV > 0 ? '✅ Aposta de Valor Encontrada' : '❌ Odds sem valor estatístico'}</p>
+                      <p className={`text-xs mt-2 font-bold ${valEV > 0 ? 'text-emerald-700 dark:text-emerald-300' : 'text-red-600 dark:text-red-400'}`}>
+                          {valEV > 0 ? '✅ Aposta de Valor Encontrada' : '❌ Odds sem valor estatístico'}
+                      </p>
                    </div>
                 </div>
                 )
@@ -368,25 +376,25 @@ const Calculators: React.FC = () => {
                    <h2 className="text-lg font-black text-slate-900 dark:text-white uppercase tracking-tighter italic mb-6 flex items-center gap-2"><Scale size={20} className="text-blue-500"/> Arbitragem (2-Way)</h2>
                    
                    <div className="mb-4">
-                      <label className="text-[10px] font-bold text-slate-400 uppercase block mb-2">Investimento Total (R$)</label>
-                      <input type="number" value={arbTotalStake} onChange={e => setArbTotalStake(e.target.value)} className="w-full p-3 bg-slate-50 dark:bg-slate-900 rounded-xl font-mono font-bold outline-none border border-slate-200 dark:border-slate-800 text-lg" />
+                      <label className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase block mb-2">Investimento Total (R$)</label>
+                      <input type="number" value={arbTotalStake} onChange={e => setArbTotalStake(e.target.value)} className="w-full p-3 bg-slate-50 dark:bg-slate-900 rounded-xl font-mono font-bold outline-none border border-slate-200 dark:border-slate-800 text-lg text-slate-900 dark:text-white" />
                    </div>
 
                    <div className="grid grid-cols-2 gap-4 mb-6">
                       <div className="bg-slate-50 dark:bg-slate-900 p-4 rounded-xl border border-slate-200 dark:border-slate-800">
-                          <label className="text-[10px] font-bold text-slate-400 uppercase block mb-2">Casa A (Odds)</label>
-                          <input type="number" value={arbOdds1} onChange={e => setArbOdds1(e.target.value)} className="w-full bg-transparent font-mono font-black text-xl outline-none" />
+                          <label className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase block mb-2">Casa A (Odds)</label>
+                          <input type="number" value={arbOdds1} onChange={e => setArbOdds1(e.target.value)} className="w-full bg-transparent font-mono font-black text-xl outline-none text-slate-900 dark:text-white" />
                           <div className="mt-2 pt-2 border-t border-slate-200 dark:border-slate-700">
-                             <p className="text-[10px] uppercase text-slate-400">Apostar:</p>
-                             <p className="text-emerald-500 font-bold">R$ {isFinite(arbStake1) ? arbStake1.toFixed(2) : '0.00'}</p>
+                             <p className="text-[10px] uppercase text-slate-500 dark:text-slate-400">Apostar:</p>
+                             <p className="text-emerald-600 dark:text-emerald-500 font-bold">R$ {isFinite(arbStake1) ? arbStake1.toFixed(2) : '0.00'}</p>
                           </div>
                       </div>
                       <div className="bg-slate-50 dark:bg-slate-900 p-4 rounded-xl border border-slate-200 dark:border-slate-800">
-                          <label className="text-[10px] font-bold text-slate-400 uppercase block mb-2">Casa B (Odds)</label>
-                          <input type="number" value={arbOdds2} onChange={e => setArbOdds2(e.target.value)} className="w-full bg-transparent font-mono font-black text-xl outline-none" />
+                          <label className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase block mb-2">Casa B (Odds)</label>
+                          <input type="number" value={arbOdds2} onChange={e => setArbOdds2(e.target.value)} className="w-full bg-transparent font-mono font-black text-xl outline-none text-slate-900 dark:text-white" />
                           <div className="mt-2 pt-2 border-t border-slate-200 dark:border-slate-700">
-                             <p className="text-[10px] uppercase text-slate-400">Apostar:</p>
-                             <p className="text-emerald-500 font-bold">R$ {isFinite(arbStake2) ? arbStake2.toFixed(2) : '0.00'}</p>
+                             <p className="text-[10px] uppercase text-slate-500 dark:text-slate-400">Apostar:</p>
+                             <p className="text-emerald-600 dark:text-emerald-500 font-bold">R$ {isFinite(arbStake2) ? arbStake2.toFixed(2) : '0.00'}</p>
                           </div>
                       </div>
                    </div>
@@ -395,7 +403,7 @@ const Calculators: React.FC = () => {
                       <span className="font-bold uppercase text-xs tracking-widest">Lucro Garantido (ROI)</span>
                       <span className="font-black text-xl">{arbRoi.toFixed(2)}%</span>
                    </div>
-                   {arbRoi > 0 && <p className="text-center text-xs text-slate-400 mt-2">Lucro líquido: R$ {arbProfit.toFixed(2)}</p>}
+                   {arbRoi > 0 && <p className="text-center text-xs text-slate-500 dark:text-slate-400 mt-2">Lucro líquido: R$ {arbProfit.toFixed(2)}</p>}
                 </div>
                 )
             )}
@@ -406,14 +414,14 @@ const Calculators: React.FC = () => {
                    <h2 className="text-lg font-black text-slate-900 dark:text-white uppercase tracking-tighter italic mb-6 flex items-center gap-2"><Percent size={20} className="text-orange-500"/> Calculadora Stake Fixa</h2>
                    
                    <div className="mb-6">
-                      <label className="text-[10px] font-bold text-slate-400 uppercase block mb-2">Porcentagem da Banca (%)</label>
+                      <label className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase block mb-2">Porcentagem da Banca (%)</label>
                       <input type="number" value={stakePercent} onChange={e => setStakePercent(e.target.value)} className="w-full p-4 bg-slate-50 dark:bg-slate-900 rounded-xl font-mono font-black text-3xl outline-none border border-slate-200 dark:border-slate-800 text-center text-orange-500" />
                    </div>
 
                    <div className="bg-slate-50 dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 text-center">
                       <p className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-1">Valor da Aposta</p>
                       <h3 className="text-4xl font-black text-slate-900 dark:text-white">R$ {stakeValue.toFixed(2)}</h3>
-                      <p className="text-xs text-slate-400 mt-2">Baseado na banca atual de R$ {currentBankrollBalance.toFixed(2)}</p>
+                      <p className="text-xs text-slate-500 dark:text-slate-400 mt-2">Baseado na banca atual de R$ {currentBankrollBalance.toFixed(2)}</p>
                    </div>
                 </div>
             )}
@@ -425,16 +433,16 @@ const Calculators: React.FC = () => {
                    
                    <div className="space-y-4">
                       <div className="bg-slate-50 dark:bg-slate-900 p-4 rounded-xl border border-slate-200 dark:border-slate-800 flex justify-between items-center">
-                          <label className="text-xs font-bold text-slate-500 uppercase">Decimal (Eu/Br)</label>
-                          <input type="number" value={convDec} onChange={e => handleDecChange(e.target.value)} className="bg-transparent text-right font-mono font-black text-lg outline-none w-24 text-indigo-500" />
+                          <label className="text-xs font-bold text-slate-600 dark:text-slate-400 uppercase">Decimal (Eu/Br)</label>
+                          <input type="number" value={convDec} onChange={e => handleDecChange(e.target.value)} className="bg-transparent text-right font-mono font-black text-lg outline-none w-24 text-indigo-600 dark:text-indigo-400" />
                       </div>
                       <div className="bg-slate-50 dark:bg-slate-900 p-4 rounded-xl border border-slate-200 dark:border-slate-800 flex justify-between items-center">
-                          <label className="text-xs font-bold text-slate-500 uppercase">Americana (US)</label>
-                          <span className="font-mono font-bold text-slate-700 dark:text-slate-300">{convAm}</span>
+                          <label className="text-xs font-bold text-slate-600 dark:text-slate-400 uppercase">Americana (US)</label>
+                          <span className="font-mono font-bold text-slate-900 dark:text-white">{convAm}</span>
                       </div>
                       <div className="bg-slate-50 dark:bg-slate-900 p-4 rounded-xl border border-slate-200 dark:border-slate-800 flex justify-between items-center">
-                          <label className="text-xs font-bold text-slate-500 uppercase">Probabilidade Implícita</label>
-                          <span className="font-mono font-bold text-slate-700 dark:text-slate-300">{convProb}%</span>
+                          <label className="text-xs font-bold text-slate-600 dark:text-slate-400 uppercase">Probabilidade Implícita</label>
+                          <span className="font-mono font-bold text-slate-900 dark:text-white">{convProb}%</span>
                       </div>
                    </div>
                 </div>
@@ -447,11 +455,11 @@ const Calculators: React.FC = () => {
                    <h2 className="text-lg font-black text-slate-900 dark:text-white uppercase tracking-tighter italic mb-6 flex items-center gap-2"><TrendingUp size={20} className="text-pink-500"/> Break Even Point</h2>
                    
                    <div className="mb-8">
-                      <label className="text-[10px] font-bold text-slate-400 uppercase block mb-2">Odd Média</label>
+                      <label className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase block mb-2">Odd Média</label>
                       <input type="number" value={beOdds} onChange={e => setBeOdds(e.target.value)} className="w-full p-4 bg-slate-50 dark:bg-slate-900 rounded-xl font-mono font-black text-3xl outline-none border border-slate-200 dark:border-slate-800 text-center text-pink-500" />
                    </div>
 
-                   <div className="p-6 rounded-2xl bg-slate-900 text-white text-center shadow-lg shadow-slate-900/20">
+                   <div className="p-6 rounded-2xl bg-slate-900 dark:bg-slate-950 text-white text-center shadow-lg shadow-slate-900/20">
                       <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Win Rate Necessária</p>
                       <h3 className="text-4xl font-black text-white">{beWinRate.toFixed(2)}%</h3>
                       <p className="text-xs text-slate-500 mt-2">Para ficar no zero a zero (sem prejuízo)</p>
@@ -467,7 +475,7 @@ const Calculators: React.FC = () => {
             <div className="bg-white dark:bg-[#0f172a] rounded-[1.5rem] md:rounded-[2rem] border border-slate-200 dark:border-slate-800 p-6 md:p-8 shadow-sm sticky top-6">
                 <h4 className="font-black text-slate-900 dark:text-white mb-6 uppercase tracking-widest text-xs">Ações Rápidas</h4>
                 <div className="p-4 bg-slate-50 dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800">
-                    <p className="text-[10px] text-slate-400 mb-2 uppercase font-bold tracking-wider">{sidebarInfo.title}</p>
+                    <p className="text-[10px] text-slate-500 dark:text-slate-400 mb-2 uppercase font-bold tracking-wider">{sidebarInfo.title}</p>
                     <p className="text-sm font-medium text-slate-700 dark:text-slate-300 leading-relaxed">
                         {sidebarInfo.text}
                     </p>
@@ -475,8 +483,8 @@ const Calculators: React.FC = () => {
 
                 <div className="mt-6 pt-6 border-t border-slate-100 dark:border-slate-800">
                     <div className="flex items-start gap-3">
-                       <AlertTriangle size={16} className="text-yellow-500 mt-0.5" />
-                       <p className="text-[10px] text-slate-400 leading-relaxed">
+                       <AlertTriangle size={16} className="text-yellow-500 mt-0.5 shrink-0" />
+                       <p className="text-[10px] text-slate-500 dark:text-slate-400 leading-relaxed">
                          Lembre-se: Todas as calculadoras assumem liquidez disponível. Sempre verifique os limites da casa antes de apostar valores altos.
                        </p>
                     </div>
