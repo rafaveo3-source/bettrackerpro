@@ -296,19 +296,19 @@ const tooltipText = isDark ? '#ffffff' : '#0f172a';
 
         <div>
           <div className="flex items-center gap-2 text-emerald-500 text-[10px] font-mono font-bold uppercase tracking-widest mb-2">
-            <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse"></span>
-            System: Online • {activeBR?.name.toUpperCase()}
+            <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse shadow-[0_0_8px_#10b981]"></span>
+            System Status: Online • {activeBR?.name.toUpperCase() || 'SEM PORTFÓLIO'}
           </div>
 
           <h1 className="text-3xl font-black text-slate-900 dark:text-white tracking-tighter uppercase italic">
-            Dashboard <span className="text-slate-400 dark:text-slate-700 text-lg">///</span>
+            Visão Geral <span className="text-slate-400 dark:text-slate-700 text-lg">///</span>
           </h1>
         </div>
 
         <div className="flex items-center gap-6 w-full md:w-auto justify-between md:justify-end">
           <div className="text-right">
             <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">
-              Liquidez Líquida
+              Patrimônio Líquido
             </p>
             <p className="text-3xl font-black text-emerald-500 dark:text-emerald-400 font-mono tracking-tight">
               {formatValue(currentBankrollBalance)}
@@ -504,10 +504,8 @@ const tooltipText = isDark ? '#ffffff' : '#0f172a';
             <div className="flex-1 overflow-y-auto p-3 space-y-2">
               {bankrollHistory.length === 0 ? (
                 <div className="h-full flex flex-col items-center justify-center opacity-50">
-                  <Sparkles size={24} />
-                  <p className="text-xs uppercase font-bold">
-                    Sem Atividade
-                  </p>
+                  <Sparkles size={24} className="mb-2 text-slate-400" />
+                  <p className="text-[10px] uppercase font-black tracking-widest text-slate-500">Sem Liquidez no Dia</p>
                 </div>
               ) : (
                 bankrollHistory
