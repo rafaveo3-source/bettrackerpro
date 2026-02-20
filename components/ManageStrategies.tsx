@@ -41,89 +41,70 @@ const ManageStrategies = () => {
   const getBlueprintData = (strategy: ProgressionStrategy) => {
       const name = strategy.name.toLowerCase();
 
-      // 1. SOROS (Juros Compostos Agressivos)
-      if (name.includes('soros') || name.includes('alavancagem')) {
+      if (name.includes('soros') || name.includes('alavancagem') || name.includes('composto')) {
         return {
-          setup: { oddTarget: "@1.30 a @1.50", steps: "3 a 5 tiros", type: "Compound" },
+          setup: { oddTarget: "@1.30 a @1.50", steps: "3 a 5 níveis", type: "Juros Compostos" },
           roadmap: [
-            "Passo 1: Entrar com 1% da banca.",
-            "Passo 2: Entrar com o lucro + stake anterior.",
-            "Passo 3: Repetir até bater o nível 4.",
-            "Garantia: Retirar 100% do lucro e voltar pro Passo 1."
+            "Passo 1: Investir 1% a 2% do capital inicial.",
+            "Passo 2: Reinvestir o montante total (Stake + Lucro da operação anterior).",
+            "Passo 3: Repetir o processo até o alvo definido no ciclo.",
+            "Fechamento: Ao atingir a meta, resgatar o lucro e reiniciar com a stake base."
           ],
-          stopLoss: "Se der Red em qualquer passo, aborte a sequência. O loss real é sempre apenas 1% (a stake inicial). Recomece no dia seguinte.",
-          markets: ["Over 1.5 Gols", "Dupla Chance (Favorito)"]
+          stopLoss: "O Stop Loss deste modelo é sempre a Stake Inicial (1%). Se o mercado for contra (Red), assuma a perda da unidade e reinicie um novo ciclo.",
+          markets: ["Mercados de Baixa Variância (Ex: Dupla Chance)"]
         };
       }
       
-      // 2. MARTINGALE / RECUPERAÇÃO
       if (name.includes('martingale') || name.includes('recuperação')) {
          return {
-          setup: { oddTarget: "@2.00+", steps: "Máx 3 tiros", type: "Recovery" },
+          setup: { oddTarget: "@2.00+", steps: "Máx 3 Níveis", type: "Cobertura de Risco" },
           roadmap: [
-            "Passo 1: Entrar com 0.5% da banca.",
-            "Passo 2 (Em caso de Red): Dobrar a stake (1%).",
-            "Passo 3 (Em caso de Red): Dobrar a stake (2%).",
-            "Sucesso: Retorna à stake base de 0.5%."
+            "Passo 1: Exposição primária de 0.5% a 1% da unidade.",
+            "Passo 2 (Em caso de Red): Exposição ajustada para cobrir a perda anterior.",
+            "Passo 3 (Em caso de Red): Último nível de cobertura programada.",
+            "Retorno ao Padrão: Assim que houver um acerto (Green), retorne imediatamente à stake inicial."
           ],
-          stopLoss: "PERIGO: Se errar 3 vezes seguidas, PARE! Assuma o red de 3.5% da banca. Não tente o 4º passo ou correrá risco de quebra.",
-          markets: ["Back Empate", "Over 2.5 Gols (pré-live)"]
+          stopLoss: "PERIGO MÁXIMO DE DRAWDOWN: Respeite rigorosamente o limite de 3 níveis de cobertura. Um ciclo de perdas prolongado forçará o esgotamento do portfólio.",
+          markets: ["Odds pares (Ex: Over 2.5 Gols ou Handicaps Asiáticos)"]
         };
       }
 
-      // 3. D'ALEMBERT / CICLOS
       if (name.includes('alembert') || name.includes('ciclo')) {
          return {
-          setup: { oddTarget: "@2.00", steps: "Variável", type: "Progressive" },
+          setup: { oddTarget: "@2.00", steps: "Variável", type: "Gestão Progressiva" },
           roadmap: [
-            "Defina sua Unidade Base (ex: R$10).",
-            "Red: Aumente a próxima aposta em +1 Unidade (R$20).",
-            "Green: Reduza a próxima aposta em -1 Unidade.",
-            "Objetivo: Fechar o ciclo voltando à Unidade 1."
+            "Defina o valor base da sua Unidade Financeira.",
+            "Pós-Red: Aumente a próxima exposição em +1 Unidade Base.",
+            "Pós-Green: Reduza a próxima exposição em -1 Unidade Base.",
+            "Conclusão: O ciclo encerra ao retornar à estaca zero com saldo positivo."
           ],
-          stopLoss: "Stop Diário: Bateu -5 unidades de prejuízo no mesmo dia? Encerre e tente recomeçar o ciclo amanhã a partir do nível atual.",
-          markets: ["Handicap Asiático -1.0", "Match Odds (Equilíbrio)"]
+          stopLoss: "Defina um limite de variação negativa (Stop Diário) de no máximo 5 Unidades. Se atingido, interrompa a sessão para evitar abalo emocional.",
+          markets: ["Handicap Asiático", "Linhas de Match Odds equilibradas"]
         };
       }
 
-      // 4. JUROS COMPOSTOS CONSERVADORES (Gestão de Banca)
-      if (name.includes('composto') || name.includes('conservador')) {
+      if (name.includes('conservador') || name.includes('flat')) {
          return {
-          setup: { oddTarget: "@1.70+", steps: "Longo Prazo", type: "Bankroll Building" },
+          setup: { oddTarget: "@1.70 a @2.20", steps: "Longo Prazo", type: "Stake Fixa (Flat)" },
           roadmap: [
-            "Dividir a banca em 50 ou 100 unidades.",
-            "Stake Fixa de 1 a 2% por entrada.",
-            "A cada 30 dias (ou 10% de lucro), recalcular o valor da Unidade baseado no novo montante total."
+            "Divida o portfólio em 50 a 100 partes iguais (Unidades).",
+            "Mantenha a exposição travada em 1U a 2U por evento de forma estrita.",
+            "O crescimento do capital depende exclusivamente do Win Rate e do ROI médio ao final do mês."
           ],
-          stopLoss: "Drawdown Máximo de 15%. Se a banca cair de 100% para 85%, pare de operar por 3 dias, revise os métodos e diminua a stake para 0.5%.",
-          markets: ["Todos os mercados de Valor (+EV)"]
+          stopLoss: "Drawdown Máximo sugerido de 15%. Se o patrimônio recuar para 85% da banca inicial, pause as operações e reavalie seus critérios de análise técnica.",
+          markets: ["Procura por Valor Esperado Positivo (+EV) em qualquer mercado."]
         };
       }
 
-      // 5. HIGH HIT-RATE (Foco em Acerto)
-      if (name.includes('hit-rate') || name.includes('acerto')) {
-         return {
-          setup: { oddTarget: "@1.15 a @1.30", steps: "Volume Alto", type: "Grind" },
-          roadmap: [
-            "Apostar 5% da banca buscando pequenos lucros de 0.7% a 1.5% do montante total.",
-            "Necessário taxa de acerto acima de 85%.",
-            "Focar em entradas nos últimos 10 minutos (Late Under/Fav ganhando)."
-          ],
-          stopLoss: "Um red aqui machuca. Se tomar um red, pare. Não tente recuperar em odds altas. Siga o plano no dia seguinte pacientemente.",
-          markets: ["Under Gols Final do Jogo", "Match Odds aos 80'"]
-        };
-      }
-
-      // 6. FALLBACK GENÉRICO
       return { 
-          setup: { oddTarget: "@1.80", steps: "Ciclo Padrão", type: "Standard" },
+          setup: { oddTarget: "Variável", steps: "Gestão Padrão", type: "Modelo Estratégico" },
           roadmap: [
-            "Siga rigorosamente a divisão de stake do modelo.",
-            "Mantenha registro no painel para validar o ROI.",
-            "Não fuja do mercado proposto."
+            "Siga rigorosamente a divisão de stake e alocação do modelo.",
+            "Valide as operações utilizando as calculadoras de controle.",
+            "Mantenha o histórico alimentado para monitoramento de ROI."
           ], 
-          stopLoss: "Nunca comprometa mais de 5% da banca em um único dia. Se bater o limite de perda, feche o sistema.",
-          markets: strategy.markets || ["Gols", "Handicap"]
+          stopLoss: "Gestão de Caixa: Não exponha mais de 5% do capital total em um único dia operacional.",
+          markets: strategy.markets || ["Mercados Específicos do Setup"]
       };
   };
 

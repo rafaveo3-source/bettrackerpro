@@ -176,14 +176,14 @@ const Calculators: React.FC = () => {
   // --- SIDEBAR INFO HELPERS ---
   const getSidebarInfo = () => {
     switch(activeTab) {
-      case 'dutching': return { title: 'Dica de Gestão', text: 'O Dutching é ideal para cobrir múltiplos placares exatos (ex: 1x0, 2x0 e 2x1) ou dividir o risco ao apoiar mais de uma equipe no mesmo evento esportivo.' };
-      case 'kelly': return { title: 'Gestão de Risco', text: 'Use o Kelly Fracionário (0.25x) para reduzir a volatilidade e proteger sua banca.' };
-      case 'value': return { title: 'Conceito Chave', text: 'Só existe lucro no longo prazo se você apostar em odds maiores que a probabilidade real (EV+).' };
-      case 'arb': return { title: 'Atenção', text: 'Casas de apostas podem limitar contas que fazem arbitragem com frequência. Arredonde as stakes.' };
-      case 'stake': return { title: 'Consistência', text: 'Stake fixa é o método mais seguro para iniciantes evitarem a ruína.' };
-      case 'odds': return { title: 'Mercado Global', text: 'Odds Americanas (+110) são comuns na Pinnacle e esportes US. Decimais (2.10) na Europa/Brasil.' };
-      case 'breakeven': return { title: 'Meta Mínima', text: 'Esta é a taxa de acerto mínima que você precisa ter para não perder dinheiro com essa odd.' };
-      default: return { title: 'Dica', text: 'Gerencie sua banca com sabedoria.' };
+      case 'dutching': return { title: 'Gestão de Risco', text: 'O Dutching divide a sua exposição entre múltiplas seleções, diluindo o risco do investimento em um único evento.' };
+      case 'kelly': return { title: 'Cálculo de Exposição', text: 'O Critério de Kelly ajusta matematicamente a stake ideal com base na probabilidade e na odd (cotação) apresentada.' };
+      case 'value': return { title: 'Análise de EV+', text: 'O conceito de Value Bet compara a cotação oferecida pelo mercado com a probabilidade real estatística de um evento ocorrer.' };
+      case 'arb': return { title: 'Arbitragem Matemática', text: 'Calcula o volume exato a ser distribuído em duas vias para anular o risco direcional. (Atenção aos limites do mercado).' };
+      case 'stake': return { title: 'Gestão Fixa', text: 'O cálculo de stake fixa percentual ajuda a manter o controle do drawdown em fases de oscilação do mercado.' };
+      case 'odds': return { title: 'Leitura Global', text: 'Conversão automática de formatos de cotações utilizados em bolsas esportivas americanas e europeias.' };
+      case 'breakeven': return { title: 'Ponto de Equilíbrio', text: 'A taxa de acerto (Hit-Rate) estatística necessária para manter a estabilidade do capital com a odd informada.' };
+      default: return { title: 'Ferramentas Analíticas', text: 'Utilize os modelos matemáticos para tomar decisões baseadas em dados e não em emoções.' };
     }
   };
 

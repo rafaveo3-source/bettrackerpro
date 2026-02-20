@@ -76,7 +76,7 @@ const Settings: React.FC = () => {
   };
 
   const handleResetData = async () => {
-      const confirmed = window.confirm('TEM CERTEZA? Isso apagará TODO o seu histórico de apostas, bancas e configurações. Sua conta permanecerá ativa, mas vazia.');
+      const confirmed = window.confirm('TEM CERTEZA? Isso apagará TODO o seu histórico de registros, portfólios e modelos de gestão. Sua conta permanecerá ativa, mas zerada.');
       if (confirmed) {
           setIsResetting(true);
           await resetData();
@@ -86,7 +86,7 @@ const Settings: React.FC = () => {
 
   const handleDeleteAccount = async () => {
     const confirmed = window.confirm(
-        "ATENÇÃO CRÍTICA:\n\nEsta ação excluirá PERMANENTEMENTE sua conta, todas as suas apostas, bancas e histórico.\n\nNão há como desfazer. Tem certeza absoluta?"
+        "ATENÇÃO CRÍTICA:\n\nEsta ação excluirá PERMANENTEMENTE sua conta, todos os seus registros operacionais, portfólios e histórico de desempenho.\n\nNão há como desfazer. Tem certeza absoluta?"
     );
     if (confirmed) {
         try {
@@ -290,7 +290,7 @@ const Settings: React.FC = () => {
                     <h2 className="text-xl font-black text-slate-900 dark:text-white uppercase tracking-tighter italic">Arquitetura de Métodos</h2>
                 </div>
                 <div className="flex flex-col sm:flex-row gap-3 mb-8">
-                    <input type="text" value={newMethodName} onChange={(e) => setNewMethodName(e.target.value)} placeholder="Ex: Alavancagem" className="flex-1 bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 rounded-2xl px-6 py-4 outline-none focus:border-indigo-500 transition-all text-slate-900 dark:text-white font-bold shadow-inner placeholder:text-slate-400" />
+                    <input type="text" value={newMethodName} onChange={(e) => setNewMethodName(e.target.value)} placeholder="Ex: Back Favorito, Over 1.5 HT..." className="flex-1 bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 rounded-2xl px-6 py-4 outline-none focus:border-indigo-500 transition-all text-slate-900 dark:text-white font-bold shadow-inner placeholder:text-slate-400" />
                     <button onClick={handleAddMethod} className="bg-indigo-600 hover:bg-indigo-500 text-white px-8 py-4 sm:py-0 rounded-2xl font-black text-xs transition-all shadow-lg active:scale-95 uppercase tracking-widest">ADD</button>
                 </div>
                 <div className="grid grid-cols-1 gap-3 max-h-[250px] overflow-y-auto pr-2 custom-scrollbar">
