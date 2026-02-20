@@ -14,16 +14,17 @@ const ProPage: React.FC = () => {
       period: 'para sempre',
       monthlyEquivalent: 'Teste sem limites de tempo',
       features: [
-        'Apenas 1 Banca de Gestão',
-        'Máximo de 50 apostas/mês',
-        'Estatísticas Básicas',
+        'Apenas 1 Portfólio Ativo',
+        'Máximo de 50 operações/mês',
+        'Dashboard Analítico Básico',
         'Calculadoras Simples'
       ],
       missing: [
-        'Sem Calculadoras Avançadas',
-        'Sem Importação de Estratégias',
-        'Sem Controle de Mindset',
-        'Sem Suporte Prioritário'
+        'Modelos Matemáticos Avançados',
+        'Hub de Estratégias (Playbooks)',
+        'Módulo de Inteligência Emocional',
+        'Trava de Risco (Circuit Breaker)',
+        'Exportação de Dados em CSV'
       ],
       link: '#', 
       recommended: false,
@@ -37,11 +38,12 @@ const ProPage: React.FC = () => {
       period: 'a cada 3 meses',
       monthlyEquivalent: 'R$ 29,96/mês',
       features: [
-        'Acesso a todas as calculadoras',
-        'Gestão de múltiplas bancas',
-        'Apostas ilimitadas',
-        'Módulo de Mindset liberado',
-        'Importação de Estratégias',
+        'Gestão de Múltiplos Portfólios',
+        'Operações Ilimitadas no Mês',
+        'Calculadoras EV+, Arb e Kelly',
+        'Hub de Estratégias Liberado',
+        'Inteligência Emocional & Lock',
+        'Exportação de Relatórios CSV',
         'Suporte Prioritário'
       ],
       missing: [],
@@ -59,10 +61,11 @@ const ProPage: React.FC = () => {
       monthlyEquivalent: 'R$ 16,49/mês',
       savings: 'Economize R$ 160 no ano',
       features: [
-        'Tudo do plano Trimestral e Semestral',
+        'Todas as features do Trimestral',
         'Acesso VITALÍCIO a atualizações',
+        'Acesso Antecipado a Novas Metas',
         'Grupo de Networking (Bônus)',
-        'Selo VIP no perfil'
+        'Selo VIP no Perfil de Operador'
       ],
       missing: [],
       // 👇 MANTENHA O SEU LINK DA KIWIFY AQUI
@@ -78,11 +81,12 @@ const ProPage: React.FC = () => {
       period: 'a cada 6 meses',
       monthlyEquivalent: 'R$ 24,98/mês',
       features: [
-        'Acesso a todas as calculadoras',
-        'Gestão de múltiplas bancas',
-        'Apostas ilimitadas',
-        'Módulo de Mindset liberado',
-        'Importação de Estratégias',
+        'Gestão de Múltiplos Portfólios',
+        'Operações Ilimitadas no Mês',
+        'Calculadoras EV+, Arb e Kelly',
+        'Hub de Estratégias Liberado',
+        'Inteligência Emocional & Lock',
+        'Exportação de Relatórios CSV',
         'Suporte Prioritário'
       ],
       missing: [],
@@ -110,7 +114,7 @@ const ProPage: React.FC = () => {
             <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-500 to-cyan-500 dark:from-emerald-400 dark:to-cyan-400">BetTracker PRO</span>
         </h1>
         <p className="text-slate-600 dark:text-slate-400 max-w-2xl mx-auto text-lg transition-colors">
-            Desbloqueie ferramentas profissionais, remova todos os limites e tenha a infraestrutura de um investidor esportivo de elite.
+            Desbloqueie ferramentas profissionais, remova todos os limites e tenha a infraestrutura de um investidor de elite.
         </p>
       </div>
 
@@ -233,7 +237,7 @@ const ProPage: React.FC = () => {
                 </div>
                 <div>
                     <h4 className="font-bold text-slate-900 dark:text-white mb-1">Garantia Risco Zero</h4>
-                    <p className="text-sm text-slate-600 dark:text-slate-400">Teste o sistema por 7 dias. Se achar que não ajudou nas suas apostas, apertando um botão devolvemos 100% do seu dinheiro. Sem perguntas.</p>
+                    <p className="text-sm text-slate-600 dark:text-slate-400">Teste o sistema por 7 dias. Se achar que não elevou o nível da sua gestão, apertando um botão devolvemos 100% do seu investimento. Sem perguntas.</p>
                 </div>
             </div>
             <div className="bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 p-6 rounded-2xl flex items-start gap-4 shadow-sm">
