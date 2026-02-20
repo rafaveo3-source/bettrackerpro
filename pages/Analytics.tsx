@@ -68,7 +68,6 @@ const Analytics: React.FC = () => {
         if (bet.status === 'pending') return;
         
         // CORREÇÃO DO FUSO HORÁRIO: Pega a string original (YYYY-MM-DD) sem converter para fuso local
-        // Assim, dia 18 não vira dia 17 as 21:00.
         const datePart = bet.date.split('T')[0]; 
         const parts = datePart.split('-');
         let dateStr = datePart;
@@ -89,13 +88,35 @@ const Analytics: React.FC = () => {
     return data;
   }, [bankrollBets, activeBR]);
 
-  // --- 2. LUCRO POR ESPORTE ---
+  // --- 2. LUCRO POR ESPORTE (CORRIGIDO: NORMALIZAÇÃO DE NOMES) ---
   const sportBarData = useMemo(() => {
     const perf: Record<string, number> = {};
+
+    // Dicionário de tradução e padronização (Tudo minúsculo aqui para facilitar o Match)
+    const normalizeSportName = (rawSport: string) => {
+        if (!rawSport) return 'Outros';
+        
+        const s = rawSport.toLowerCase().trim();
+        
+        if (s.includes('football') || s.includes('futebol') || s.includes('soccer')) return 'Futebol';
+        if (s.includes('basket') || s.includes('nba')) return 'Basquete';
+        if (s.includes('tenis') || s.includes('tennis')) return 'Tênis';
+        if (s.includes('volei') || s.includes('volleyball')) return 'Vôlei';
+        if (s.includes('esport') || s.includes('e-sport')) return 'eSports';
+        if (s.includes('mma') || s.includes('ufc') || s.includes('fight')) return 'MMA';
+        if (s.includes('race') || s.includes('corrida')) return 'Corridas';
+
+        // Se não cair nas regras acima, capitaliza a primeira letra da string original
+        return rawSport.charAt(0).toUpperCase() + rawSport.slice(1).toLowerCase();
+    };
+
     bankrollBets.forEach(bet => {
       if (bet.status === 'pending') return;
-      perf[bet.sport] = (perf[bet.sport] || 0) + bet.profit;
+      
+      const normalizedSport = normalizeSportName(bet.sport);
+      perf[normalizedSport] = (perf[normalizedSport] || 0) + bet.profit;
     });
+
     return Object.keys(perf)
         .map(sport => ({ name: sport, profit: perf[sport] }))
         .sort((a,b) => b.profit - a.profit); 
