@@ -61,7 +61,7 @@ const ProPage: React.FC = () => {
       monthlyEquivalent: 'R$ 16,49/mês',
       savings: 'Economize R$ 160 no ano',
       features: [
-        'Todas as features do Trimestral',
+        'Todas as features do Semstral e Trimestral',
         'Acesso VITALÍCIO a atualizações',
         'Acesso Antecipado a Novas Metas',
         'Grupo de Networking (Bônus)',
