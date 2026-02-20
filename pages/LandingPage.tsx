@@ -13,7 +13,7 @@ import {
   BarChart3
 } from 'lucide-react';
 
-// Import do componente de Cookies (Crie o arquivo acima primeiro)
+// Import do componente de Cookies
 import CookieConsent from '../components/ui/CookieConsent';
 
 const LandingPage = () => {
@@ -89,9 +89,9 @@ const LandingPage = () => {
             transition={{ duration: 0.6, delay: 0.1 }}
             className="text-5xl md:text-7xl lg:text-8xl font-black tracking-tighter leading-[1.05] mb-6"
           >
-            Profissionalize suas <br className="hidden md:block"/>
+            Gestão profissional para <br className="hidden md:block"/>
             <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 via-teal-200 to-emerald-400 animate-gradient bg-300%">
-              apostas esportivas.
+              investimentos esportivos.
             </span>
           </motion.h1>
 
@@ -101,7 +101,7 @@ const LandingPage = () => {
             transition={{ duration: 0.6, delay: 0.2 }}
             className="text-lg md:text-xl text-slate-400 max-w-2xl mx-auto mb-10 leading-relaxed font-medium"
           >
-            A plataforma definitiva para gestão de bancas, validação de métodos e controle emocional. Saia do amadorismo e tenha a infraestrutura de um investidor.
+            A plataforma definitiva para controle de portfólio, validação de métodos e proteção de capital. Saia do amadorismo e tenha a infraestrutura de um gestor de risco.
           </motion.p>
 
           <motion.div
@@ -140,7 +140,7 @@ const LandingPage = () => {
                <div className="aspect-[16/9] w-full bg-slate-950 rounded-xl md:rounded-[1.5rem] overflow-hidden relative shadow-inner">
                   <img 
                     src="https://i.ibb.co/G44jBSdj/DASHBOARD-SYSTEM.webp" 
-                    alt="Dashboard do Sistema de Gestão de Bancas" 
+                    alt="Dashboard do Sistema de Gestão" 
                     className="w-full h-full object-cover object-top opacity-100 hover:scale-[1.01] transition-transform duration-1000"
                     loading="eager"
                   />
@@ -171,16 +171,16 @@ const LandingPage = () => {
                     <div className="w-10 h-10 bg-emerald-500/10 rounded-lg flex items-center justify-center mb-4 text-emerald-500 border border-emerald-500/20">
                        <ShieldCheck size={20} />
                     </div>
-                    <h3 className="text-2xl font-bold text-white mb-2">Múltiplas Bancas</h3>
+                    <h3 className="text-2xl font-bold text-white mb-2">Múltiplos Portfólios</h3>
                     <p className="text-slate-400 text-sm leading-relaxed">
-                       Gerencie saldos de diferentes casas (Bet365, Pinnacle) simultaneamente. Registre aportes, saques e visualize o crescimento real.
+                       Gerencie o capital alocado em diferentes bolsas esportivas simultaneamente. Controle o fluxo de caixa, aportes e saques em um só lugar.
                     </p>
                  </div>
               </div>
               <div className="relative flex-1 h-64 md:h-auto overflow-hidden md:rounded-tl-2xl border-t md:border-l border-white/10 z-10">
                  <img 
                     src="https://i.ibb.co/4vScY8q/banca.webp" 
-                    alt="Tela de Gestão de Banca" 
+                    alt="Tela de Gestão Financeira" 
                     className="w-full h-full object-cover object-left-top transform translate-x-4 translate-y-4 group-hover:translate-x-2 group-hover:translate-y-2 transition-transform duration-500"
                     loading="lazy"
                  />
@@ -194,15 +194,15 @@ const LandingPage = () => {
                   <div className="w-10 h-10 bg-purple-500/10 rounded-lg flex items-center justify-center mb-4 text-purple-500 border border-purple-500/20">
                     <BrainCircuit size={20} />
                   </div>
-                  <h3 className="text-2xl font-bold text-white mb-2">Calculadoras Pro</h3>
+                  <h3 className="text-2xl font-bold text-white mb-2">Calculadoras Analíticas</h3>
                   <p className="text-slate-400 text-sm">
-                    Arbitragem, Dutching, Kelly e +EV integradas ao fluxo de aposta.
+                    Arbitragem, Dutching, Critério de Kelly e Análise de EV+ integrados.
                   </p>
                </div>
                <div className="w-full h-[50%] mt-auto relative z-10 overflow-hidden border-t border-white/10">
                  <img 
                     src="https://i.ibb.co/PzhLQQR6/calculator.webp" 
-                    alt="Calculadoras de Apostas" 
+                    alt="Calculadoras de Risco" 
                     className="w-full h-full object-cover object-top hover:scale-105 transition-transform duration-500"
                     loading="lazy" 
                  />
@@ -216,15 +216,15 @@ const LandingPage = () => {
                   <div className="w-10 h-10 bg-blue-500/10 rounded-lg flex items-center justify-center mb-4 text-blue-500 border border-blue-500/20">
                     <BarChart3 size={20} />
                   </div>
-                  <h3 className="text-2xl font-bold text-white mb-2">Histórico Auditável</h3>
+                  <h3 className="text-2xl font-bold text-white mb-2">Diário Operacional</h3>
                   <p className="text-slate-400 text-sm">
-                    Filtros avançados e visualização clara de cada operação pendente ou finalizada.
+                    Filtros avançados e visualização clara do desempenho de cada entrada no mercado.
                   </p>
                </div>
                <div className="w-full h-[50%] mt-auto relative z-10 overflow-hidden border-t border-white/10">
                  <img 
                     src="https://i.ibb.co/PsyXgqkf/HIST-RICO.webp" 
-                    alt="Histórico de Apostas" 
+                    alt="Histórico de Registros" 
                     className="w-full h-full object-cover object-top hover:scale-105 transition-transform duration-500"
                     loading="lazy" 
                  />
@@ -239,16 +239,16 @@ const LandingPage = () => {
                     <div className="w-10 h-10 bg-orange-500/10 rounded-lg flex items-center justify-center mb-4 text-orange-500 border border-orange-500/20">
                        <Target size={20} />
                     </div>
-                    <h3 className="text-2xl font-bold text-white mb-2">Biblioteca de Métodos</h3>
+                    <h3 className="text-2xl font-bold text-white mb-2">Modelos de Validação</h3>
                     <p className="text-slate-400 text-sm leading-relaxed">
-                       Não aposte no escuro. Cadastre e valide suas estratégias (Over 2.5, Back Favorito). Saiba exatamente o que te dá lucro.
+                       Não opere no escuro. Cadastre e valide suas estratégias para descobrir exatamente quais métricas trazem consistência no longo prazo.
                     </p>
                  </div>
               </div>
               <div className="relative flex-1 h-64 md:h-auto overflow-hidden md:rounded-tl-2xl border-t md:border-l border-white/10 z-10">
                  <img 
                     src="https://i.ibb.co/rR2T5ZWr/ESTRATEGY.webp" 
-                    alt="Biblioteca Estratégica" 
+                    alt="Biblioteca de Modelos" 
                     className="w-full h-full object-cover object-left-top transform translate-x-6 translate-y-6 group-hover:translate-x-4 group-hover:translate-y-4 transition-transform duration-500"
                     loading="lazy"
                  />
@@ -262,15 +262,15 @@ const LandingPage = () => {
                   <div className="w-10 h-10 bg-cyan-500/10 rounded-lg flex items-center justify-center mb-4 text-cyan-500 border border-cyan-500/20">
                     <TrendingUp size={20} />
                   </div>
-                  <h3 className="text-2xl font-bold text-white mb-2">Performance Diária</h3>
+                  <h3 className="text-2xl font-bold text-white mb-2">Métricas e Consistência</h3>
                   <p className="text-slate-400 text-sm">
-                    Calendário de Greens e Reds para visualizar consistência.
+                    Painel visual analítico para mapear a saúde do seu capital e seu Hit-Rate.
                   </p>
                </div>
                <div className="w-full h-[45%] mt-auto relative z-10 overflow-hidden border-t border-white/10">
                  <img 
                     src="https://i.ibb.co/yFjLBfVF/CALENDAR.webp" 
-                    alt="Calendário de Performance" 
+                    alt="Dashboard Analítico" 
                     className="w-full h-full object-cover object-top hover:scale-105 transition-transform duration-500"
                     loading="lazy" 
                  />
@@ -290,13 +290,13 @@ const LandingPage = () => {
                         SEU ESCRITÓRIO <br/> <span className="text-emerald-500">NO SEU BOLSO.</span>
                     </h3>
                     <p className="text-slate-400 text-lg mb-8 max-w-lg mx-auto md:mx-0 font-medium leading-relaxed">
-                        Use direto pelo navegador do seu celular. Rápido, fluido e sem necessidade de downloads na loja de aplicativos. Adicione à tela de início e tenha acesso imediato.
+                        Interface responsiva direto pelo navegador do celular. Rápido, fluido e sem burocracias de loja de apps. Adicione à tela de início para acesso instantâneo.
                     </p>
                     <button 
                         onClick={handleSignUp} 
                         className="bg-emerald-500 text-slate-950 px-8 py-4 rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-emerald-400 transition-all shadow-lg hover:shadow-emerald-500/30 relative z-30"
                     >
-                        Começar Agora
+                        Criar Conta
                     </button>
                 </div>
 
@@ -306,7 +306,7 @@ const LandingPage = () => {
                         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-24 h-6 bg-[#1e293b] rounded-b-2xl z-30"></div>
                         <img 
                             src="https://i.ibb.co/YFQFFLvY/mobile.webp" 
-                            alt="BetTracker Mobile App" 
+                            alt="Visualização Mobile do Sistema" 
                             className="w-full h-full object-cover"
                             loading="lazy"
                         />
@@ -334,9 +334,9 @@ const LandingPage = () => {
                 <Trophy size={32} strokeWidth={3} />
             </div>
             
-            <h2 className="text-3xl md:text-5xl font-black mb-6 text-white tracking-tight">Pare de perder dinheiro hoje.</h2>
+            <h2 className="text-3xl md:text-5xl font-black mb-6 text-white tracking-tight">Pare de contar com a sorte.</h2>
             <p className="text-emerald-100/70 text-lg mb-10 max-w-2xl mx-auto font-medium">
-              Crie sua conta gratuita em menos de 30 segundos. Acesso imediato a todas as ferramentas básicas.
+              Acesso imediato às ferramentas essenciais. Crie sua conta gratuita em menos de 30 segundos e comece a gerenciar seu capital de forma analítica.
             </p>
             
             <div className="flex flex-col sm:flex-row justify-center gap-4">
@@ -344,34 +344,36 @@ const LandingPage = () => {
                 onClick={handleSignUp}
                 className="bg-emerald-500 hover:bg-emerald-400 text-slate-950 px-12 py-5 rounded-2xl font-black text-sm uppercase tracking-widest transition-all shadow-xl shadow-emerald-500/20 active:scale-95 hover:scale-105"
                 >
-                Criar Minha Conta Grátis
+                Iniciar Controle Gratuito
                 </button>
             </div>
             
             <p className="mt-8 text-[10px] text-slate-500 font-bold uppercase tracking-widest">
-              Junte-se a apostadores profissionais
+              Arquitetura de Gestão Profissional
             </p>
           </div>
         </div>
       </section>
 
-      {/* --- FOOTER --- */}
-      <footer className="border-t border-white/5 bg-[#01040f] pt-16 pb-8 px-6">
-        <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-8">
-            <div className="flex items-center gap-2">
-                <div className="w-6 h-6 bg-slate-800 rounded flex items-center justify-center font-bold text-xs text-white">B</div>
-                <span className="font-bold text-slate-300 tracking-tight text-sm">BETTRACKER PRO</span>
-            </div>
-            
-            <div className="flex flex-wrap gap-8 text-sm text-slate-500 font-medium justify-center md:justify-start">
-                <a href="https://docs.google.com/document/d/1wDahOoeTtlRRj5QXLuxyEEGaIXD24P10ixak5I6fpT4/edit?usp=sharing" target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors">Termos de Uso</a>
-                <a href="https://docs.google.com/document/d/1oqh1V6PAQybR3wPWlRu_9UZ9yzrW48tTsTVubwy6S6k/edit?usp=sharing" target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors">Políticas de Privacidade</a>
-                <a href="https://t.me/magraodotrafego" target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors">Contato</a>
-            </div>
+      {/* --- FOOTER BLINDADO --- */}
+      <footer className="bg-[#020617] border-t border-slate-800 py-12 px-6 mt-10">
+        <div className="max-w-6xl mx-auto flex flex-col items-center text-center">
+          
+          {/* Links Obrigatórios */}
+          <div className="flex flex-wrap justify-center gap-6 mb-8 text-xs font-bold uppercase tracking-widest text-slate-500">
+            <a href="https://docs.google.com/document/d/1wDahOoeTtlRRj5QXLuxyEEGaIXD24P10ixak5I6fpT4/edit?usp=sharing" target="_blank" rel="noopener noreferrer" className="hover:text-emerald-500 transition-colors">Termos de Uso</a>
+            <a href="https://docs.google.com/document/d/1oqh1V6PAQybR3wPWlRu_9UZ9yzrW48tTsTVubwy6S6k/edit?usp=sharing" target="_blank" rel="noopener noreferrer" className="hover:text-emerald-500 transition-colors">Política de Privacidade</a>
+            <a href="mailto:suporte@bettrackerpro.com.br" className="hover:text-emerald-500 transition-colors">suporte@bettrackerpro.com.br</a>
+          </div>
 
-            <p className="text-slate-600 text-xs font-medium text-center md:text-right">
-                © {new Date().getFullYear()} BetTracker Pro. Todos os direitos reservados a simplifica.dev.
-            </p>
+          {/* Disclaimer Obrigatório (Gateway Compliance) */}
+          <p className="text-[10px] text-slate-600 max-w-4xl leading-relaxed mb-6">
+            AVISO LEGAL: O BetTracker PRO é exclusivamente um software de gestão de portfólio, registro de dados e fornecimento de calculadoras matemáticas. Nós não somos uma casa de apostas, não vendemos sinais, não fazemos recomendações de investimentos e não prometemos ou garantimos ganhos financeiros. O sucesso no mercado depende exclusivamente das decisões e habilidades do usuário.
+          </p>
+
+          <p className="text-[10px] text-slate-700 font-bold uppercase tracking-widest">
+            &copy; {new Date().getFullYear()} BetTracker PRO. Todos os direitos reservados.
+          </p>
         </div>
       </footer>
     </div>
