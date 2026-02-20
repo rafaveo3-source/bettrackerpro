@@ -38,6 +38,7 @@ const NewBetModal: React.FC<NewBetModalProps> = ({
     displayMode,
     unitSize,
     isPro, 
+    activeBankrollId, // 🔥 Puxando a banca ativa para validação local
     
     // Dados Globais
     globalLeagues,
@@ -71,19 +72,16 @@ const NewBetModal: React.FC<NewBetModalProps> = ({
     cashoutValue: ''
   });
 
-  // 🔥 FILTRAGEM DE SEGURANÇA PRO/FREE
   const availableStrategies = isPro ? customStrategies : [];
   const availableMarkets = isPro ? customMarkets : []; 
   const availableMethods = isPro ? methods : [];
 
-  // Carrega ligas ao abrir
   useEffect(() => {
     if (isOpen && globalLeagues.length === 0) {
       fetchLeagues();
     }
   }, [isOpen]);
 
-  // Carrega times da liga
   useEffect(() => {
     if (selectedLeagueId && selectedLeagueId !== 'manual') {
       fetchLeagueTeams(selectedLeagueId);
@@ -94,7 +92,6 @@ const NewBetModal: React.FC<NewBetModalProps> = ({
     }
   }, [selectedLeagueId]);
 
-  // Nome do evento automático
   useEffect(() => {
     if (!isManualMode && selectedHomeTeam && selectedAwayTeam) {
       const home = currentLeagueTeams.find(t => t.id === selectedHomeTeam)?.name || '';
@@ -105,7 +102,6 @@ const NewBetModal: React.FC<NewBetModalProps> = ({
     }
   }, [selectedHomeTeam, selectedAwayTeam, isManualMode, currentLeagueTeams]);
 
-  // Inicialização (Edit vs New)
   useEffect(() => {
     if (betToEdit) {
       setFormData({
@@ -142,7 +138,6 @@ const NewBetModal: React.FC<NewBetModalProps> = ({
       });
       setManualMarket('');
       
-      // 🔥 Se não for PRO, força modo manual imediatamente
       setIsManualMode(!isPro || userLeagues.length === 0);
       setSelectedLeagueId('');
       setSelectedHomeTeam('');
@@ -153,6 +148,12 @@ const NewBetModal: React.FC<NewBetModalProps> = ({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+
+    // 🔥 NOVA VALIDAÇÃO DE BANCA ANTES DE CONTINUAR
+    if (!activeBankrollId) {
+      setError('Crie ou selecione um portfólio (banca) antes de registrar uma entrada.');
+      return;
+    }
 
     if (!formData.event || !formData.odds || !formData.stake) {
       setError('Preencha todos os campos obrigatórios.');
@@ -180,8 +181,7 @@ const NewBetModal: React.FC<NewBetModalProps> = ({
       return;
     }
 
-    const finalMarket =
-      formData.market === '__custom' ? manualMarket : formData.market;
+    const finalMarket = formData.market === '__custom' ? manualMarket : formData.market;
 
     const payload = {
       ...formData,
@@ -207,11 +207,9 @@ const NewBetModal: React.FC<NewBetModalProps> = ({
 
   const calculateResult = () => {
     let stake = parseFloat(formData.stake) || 0;
-
     if (displayMode === 'units') {
       stake = stake * unitSize;
     }
-
     const odds = parseFloat(formData.odds) || 0;
     const cashout = parseFloat(formData.cashoutValue) || 0;
 
@@ -261,37 +259,43 @@ const NewBetModal: React.FC<NewBetModalProps> = ({
             animate={{ scale: 1, opacity: 1, y: 0 }}
             exit={{ scale: 0.95, opacity: 0, y: 30 }}
             onClick={(e) => e.stopPropagation()}
-            className="bg-gradient-to-b from-slate-900 to-slate-950 border border-slate-800 w-full max-w-3xl rounded-3xl shadow-2xl my-8 flex flex-col"
+            className="bg-gradient-to-b from-slate-900 to-slate-950 border border-slate-800 w-full max-w-3xl rounded-3xl shadow-2xl my-8 flex flex-col relative overflow-hidden"
           >
-            <div className="px-6 py-5 border-b border-slate-800 flex justify-between items-center sticky top-0 bg-slate-900/95 backdrop-blur z-10 rounded-t-3xl">
-              <div>
-                <h2 className="text-xl md:text-2xl font-black text-white tracking-tight flex items-center gap-2">
-                  {betToEdit ? 'Editar Operação' : 'Nova Operação'}
-                </h2>
-                <p className="text-slate-500 text-xs md:text-sm mt-0.5">
-                  Preencha os detalhes do registro no diário
-                </p>
+            {/* 🔥 CABEÇALHO FIXO COM MENSAGEM DE ERRO IMBUTIDA (NUNCA É CORTADA) */}
+            <div className="px-6 py-5 border-b border-slate-800 flex flex-col gap-4 sticky top-0 bg-slate-900/95 backdrop-blur z-20 rounded-t-3xl">
+              <div className="flex justify-between items-center">
+                <div>
+                  <h2 className="text-xl md:text-2xl font-black text-white tracking-tight flex items-center gap-2">
+                    {betToEdit ? 'Editar Operação' : 'Nova Operação'}
+                  </h2>
+                  <p className="text-slate-500 text-xs md:text-sm mt-0.5">
+                    Preencha os detalhes do registro no diário de bordo
+                  </p>
+                </div>
+                <button
+                  onClick={onClose}
+                  className="bg-slate-800/50 p-2 rounded-full text-slate-400 hover:text-white hover:bg-slate-800 transition-all"
+                >
+                  <X size={20} />
+                </button>
               </div>
-              <button
-                onClick={onClose}
-                className="bg-slate-800/50 p-2 rounded-full text-slate-400 hover:text-white hover:bg-slate-800 transition-all"
-              >
-                <X size={20} />
-              </button>
+
+              <AnimatePresence>
+                {error && (
+                  <motion.div 
+                    initial={{ opacity: 0, y: -10, height: 0 }}
+                    animate={{ opacity: 1, y: 0, height: 'auto' }}
+                    exit={{ opacity: 0, height: 0 }}
+                    className="bg-red-500/10 border border-red-500/30 text-red-400 p-3 rounded-xl text-xs md:text-sm flex items-center gap-3 font-medium"
+                  >
+                    <AlertCircle size={16} className="shrink-0" />
+                    {error}
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </div>
 
-            <form onSubmit={handleSubmit} className="p-6 md:p-8 space-y-6 md:space-y-8 overflow-y-auto max-h-[85vh] md:max-h-none scrollbar-hide">
-
-              {error && (
-                <motion.div 
-                  initial={{ opacity: 0, y: -10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className="bg-red-500/10 border border-red-500/30 text-red-400 p-4 rounded-xl text-sm flex items-center gap-3"
-                >
-                  <AlertCircle size={18} className="shrink-0" />
-                  {error}
-                </motion.div>
-              )}
+            <form onSubmit={handleSubmit} className="p-6 md:p-8 space-y-6 md:space-y-8 overflow-y-auto max-h-[80vh] md:max-h-none scrollbar-hide">
 
               <div className="space-y-3">
                 <label className="text-xs uppercase text-slate-500 font-bold tracking-wider ml-1">
@@ -316,7 +320,6 @@ const NewBetModal: React.FC<NewBetModalProps> = ({
                 </div>
               </div>
 
-              {/* Botão de Toggle Manual - Desabilitado se !isPro */}
               {!betToEdit && myActiveLeagues.length > 0 && isPro && (
                 <div className="flex justify-end">
                     <button 
@@ -339,7 +342,6 @@ const NewBetModal: React.FC<NewBetModalProps> = ({
                         <Trophy size={12} /> Liga / Competição
                       </label>
                       
-                      {/* 🔥 BLOQUEIO: Se não for PRO, ou se estiver em modo manual, ou sem ligas, cai no Select Simples */}
                       {!isManualMode && myActiveLeagues.length > 0 && isPro ? (
                         <select
                           value={selectedLeagueId}
@@ -379,7 +381,6 @@ const NewBetModal: React.FC<NewBetModalProps> = ({
                         {!isPro && <span className="text-[9px] text-amber-500 flex items-center gap-1 ml-auto"><Lock size={8}/> Seleção Automática (PRO)</span>}
                       </label>
 
-                      {/* 🔥 BLOQUEIO: Se não for PRO, não exibe o seletor de times */}
                       {!isManualMode && selectedLeagueId && selectedLeagueId !== 'manual' && isPro ? (
                          <div className="flex flex-col md:flex-row gap-2 items-center">
                             <div className="flex-1 w-full">
