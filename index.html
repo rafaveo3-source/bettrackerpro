@@ -7,30 +7,9 @@
     
     <title>BetTracker PRO | Gestão Profissional de Portfólio Esportivo</title>
     <meta name="description" content="Software SaaS para gestão de capital, análise de dados e controle emocional (Stop Loss) para traders e investidores esportivos." />
+    
     <meta name="google-site-verification" content="WrPUR-RC6GjaLpn3nL9H6NTNfgRI4AjhzpFvEHt6eI0" />
 
-    <script async src="https://www.googletagmanager.com/gtag/js?id=G-SEU_ID_DO_GA4_AQUI"></script>
-    <script>
-      window.dataLayer = window.dataLayer || [];
-      function gtag(){dataLayer.push(arguments);}
-      gtag('js', new Date());
-      gtag('config', 'G-SEU_ID_DO_GA4_AQUI'); 
-      gtag('config', 'AW-SEU_ID_DO_ADS_AQUI');
-    </script>
-
-    <script>
-      !function(f,b,e,v,n,t,s)
-      {if(f.fbq)return;n=f.fbq=function(){n.callMethod?
-      n.callMethod.apply(n,arguments):n.queue.push(arguments)};
-      if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
-      n.queue=[];t=b.createElement(e);t.async=!0;
-      t.src=v;s=b.getElementsByTagName(e)[0];
-      s.parentNode.insertBefore(t,s)}(window, document,'script',
-      'https://connect.facebook.net/en_US/fbevents.js');
-      fbq('init', 'SEU_ID_DO_PIXEL_AQUI');
-      fbq('track', 'PageView');
-    </script>
-    <noscript><img height="1" width="1" style="display:none" src="https://www.facebook.com/tr?id=SEU_ID_DO_PIXEL_AQUI&ev=PageView&noscript=1"/></noscript>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
     <script>
@@ -42,7 +21,6 @@
               sans: ['Inter', 'sans-serif'],
             },
             colors: {
-              // Graphite Palette (Neutral/Zinc style) replacing standard Blue-ish Slate
               slate: {
                 50: '#fafafa',
                 100: '#f4f4f5',
@@ -53,10 +31,9 @@
                 600: '#52525b',
                 700: '#3f3f46',
                 800: '#27272a',
-                900: '#18181b', // Card Background
-                950: '#09090b', // App Background
+                900: '#18181b', 
+                950: '#09090b', 
               },
-              // Mapping 'emerald' classes to CSS variables for dynamic theming (Defaults to Gold)
               emerald: {
                 50: 'rgb(var(--color-primary-50) / <alpha-value>)',
                 100: 'rgb(var(--color-primary-100) / <alpha-value>)',
@@ -70,7 +47,6 @@
     </script>
     <style>
       :root {
-        /* Default to Gold/Amber Palette (Premium Gold) */
         --color-primary-50: 255 251 235;
         --color-primary-100: 254 243 199;
         --color-primary-500: 245 158 11;
@@ -84,7 +60,6 @@
         -moz-osx-font-smoothing: grayscale;
       }
 
-      /* Premium Card Effects per Theme */
       .glass-card {
         background: rgba(255, 255, 255, 1);
         border: 1px solid #e4e4e7;
@@ -92,13 +67,12 @@
       }
 
       .dark .glass-card {
-        background: rgba(24, 24, 27, 0.6); /* Slate-900 with opacity */
+        background: rgba(24, 24, 27, 0.6); 
         backdrop-filter: blur(12px);
         border: 1px solid rgba(255, 255, 255, 0.08);
         box-shadow: 0 10px 20px -5px rgba(0, 0, 0, 0.5);
       }
 
-      /* Custom Scrollbar - Graphite Style */
       ::-webkit-scrollbar { width: 6px; }
       ::-webkit-scrollbar-track { background: transparent; }
       .dark ::-webkit-scrollbar-thumb { background: #3f3f46; border-radius: 10px; }
@@ -115,24 +89,7 @@
         -webkit-text-fill-color: transparent;
       }
     </style>
-  <script type="importmap">
-{
-  "imports": {
-    "react": "https://esm.sh/react@^19.2.4",
-    "react-dom/": "https://esm.sh/react-dom@^19.2.4/",
-    "react/": "https://esm.sh/react@^19.2.4/",
-    "zustand": "https://esm.sh/zustand@^5.0.11",
-    "zustand/": "https://esm.sh/zustand@^5.0.11/",
-    "@supabase/supabase-js": "https://esm.sh/@supabase/supabase-js@^2.95.3",
-    "lucide-react": "https://esm.sh/lucide-react@^0.563.0",
-    "framer-motion": "https://esm.sh/framer-motion@^12.34.0",
-    "recharts": "https://esm.sh/recharts@^3.7.0",
-    "vite": "https://esm.sh/vite@^7.3.1",
-    "@vitejs/plugin-react": "https://esm.sh/@vitejs/plugin-react@^5.1.4"
-  }
-}
-</script>
-</head>
+  </head>
   <body class="bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100">
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
