@@ -1,13 +1,36 @@
 <!DOCTYPE html>
 <html lang="pt-BR" class="dark">
   <head>
-    <head>
     <meta charset="UTF-8" />
-    <title>BetTracker PRO | Gestão Profissional de Portfólio Esportivo</title>
-    <meta name="description" content="Software SaaS para gestão de capital..." />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     
-    <meta name="google-site-verification" content="<meta name="google-site-verification" content="WrPUR-RC6GjaLpn3nL9H6NTNfgRI4AjhzpFvEHt6eI0" />" />
-  <title>BetTracker Pro | Gestão de Apostas Esportivas</title>
+    <title>BetTracker PRO | Gestão Profissional de Portfólio Esportivo</title>
+    <meta name="description" content="Software SaaS para gestão de capital, análise de dados e controle emocional (Stop Loss) para traders e investidores esportivos." />
+    <meta name="google-site-verification" content="WrPUR-RC6GjaLpn3nL9H6NTNfgRI4AjhzpFvEHt6eI0" />
+
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-SEU_ID_DO_GA4_AQUI"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+      gtag('config', 'G-SEU_ID_DO_GA4_AQUI'); 
+      gtag('config', 'AW-SEU_ID_DO_ADS_AQUI');
+    </script>
+
+    <script>
+      !function(f,b,e,v,n,t,s)
+      {if(f.fbq)return;n=f.fbq=function(){n.callMethod?
+      n.callMethod.apply(n,arguments):n.queue.push(arguments)};
+      if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
+      n.queue=[];t=b.createElement(e);t.async=!0;
+      t.src=v;s=b.getElementsByTagName(e)[0];
+      s.parentNode.insertBefore(t,s)}(window, document,'script',
+      'https://connect.facebook.net/en_US/fbevents.js');
+      fbq('init', 'SEU_ID_DO_PIXEL_AQUI');
+      fbq('track', 'PageView');
+    </script>
+    <noscript><img height="1" width="1" style="display:none" src="https://www.facebook.com/tr?id=SEU_ID_DO_PIXEL_AQUI&ev=PageView&noscript=1"/></noscript>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
     <script>
@@ -112,6 +135,6 @@
 </head>
   <body class="bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100">
     <div id="root"></div>
-    <script type="module" src="/index.tsx"></script>
+    <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
