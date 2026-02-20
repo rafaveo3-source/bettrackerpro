@@ -10,7 +10,8 @@ import {
   ChevronRight,
   ShieldCheck,
   TrendingUp,
-  BarChart3
+  BarChart3,
+  CheckCircle2
 } from 'lucide-react';
 
 // Import do componente de Cookies
@@ -54,7 +55,7 @@ const LandingPage = () => {
             </button>
             <button 
               onClick={handleSignUp} 
-              className="bg-white text-slate-950 px-5 md:px-7 py-2.5 rounded-full font-black text-[10px] md:text-xs uppercase tracking-widest hover:bg-emerald-400 hover:scale-105 transition-all shadow-lg hover:shadow-emerald-500/20 active:scale-95"
+              className="bg-white text-slate-950 px-5 md:px-7 py-2.5 rounded-full font-black text-[10px] md:text-xs uppercase tracking-widest hover:bg-emerald-400 hover:scale-105 transition-all shadow-[0_0_15px_rgba(255,255,255,0.1)] hover:shadow-emerald-500/20 active:scale-95"
             >
               Criar Conta
             </button>
@@ -108,24 +109,31 @@ const LandingPage = () => {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 0.3 }}
-            className="flex flex-col sm:flex-row gap-4 justify-center items-center relative z-20"
+            className="flex flex-col items-center relative z-20"
           >
-            <button 
-              onClick={handleSignUp}
-              className="group relative bg-emerald-500 hover:bg-emerald-400 text-slate-950 px-10 py-5 rounded-2xl font-black text-sm uppercase tracking-widest transition-all shadow-[0_0_40px_rgba(16,185,129,0.3)] hover:shadow-[0_0_60px_rgba(16,185,129,0.5)] active:scale-95 w-full sm:w-auto overflow-hidden z-20"
-            >
-              <span className="relative z-10 flex items-center justify-center gap-2">
-                Começar Grátis <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform"/>
-              </span>
-              <div className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-300" />
-            </button>
+            <div className="flex flex-col sm:flex-row gap-4 justify-center items-center w-full sm:w-auto">
+                <button 
+                onClick={handleSignUp}
+                className="group relative bg-emerald-500 hover:bg-emerald-400 text-slate-950 px-10 py-5 rounded-2xl font-black text-sm uppercase tracking-widest transition-all shadow-[0_0_40px_rgba(16,185,129,0.3)] hover:shadow-[0_0_60px_rgba(16,185,129,0.5)] active:scale-95 w-full sm:w-auto overflow-hidden z-20"
+                >
+                <span className="relative z-10 flex items-center justify-center gap-2">
+                    Começar Grátis <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform"/>
+                </span>
+                <div className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-300" />
+                </button>
+                
+                <button 
+                onClick={() => document.getElementById('features')?.scrollIntoView({ behavior: 'smooth' })}
+                className="text-slate-400 hover:text-white font-bold text-sm px-8 py-5 transition-colors flex items-center gap-2 group z-20"
+                >
+                Ver Funcionalidades <ChevronRight size={16} className="group-hover:translate-x-0.5 transition-transform" />
+                </button>
+            </div>
             
-            <button 
-               onClick={() => document.getElementById('features')?.scrollIntoView({ behavior: 'smooth' })}
-               className="text-slate-400 hover:text-white font-bold text-sm px-8 py-5 transition-colors flex items-center gap-2 group z-20"
-            >
-              Ver Funcionalidades <ChevronRight size={16} className="group-hover:translate-x-0.5 transition-transform" />
-            </button>
+            <div className="flex items-center gap-2 mt-4 text-[10px] uppercase tracking-widest text-slate-500 font-bold">
+                <CheckCircle2 size={12} className="text-emerald-500" />
+                Não exige cartão de crédito
+            </div>
           </motion.div>
 
           {/* DASHBOARD HERO IMAGE (3D Tilt) */}
@@ -363,7 +371,7 @@ const LandingPage = () => {
           <div className="flex flex-wrap justify-center gap-6 mb-8 text-xs font-bold uppercase tracking-widest text-slate-500">
             <a href="https://docs.google.com/document/d/1wDahOoeTtlRRj5QXLuxyEEGaIXD24P10ixak5I6fpT4/edit?usp=sharing" target="_blank" rel="noopener noreferrer" className="hover:text-emerald-500 transition-colors">Termos de Uso</a>
             <a href="https://docs.google.com/document/d/1oqh1V6PAQybR3wPWlRu_9UZ9yzrW48tTsTVubwy6S6k/edit?usp=sharing" target="_blank" rel="noopener noreferrer" className="hover:text-emerald-500 transition-colors">Política de Privacidade</a>
-            <a href="mailto:suporte@bettrackerpro.com.br" className="hover:text-emerald-500 transition-colors">suporte@bettrackerpro.com.br</a>
+            <a href="mailto:agenciasimplificaads@gmail.com" className="hover:text-emerald-500 transition-colors">agenciasimplificaads@gmail.com</a>
           </div>
 
           {/* Disclaimer Obrigatório (Gateway Compliance) */}
@@ -372,7 +380,7 @@ const LandingPage = () => {
           </p>
 
           <p className="text-[10px] text-slate-700 font-bold uppercase tracking-widest">
-            &copy; {new Date().getFullYear()} BetTracker PRO. Todos os direitos reservados.
+            &copy; {new Date().getFullYear()} BetTracker PRO. Todos os direitos reservados a simplifica.dev.
           </p>
         </div>
       </footer>
