@@ -3,33 +3,45 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2"
 
 serve(async (req) => {
   try {
-    // 1. Recebe os dados da Lastlink
+    // 1. Recebe os dados
     const payload = await req.json()
     console.log("Webhook Lastlink recebido:", JSON.stringify(payload))
 
-    // 2. Inicia o Cliente Admin do Supabase
     const supabaseAdmin = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     )
 
-    // 3. Extrai o Email do Cliente e o Evento da Lastlink
-    // A Lastlink envia o email geralmente em payload.data.customer.email
-    const email = payload?.data?.customer?.email || payload?.customer_email || payload?.email;
-    const eventType = payload?.event || payload?.status || '';
-    const planName = payload?.data?.subscription?.plan?.name || payload?.data?.plan_name || '';
+    // 2. Mapeamento preparado para as Letras Maiúsculas da Lastlink
+    const eventType = payload?.Event || payload?.event || payload?.status || '';
+    
+    // Navegando pelos objetos Data -> Customer -> Email
+    const dataObj = payload?.Data || payload?.data || {};
+    const customerObj = dataObj?.Customer || dataObj?.customer || payload?.customer || {};
+    const email = customerObj?.Email || customerObj?.email || payload?.email || payload?.customer_email;
+    
+    // Pegando o nome do plano (Trimestral, Semestral, Anual)
+    const subObj = dataObj?.Subscription || dataObj?.subscription || {};
+    const planObj = subObj?.Plan || subObj?.plan || {};
+    const planName = planObj?.Name || planObj?.name || payload?.plan_name || '';
 
     if (!email) {
-      return new Response(JSON.stringify({ error: "Email não encontrado no payload" }), { status: 400 })
+      console.error("Email não encontrado no payload!");
+      return new Response(JSON.stringify({ error: "Email não encontrado" }), { status: 400 })
     }
 
-    // 4. Se o pagamento foi APROVADO ou RENOVADO
-    const isApproved = eventType.includes('approved') || eventType.includes('paid') || eventType.includes('renewed');
+    const eventTypeLower = String(eventType).toLowerCase();
+    
+    // 3. Lógica de Aprovação (Pagamento Aprovado ou Assinatura Criada/Renovada)
+    const isApproved = eventTypeLower.includes('approved') || 
+                       eventTypeLower.includes('paid') || 
+                       eventTypeLower.includes('renewed') || 
+                       eventTypeLower.includes('created') || 
+                       eventTypeLower.includes('active');
 
     if (isApproved) {
-      // Descobre quantos dias liberar com base no nome do plano
       let daysToAdd = 90; // Padrão: Trimestral
-      const nameLower = planName.toLowerCase();
+      const nameLower = String(planName).toLowerCase();
       
       if (nameLower.includes('semestral')) daysToAdd = 180;
       if (nameLower.includes('anual') || nameLower.includes('vip')) daysToAdd = 365;
@@ -37,23 +49,25 @@ serve(async (req) => {
       const validUntilDate = new Date();
       validUntilDate.setDate(validUntilDate.getDate() + daysToAdd);
 
-      // Atualiza o perfil do usuário para PRO
       const { error } = await supabaseAdmin
         .from('profiles')
         .update({ 
           is_pro: true, 
           valid_until: validUntilDate.toISOString() 
         })
-        .eq('email', email)
+        .eq('email', String(email).toLowerCase().trim())
 
       if (error) throw error;
 
-      console.log(`✅ PRO ATIVADO: ${email} por ${daysToAdd} dias.`);
+      console.log(`✅ PRO ATIVADO: ${email} por ${daysToAdd} dias. (Plano detectado: ${planName})`);
       return new Response(JSON.stringify({ success: true, message: `PRO ativado para ${email}` }), { status: 200 })
     }
 
-    // 5. Se a assinatura foi CANCELADA, REEMBOLSADA ou CHARGEBACK
-    const isCanceled = eventType.includes('canceled') || eventType.includes('refunded') || eventType.includes('chargeback');
+    // 4. Lógica de Reembolso / Cancelamento
+    const isCanceled = eventTypeLower.includes('canceled') || 
+                       eventTypeLower.includes('refunded') || 
+                       eventTypeLower.includes('chargeback') || 
+                       eventTypeLower.includes('expired');
 
     if (isCanceled) {
       const { error } = await supabaseAdmin
@@ -62,7 +76,7 @@ serve(async (req) => {
           is_pro: false, 
           valid_until: null 
         })
-        .eq('email', email)
+        .eq('email', String(email).toLowerCase().trim())
 
       if (error) throw error;
 
@@ -70,8 +84,8 @@ serve(async (req) => {
       return new Response(JSON.stringify({ success: true, message: `PRO removido de ${email}` }), { status: 200 })
     }
 
-    // Se for outro evento qualquer da Lastlink (ex: boleto gerado), apenas ignora.
-    return new Response(JSON.stringify({ success: true, message: "Evento ignorado" }), { status: 200 })
+    // Se for outro evento qualquer (ex: boleto gerado), ignora
+    return new Response(JSON.stringify({ success: true, message: `Evento ignorado: ${eventType}` }), { status: 200 })
 
   } catch (error: any) {
     console.error("Erro no Webhook da Lastlink:", error.message)
