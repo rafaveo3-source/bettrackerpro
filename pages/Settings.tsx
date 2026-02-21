@@ -167,7 +167,7 @@ const Settings: React.FC = () => {
                             <div className="flex items-start gap-2 bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/20 text-amber-700 dark:text-amber-400 p-3 rounded-xl max-w-sm">
                                 <AlertCircle size={16} className="shrink-0 mt-0.5" />
                                 <p className="text-[10px] font-bold leading-relaxed">
-                                    Faltam apenas {daysRemaining} dias. O pagamento na Kiwify costuma ser automático, garanta o limite para não perder o acesso!
+                                    Faltam apenas {daysRemaining} dias. O pagamento na Lastlink costuma ser automático, garanta o limite na conta/cartão para não perder o acesso!
                                 </p>
                             </div>
                         )}
@@ -180,12 +180,12 @@ const Settings: React.FC = () => {
                                 Estender Plano
                             </button>
                             <a 
-                                href="https://dashboard.kiwify.com.br/purchases"
+                                href="https://lastlink.com/login"
                                 target="_blank"
                                 rel="noreferrer"
                                 className="flex-1 md:flex-none bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 px-4 py-2.5 rounded-xl font-bold text-[10px] uppercase tracking-widest transition-all active:scale-95 text-center border border-slate-200 dark:border-slate-700 flex items-center justify-center gap-1.5"
                             >
-                                Kiwify <ExternalLink size={12} />
+                                Gerenciar Assinatura <ExternalLink size={12} />
                             </a>
                         </div>
                     </>
