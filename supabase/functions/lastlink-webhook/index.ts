@@ -3,7 +3,6 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2"
 
 serve(async (req) => {
   try {
-    // 1. Recebe os dados
     const payload = await req.json()
     console.log("Webhook Lastlink recebido:", JSON.stringify(payload))
 
@@ -12,27 +11,34 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     )
 
-    // 2. Mapeamento preparado para as Letras Maiúsculas da Lastlink
     const eventType = payload?.Event || payload?.event || payload?.status || '';
     
-    // Navegando pelos objetos Data -> Customer -> Email
-    const dataObj = payload?.Data || payload?.data || {};
-    const customerObj = dataObj?.Customer || dataObj?.customer || payload?.customer || {};
-    const email = customerObj?.Email || customerObj?.email || payload?.email || payload?.customer_email;
+    // BUSCA BLINDADA DE E-MAIL (Mapeando TODAS as possibilidades da Lastlink)
+    const email = payload?.Customer?.Email || 
+                  payload?.Customer?.email || 
+                  payload?.customer?.email || 
+                  payload?.Data?.Customer?.Email || 
+                  payload?.data?.customer?.email || 
+                  payload?.email || 
+                  payload?.customer_email;
     
-    // Pegando o nome do plano (Trimestral, Semestral, Anual)
-    const subObj = dataObj?.Subscription || dataObj?.subscription || {};
-    const planObj = subObj?.Plan || subObj?.plan || {};
-    const planName = planObj?.Name || planObj?.name || payload?.plan_name || '';
+    // BUSCA BLINDADA DO NOME DO PLANO
+    const planName = payload?.Subscription?.Plan?.Name || 
+                     payload?.Subscription?.plan?.name ||
+                     payload?.subscription?.plan?.name || 
+                     payload?.Data?.Subscription?.Plan?.Name || 
+                     payload?.plan_name || 
+                     '';
 
     if (!email) {
-      console.error("Email não encontrado no payload!");
+      // Se ainda assim não achar, ele vai cuspir o arquivo inteiro no log para vermos o formato exato
+      console.error("Email não encontrado! Estrutura recebida:", JSON.stringify(payload));
       return new Response(JSON.stringify({ error: "Email não encontrado" }), { status: 400 })
     }
 
     const eventTypeLower = String(eventType).toLowerCase();
     
-    // 3. Lógica de Aprovação (Pagamento Aprovado ou Assinatura Criada/Renovada)
+    // VERIFICA SE FOI APROVADO
     const isApproved = eventTypeLower.includes('approved') || 
                        eventTypeLower.includes('paid') || 
                        eventTypeLower.includes('renewed') || 
@@ -59,11 +65,11 @@ serve(async (req) => {
 
       if (error) throw error;
 
-      console.log(`✅ PRO ATIVADO: ${email} por ${daysToAdd} dias. (Plano detectado: ${planName})`);
+      console.log(`✅ PRO ATIVADO: ${email} por ${daysToAdd} dias. (Plano: ${planName})`);
       return new Response(JSON.stringify({ success: true, message: `PRO ativado para ${email}` }), { status: 200 })
     }
 
-    // 4. Lógica de Reembolso / Cancelamento
+    // VERIFICA SE FOI CANCELADO/ESTORNADO
     const isCanceled = eventTypeLower.includes('canceled') || 
                        eventTypeLower.includes('refunded') || 
                        eventTypeLower.includes('chargeback') || 
@@ -84,7 +90,6 @@ serve(async (req) => {
       return new Response(JSON.stringify({ success: true, message: `PRO removido de ${email}` }), { status: 200 })
     }
 
-    // Se for outro evento qualquer (ex: boleto gerado), ignora
     return new Response(JSON.stringify({ success: true, message: `Evento ignorado: ${eventType}` }), { status: 200 })
 
   } catch (error: any) {
