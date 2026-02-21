@@ -47,8 +47,8 @@ const ProPage: React.FC = () => {
         'Suporte Prioritário'
       ],
       missing: [],
-      // 👇 MANTENHA O SEU LINK DA KIWIFY AQUI
-      link: 'https://pay.kiwify.com.br/RTVLbxr', 
+      // SEU LINK OFICIAL DA LASTLINK - TRIMESTRAL
+      link: 'https://lastlink.com/p/C184F4DD2/checkout-payment/', 
       recommended: false,
       color: 'blue',
       isFree: false
@@ -61,15 +61,15 @@ const ProPage: React.FC = () => {
       monthlyEquivalent: 'R$ 16,49/mês',
       savings: 'Economize R$ 160 no ano',
       features: [
-        'Todas as features do Semestral e Trimestral',
+        'Todas as features do Trimestral',
         'Acesso VITALÍCIO a atualizações',
         'Acesso Antecipado a Novas Metas',
         'Grupo de Networking (Bônus)',
         'Selo VIP no Perfil de Operador'
       ],
       missing: [],
-      // 👇 MANTENHA O SEU LINK DA KIWIFY AQUI
-      link: 'https://pay.kiwify.com.br/gsD3KTv', 
+      // SEU LINK OFICIAL DA LASTLINK - ANUAL
+      link: 'https://lastlink.com/p/CFBECA72D/checkout-payment/', 
       recommended: true,
       color: 'emerald',
       isFree: false
@@ -90,8 +90,8 @@ const ProPage: React.FC = () => {
         'Suporte Prioritário'
       ],
       missing: [],
-      // 👇 MANTENHA O SEU LINK DA KIWIFY AQUI
-      link: 'https://pay.kiwify.com.br/LbPU3YC', 
+      // SEU LINK OFICIAL DA LASTLINK - SEMESTRAL
+      link: 'https://lastlink.com/p/CFBF0E56B/checkout-payment/', 
       recommended: false,
       color: 'purple',
       isFree: false
@@ -133,12 +133,12 @@ const ProPage: React.FC = () => {
             </div>
             <div className="relative z-10">
                 <a 
-                    href="https://dashboard.kiwify.com.br/purchases"
+                    href="https://lastlink.com/login"
                     target="_blank"
                     rel="noreferrer"
                     className="inline-flex items-center gap-2 bg-slate-200 hover:bg-slate-300 text-slate-700 dark:bg-white/10 dark:hover:bg-white/20 dark:text-white px-6 py-3 rounded-xl font-bold text-xs uppercase tracking-widest transition-all"
                 >
-                    Gerenciar na Kiwify <ExternalLink size={14} />
+                    Gerenciar Assinatura <ExternalLink size={14} />
                 </a>
             </div>
         </div>
