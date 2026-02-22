@@ -11,8 +11,10 @@ const ManageTeams = () => {
     fetchLeagueTeams, 
     toggleUserTeam, 
     isLoadingTeams,
-    isPro // 🔥 Pegue o isPro
+    isPro 
   } = useBetStore();
+  
+  const navigate = useNavigate(); // <-- ADICIONADO
 
   const safeGlobalLeagues = Array.isArray(globalLeagues) ? globalLeagues : [];
   const safeUserLeagues = Array.isArray(userLeagues) ? userLeagues : [];
@@ -36,7 +38,7 @@ const ManageTeams = () => {
 
   const checkProAndExecute = (action: () => void) => {
       if (!isPro) {
-          alert("Gerenciamento de Times Favoritos é exclusivo PRO 💎");
+          navigate('/pro'); // <-- UX: Redireciona para venda
           return;
       }
       action();

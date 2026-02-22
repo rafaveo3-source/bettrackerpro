@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useBetStore, GlobalMarket } from '../store/useBetStore';
 import { LayoutGrid, Check, Search, Loader2, Tag, CheckSquare, Square, Lock } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useNavigate } from 'react-router-dom';
 
 const ManageMarkets = () => {
   const { 
@@ -14,6 +15,7 @@ const ManageMarkets = () => {
   } = useBetStore();
 
   const [search, setSearch] = useState('');
+  const navigate = useNavigate(); // <-- ADICIONADO
 
   useEffect(() => {
     fetchGlobalMarkets();
@@ -34,7 +36,7 @@ const ManageMarkets = () => {
 
   const checkProAndExecute = (action: () => void) => {
     if (!isPro) {
-        alert("Personalização de Mercados é exclusiva PRO 💎");
+        navigate('/pro'); // <-- UX: Redireciona para venda em vez de alert
         return;
     }
     action();

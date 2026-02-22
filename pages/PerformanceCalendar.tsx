@@ -1,11 +1,24 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom'; // <-- ADICIONADO
 import { useBetStore } from '../store/useBetStore';
 import { ChevronLeft, ChevronRight, Activity, CircleDollarSign, Target, Trophy, Calendar as CalendarIcon } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 const PerformanceCalendar: React.FC = () => {
-  const { history, currency, bankrolls, methods, displayMode, unitSize } = useBetStore();
+  // ADICIONADO isPro no destructuring
+  const { history, currency, bankrolls, methods, displayMode, unitSize, isPro } = useBetStore(); 
   const [currentDate, setCurrentDate] = useState(new Date());
+  
+  const navigate = useNavigate(); // <-- ADICIONADO
+
+  // <-- ADICIONADO TRAVA DE SEGURANÇA
+  useEffect(() => {
+    if (!isPro) {
+      navigate('/pro'); 
+    }
+  }, [isPro, navigate]);
+
+  if (!isPro) return null; // Impede renderização de tela fantasma enquanto redireciona
   const [selectedDate, setSelectedDate] = useState<Date | null>(new Date());
   
   const [selectedBankroll, setSelectedBankroll] = useState('all');
