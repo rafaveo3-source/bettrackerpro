@@ -63,7 +63,8 @@ serve(async (req) => {
     const isApproved = eventTypeLower.includes('approved') || 
                        eventTypeLower.includes('paid') || 
                        eventTypeLower.includes('renewed') || 
-                       eventTypeLower.includes('created');
+                       eventTypeLower.includes('created') ||
+                       eventTypeLower.includes('confirmed'); // <-- Capta 'Purchase_Order_Confirmed'
 
     if (isApproved) {
       let daysToAdd = 90; // Padrão: Trimestral
