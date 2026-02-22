@@ -16,13 +16,12 @@ import {
   Crown,
   Moon,
   Sun,
-  PlayCircle // <-- VÍRGULA ADICIONADA APÓS O SUN
+  PlayCircle
 } from 'lucide-react';
 import { useBetStore } from '../store/useBetStore';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 
-// Componente de Logo
 const Logo = () => (
   <div className="flex items-center gap-2 px-2">
     <div className="w-8 h-8 bg-emerald-500 rounded-lg flex items-center justify-center font-black text-[#020617] text-xl italic shadow-lg shadow-emerald-500/20">
@@ -37,14 +36,14 @@ const Logo = () => (
 interface SidebarProps {
     currentView: string;
     setView: (view: string) => void;
+    isOpen: boolean;
+    setIsOpen: (val: boolean) => void;
 }
 
-const Sidebar: React.FC<SidebarProps> = ({ currentView, setView }) => {
+const Sidebar: React.FC<SidebarProps> = ({ currentView, setView, isOpen, setIsOpen }) => {
   const { user, logout, isPro, isDarkMode, toggleTheme, resetTutorial } = useBetStore();
-  const [isOpen, setIsOpen] = useState(false);
   const navigate = useNavigate();
 
-  // 🔥 NOMENCLATURA INSTITUCIONAL (BLINDAGEM KIWIFY)
   const menuItems = [
     { id: 'dashboard', label: 'Visão Geral', icon: LayoutDashboard },
     { id: 'analytics', label: 'Análise de Dados', icon: BarChart2 },
@@ -72,7 +71,6 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, setView }) => {
 
   return (
     <>
-      {/* Mobile Trigger */}
       <div className="md:hidden fixed top-0 left-0 w-full h-16 bg-white dark:bg-[#020617] border-b border-slate-200 dark:border-slate-800 flex items-center justify-between px-4 z-50 transition-colors duration-300">
         <Logo />
         <button onClick={() => setIsOpen(!isOpen)} className="text-slate-900 dark:text-white p-2">
@@ -80,19 +78,16 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, setView }) => {
         </button>
       </div>
 
-      {/* Sidebar Container */}
       <aside className={`
-        fixed top-0 left-0 h-full bg-white dark:bg-[#020617] border-r border-slate-200 dark:border-slate-800 z-40 transition-all duration-300 w-64 flex flex-col
+        fixed top-0 left-0 h-full bg-white dark:bg-[#020617] border-r border-slate-200 dark:border-slate-800 z-50 transition-transform duration-300 w-64 flex flex-col
         ${isOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}
         md:pt-0 pt-16
       `}>
         
-        {/* Desktop Header */}
         <div className="hidden md:flex h-20 items-center px-6 border-b border-slate-200 dark:border-slate-800/50 transition-colors duration-300">
            <Logo />
         </div>
 
-        {/* User Profile Snippet */}
         <div className="p-6 border-b border-slate-200 dark:border-slate-800/50 transition-colors duration-300">
             <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-full bg-slate-100 dark:bg-slate-800 overflow-hidden border border-slate-200 dark:border-slate-700 shrink-0">
@@ -115,17 +110,19 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, setView }) => {
             </div>
         </div>
 
-        {/* Navigation */}
         <nav className="flex-1 overflow-y-auto py-6 px-4 space-y-1 custom-scrollbar">
             {menuItems.map(item => {
                 const isActive = currentView === item.id;
                 
-                // 🔥 LÓGICA DE ANCORAGEM DO TOUR ADICIONADA AQUI
+                // 🔥 CLASSES DO TOUR ATUALIZADAS
                 let tourClass = '';
                 if (item.id === 'dashboard') tourClass = 'tour-sidebar-dashboard';
                 if (item.id === 'bancas') tourClass = 'tour-sidebar-bankroll';
                 if (item.id === 'mindset') tourClass = 'tour-sidebar-mindset';
-                if (item.id === 'metas') tourClass = 'tour-sidebar-metas'; // <-- ADICIONADO AQUI
+                if (item.id === 'metas') tourClass = 'tour-sidebar-metas';
+                if (item.id === 'calendar') tourClass = 'tour-sidebar-calendar';
+                if (item.id === 'calculators') tourClass = 'tour-sidebar-calculators';
+                if (item.id === 'biblioteca') tourClass = 'tour-sidebar-biblioteca';
 
                 return (
                     <button
@@ -146,21 +143,19 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, setView }) => {
             })}
         </nav>
 
-        {/* Footer / CTA PRO */}
         <div className="p-4 border-t border-slate-200 dark:border-slate-800/50 bg-slate-50 dark:bg-[#020617] transition-colors duration-300">
             
-            {/* 🔥 BOTÃO REVER TUTORIAL ADICIONADO AQUI */}
             <button 
                 onClick={() => {
                     resetTutorial();
-                    if (window.innerWidth < 768) setIsOpen(false); // Fecha a sidebar no mobile para não cobrir o tour
+                    // Força a sidebar a ficar aberta no mobile quando reinicia o tour
+                    if (window.innerWidth < 768) setIsOpen(true); 
                 }}
                 className="w-full flex items-center justify-center gap-2 text-blue-500 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-500/10 py-3 rounded-xl transition-all text-xs font-bold uppercase tracking-widest mb-2"
             >
                 <PlayCircle size={16} /> Rever Tutorial
             </button>
 
-            {/* Tema Toggle */}
             <button 
                 onClick={toggleTheme}
                 className="w-full flex items-center justify-center gap-2 text-slate-500 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200 dark:hover:bg-slate-800/50 py-3 rounded-xl transition-all text-xs font-bold uppercase tracking-widest mb-2"
@@ -197,7 +192,6 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, setView }) => {
 
       </aside>
 
-      {/* Overlay para fechar no mobile */}
       <AnimatePresence>
         {isOpen && (
             <motion.div 
@@ -205,7 +199,8 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, setView }) => {
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
                 onClick={() => setIsOpen(false)}
-                className="fixed inset-0 bg-black/80 backdrop-blur-sm z-30 md:hidden"
+                // z-index deve ser um pouco abaixo da sidebar (que é z-50) e do tour
+                className="fixed inset-0 bg-black/80 backdrop-blur-sm z-40 md:hidden"
             />
         )}
       </AnimatePresence>

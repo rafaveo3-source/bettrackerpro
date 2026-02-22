@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import Sidebar from './components/Sidebar';
 import NewBetModal from './components/NewBetModal';
-import { Plus, Lock, Rocket, Target, ShieldAlert, BarChart3, Wallet, BrainCircuit, X } from 'lucide-react';
+import { Plus, Lock, Rocket, Target, ShieldAlert, BarChart3, Wallet, BrainCircuit, X, CalendarDays, Calculator, BookOpen } from 'lucide-react';
 import { useBetStore, Bet } from './store/useBetStore';
 import Auth from './pages/Auth';
 import Joyride, { Step, CallBackProps, STATUS, TooltipRenderProps } from 'react-joyride';
@@ -21,7 +21,7 @@ const colorPalettes: Record<string, any> = {
 };
 
 // ========================================================
-// 🎨 COMPONENTE CUSTOMIZADO DO TOOLTIP (NÍVEL PRO)
+// 🎨 COMPONENTE CUSTOMIZADO DO TOOLTIP (ADAPTADO MOBILE)
 // ========================================================
 const CustomTooltip = ({
   index,
@@ -35,34 +35,31 @@ const CustomTooltip = ({
   return (
     <div
       {...tooltipProps}
-      className="bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-800 rounded-[2rem] p-6 shadow-2xl max-w-[360px] w-full"
+      // Largura dinâmica: preenche a tela no mobile com margem, e fixa tamanho no desktop
+      className="bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-800 rounded-[2rem] p-5 md:p-6 shadow-2xl w-[calc(100vw-32px)] md:max-w-[360px] mx-auto"
     >
-      {/* Indicador de Progresso (Dots) */}
-      <div className="flex gap-1.5 mb-5 justify-center">
-        {[...Array(6)].map((_, i) => (
+      <div className="flex gap-1.5 mb-4 justify-center">
+        {[...Array(9)].map((_, i) => (
           <div key={i} className={`h-1.5 rounded-full transition-all duration-300 ${i === index ? 'w-6 bg-emerald-500' : 'w-1.5 bg-slate-200 dark:bg-slate-800'}`} />
         ))}
       </div>
 
-      {/* Título com Ícone */}
       <div className="flex items-start justify-between gap-4 mb-3">
-        <h3 className="text-lg font-black text-slate-900 dark:text-white uppercase tracking-tighter italic flex items-center gap-2">
+        <h3 className="text-base md:text-lg font-black text-slate-900 dark:text-white uppercase tracking-tighter italic flex items-center gap-2">
           {step.title}
         </h3>
       </div>
 
-      {/* Corpo de Texto */}
-      <div className="text-sm text-slate-600 dark:text-slate-400 font-medium leading-relaxed mb-6">
+      <div className="text-xs md:text-sm text-slate-600 dark:text-slate-400 font-medium leading-relaxed mb-6">
         {step.content}
       </div>
 
-      {/* Botões de Ação */}
       <div className="flex items-center justify-between mt-auto">
         <button
           {...skipProps}
-          className="text-[10px] font-bold text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 uppercase tracking-widest transition-colors flex items-center gap-1"
+          className="text-[10px] font-bold text-slate-400 hover:text-red-500 uppercase tracking-widest transition-colors flex items-center gap-1"
         >
-          <X size={12} /> Pular Tour
+          <X size={12} /> Pular
         </button>
 
         <div className="flex gap-2">
@@ -103,6 +100,13 @@ const Layout: React.FC<LayoutProps> = ({ children, currentView, setView }) => {
 } = useBetStore();
   const [locked, setLocked] = useState(false);
 
+  // 🔥 GARANTIR QUE A SIDEBAR ABRA NO MOBILE PARA O TOUR
+  useEffect(() => {
+    if (!hasSeenTutorial && isAuthenticated && window.innerWidth < 768) {
+      setIsSidebarOpen(true);
+    }
+  }, [hasSeenTutorial, isAuthenticated]);
+
   useEffect(() => {
      const interval = setInterval(() => setLocked(isTiltLocked()), 1000);
      return () => clearInterval(interval);
@@ -135,7 +139,7 @@ const Layout: React.FC<LayoutProps> = ({ children, currentView, setView }) => {
   }, [toast, setToast]);
 
   // ========================================================
-  // 🔥 CONFIGURAÇÃO DO TUTORIAL INTERATIVO (COPY FOCADA EM BETS)
+  // 🔥 CONFIGURAÇÃO DO TUTORIAL COM NOVAS TELAS
   // ========================================================
   const tutorialSteps: Step[] = [
     {
@@ -149,7 +153,7 @@ const Layout: React.FC<LayoutProps> = ({ children, currentView, setView }) => {
       target: '.tour-sidebar-dashboard',
       placement: 'right',
       title: <><BarChart3 className="text-blue-500" /> Cockpit de Análise</>,
-      content: 'Onde o dinheiro é medido. Aqui você acompanha sua Win Rate real, descobre o EV+ das suas operações e mede seu Max Drawdown para evitar quebras de banca.',
+      content: 'Onde o dinheiro é medido. Aqui você acompanha sua Win Rate real, descobre o EV+ das suas operações e mede seu Max Drawdown para evitar quebras.',
     },
     {
       target: '.tour-sidebar-bankroll',
@@ -158,22 +162,40 @@ const Layout: React.FC<LayoutProps> = ({ children, currentView, setView }) => {
       content: 'Nunca misture o dinheiro. Crie múltiplos Portfólios para separar sua banca de cantos, gestão conservadora, ou caixa alavancado de alta exposição.',
     },
     {
-      target: '.tour-sidebar-metas', // ATENÇÃO: Iremos adicionar essa classe na Sidebar
+      target: '.tour-sidebar-metas',
       placement: 'right',
       title: <><Target className="text-purple-500" /> Sistema Take Profit</>,
-      content: 'O mercado não tem fim, mas sua meta deve ter. Configure alvos financeiros e o sistema travará a banca automaticamente quando você atingir o lucro desejado.',
+      content: 'O mercado não tem fim, mas sua meta deve ter. Configure alvos e o sistema travará a banca automaticamente quando você atingir o lucro desejado.',
     },
     {
       target: '.tour-sidebar-mindset',
       placement: 'right',
       title: <><BrainCircuit className="text-orange-500" /> Módulo Psicológico</>,
-      content: 'Mais de 80% das bancas quebram por descontrole emocional (Tilt). Registre como você se sentiu e veja como sua mente impacta o seu ROI a longo prazo.',
+      content: 'A maioria quebra por descontrole emocional (Tilt). Registre como você se sentiu e veja como sua mente impacta o seu ROI a longo prazo.',
+    },
+    {
+      target: '.tour-sidebar-calendar',
+      placement: 'right',
+      title: <><CalendarDays className="text-pink-500" /> Calendário Financeiro</>,
+      content: 'Acompanhe seus dias de Green e Red de forma visual. O calendário consolida o P&L diário para você entender seus ciclos de lucro.',
+    },
+    {
+      target: '.tour-sidebar-calculators',
+      placement: 'right',
+      title: <><Calculator className="text-teal-500" /> Calculadoras PRO</>,
+      content: 'Valide suas entradas antes de apostar. Ferramentas matemáticas como EV+, Critério de Kelly e Arbitragem garantem precisão técnica.',
+    },
+    {
+      target: '.tour-sidebar-biblioteca',
+      placement: 'right',
+      title: <><BookOpen className="text-indigo-500" /> Playbooks e Gestão</>,
+      content: 'Acesse métodos validados por profissionais. Descubra novas formas de operar e copie blueprints de progressão direto para o seu perfil.',
     },
     {
       target: '.tour-fab-button',
       placement: 'top-end',
       title: <><ShieldAlert className="text-emerald-500" /> Registre o Green</>,
-      content: 'Acabou a operação? Clique aqui. Cadastre a Stake e a Odd. O motor do BetTracker fará todo o cruzamento de dados matemáticos de forma automática.',
+      content: 'Acabou a operação? Clique aqui para cadastrar a Stake e a Odd. O motor do BetTracker fará todo o cruzamento de dados matemáticos.',
     }
   ];
 
@@ -182,13 +204,17 @@ const Layout: React.FC<LayoutProps> = ({ children, currentView, setView }) => {
     const finishedStatuses: string[] = [STATUS.FINISHED, STATUS.SKIPPED];
     if (finishedStatuses.includes(status)) {
       completeTutorial();
+      // Fecha a sidebar no mobile ao finalizar o tour
+      if (window.innerWidth < 768) {
+        setIsSidebarOpen(false); 
+      }
     }
   };
 
   if (!isAuthenticated) return <Auth />;
 
   return (
-    <div className="flex min-h-screen font-sans bg-slate-50 dark:bg-slate-950 transition-colors duration-300 w-full overflow-x-hidden">
+    <div className="flex min-h-screen font-sans bg-slate-50 dark:bg-slate-950 transition-colors duration-300 w-full overflow-x-hidden relative">
       
       {/* MOTOR DO TUTORIAL INJETADO E CUSTOMIZADO */}
       {!hasSeenTutorial && isAuthenticated && (
@@ -196,14 +222,15 @@ const Layout: React.FC<LayoutProps> = ({ children, currentView, setView }) => {
           steps={tutorialSteps}
           run={true}
           continuous={true}
-          showProgress={false} // Desabilitado o padrão, pois criamos um na mão
+          showProgress={false} 
           showSkipButton={true}
           callback={handleJoyrideCallback}
-          tooltipComponent={CustomTooltip} // <-- Chama o componente Tailwind lindão
+          tooltipComponent={CustomTooltip}
+          floaterProps={{ disableAnimation: true }} // Melhora a resposta no mobile
           styles={{
             options: {
-              zIndex: 1000,
-              overlayColor: 'rgba(2, 6, 23, 0.85)', // Fundo mais escuro, focando no app
+              zIndex: 10000,
+              overlayColor: 'rgba(2, 6, 23, 0.85)',
             }
           }}
         />
@@ -224,7 +251,7 @@ const Layout: React.FC<LayoutProps> = ({ children, currentView, setView }) => {
       </div>
 
       {!locked && (
-          <button onClick={() => { setBetToEdit(undefined); setIsModalOpen(true); }} className="tour-fab-button fixed bottom-6 right-6 lg:bottom-10 lg:right-10 bg-emerald-500 hover:bg-emerald-400 text-white dark:text-[#020617] p-4 lg:p-5 rounded-[2rem] shadow-2xl shadow-emerald-500/20 transition-all hover:scale-110 active:scale-95 z-50 flex items-center gap-3 group border-4 border-white dark:border-slate-900">
+          <button onClick={() => { setBetToEdit(undefined); setIsModalOpen(true); }} className="tour-fab-button fixed bottom-6 right-6 lg:bottom-10 lg:right-10 bg-emerald-500 hover:bg-emerald-400 text-white dark:text-[#020617] p-4 lg:p-5 rounded-[2rem] shadow-2xl shadow-emerald-500/20 transition-all hover:scale-110 active:scale-95 z-40 flex items-center gap-3 group border-4 border-white dark:border-slate-900">
             <Plus size={24} />
             <span className="max-w-0 overflow-hidden group-hover:max-w-xs transition-all duration-300 whitespace-nowrap font-black uppercase text-xs tracking-widest hidden md:inline-block">Registrar Entrada</span>
           </button>
