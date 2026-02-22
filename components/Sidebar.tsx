@@ -118,11 +118,20 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, setView }) => {
         <nav className="flex-1 overflow-y-auto py-6 px-4 space-y-1 custom-scrollbar">
             {menuItems.map(item => {
                 const isActive = currentView === item.id;
+                
+                // 🔥 LÓGICA DE ANCORAGEM DO TOUR ADICIONADA AQUI
+                let tourClass = '';
+                if (item.id === 'dashboard') tourClass = 'tour-sidebar-dashboard';
+                if (item.id === 'bancas') tourClass = 'tour-sidebar-bankroll';
+                if (item.id === 'mindset') tourClass = 'tour-sidebar-mindset';
+
                 return (
                     <button
                         key={item.id}
                         onClick={() => handleNavigation(item.id)}
+                        // Note a variável ${tourClass} injetada na linha abaixo
                         className={`
+                            ${tourClass}
                             w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200 group
                             ${isActive 
                                 ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-500 border border-emerald-500/20' 

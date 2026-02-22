@@ -178,6 +178,9 @@ interface BetState {
   displayMode: DisplayMode;
   unitSize: number;
 
+  hasSeenTutorial: boolean;
+  completeTutorial: () => void;
+
   globalLeagues: League[];
   userLeagues: string[];
   isLoadingLeagues: boolean;
@@ -309,6 +312,9 @@ export const useBetStore = create<BetState>()(
       currency: 'BRL',
       displayMode: 'currency',
       unitSize: 100,
+      
+      hasSeenTutorial: false,
+      completeTutorial: () => set({ hasSeenTutorial: true }),
       
       globalLeagues: [],
       userLeagues: [],
@@ -1694,7 +1700,8 @@ export const useBetStore = create<BetState>()(
       partialize: (state) => ({
         isDarkMode: state.isDarkMode,
         displayMode: state.displayMode,
-        unitSize: state.unitSize
+        unitSize: state.unitSize,
+        hasSeenTutorial: state.hasSeenTutorial // 🔥 ADICIONADO PARA PERSISTIR
       }),
     }
   )
