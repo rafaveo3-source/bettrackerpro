@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom'; // ✅ Importação adicionada
 import { useBetStore } from '../store/useBetStore';
 import { Shield, Check, Loader2, ChevronDown, Trophy, CheckSquare, Square, Lock } from 'lucide-react';
 
@@ -14,7 +15,7 @@ const ManageTeams = () => {
     isPro 
   } = useBetStore();
   
-  const navigate = useNavigate(); // <-- ADICIONADO
+  const navigate = useNavigate(); // ✅ Inicialização corrigida
 
   const safeGlobalLeagues = Array.isArray(globalLeagues) ? globalLeagues : [];
   const safeUserLeagues = Array.isArray(userLeagues) ? userLeagues : [];
@@ -38,7 +39,7 @@ const ManageTeams = () => {
 
   const checkProAndExecute = (action: () => void) => {
       if (!isPro) {
-          navigate('/pro'); // <-- UX: Redireciona para venda
+          navigate('/pro'); // ✅ UX: Redireciona para venda
           return;
       }
       action();
