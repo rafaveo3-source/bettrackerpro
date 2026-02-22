@@ -1,10 +1,45 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2"
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3"
+
+// 🧲 FUNÇÃO DE BUSCA BLINDADA DE E-MAIL (Busca em todas as camadas do JSON)
+function extractEmail(obj: any): string | null {
+  if (!obj || typeof obj !== 'object') return null;
+  for (const [key, value] of Object.entries(obj)) {
+    if (key.toLowerCase() === 'email' && typeof value === 'string' && value.includes('@')) {
+      return value.trim().toLowerCase();
+    }
+    if (typeof value === 'object') {
+      const found = extractEmail(value);
+      if (found) return found;
+    }
+  }
+  return null;
+}
+
+// 🧲 FUNÇÃO DE BUSCA BLINDADA DE PLANO
+function extractPlanName(obj: any): string {
+  if (obj?.Subscription?.Plan?.Name) return obj.Subscription.Plan.Name;
+  if (obj?.Product?.Name) return obj.Product.Name;
+  
+  let found = '';
+  const search = (o: any) => {
+    if (!o || typeof o !== 'object') return;
+    for (const [key, value] of Object.entries(o)) {
+      if ((key.toLowerCase() === 'plan' || key.toLowerCase() === 'product') && typeof value === 'object') {
+         if (value.Name) found = value.Name;
+         else if (value.name) found = value.name;
+      }
+      if (typeof value === 'object' && !found) search(value);
+    }
+  };
+  search(obj);
+  return found || 'Plano Padrão';
+}
 
 serve(async (req) => {
   try {
     const payload = await req.json()
-    console.log("Webhook Lastlink recebido:", JSON.stringify(payload))
+    console.log("🔥 Webhook Lastlink recebido! Evento:", payload?.Event || payload?.event || 'Desconhecido')
 
     const supabaseAdmin = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
@@ -12,38 +47,23 @@ serve(async (req) => {
     )
 
     const eventType = payload?.Event || payload?.event || payload?.status || '';
-    
-    // BUSCA BLINDADA DE E-MAIL (Mapeando TODAS as possibilidades da Lastlink)
-    const email = payload?.Customer?.Email || 
-                  payload?.Customer?.email || 
-                  payload?.customer?.email || 
-                  payload?.Data?.Customer?.Email || 
-                  payload?.data?.customer?.email || 
-                  payload?.email || 
-                  payload?.customer_email;
-    
-    // BUSCA BLINDADA DO NOME DO PLANO
-    const planName = payload?.Subscription?.Plan?.Name || 
-                     payload?.Subscription?.plan?.name ||
-                     payload?.subscription?.plan?.name || 
-                     payload?.Data?.Subscription?.Plan?.Name || 
-                     payload?.plan_name || 
-                     '';
+    const email = extractEmail(payload);
+    const planName = extractPlanName(payload);
 
     if (!email) {
-      // Se ainda assim não achar, ele vai cuspir o arquivo inteiro no log para vermos o formato exato
-      console.error("Email não encontrado! Estrutura recebida:", JSON.stringify(payload));
-      return new Response(JSON.stringify({ error: "Email não encontrado" }), { status: 400 })
+      console.error("❌ E-mail não encontrado no payload! Estrutura completa:", JSON.stringify(payload));
+      return new Response(JSON.stringify({ error: "E-mail não encontrado na requisição" }), { status: 400 })
     }
 
     const eventTypeLower = String(eventType).toLowerCase();
     
-    // VERIFICA SE FOI APROVADO
+    // ==========================================
+    // 🟢 LÓGICA DE APROVAÇÃO (CRIADO / PAGO / RENOVADO)
+    // ==========================================
     const isApproved = eventTypeLower.includes('approved') || 
                        eventTypeLower.includes('paid') || 
                        eventTypeLower.includes('renewed') || 
-                       eventTypeLower.includes('created') || 
-                       eventTypeLower.includes('active');
+                       eventTypeLower.includes('created');
 
     if (isApproved) {
       let daysToAdd = 90; // Padrão: Trimestral
@@ -51,49 +71,64 @@ serve(async (req) => {
       
       if (nameLower.includes('semestral')) daysToAdd = 180;
       if (nameLower.includes('anual') || nameLower.includes('vip')) daysToAdd = 365;
+      if (nameLower.includes('mensal')) daysToAdd = 30;
 
       const validUntilDate = new Date();
       validUntilDate.setDate(validUntilDate.getDate() + daysToAdd);
 
-      const { error } = await supabaseAdmin
-        .from('profiles')
-        .update({ 
-          is_pro: true, 
-          valid_until: validUntilDate.toISOString() 
-        })
-        .eq('email', String(email).toLowerCase().trim())
+      console.log(`🔄 Liberando PRO para: ${email} até ${validUntilDate.toISOString()} (Plano detectado: ${planName})`)
+      
+      // ✅ USANDO A RPC ORIGINAL DO BANCO PARA GARANTIR FUNCIONAMENTO
+      const { error } = await supabaseAdmin.rpc('update_pro_status_by_email', {
+        p_email: email,
+        p_status: 'active',
+        p_valid_until: validUntilDate.toISOString()
+      })
 
       if (error) throw error;
 
-      console.log(`✅ PRO ATIVADO: ${email} por ${daysToAdd} dias. (Plano: ${planName})`);
+      console.log(`✅ Sucesso! Usuário atualizado para PRO.`);
       return new Response(JSON.stringify({ success: true, message: `PRO ativado para ${email}` }), { status: 200 })
     }
 
-    // VERIFICA SE FOI CANCELADO/ESTORNADO
-    const isCanceled = eventTypeLower.includes('canceled') || 
-                       eventTypeLower.includes('refunded') || 
-                       eventTypeLower.includes('chargeback') || 
-                       eventTypeLower.includes('expired');
+    // ==========================================
+    // 🔴 LÓGICA DE ESTORNO E CHARGEBACK (REMOVER PRO IMEDIATAMENTE)
+    // ==========================================
+    const isEstorno = eventTypeLower.includes('refund') || 
+                      eventTypeLower.includes('chargeback');
 
-    if (isCanceled) {
-      const { error } = await supabaseAdmin
-        .from('profiles')
-        .update({ 
-          is_pro: false, 
-          valid_until: null 
-        })
-        .eq('email', String(email).toLowerCase().trim())
+    if (isEstorno) {
+      console.log(`🔄 Rebaixando para FREE (Estorno/Fraude de ${email})...`)
+      
+      const { error } = await supabaseAdmin.rpc('update_pro_status_by_email', {
+        p_email: email,
+        p_status: 'free',
+        p_valid_until: null
+      })
 
       if (error) throw error;
 
-      console.log(`❌ PRO REMOVIDO: ${email} cancelou ou pediu reembolso.`);
+      console.log(`❌ Sucesso! PRO REMOVIDO: ${email} cancelou ou pediu reembolso.`);
       return new Response(JSON.stringify({ success: true, message: `PRO removido de ${email}` }), { status: 200 })
     }
 
+    // ==========================================
+    // ⚠️ LÓGICA DE CANCELAMENTO DE ASSINATURA (NÃO RENOVAÇÃO)
+    // ==========================================
+    const isCanceled = eventTypeLower.includes('canceled') || 
+                       eventTypeLower.includes('expired');
+
+    if (isCanceled) {
+       console.log(`⚠️ Assinatura cancelada (${eventType}), mas não estornada. O usuário ${email} manterá o acesso até a data de validade acabar naturalmente.`);
+       return new Response(JSON.stringify({ success: true, message: `Cancelamento ignorado. Acesso mantido até validade.` }), { status: 200 })
+    }
+
+    // OUTROS EVENTOS DA LASTLINK (Ex: boleto impresso)
+    console.log(`⚠️ Status secundário recebido (${eventType}). Nenhuma ação necessária.`);
     return new Response(JSON.stringify({ success: true, message: `Evento ignorado: ${eventType}` }), { status: 200 })
 
   } catch (error: any) {
-    console.error("Erro no Webhook da Lastlink:", error.message)
+    console.error("❌ ERRO FATAL NA FUNÇÃO:", error.message)
     return new Response(JSON.stringify({ error: error.message }), { status: 500 })
   }
 })
