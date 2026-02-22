@@ -115,15 +115,15 @@ serve(async (req) => {
     }
 
     // ==========================================
-    // ⚠️ LÓGICA DE CANCELAMENTO DE ASSINATURA (NÃO RENOVAÇÃO)
+    // ⚠️ LÓGICA DE CANCELAMENTO DE ASSINATURA E EXPIRAÇÃO
     // ==========================================
     const isCanceled = eventTypeLower.includes('canceled') || 
                        eventTypeLower.includes('cancelad') ||
                        eventTypeLower.includes('expired');
 
     if (isCanceled) {
-       console.log(`⚠️ Assinatura cancelada (${eventType}). O usuário ${email} manterá o acesso até a data de validade acabar naturalmente.`);
-       return new Response(JSON.stringify({ success: true, message: `Cancelamento de renovação ignorado. Acesso mantido.` }), { status: 200 })
+       console.log(`⚠️ Assinatura cancelada ou expirada (${eventType}). O usuário ${email} manterá o acesso até a data de validade acabar naturalmente.`);
+       return new Response(JSON.stringify({ success: true, message: `Cancelamento/Expiração ignorado. Acesso mantido.` }), { status: 200 })
     }
 
     // OUTROS EVENTOS DA LASTLINK (Ex: boleto impresso)
