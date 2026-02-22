@@ -15,8 +15,8 @@ import {
   LogOut,
   Crown,
   Moon,
-  Sun
-  PlayCircle
+  Sun,
+  PlayCircle // <-- VÍRGULA ADICIONADA APÓS O SUN
 } from 'lucide-react';
 import { useBetStore } from '../store/useBetStore';
 import { useNavigate } from 'react-router-dom';
