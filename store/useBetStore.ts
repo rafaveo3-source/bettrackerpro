@@ -180,6 +180,7 @@ interface BetState {
 
   hasSeenTutorial: boolean;
   completeTutorial: () => void;
+  resetTutorial: () => void;
 
   globalLeagues: League[];
   userLeagues: string[];
@@ -315,6 +316,7 @@ export const useBetStore = create<BetState>()(
       
       hasSeenTutorial: false,
       completeTutorial: () => set({ hasSeenTutorial: true }),
+      resetTutorial: () => set({ hasSeenTutorial: false }),
       
       globalLeagues: [],
       userLeagues: [],

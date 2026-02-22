@@ -16,6 +16,7 @@ import {
   Crown,
   Moon,
   Sun
+  PlayCircle
 } from 'lucide-react';
 import { useBetStore } from '../store/useBetStore';
 import { useNavigate } from 'react-router-dom';
@@ -39,7 +40,7 @@ interface SidebarProps {
 }
 
 const Sidebar: React.FC<SidebarProps> = ({ currentView, setView }) => {
-  const { user, logout, isPro, isDarkMode, toggleTheme } = useBetStore();
+  const { user, logout, isPro, isDarkMode, toggleTheme, resetTutorial } = useBetStore();
   const [isOpen, setIsOpen] = useState(false);
   const navigate = useNavigate();
 
@@ -148,6 +149,17 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, setView }) => {
         {/* Footer / CTA PRO */}
         <div className="p-4 border-t border-slate-200 dark:border-slate-800/50 bg-slate-50 dark:bg-[#020617] transition-colors duration-300">
             
+            {/* 🔥 BOTÃO REVER TUTORIAL ADICIONADO AQUI */}
+            <button 
+                onClick={() => {
+                    resetTutorial();
+                    if (window.innerWidth < 768) setIsOpen(false); // Fecha a sidebar no mobile para não cobrir o tour
+                }}
+                className="w-full flex items-center justify-center gap-2 text-blue-500 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-500/10 py-3 rounded-xl transition-all text-xs font-bold uppercase tracking-widest mb-2"
+            >
+                <PlayCircle size={16} /> Rever Tutorial
+            </button>
+
             {/* Tema Toggle */}
             <button 
                 onClick={toggleTheme}
