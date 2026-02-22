@@ -201,7 +201,7 @@ const Settings: React.FC = () => {
         </section>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-            {/* Identity Card */}
+            {/* Identity Card - Otimizado */}
             <section className="bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-800 rounded-[2.5rem] p-6 md:p-10 shadow-sm transition-shadow hover:shadow-md">
                 <div className="flex items-center gap-4 mb-10">
                     <div className="p-3 bg-blue-100 dark:bg-blue-500/10 rounded-2xl text-blue-600 dark:text-blue-500 shadow-inner"><User size={24} /></div>
@@ -209,46 +209,41 @@ const Settings: React.FC = () => {
                 </div>
                 
                 <form onSubmit={handleUpdateProfile} className="space-y-8">
-                    <div className="flex flex-col gap-6">
-                        <div className="flex flex-col sm:flex-row gap-4 items-center sm:items-start">
-                             <div className="relative group shrink-0">
-                                <div className="w-24 h-24 rounded-[2rem] overflow-hidden border-4 border-slate-100 dark:border-slate-700 shadow-lg">
-                                    <img src={profileAvatar || `https://ui-avatars.com/api/?name=${profileName}`} alt="" className="w-full h-full object-cover" />
-                                </div>
-                                <div className="absolute -bottom-2 -right-2 bg-emerald-500 text-white p-2 rounded-full shadow-lg border-4 border-white dark:border-[#0f172a]">
-                                    <ImageIcon size={14} />
-                                </div>
-                             </div>
-                             <div className="flex-1 w-full">
-                                <div className="mb-4">
-                                    <label className="block text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-[0.2em] mb-2 ml-1">Nome de Operador</label>
-                                    <input type="text" value={profileName} onChange={(e) => setProfileName(e.target.value)} className="w-full bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-3 outline-none focus:border-emerald-500 transition-all text-slate-900 dark:text-white font-bold text-sm" />
-                                </div>
-                                <div>
-                                    <label className="block text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-[0.2em] mb-2 ml-1">Avatar URL</label>
-                                    <input type="text" value={profileAvatar} onChange={(e) => setProfileAvatar(e.target.value)} placeholder="https://..." className="w-full bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-3 outline-none focus:border-emerald-500 transition-all text-slate-900 dark:text-white text-xs font-medium" />
-                                </div>
-                             </div>
+                    <div className="flex flex-col gap-8">
+                        {/* Visualização de Perfil (Read Only) */}
+                        <div className="flex items-center gap-5 p-6 bg-slate-50 dark:bg-slate-900/50 rounded-[2rem] border border-slate-200 dark:border-slate-800 border-dashed">
+                            <div className="w-20 h-20 rounded-[1.5rem] overflow-hidden border-4 border-white dark:border-slate-800 shadow-xl shrink-0">
+                                <img src={profileAvatar || `https://ui-avatars.com/api/?name=${profileName}`} alt="" className="w-full h-full object-cover" />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                                <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Operador Autenticado</p>
+                                <h4 className="text-xl font-black text-slate-900 dark:text-white truncate">{profileName}</h4>
+                                <p className="text-[10px] text-emerald-500 font-bold uppercase tracking-tighter">Identidade Gerenciada via Cloud</p>
+                            </div>
                         </div>
 
-                        <div className="p-5 bg-slate-50 dark:bg-slate-900/30 rounded-2xl border border-slate-200 dark:border-slate-800/50">
-                             <h3 className="text-xs font-black text-slate-600 dark:text-slate-400 uppercase tracking-widest mb-4 flex items-center gap-2"><PieChart size={14} /> Gestão de Unidade</h3>
-                             <div className="flex flex-col sm:flex-row gap-4">
+                        {/* Gestão de Unidade e Exibição */}
+                        <div className="p-6 bg-slate-50 dark:bg-slate-900/30 rounded-[2rem] border border-slate-200 dark:border-slate-800/50">
+                             <h3 className="text-xs font-black text-slate-600 dark:text-slate-400 uppercase tracking-widest mb-6 flex items-center gap-2">
+                                <PieChart size={14} /> Definição de Stake & Display
+                             </h3>
+                             
+                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 mb-8">
                                  <div className="flex-1">
-                                     <label className="block text-[10px] font-bold text-slate-500 dark:text-slate-400 mb-1">Valor de 1 Unidade ({currency})</label>
+                                     <label className="block text-[10px] font-bold text-slate-500 dark:text-slate-400 mb-2 ml-1 uppercase tracking-widest">Valor de 1 Unidade ({currency})</label>
                                      <div className="relative">
-                                         <Hash size={14} className="absolute left-3 top-3.5 text-slate-400" />
+                                         <Hash size={14} className="absolute left-4 top-4 text-slate-400" />
                                          <input 
                                              type="number" 
                                              value={tempUnitSize} 
                                              onChange={(e) => setTempUnitSize(e.target.value)} 
-                                             className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl pl-9 pr-4 py-3 font-mono font-bold text-emerald-600 dark:text-emerald-500 outline-none focus:ring-1 focus:ring-emerald-500" 
+                                             className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl pl-10 pr-4 py-4 font-mono font-black text-emerald-600 dark:text-emerald-500 outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all text-lg" 
                                          />
-                                      </div>
+                                     </div>
                                  </div>
                                  <div className="flex-1">
-                                     <label className="block text-[10px] font-bold text-slate-500 dark:text-slate-400 mb-1">Modo de Exibição</label>
-                                     <div className="flex bg-white dark:bg-slate-900 rounded-xl p-1 border border-slate-200 dark:border-slate-800 h-[46px]">
+                                     <label className="block text-[10px] font-bold text-slate-500 dark:text-slate-400 mb-2 ml-1 uppercase tracking-widest">Modo de Exibição Principal</label>
+                                     <div className="flex bg-white dark:bg-slate-900 rounded-xl p-1.5 border border-slate-200 dark:border-slate-800 h-[60px]">
                                          <button 
                                             type="button"
                                             onClick={async () => {
@@ -256,8 +251,9 @@ const Settings: React.FC = () => {
                                               setShowSavedToast(true);
                                               setTimeout(() => setShowSavedToast(false), 2000);
                                             }}
-                                            className={`flex-1 rounded-lg text-xs font-bold transition-all ${displayMode === 'currency' ? 'bg-emerald-500 text-white shadow-md' : 'text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-300'}`}
+                                            className={`flex-1 rounded-lg text-xs font-black transition-all flex flex-col items-center justify-center gap-0.5 ${displayMode === 'currency' ? 'bg-emerald-500 text-white shadow-lg' : 'text-slate-500 hover:text-slate-700 dark:text-slate-400'}`}
                                          >
+                                            <span className="text-[9px] uppercase opacity-60">Financeiro</span>
                                             {currency}
                                          </button>
                                          <button 
@@ -267,22 +263,46 @@ const Settings: React.FC = () => {
                                               setShowSavedToast(true);
                                               setTimeout(() => setShowSavedToast(false), 2000);
                                             }}
-                                            className={`flex-1 rounded-lg text-xs font-bold transition-all ${displayMode === 'units' ? 'bg-blue-500 text-white shadow-md' : 'text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-300'}`}
+                                            className={`flex-1 rounded-lg text-xs font-black transition-all flex flex-col items-center justify-center gap-0.5 ${displayMode === 'units' ? 'bg-blue-500 text-white shadow-lg' : 'text-slate-500 hover:text-slate-700 dark:text-slate-400'}`}
                                          >
-                                            Unid.
+                                            <span className="text-[9px] uppercase opacity-60">Escalar</span>
+                                            Unidades
                                          </button>
                                      </div>
                                  </div>
                              </div>
+
+                             {/* --- NOVO: PRÉVIA DE GESTÃO MATEMÁTICA --- */}
+                             <div className="space-y-3 pt-6 border-t border-slate-200 dark:border-slate-800/60">
+                                <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-4">Prévia da sua Gestão de Unidade:</p>
+                                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                                    {[
+                                        { label: '1/4 Unidade', mult: 0.25, color: 'text-slate-500' },
+                                        { label: '1/2 Unidade', mult: 0.5, color: 'text-slate-500' },
+                                        { label: '1.5 Unidade', mult: 1.5, color: 'text-emerald-500' },
+                                        { label: '2.0 Unidades', mult: 2.0, color: 'text-emerald-600 dark:text-emerald-400' },
+                                    ].map((item) => (
+                                        <div key={item.label} className="bg-white dark:bg-slate-950 p-3 rounded-xl border border-slate-200 dark:border-slate-800">
+                                            <p className="text-[9px] font-bold text-slate-400 uppercase mb-1">{item.label}</p>
+                                            <p className={`text-sm font-black font-mono ${item.color}`}>
+                                                {currency} {(parseFloat(tempUnitSize || '0') * item.mult).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                                            </p>
+                                        </div>
+                                    ))}
+                                </div>
+                                <div className="mt-4 p-4 bg-emerald-500/5 rounded-xl border border-emerald-500/10 flex justify-between items-center">
+                                    <span className="text-[10px] font-black text-emerald-600 dark:text-emerald-500 uppercase italic">Referência Full Stake (1.0):</span>
+                                    <span className="text-lg font-black text-emerald-600 dark:text-emerald-500 font-mono">{currency} {parseFloat(tempUnitSize || '0').toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+                                </div>
+                             </div>
                         </div>
                     </div>
-                    <button type="submit" className="w-full bg-emerald-500 hover:bg-emerald-400 text-white dark:text-[#020617] font-black py-4 rounded-2xl transition-all shadow-xl shadow-emerald-500/10 flex items-center justify-center gap-3 group active:scale-[0.98]">
+                    <button type="submit" className="w-full bg-emerald-500 hover:bg-emerald-400 text-white dark:text-[#020617] font-black py-5 rounded-2xl transition-all shadow-xl shadow-emerald-500/20 flex items-center justify-center gap-3 group active:scale-[0.98] uppercase tracking-widest text-xs">
                         <Save size={18} className="group-hover:rotate-12 transition-transform" /> 
-                        SALVAR PREFERÊNCIAS
+                        ATUALIZAR ARQUITETURA DE BANCA
                     </button>
                 </form>
             </section>
-
             {/* Methods Card */}
             <section className="bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-800 rounded-[2.5rem] p-6 md:p-10 shadow-sm transition-shadow hover:shadow-md">
                  <div className="flex items-center gap-4 mb-10">
