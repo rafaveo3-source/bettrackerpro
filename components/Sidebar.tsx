@@ -124,12 +124,12 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, setView }) => {
                 if (item.id === 'dashboard') tourClass = 'tour-sidebar-dashboard';
                 if (item.id === 'bancas') tourClass = 'tour-sidebar-bankroll';
                 if (item.id === 'mindset') tourClass = 'tour-sidebar-mindset';
+                if (item.id === 'metas') tourClass = 'tour-sidebar-metas'; // <-- ADICIONADO AQUI
 
                 return (
                     <button
                         key={item.id}
                         onClick={() => handleNavigation(item.id)}
-                        // Note a variável ${tourClass} injetada na linha abaixo
                         className={`
                             ${tourClass}
                             w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200 group
