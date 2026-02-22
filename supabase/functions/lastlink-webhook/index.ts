@@ -95,10 +95,12 @@ serve(async (req) => {
     // 🔴 LÓGICA DE ESTORNO E CHARGEBACK (REMOVER PRO IMEDIATAMENTE)
     // ==========================================
     const isEstorno = eventTypeLower.includes('refund') || 
-                      eventTypeLower.includes('chargeback');
+                      eventTypeLower.includes('chargeback') ||
+                      eventTypeLower.includes('reembolsad') || 
+                      eventTypeLower.includes('estornad');
 
     if (isEstorno) {
-      console.log(`🔄 Rebaixando para FREE (Estorno/Fraude de ${email})...`)
+      console.log(`🔄 Rebaixando para FREE (Estorno/Reembolso de ${email})...`)
       
       const { error } = await supabaseAdmin.rpc('update_pro_status_by_email', {
         p_email: email,
@@ -108,7 +110,7 @@ serve(async (req) => {
 
       if (error) throw error;
 
-      console.log(`❌ Sucesso! PRO REMOVIDO: ${email} cancelou ou pediu reembolso.`);
+      console.log(`❌ Sucesso! PRO REMOVIDO: ${email} cancelou e pediu reembolso.`);
       return new Response(JSON.stringify({ success: true, message: `PRO removido de ${email}` }), { status: 200 })
     }
 
@@ -116,11 +118,12 @@ serve(async (req) => {
     // ⚠️ LÓGICA DE CANCELAMENTO DE ASSINATURA (NÃO RENOVAÇÃO)
     // ==========================================
     const isCanceled = eventTypeLower.includes('canceled') || 
+                       eventTypeLower.includes('cancelad') ||
                        eventTypeLower.includes('expired');
 
     if (isCanceled) {
-       console.log(`⚠️ Assinatura cancelada (${eventType}), mas não estornada. O usuário ${email} manterá o acesso até a data de validade acabar naturalmente.`);
-       return new Response(JSON.stringify({ success: true, message: `Cancelamento ignorado. Acesso mantido até validade.` }), { status: 200 })
+       console.log(`⚠️ Assinatura cancelada (${eventType}). O usuário ${email} manterá o acesso até a data de validade acabar naturalmente.`);
+       return new Response(JSON.stringify({ success: true, message: `Cancelamento de renovação ignorado. Acesso mantido.` }), { status: 200 })
     }
 
     // OUTROS EVENTOS DA LASTLINK (Ex: boleto impresso)
