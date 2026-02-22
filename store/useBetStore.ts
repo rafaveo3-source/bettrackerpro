@@ -419,9 +419,15 @@ export const useBetStore = create<BetState>()(
               currency: b.currency,
               initialBalance: Number(b.initial_balance)
             }));
+            
+            // 🔥 LÓGICA DE PERSISTÊNCIA DA BANCA
+            const savedBankrollId = get().activeBankrollId;
+            // Verifica se o ID salvo ainda existe (caso tenha sido deletado em outro PC)
+            const isValidSavedId = formattedBankrolls.some(b => b.id === savedBankrollId);
+
             set({
               bankrolls: formattedBankrolls,
-              activeBankrollId: formattedBankrolls.length > 0 ? formattedBankrolls[0].id : ''
+              activeBankrollId: isValidSavedId ? savedBankrollId : (formattedBankrolls.length > 0 ? formattedBankrolls[0].id : '')
             });
           }
 
@@ -1703,7 +1709,8 @@ export const useBetStore = create<BetState>()(
         isDarkMode: state.isDarkMode,
         displayMode: state.displayMode,
         unitSize: state.unitSize,
-        hasSeenTutorial: state.hasSeenTutorial // 🔥 ADICIONADO PARA PERSISTIR
+        hasSeenTutorial: state.hasSeenTutorial,
+        activeBankrollId: state.activeBankrollId // 🔥 PERSISTE A BANCA SELECIONADA
       }),
     }
   )

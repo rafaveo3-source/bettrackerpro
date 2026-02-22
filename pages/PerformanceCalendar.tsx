@@ -5,24 +5,31 @@ import { ChevronLeft, ChevronRight, Activity, CircleDollarSign, Target, Trophy, 
 import { motion } from 'framer-motion';
 
 const PerformanceCalendar: React.FC = () => {
-  // ADICIONADO isPro no destructuring
-  const { history, currency, bankrolls, methods, displayMode, unitSize, isPro } = useBetStore(); 
+  // 🔥 activeBankrollId adicionado
+  const { history, currency, bankrolls, methods, displayMode, unitSize, isPro, activeBankrollId } = useBetStore(); 
   const [currentDate, setCurrentDate] = useState(new Date());
   
-  const navigate = useNavigate(); // <-- ADICIONADO
+  const navigate = useNavigate(); 
 
-  // <-- ADICIONADO TRAVA DE SEGURANÇA
   useEffect(() => {
     if (!isPro) {
       navigate('/pro'); 
     }
   }, [isPro, navigate]);
 
-  if (!isPro) return null; // Impede renderização de tela fantasma enquanto redireciona
+  if (!isPro) return null; 
   const [selectedDate, setSelectedDate] = useState<Date | null>(new Date());
   
-  const [selectedBankroll, setSelectedBankroll] = useState('all');
+  // 🔥 Estado inicial agora puxa a banca global
+  const [selectedBankroll, setSelectedBankroll] = useState(activeBankrollId || 'all');
   const [selectedMethod, setSelectedMethod] = useState('all');
+
+  // 🔥 Mantém sincronizado se a banca mudar em outro lugar
+  useEffect(() => {
+    if (activeBankrollId) {
+      setSelectedBankroll(activeBankrollId);
+    }
+  }, [activeBankrollId]);
 
   // ✅ Helper de Formatação (Moeda vs Unidade)
   const formatValue = (val: number) => {
