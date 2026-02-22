@@ -1,0 +1,8 @@
+User-agent: *
+Allow: /
+Allow: /pro
+Disallow: /dashboard
+Disallow: /analytics
+Disallow: /metas
+
+Sitemap: https://www.bettrackerpro.com.br/sitemap.xml
