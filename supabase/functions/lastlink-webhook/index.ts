@@ -37,6 +37,16 @@ function extractPlanName(obj: any): string {
 }
 
 serve(async (req) => {
+  // 🔒 TRAVA DE SEGURANÇA IMEDIATA
+  const url = new URL(req.url);
+  const token = url.searchParams.get('token');
+  const SECURE_TOKEN = Deno.env.get('WEBHOOK_SECRET');
+
+  if (token !== SECURE_TOKEN) {
+    console.error("🚨 Tentativa de invasão bloqueada: Token inválido.");
+    return new Response("Unauthorized", { status: 401 });
+  }
+
   try {
     const payload = await req.json()
     console.log("🔥 Webhook Lastlink recebido! Evento:", payload?.Event || payload?.event || 'Desconhecido')
@@ -45,7 +55,7 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     )
-
+    
     const eventType = payload?.Event || payload?.event || payload?.status || '';
     const email = extractEmail(payload);
     const planName = extractPlanName(payload);
