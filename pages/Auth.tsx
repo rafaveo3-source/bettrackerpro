@@ -71,21 +71,31 @@ const Auth: React.FC = () => {
         if (authError) throw authError;
         setSession(data.session);
       } else if (view === 'register') {
-        const { data, error: authError } = await supabase.auth.signUp({ 
-            email, 
-            password,
-            options: {
-                data: { full_name: email.split('@')[0] }
-            }
-        });
-        if (authError) throw authError;
-        if (data.session) {
-            setSession(data.session);
-        } else {
-            setError("Confirmação: Conta criada! Verifique seu e-mail para confirmar o cadastro antes de logar.");
-            setView('login');
-        }
-      } else {
+  const { data, error: authError } = await supabase.auth.signUp({ 
+      email, 
+      password,
+      options: {
+          data: { full_name: email.split('@')[0] }
+      }
+  });
+
+  if (authError) throw authError;
+
+  // 🚀 DISPARO DO EVENTO DE CONVERSÃO META
+  if (typeof window !== 'undefined' && (window as any).fbq) {
+      (window as any).fbq('track', 'CompleteRegistration', {
+          content_name: 'Cadastro Gratuito BetTracker PRO',
+          status: 'success'
+      });
+  }
+
+  if (data.session) {
+      setSession(data.session);
+  } else {
+      setError("Confirmação: Conta criada! Verifique seu e-mail para confirmar o cadastro antes de logar.");
+      setView('login');
+  }
+} else {
         const { error: authError } = await supabase.auth.resetPasswordForEmail(email, {
              redirectTo: window.location.origin,
         });
