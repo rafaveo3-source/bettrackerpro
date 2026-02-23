@@ -50,6 +50,14 @@ const History: React.FC = () => {
         return matchesSearch && matchesStatus && matchesSport && matchesDateStart && matchesDateEnd && matchesOdd && matchesStake;
       })
       .sort((a, b) => {
+        // LÓGICA PADRÃO BET365: "Pending" sempre no topo.
+        const isAPending = a.status === 'pending';
+        const isBPending = b.status === 'pending';
+
+        if (isAPending && !isBPending) return -1; // A vai pro topo
+        if (!isAPending && isBPending) return 1;  // B vai pro topo
+
+        // Se ambos forem pending, ou ambos forem resolvidos, aplica a ordenação da coluna
         const aValue = a[sortConfig.key];
         const bValue = b[sortConfig.key];
 
