@@ -169,11 +169,8 @@ const NewBetModal: React.FC<NewBetModalProps> = ({
       return;
     }
 
+    // 🔥 O STAKE AGORA É SEMPRE LIDO COMO MOEDA PURA (Não faz mais a multiplicação x unitSize aqui)
     let stakeValue = parseFloat(formData.stake);
-
-    if (displayMode === 'units') {
-      stakeValue = stakeValue * unitSize;
-    }
 
     if (stakeValue < 0) {
       setError('A exposição não pode ser negativa.');
@@ -205,10 +202,8 @@ const NewBetModal: React.FC<NewBetModalProps> = ({
   };
 
   const calculateResult = () => {
+    // 🔥 CÁLCULO DE RESULTADO AGORA SEMPRE TRATA O INPUT COMO MOEDA
     let stake = parseFloat(formData.stake) || 0;
-    if (displayMode === 'units') {
-      stake = stake * unitSize;
-    }
     const odds = parseFloat(formData.odds) || 0;
     const cashout = parseFloat(formData.cashoutValue) || 0;
 
@@ -518,16 +513,17 @@ const NewBetModal: React.FC<NewBetModalProps> = ({
                           </div>
                         </div>
 
+                        {/* 🔥 CAMPO DE EXPOSIÇÃO FIXADO EM MOEDA */}
                         <div className="space-y-2">
                           <label className="text-[10px] uppercase text-slate-500 font-bold tracking-wider ml-1 truncate">
-                            Exposição ({displayMode === 'units' ? 'Un.' : currency})
+                            Exposição ({currency})
                           </label>
                           <input
                             type="number"
-                            step={displayMode === 'units' ? "0.1" : "1"}
+                            step="1"
                             value={formData.stake}
                             onChange={(e) => setFormData({ ...formData, stake: e.target.value })}
-                            placeholder={displayMode === 'units' ? '1.0' : '100'}
+                            placeholder="100.00"
                             className={inputStyle}
                           />
                         </div>
@@ -563,6 +559,7 @@ const NewBetModal: React.FC<NewBetModalProps> = ({
                   <p className="text-slate-500 text-[10px] font-bold uppercase tracking-widest">
                     {formData.status === 'pending' ? 'Potencial Estimado' : 'Resultado Consolidado'}
                   </p>
+                  {/* 🔥 CÁLCULO DE RESULTADO E VISUALIZAÇÃO FIXADA EM MOEDA */}
                   <div className={`text-2xl font-mono font-black tracking-tight ${
                     resultValue > 0 ? 'text-emerald-400' : resultValue < 0 ? 'text-red-400' : 'text-slate-400'
                   }`}>
