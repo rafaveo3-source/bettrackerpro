@@ -33,8 +33,8 @@ const PodInput = ({ label, value, onChange, icon: Icon, placeholder, colorClass,
   </div>
 );
 
-// Ícone customizado improvisado para Field Tilt
-const Map = ({ size, className }: any) => (
+// Ícone customizado improvisado para Field Tilt (Renomeado para MapIcon para evitar conflito na build)
+const MapIcon = ({ size, className }: any) => (
   <svg width={size} height={size} className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <polygon points="3 6 9 3 15 6 21 3 21 18 15 21 9 18 3 21"></polygon>
     <line x1="9" y1="3" x2="9" y2="21"></line>
@@ -77,7 +77,7 @@ const Calculators: React.FC = () => {
   );
 
   // ==========================================
-  // LÓGICAS DAS CALCULADORAS BASE 
+  // 1. LÓGICA DUTCHING
   // ==========================================
   const [dutchTotalStake, setDutchTotalStake] = useState('100');
   const [dutchSelections, setDutchSelections] = useState([{ id: 1, name: 'Seleção A', odds: '2.50', stake: 0, profit: 0 }, { id: 2, name: 'Seleção B', odds: '3.20', stake: 0, profit: 0 }]);
@@ -96,22 +96,61 @@ const Calculators: React.FC = () => {
     }));
   };
 
-  const [kellyOdds, setKellyOdds] = useState('2.00'); const [kellyProb, setKellyProb] = useState('55'); const [kellyFraction, setKellyFraction] = useState('1'); 
+  // ==========================================
+  // 2. LÓGICA KELLY
+  // ==========================================
+  const [kellyOdds, setKellyOdds] = useState('2.00'); 
+  const [kellyProb, setKellyProb] = useState('55'); 
+  const [kellyFraction, setKellyFraction] = useState('1'); 
   const kellyResult = (() => { const b = parseFloat(kellyOdds) - 1; const p = parseFloat(kellyProb) / 100; if (b <= 0) return "0.00"; return (((b * p - (1 - p)) / b) * parseFloat(kellyFraction) * 100).toFixed(2); })();
   const kellyMoney = (parseFloat(kellyResult) / 100) * currentBankrollBalance;
 
-  const [valOdds, setValOdds] = useState('2.10'); const [valProb, setValProb] = useState('50'); 
-  const valEV = (parseFloat(valProb) / 100 * parseFloat(valOdds)) - 1; const valEVPercent = valEV * 100;
+  // ==========================================
+  // 3. LÓGICA VALUE BET
+  // ==========================================
+  const [valOdds, setValOdds] = useState('2.10'); 
+  const [valProb, setValProb] = useState('50'); 
+  const valEV = (parseFloat(valProb) / 100 * parseFloat(valOdds)) - 1; 
+  const valEVPercent = valEV * 100;
 
-  const [arbOdds1, setArbOdds1] = useState('2.05'); const [arbOdds2, setArbOdds2] = useState('2.05'); const [arbTotalStake, setArbTotalStake] = useState('1000');
-  const arbImplied = (1 / parseFloat(arbOdds1)) + (1 / parseFloat(arbOdds2)); const arbRoi = ((1 / arbImplied) - 1) * 100;
-  const arbStake1 = (parseFloat(arbTotalStake) * (1 / parseFloat(arbOdds1))) / arbImplied; const arbStake2 = (parseFloat(arbTotalStake) * (1 / parseFloat(arbOdds2))) / arbImplied;
+  // ==========================================
+  // 4. LÓGICA ARBITRAGEM
+  // ==========================================
+  const [arbOdds1, setArbOdds1] = useState('2.05'); 
+  const [arbOdds2, setArbOdds2] = useState('2.05'); 
+  const [arbTotalStake, setArbTotalStake] = useState('1000');
+  const arbImplied = (1 / parseFloat(arbOdds1)) + (1 / parseFloat(arbOdds2)); 
+  const arbRoi = ((1 / arbImplied) - 1) * 100;
+  const arbStake1 = (parseFloat(arbTotalStake) * (1 / parseFloat(arbOdds1))) / arbImplied; 
+  const arbStake2 = (parseFloat(arbTotalStake) * (1 / parseFloat(arbOdds2))) / arbImplied;
   const arbProfit = (arbStake1 * parseFloat(arbOdds1)) - parseFloat(arbTotalStake);
 
-  const [stakePercent, setStakePercent] = useState('1'); const stakeValue = (parseFloat(stakePercent) / 100) * currentBankrollBalance;
-  const [convDec, setConvDec] = useState('2.00'); const [convAm, setConvAm] = useState('+100'); const [convProb, setConvProb] = useState('50.00');
-  const handleDecChange = (val: string) => { setConvDec(val); const d = parseFloat(val); if (d > 1) { setConvProb(((1 / d) * 100).toFixed(2)); setConvAm(d >= 2 ? '+' + ((d - 1) * 100).toFixed(0) : (( -100 / (d - 1) )).toFixed(0)); } };
-  const [beOdds, setBeOdds] = useState('1.90'); const beWinRate = parseFloat(beOdds) > 1 ? (1 / parseFloat(beOdds)) * 100 : 0;
+  // ==========================================
+  // 5. LÓGICA STAKE %
+  // ==========================================
+  const [stakePercent, setStakePercent] = useState('1'); 
+  const stakeValue = (parseFloat(stakePercent) / 100) * currentBankrollBalance;
+
+  // ==========================================
+  // 6. LÓGICA ODDS CONVERTER
+  // ==========================================
+  const [convDec, setConvDec] = useState('2.00'); 
+  const [convAm, setConvAm] = useState('+100'); 
+  const [convProb, setConvProb] = useState('50.00');
+  const handleDecChange = (val: string) => { 
+    setConvDec(val); 
+    const d = parseFloat(val); 
+    if (d > 1) { 
+        setConvProb(((1 / d) * 100).toFixed(2)); 
+        setConvAm(d >= 2 ? '+' + ((d - 1) * 100).toFixed(0) : (( -100 / (d - 1) )).toFixed(0)); 
+    } 
+  };
+
+  // ==========================================
+  // 7. LÓGICA BREAK EVEN
+  // ==========================================
+  const [beOdds, setBeOdds] = useState('1.90'); 
+  const beWinRate = parseFloat(beOdds) > 1 ? (1 / parseFloat(beOdds)) * 100 : 0;
 
   // ==========================================
   // ESTADOS COMPARTILHADOS (ExC e ExG)
@@ -154,7 +193,7 @@ const Calculators: React.FC = () => {
       const ap5m = parseFloat(liveAP_5m) || 0; const currentOdd = parseFloat(liveCurrentOdd) || 0;
       const sot = parseFloat(liveSoT) || 0; const sofft = parseFloat(liveSoffT) || 0;
 
-      if (!min || min <= 0 || !apPress) return { appm: 0, fieldTilt: 0, proj: 0, probLimit: 0, probAsian: 0, signal: 'none', msg: 'Aguardando dados...', fairOddLimit: 0, fairOddAsian: 0, ev: 0, momentum: 0, paceMsg: '', crossCheckMsg: '' };
+      if (!min || min <= 0 || !apPress) return { appm: 0, fieldTilt: 0, proj: 0, probLimit: 0, probAsian: 0, signal: 'none', msg: 'Aguardando dados estruturados...', fairOddLimit: 0, fairOddAsian: 0, ev: 0, momentum: 0, paceMsg: '', crossCheckMsg: '' };
 
       const isHT = excScenario.includes('ht'); const isAsianTarget = excScenario.includes('asian');
       const remainingTime = Math.max(1, ((isHT ? 45 : 90) + (isHT ? 3 : 6)) - min);
@@ -224,7 +263,7 @@ const Calculators: React.FC = () => {
       const currentOdd = parseFloat(liveCurrentOdd) || 0;
       const sot = parseFloat(liveSoT) || 0; const sofft = parseFloat(liveSoffT) || 0;
 
-      if (!min || min <= 0 || !apPress) return { xgTotal: 0, probGoal: 0, signal: 'none', msg: 'Aguardando dados...', fairOddGoal: 0, ev: 0, crossCheckMsg: '' };
+      if (!min || min <= 0 || !apPress) return { xgTotal: 0, probGoal: 0, signal: 'none', msg: 'Aguardando dados estruturados...', fairOddGoal: 0, ev: 0, crossCheckMsg: '' };
 
       const isHT = exgScenario.includes('ht');
       const remainingTime = Math.max(1, ((isHT ? 45 : 90) + (isHT ? 3 : 6)) - min);
@@ -605,7 +644,7 @@ const Calculators: React.FC = () => {
                                        <span className={`text-xl font-black font-mono ${excResult.appm >= 1.05 ? 'text-emerald-400 drop-shadow-[0_0_8px_rgba(52,211,153,0.4)]' : 'text-slate-400'}`}>{excResult.appm.toFixed(2)}</span>
                                     </div>
                                     <div className="bg-slate-900/80 p-4 rounded-2xl border border-slate-800 flex justify-between items-center">
-                                       <span className="text-[10px] uppercase tracking-widest text-slate-500 font-bold flex items-center gap-2"><Map size={14}/> Field Tilt</span>
+                                       <span className="text-[10px] uppercase tracking-widest text-slate-500 font-bold flex items-center gap-2"><MapIcon size={14}/> Field Tilt</span>
                                        <span className={`text-xl font-black font-mono ${excResult.fieldTilt >= 65 ? 'text-blue-400 drop-shadow-[0_0_8px_rgba(96,165,250,0.4)]' : 'text-slate-400'}`}>{excResult.fieldTilt.toFixed(0)}%</span>
                                     </div>
                                     <div className="bg-slate-900/80 p-4 rounded-2xl border border-slate-800 flex justify-between items-center">
@@ -754,7 +793,7 @@ const Calculators: React.FC = () => {
                                     <DollarSign size={24} className="text-orange-400" />
                                  </div>
                                  <div className="flex-1">
-                                    <label className="text-[10px] font-black text-orange-500 uppercase tracking-[0.2em] block mb-1">Odd Oferecida (Scanner de EV%)</label>
+                                    <label className="text-[9px] font-black text-orange-500 uppercase tracking-[0.2em] block mb-1">Odd Oferecida (Scanner de EV%)</label>
                                     <input type="number" step="0.01" placeholder="Ex: 1.83" value={liveCurrentOdd} onChange={e => setLiveCurrentOdd(e.target.value)} className="w-full bg-transparent text-2xl font-mono font-black text-white outline-none placeholder:text-slate-700" />
                                  </div>
                              </div>
@@ -780,7 +819,7 @@ const Calculators: React.FC = () => {
                              <div className="relative z-10 flex flex-col md:flex-row justify-between mb-8 gap-8">
                                 {/* Cápsulas de Métricas */}
                                 <div className="space-y-4 flex-1 flex flex-col justify-center">
-                                    <div className="bg-slate-900/80 p-5 rounded-2xl border border-slate-800 text-center">
+                                    <div className="bg-slate-900/80 p-5 rounded-2xl border border-slate-800 text-center shadow-inner">
                                        <span className="text-[10px] uppercase tracking-widest text-slate-500 font-bold block mb-2"><Activity size={14} className="inline mr-1"/> xG Criado (Gols Esperados)</span>
                                        <span className={`text-5xl font-black font-mono tracking-tighter ${exgResult.xgTotal >= 1.0 ? 'text-orange-400 drop-shadow-[0_0_10px_rgba(251,146,60,0.4)]' : 'text-slate-400'}`}>{exgResult.xgTotal.toFixed(2)}</span>
                                     </div>
@@ -867,14 +906,5 @@ const Calculators: React.FC = () => {
     </div> 
   );
 };
-
-// Ícone customizado improvisado para Field Tilt
-const Map = ({ size, className }: any) => (
-  <svg width={size} height={size} className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinelinejoin="round">
-    <polygon points="3 6 9 3 15 6 21 3 21 18 15 21 9 18 3 21"></polygon>
-    <line x1="9" y1="3" x2="9" y2="21"></line>
-    <line x1="15" y1="3" x2="15" y2="21"></line>
-  </svg>
-);
 
 export default Calculators;
