@@ -1,27 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
-  Info, 
-  ChevronDown, 
-  Sparkles, 
-  Trash2, 
-  Plus,
-  Scale,
-  Percent,
-  ArrowRightLeft,
-  Target,
-  TrendingUp,
-  AlertTriangle,
-  Lock,
-  Crown,
-  Radar,
-  CheckSquare,
-  Square,
-  Activity,
-  Crosshair,
-  BarChart4,
-  Zap,
-  DollarSign
+  Info, ChevronDown, Sparkles, Trash2, Plus, Scale, Percent, ArrowRightLeft, 
+  Target, TrendingUp, AlertTriangle, Lock, Crown, Radar, CheckSquare, 
+  Square, Activity, Crosshair, BarChart4, Zap, DollarSign, Goal, Lightbulb
 } from 'lucide-react';
 import { useBetStore } from '../store/useBetStore';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -31,14 +13,7 @@ const Calculators: React.FC = () => {
   const navigate = useNavigate();
 
   const [activeTab, setActiveTab] = useState<
-    'dutching' | 
-    'kelly' | 
-    'value' | 
-    'arb' | 
-    'stake' | 
-    'odds' | 
-    'breakeven' |
-    'exc'
+    'dutching' | 'kelly' | 'value' | 'arb' | 'stake' | 'odds' | 'breakeven' | 'exc' | 'exg'
   >('dutching');
   
   const [expandedInfo, setExpandedInfo] = useState<string | null>(null);
@@ -68,7 +43,7 @@ const Calculators: React.FC = () => {
   );
 
   // ==========================================
-  // LÓGICAS DAS CALCULADORAS BASE (Mantidas 100% intactas)
+  // 1. LÓGICA DUTCHING
   // ==========================================
   const [dutchTotalStake, setDutchTotalStake] = useState('100');
   const [dutchSelections, setDutchSelections] = useState([
@@ -83,237 +58,168 @@ const Calculators: React.FC = () => {
     const impliedProbs = dutchSelections.map(s => parseFloat(s.odds) > 1 ? 1 / parseFloat(s.odds) : 0);
     const totalImplied = impliedProbs.reduce((a, b) => a + b, 0);
     if (totalImplied <= 0) return;
-    const newSelections = dutchSelections.map((s, i) => {
+    setDutchSelections(dutchSelections.map((s, i) => {
       const stake = totalStake * (impliedProbs[i] / totalImplied);
       const odd = parseFloat(s.odds || '0');
-      const profit = odd > 1 ? (stake * odd) - totalStake : 0;
-      return { ...s, stake: stake || 0, profit: profit || 0 };
-    });
-    setDutchSelections(newSelections);
+      return { ...s, stake: stake || 0, profit: odd > 1 ? (stake * odd) - totalStake : 0 };
+    }));
   };
 
-  const [kellyOdds, setKellyOdds] = useState('2.00');
-  const [kellyProb, setKellyProb] = useState('55');
+  // ==========================================
+  // 2. LÓGICA KELLY
+  // ==========================================
+  const [kellyOdds, setKellyOdds] = useState('2.00'); 
+  const [kellyProb, setKellyProb] = useState('55'); 
   const [kellyFraction, setKellyFraction] = useState('1'); 
-  const calculateKelly = () => {
-    const b = parseFloat(kellyOdds) - 1;
-    const p = parseFloat(kellyProb) / 100;
-    if (b <= 0) return "0.00";
-    const f = (b * p - (1 - p)) / b;
-    return (f * parseFloat(kellyFraction) * 100).toFixed(2);
-  };
-  const kellyResult = calculateKelly();
+  const kellyResult = (() => { const b = parseFloat(kellyOdds) - 1; const p = parseFloat(kellyProb) / 100; if (b <= 0) return "0.00"; return (((b * p - (1 - p)) / b) * parseFloat(kellyFraction) * 100).toFixed(2); })();
   const kellyMoney = (parseFloat(kellyResult) / 100) * currentBankrollBalance;
 
-  const [valOdds, setValOdds] = useState('2.10');
+  // ==========================================
+  // 3. LÓGICA VALUE BET
+  // ==========================================
+  const [valOdds, setValOdds] = useState('2.10'); 
   const [valProb, setValProb] = useState('50'); 
-  const valEV = (parseFloat(valProb) / 100 * parseFloat(valOdds)) - 1;
+  const valEV = (parseFloat(valProb) / 100 * parseFloat(valOdds)) - 1; 
   const valEVPercent = valEV * 100;
 
-  const [arbOdds1, setArbOdds1] = useState('2.05');
-  const [arbOdds2, setArbOdds2] = useState('2.05');
+  // ==========================================
+  // 4. LÓGICA ARBITRAGEM
+  // ==========================================
+  const [arbOdds1, setArbOdds1] = useState('2.05'); 
+  const [arbOdds2, setArbOdds2] = useState('2.05'); 
   const [arbTotalStake, setArbTotalStake] = useState('1000');
-  const arbImplied = (1 / parseFloat(arbOdds1)) + (1 / parseFloat(arbOdds2));
+  const arbImplied = (1 / parseFloat(arbOdds1)) + (1 / parseFloat(arbOdds2)); 
   const arbRoi = ((1 / arbImplied) - 1) * 100;
-  const arbStake1 = (parseFloat(arbTotalStake) * (1 / parseFloat(arbOdds1))) / arbImplied;
+  const arbStake1 = (parseFloat(arbTotalStake) * (1 / parseFloat(arbOdds1))) / arbImplied; 
   const arbStake2 = (parseFloat(arbTotalStake) * (1 / parseFloat(arbOdds2))) / arbImplied;
   const arbProfit = (arbStake1 * parseFloat(arbOdds1)) - parseFloat(arbTotalStake);
 
+  // ==========================================
+  // 5. LÓGICA STAKE %
+  // ==========================================
   const [stakePercent, setStakePercent] = useState('1'); 
   const stakeValue = (parseFloat(stakePercent) / 100) * currentBankrollBalance;
 
-  const [convDec, setConvDec] = useState('2.00');
-  const [convAm, setConvAm] = useState('+100');
+  // ==========================================
+  // 6. LÓGICA ODDS CONVERTER
+  // ==========================================
+  const [convDec, setConvDec] = useState('2.00'); 
+  const [convAm, setConvAm] = useState('+100'); 
   const [convProb, setConvProb] = useState('50.00');
-  const handleDecChange = (val: string) => {
-    setConvDec(val);
-    const d = parseFloat(val);
-    if (d > 1) {
-      setConvProb(((1 / d) * 100).toFixed(2));
-      if (d >= 2) setConvAm('+' + ((d - 1) * 100).toFixed(0));
-      else setConvAm((( -100 / (d - 1) )).toFixed(0));
-    }
+  const handleDecChange = (val: string) => { 
+    setConvDec(val); 
+    const d = parseFloat(val); 
+    if (d > 1) { 
+        setConvProb(((1 / d) * 100).toFixed(2)); 
+        setConvAm(d >= 2 ? '+' + ((d - 1) * 100).toFixed(0) : (( -100 / (d - 1) )).toFixed(0)); 
+    } 
   };
 
-  const [beOdds, setBeOdds] = useState('1.90');
+  // ==========================================
+  // 7. LÓGICA BREAK EVEN
+  // ==========================================
+  const [beOdds, setBeOdds] = useState('1.90'); 
   const beWinRate = parseFloat(beOdds) > 1 ? (1 / parseFloat(beOdds)) * 100 : 0;
 
   // ==========================================
-  // 8. LÓGICA ExC QUANTITATIVA (POISSON + MOMENTUM + EV%)
+  // ESTADOS COMPARTILHADOS (ExC e ExG usam o mesmo Radar)
+  // ==========================================
+  const [liveMin, setLiveMin] = useState('');
+  const [liveCurrentTarget, setLiveCurrentTarget] = useState(''); 
+  const [liveAP_Def, setLiveAP_Def] = useState(''); 
+  const [liveAP_Press, setLiveAP_Press] = useState(''); 
+  const [liveAP_5m, setLiveAP_5m] = useState(''); 
+  const [liveSoT, setLiveSoT] = useState(''); 
+  const [liveSoffT, setLiveSoffT] = useState(''); 
+  const [liveCurrentOdd, setLiveCurrentOdd] = useState(''); 
+
+  const factorial = (n: number): number => (n === 0 || n === 1 ? 1 : n * factorial(n - 1));
+  const poissonExact = (k: number, lambda: number) => (Math.pow(lambda, k) * Math.exp(-lambda)) / factorial(k);
+
+  // ==========================================
+  // 8. LÓGICA ExC QUANTITATIVA (CANTOS)
   // ==========================================
   const [excScenario, setExcScenario] = useState('ht_asian');
   const [excChecklist, setExcChecklist] = useState<Record<number, boolean>>({});
   const [excUnlocked, setExcUnlocked] = useState(false);
 
-  const [excMin, setExcMin] = useState('');
-  const [excCorners, setExcCorners] = useState('');
-  const [excAP_Def, setExcAP_Def] = useState(''); 
-  const [excAP_Press, setExcAP_Press] = useState(''); 
-  const [excAP_5m, setExcAP_5m] = useState(''); // NOVO: Momentum Delta
-  const [excSoT, setExcSoT] = useState(''); 
-  const [excSoffT, setExcSoffT] = useState(''); 
-  const [excCurrentOdd, setExcCurrentOdd] = useState(''); // NOVO: Odd Atual para EV
-
   const excScenariosData: Record<string, { title: string; checks: string[] }> = {
-    ht_asian: {
-      title: 'Canto Asiático HT',
-      checks: [
-        'Janela de oportunidade: Entre 25 e 36 minutos?',
-        'O time favorito está pressionando ativamente?',
-        'Existe assimetria visível no radar do jogo?'
-      ]
-    },
-    ht_limit: {
-      title: 'Canto Limite HT',
-      checks: [
-        'Janela de oportunidade: Entre 38 e 43 minutos?',
-        'Ocorrência de ataques rápidos e finalizações?',
-        'Adversário está sendo empurrado para a própria área?'
-      ]
-    },
-    ft_asian: {
-      title: 'Canto Asiático FT',
-      checks: [
-        'Janela de oportunidade: Entre 65 e 78 minutos?',
-        'O time perdendo/empatando dominou a posse no 2º tempo?',
-        'Zagueiros adversários estão rebatendo muitas bolas?'
-      ]
-    },
-    ft_limit: {
-      title: 'Canto Limite FT',
-      checks: [
-        'Janela de oportunidade: Entre 83 e 88 minutos?',
-        'Time precisando desesperadamente de 1 gol (Abafa)?',
-        'Adversário não consegue segurar a bola no ataque?'
-      ]
-    }
+    ht_asian: { title: 'Canto Asiático HT', checks: ['Entre 25 e 36 minutos?', 'Favorito pressionando ativamente?', 'Assimetria visível no radar?'] },
+    ht_limit: { title: 'Canto Limite HT', checks: ['Entre 38 e 43 minutos?', 'Ataques rápidos e finalizações?', 'Adversário empurrado para a área?'] },
+    ft_asian: { title: 'Canto Asiático FT', checks: ['Entre 65 e 78 minutos?', 'Time dominou a posse no 2º tempo?', 'Zagueiros rebatendo muitas bolas?'] },
+    ft_limit: { title: 'Canto Limite FT', checks: ['Entre 83 e 88 minutos?', 'Modo desespero (Abafa)?', 'Adversário não segura a bola?'] }
   };
 
-  useEffect(() => {
-    setExcChecklist({});
-    setExcUnlocked(false);
-  }, [excScenario]);
-
+  useEffect(() => { setExcChecklist({}); setExcUnlocked(false); }, [excScenario]);
   const handleExcCheck = (idx: number) => {
-    const newChecklist = { ...excChecklist, [idx] : !excChecklist[idx] };
-    setExcChecklist(newChecklist);
-    const requiredChecks = excScenariosData[excScenario].checks.length;
-    setExcUnlocked(Object.keys(newChecklist).filter(k => newChecklist[parseInt(k)]).length === requiredChecks);
+    const n = { ...excChecklist, [idx] : !excChecklist[idx] }; setExcChecklist(n);
+    setExcUnlocked(Object.keys(n).filter(k => n[parseInt(k)]).length === excScenariosData[excScenario].checks.length);
   };
-
-  // Helper Estatístico
-  const factorial = (n: number): number => (n === 0 || n === 1 ? 1 : n * factorial(n - 1));
-  const poissonExact = (k: number, lambda: number) => (Math.pow(lambda, k) * Math.exp(-lambda)) / factorial(k);
 
   const calculateExC = () => {
-      const min = parseFloat(excMin);
-      const corners = parseFloat(excCorners) || 0;
-      const apDef = parseFloat(excAP_Def) || 0;
-      const apPress = parseFloat(excAP_Press) || 0;
-      const ap5m = parseFloat(excAP_5m) || 0; 
-      const currentOdd = parseFloat(excCurrentOdd) || 0;
-      const sot = parseFloat(excSoT) || 0;
-      const sofft = parseFloat(excSoffT) || 0;
+      const min = parseFloat(liveMin); const corners = parseFloat(liveCurrentTarget) || 0;
+      const apDef = parseFloat(liveAP_Def) || 0; const apPress = parseFloat(liveAP_Press) || 0;
+      const ap5m = parseFloat(liveAP_5m) || 0; const currentOdd = parseFloat(liveCurrentOdd) || 0;
+      const sot = parseFloat(liveSoT) || 0; const sofft = parseFloat(liveSoffT) || 0;
 
-      if (!min || min <= 0 || !apPress) return { 
-          appm: 0, fieldTilt: 0, proj: 0, probLimit: 0, probAsian: 0, signal: 'none', msg: 'Aguardando dados estruturados...',
-          fairOddLimit: 0, fairOddAsian: 0, ev: 0, momentum: 0, paceMsg: ''
-      };
+      if (!min || min <= 0 || !apPress) return { appm: 0, fieldTilt: 0, proj: 0, probLimit: 0, probAsian: 0, signal: 'none', msg: 'Aguardando dados...', fairOddLimit: 0, fairOddAsian: 0, ev: 0, momentum: 0, paceMsg: '', crossCheckMsg: '' };
 
       const isHT = excScenario.includes('ht');
       const isAsianTarget = excScenario.includes('asian');
-      const extraTime = isHT ? 3 : 6; 
-      const maxMin = isHT ? 45 : 90;
+      const extraTime = isHT ? 3 : 6; const maxMin = isHT ? 45 : 90;
       const remainingTime = Math.max(1, (maxMin + extraTime) - min);
 
-      // 1. Métricas Base
-      const totalAP = apPress + apDef;
-      const fieldTilt = totalAP > 0 ? (apPress / totalAP) * 100 : 0;
+      const totalAP = apPress + apDef; const fieldTilt = totalAP > 0 ? (apPress / totalAP) * 100 : 0;
       const appm = apPress / min;
       
-      // 2. Momentum (Aceleração nos últimos 5 min)
-      let momentum = 0;
-      let paceMsg = "Padrão";
-      let urgencyFactor = 1.0;
-
-      if (ap5m > 0 && apPress > ap5m) {
-          const deltaAP = apPress - ap5m;
-          momentum = deltaAP / 5; // Ataques por minuto recentes
-          
-          if (momentum >= 2.0) {
-              urgencyFactor += 0.35; // Avalanche total
-              paceMsg = "Avalanche (Extremo)";
-          } else if (momentum >= 1.2) {
-              urgencyFactor += 0.15; // Ritmo forte
-              paceMsg = "Acelerado";
-          } else if (momentum < 0.8) {
-              urgencyFactor -= 0.10; // Esfriando
-              paceMsg = "Desacelerando";
-          }
+      // Inteligência Cruzada
+      let crossCheckMsg = '';
+      if (sot >= 4 && (sot / apPress) > 0.1) {
+          crossCheckMsg = '💡 Dica de Perfil: Este time está chutando muito ao gol. O cenário pode ser melhor para o mercado de GOLS.';
+      } else if (appm > 1.2 && sot <= 1) {
+          crossCheckMsg = '✅ Perfil Perfeito para Cantos: Muito volume (chuveirinho) e pouca precisão de chutes.';
       }
 
-      // Adiciona peso do domínio territorial
+      let momentum = 0; let paceMsg = "Padrão"; let urgencyFactor = 1.0;
+      if (ap5m > 0 && apPress > ap5m) {
+          momentum = (apPress - ap5m) / 5;
+          if (momentum >= 2.0) { urgencyFactor += 0.35; paceMsg = "Avalanche (Extremo)"; } 
+          else if (momentum >= 1.2) { urgencyFactor += 0.15; paceMsg = "Acelerado"; } 
+          else if (momentum < 0.8) { urgencyFactor -= 0.10; paceMsg = "Desacelerando"; }
+      }
+
       if (fieldTilt >= 70) urgencyFactor += 0.15;
       if (fieldTilt >= 80) urgencyFactor += 0.10;
       if (isHT && min >= 38) urgencyFactor += 0.10;
       if (!isHT && min >= 80) urgencyFactor += 0.20;
 
-      // 3. True Pressure Rate (TPR)
       const expectedCornersSoFar = (apPress * 0.06) + (sot * 0.35) + (sofft * 0.15);
       const tpr = expectedCornersSoFar / min;
-      
       const lambda = tpr * remainingTime * urgencyFactor;
-      const totalExc = corners + lambda;
-
-      // 4. Poisson & Fair Odds
-      const p0 = poissonExact(0, lambda);
-      const p1 = poissonExact(1, lambda);
-
-      const probLimit = (1 - p0) * 100; 
-      const probAsian = (1 - (p0 + p1)) * 100;
-
+      
+      const p0 = poissonExact(0, lambda); const p1 = poissonExact(1, lambda);
+      const probLimit = (1 - p0) * 100; const probAsian = (1 - (p0 + p1)) * 100;
       const fairOddLimit = probLimit > 0 ? 100 / probLimit : 0;
       const fairOddAsian = probAsian > 0 ? 100 / probAsian : 0;
-
-      // 5. Calculadora de EV+
+      
       const targetProb = isAsianTarget ? probAsian : probLimit;
       const targetFairOdd = isAsianTarget ? fairOddAsian : fairOddLimit;
       const ev = currentOdd > 0 ? ((targetProb / 100) * currentOdd - 1) * 100 : 0;
 
-      // 6. Motor Quantitativo de Decisão
-      let signal = 'red';
-      let msg = '';
-      
-      const isVolumeValid = appm >= 1.05 || momentum >= 1.5; // Passa se for lento antes mas explodiu agora
+      let signal = 'red'; let msg = '';
+      const isVolumeValid = appm >= 1.05 || momentum >= 1.5;
       const isDominanceValid = fieldTilt >= 65;
       const isEfficiencyValid = (sot + sofft) >= (min / 10);
 
-      // Lógica Baseada em EV (Se tiver Odd preenchida, o EV manda em tudo)
       if (currentOdd > 0) {
-          if (ev < 0) {
-              signal = 'red';
-              msg = `🔴 ABORTAR: Odd s/ valor (-EV de ${ev.toFixed(1)}%). Justa: @${targetFairOdd.toFixed(2)}`;
-          } else if (ev >= 10 && isDominanceValid) {
-              signal = 'green';
-              msg = `🟢 SINAL VERDE: EV+ GIGANTE (+${ev.toFixed(1)}%). Compre essa Odd!`;
-          } else if (ev > 0) {
-              signal = 'yellow';
-              msg = `🟡 OBSERVATÓRIO: Leve EV+ (+${ev.toFixed(1)}%). Risco tático.`;
-          }
-      } 
-      // Lógica Baseada apenas nos Dados (Sem Odd preenchida)
-      else {
+          if (ev < 0) { signal = 'red'; msg = `🔴 ABORTAR: Odd s/ valor (-EV de ${ev.toFixed(1)}%). Justa: @${targetFairOdd.toFixed(2)}`; }
+          else if (ev >= 10 && isDominanceValid) { signal = 'green'; msg = `🟢 SINAL VERDE: EV+ GIGANTE (+${ev.toFixed(1)}%).`; }
+          else if (ev > 0) { signal = 'yellow'; msg = `🟡 OBSERVATÓRIO: Leve EV+ (+${ev.toFixed(1)}%).`; }
+      } else {
           if (isVolumeValid && isDominanceValid) {
-              if (targetProb >= 70 && isEfficiencyValid) {
-                  signal = 'green';
-                  msg = '🟢 SINAL VERDE: ASSIMETRIA CLARA (Busque Valor)';
-              } else if (targetProb >= 55 || appm >= 1.2) {
-                  signal = 'yellow';
-                  msg = '🟡 OBSERVATÓRIO: Risco moderado. Aguarde a odd valorizar.';
-              } else {
-                  signal = 'red';
-                  msg = '🔴 ABORTAR: Baixa probabilidade estatística.';
-              }
+              if (targetProb >= 70 && isEfficiencyValid) { signal = 'green'; msg = '🟢 SINAL VERDE: ASSIMETRIA CLARA (EV+)'; }
+              else if (targetProb >= 55 || appm >= 1.2) { signal = 'yellow'; msg = '🟡 OBSERVATÓRIO: Risco moderado. Aguarde a odd.'; }
+              else { signal = 'red'; msg = '🔴 ABORTAR: Baixa probabilidade estatística.'; }
           } else {
               if (!isVolumeValid) msg = `🔴 ABORTAR: Jogo Lento (APPM de ${appm.toFixed(2)})`;
               else if (!isDominanceValid) msg = `🔴 ABORTAR: Equilíbrio Tático (Domínio < 65%)`;
@@ -321,24 +227,100 @@ const Calculators: React.FC = () => {
           }
       }
 
-      return { 
-          appm, fieldTilt, proj: totalExc, probLimit, probAsian, 
-          signal, msg, momentum, paceMsg, fairOddLimit, fairOddAsian, ev, isAsianTarget 
-      };
+      return { appm, fieldTilt, proj: corners + lambda, probLimit, probAsian, signal, msg, fairOddLimit, fairOddAsian, ev, momentum, paceMsg, crossCheckMsg };
+  };
+  const excResult = calculateExC();
+
+  // ==========================================
+  // 9. LÓGICA ExG QUANTITATIVA (GOLS)
+  // ==========================================
+  const [exgScenario, setExgScenario] = useState('ft_over05');
+  const [exgChecklist, setExgChecklist] = useState<Record<number, boolean>>({});
+  const [exgUnlocked, setExgUnlocked] = useState(false);
+
+  const exgScenariosData: Record<string, { title: string; checks: string[] }> = {
+    ht_over05: { title: 'Over 0.5 Gols HT', checks: ['Antes dos 30 minutos?', 'Jogo aberto (Lá e cá) ou favorito amassando?', 'Goleiros já fizeram defesas difíceis?'] },
+    ft_over05: { title: 'Over 0.5 Gols FT (Reta Final)', checks: ['Entre 70 e 80 minutos?', 'Pelo menos um time precisa da vitória?', 'Muitos espaços deixados para contra-ataque?'] },
+    ft_over15: { title: 'Over 1.5 Gols FT', checks: ['Segundo tempo recém iniciado (45 a 60 min)?', 'Time perdendo se lançou pro ataque?', 'Alto índice de chutes dentro da área?'] }
   };
 
-  const excResult = calculateExC();
+  useEffect(() => { setExgChecklist({}); setExgUnlocked(false); }, [exgScenario]);
+  const handleExgCheck = (idx: number) => {
+    const n = { ...exgChecklist, [idx] : !exgChecklist[idx] }; setExgChecklist(n);
+    setExgUnlocked(Object.keys(n).filter(k => n[parseInt(k)]).length === exgScenariosData[exgScenario].checks.length);
+  };
+
+  const calculateExG = () => {
+      const min = parseFloat(liveMin); const goals = parseFloat(liveCurrentTarget) || 0; 
+      const apDef = parseFloat(liveAP_Def) || 0; const apPress = parseFloat(liveAP_Press) || 0;
+      const currentOdd = parseFloat(liveCurrentOdd) || 0;
+      const sot = parseFloat(liveSoT) || 0; const sofft = parseFloat(liveSoffT) || 0;
+
+      if (!min || min <= 0 || !apPress) return { xgTotal: 0, probGoal: 0, signal: 'none', msg: 'Aguardando dados...', fairOddGoal: 0, ev: 0, crossCheckMsg: '' };
+
+      const isHT = exgScenario.includes('ht');
+      const maxMin = isHT ? 45 : 90;
+      const remainingTime = Math.max(1, (maxMin + (isHT?3:6)) - min);
+
+      // Inteligência Cruzada
+      let crossCheckMsg = '';
+      if (apPress > 40 && sot === 0) {
+          crossCheckMsg = '⚠️ ALERTA: O time tem volume, mas não chuta (0 no Alvo). O mercado de CANTOS (ExC) é muito mais seguro aqui.';
+      } else if (sot >= 4) {
+          crossCheckMsg = '🎯 Perfil Letal: Excelente taxa de chutes no alvo. Cenário ideal para Gols.';
+      }
+
+      const expectedGoalsSoFar = (sot * 0.14) + (sofft * 0.04) + (apPress * 0.005); 
+      const xgPerMin = expectedGoalsSoFar / min;
+      
+      let opennessFactor = 1.0;
+      if (apDef > (apPress * 0.5)) opennessFactor = 1.2; 
+      
+      const lambdaGoals = xgPerMin * remainingTime * opennessFactor;
+      
+      const p0 = poissonExact(0, lambdaGoals);
+      const probGoal = (1 - p0) * 100; 
+      const fairOddGoal = probGoal > 0 ? 100 / probGoal : 0;
+      
+      const ev = currentOdd > 0 ? ((probGoal / 100) * currentOdd - 1) * 100 : 0;
+
+      let signal = 'red'; let msg = '';
+      if (currentOdd > 0) {
+          if (ev < 0) { signal = 'red'; msg = `🔴 ABORTAR: Odd s/ valor (-EV).`; }
+          else if (ev >= 10 && sot >= 2) { signal = 'green'; msg = `🟢 SINAL VERDE: BATE NA ODD (+${ev.toFixed(1)}% EV).`; }
+          else if (ev > 0) { signal = 'yellow'; msg = `🟡 OBSERVATÓRIO: Leve EV+.`; }
+      } else {
+          if (sot >= (min/15) || (sot+sofft) >= (min/6)) { 
+              if (probGoal >= 70) { signal = 'green'; msg = '🟢 SINAL VERDE: ALTA TENDÊNCIA DE GOL'; }
+              else if (probGoal >= 55) { signal = 'yellow'; msg = '🟡 OBSERVATÓRIO: Jogo com potencial. Aguarde odd.'; }
+              else { signal = 'red'; msg = '🔴 ABORTAR: Frequência de finalização caindo.'; }
+          } else { signal = 'red'; msg = '🔴 ABORTAR: Faltam finalizações reais no alvo.'; }
+      }
+
+      return { xgTotal: expectedGoalsSoFar + lambdaGoals, probGoal, signal, msg, fairOddGoal, ev, crossCheckMsg };
+  };
+  const exgResult = calculateExG();
+
 
   // --- SIDEBAR INFO HELPERS ---
   const getSidebarInfo = () => {
     switch(activeTab) {
-      case 'exc': return { title: 'ExC Analytics (Quant)', text: 'Motor institucional que usa Distribuição de Poisson, aceleração de momentum e cálculo automático de EV+ para identificar apostas de extremo valor em escanteios.' };
+      case 'dutching': return { title: 'Gestão de Risco', text: 'O Dutching divide a sua exposição entre múltiplas seleções, diluindo o risco do investimento em um único evento.' };
+      case 'kelly': return { title: 'Cálculo de Exposição', text: 'O Critério de Kelly ajusta matematicamente a stake ideal com base na probabilidade e na odd (cotação) apresentada.' };
+      case 'value': return { title: 'Análise de EV+', text: 'O conceito de Value Bet compara a cotação oferecida pelo mercado com a probabilidade real estatística de um evento ocorrer.' };
+      case 'arb': return { title: 'Arbitragem Matemática', text: 'Calcula o volume exato a ser distribuído em duas vias para anular o risco direcional. (Atenção aos limites do mercado).' };
+      case 'stake': return { title: 'Gestão Fixa', text: 'O cálculo de stake fixa percentual ajuda a manter o controle do drawdown em fases de oscilação do mercado.' };
+      case 'odds': return { title: 'Leitura Global', text: 'Conversão automática de formatos de cotações utilizados em bolsas esportivas americanas e europeias.' };
+      case 'breakeven': return { title: 'Ponto de Equilíbrio', text: 'A taxa de acerto (Hit-Rate) estatística necessária para manter a estabilidade do capital com a odd informada.' };
+      case 'exc': return { title: 'ExC Analytics (Cantos)', text: 'Mede o VOLUME de pressão (Ataques Perigosos e Field Tilt) para prever escanteios usando Poisson e Momentum.' };
+      case 'exg': return { title: 'ExG Analytics (Gols)', text: 'Mede a EFICIÊNCIA (Chutes no Alvo e Jogo Aberto) para calcular a probabilidade matemática de um Gol sair.' };
       default: return { title: 'Ferramentas Analíticas', text: 'Utilize os modelos matemáticos para tomar decisões baseadas em dados e não em emoções.' };
     }
   };
 
   const sidebarInfo = getSidebarInfo();
 
+  // A LISTA COMPLETA COM AS 9 ABAS
   const tabs = [
     { id: 'dutching', label: 'Dutching', pro: false },
     { id: 'kelly', label: 'Kelly', pro: false },
@@ -347,7 +329,8 @@ const Calculators: React.FC = () => {
     { id: 'stake', label: 'Stake %', pro: false },
     { id: 'odds', label: 'Odds Conv.', pro: false },
     { id: 'breakeven', label: 'Break Even', pro: true },
-    { id: 'exc', label: 'ExC Analytics', pro: true },
+    { id: 'exc', label: 'ExC (Cantos)', pro: true },
+    { id: 'exg', label: 'ExG (Gols)', pro: true },
   ];
 
   return (
@@ -368,23 +351,21 @@ const Calculators: React.FC = () => {
         </div>
       </div>
       
-      {/* TABS */}
-      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-2 mb-6 px-4 md:px-0">
+      {/* TABS GRID - Ajustado para caber as 9 abas de forma elegante */}
+      <div className="flex flex-wrap md:grid md:grid-cols-4 xl:grid-cols-9 gap-2 mb-6 px-4 md:px-0">
         {tabs.map(tab => (
           <button
             key={tab.id}
             onClick={() => setActiveTab(tab.id as any)}
-            className={`relative w-full flex items-center justify-center px-2 py-3 rounded-xl font-bold text-[10px] uppercase tracking-wider transition-all gap-1 ${
+            className={`relative flex-1 min-w-[100px] flex items-center justify-center px-2 py-3 rounded-xl font-bold text-[10px] uppercase tracking-wider transition-all gap-1 ${
               activeTab === tab.id
-                ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/20'
+                ? (tab.id === 'exg' ? 'bg-orange-500 text-white shadow-lg shadow-orange-500/20' : 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/20')
                 : 'bg-white dark:bg-[#0f172a] text-slate-600 dark:text-slate-500 border border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-900'
             }`}
           >
             {tab.pro && !isPro && <Lock size={10} className="mb-0.5" />}
             {tab.label}
-            {activeTab === tab.id && (
-              <span className="absolute bottom-0 left-0 w-full h-[3px] bg-white/40 animate-pulse rounded-b-xl" />
-            )}
+            {activeTab === tab.id && <span className="absolute bottom-0 left-0 w-full h-[3px] bg-white/40 animate-pulse rounded-b-xl" />}
           </button>
         ))}
       </div>
@@ -392,6 +373,10 @@ const Calculators: React.FC = () => {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 px-4 md:px-0">
         <div className="lg:col-span-2 space-y-6 min-w-0 w-full">
             
+            {/* =========================================
+                RENDERIZAÇÃO DAS CALCULADORAS CLÁSSICAS
+            ========================================= */}
+
             {activeTab === 'dutching' && (
                 <div className="bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-800 rounded-[2rem] p-6 shadow-sm w-full overflow-hidden">
                     <h2 className="text-lg font-black text-slate-900 dark:text-white uppercase tracking-tighter italic mb-4">Calculadora Dutching</h2>
@@ -566,28 +551,22 @@ const Calculators: React.FC = () => {
                 )
             )}
 
-            {/* --- EXPECTATIVA DE CANTOS (POISSON ESTRITO) - EXCLUSIVO PRO --- */}
+            {/* =========================================
+                EXPECTATIVA DE CANTOS (ExC) - PRO
+            ========================================= */}
             {activeTab === 'exc' && (
                 !isPro ? <ProLockScreen /> : (
                 <div className="bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-800 rounded-[2rem] p-6 shadow-sm">
                    <div className="flex justify-between items-start mb-6">
                       <h2 className="text-lg font-black text-slate-900 dark:text-white uppercase tracking-tighter italic flex items-center gap-2">
-                        <Radar size={20} className="text-blue-500"/> ExC Poisson Analytics
+                        <Radar size={20} className="text-emerald-500"/> ExC Analytics (Cantos)
                       </h2>
-                      <span className="bg-indigo-100 text-indigo-700 dark:bg-indigo-500/10 dark:text-indigo-400 px-2 py-1 rounded text-[9px] font-black uppercase tracking-widest border border-indigo-200 dark:border-indigo-500/20 flex items-center gap-1">
-                         <Zap size={10} /> Market Maker
-                      </span>
+                      <span className="bg-emerald-100 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400 px-2 py-1 rounded text-[9px] font-black uppercase tracking-widest border border-emerald-200 dark:border-emerald-500/20">Market Maker</span>
                    </div>
                    
                    <div className="mb-6">
-                      <label className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase block mb-2 tracking-widest">
-                        1. Selecione a Assimetria (Alvo)
-                      </label>
-                      <select 
-                        value={excScenario} 
-                        onChange={e => setExcScenario(e.target.value)} 
-                        className="w-full p-3 bg-slate-50 dark:bg-slate-900 rounded-xl font-bold text-sm outline-none border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white cursor-pointer focus:ring-2 focus:ring-blue-500/50"
-                      >
+                      <label className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase block mb-2 tracking-widest">1. Selecione a Assimetria (Alvo)</label>
+                      <select value={excScenario} onChange={e => setExcScenario(e.target.value)} className="w-full p-3 bg-slate-50 dark:bg-slate-900 rounded-xl font-bold text-sm outline-none border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-emerald-500/50">
                          <option value="ht_asian">Canto Asiático HT (Volume Seguro)</option>
                          <option value="ht_limit">Canto Limite HT (Abafa)</option>
                          <option value="ft_asian">Canto Asiático FT (Volta do Intervalo)</option>
@@ -595,179 +574,147 @@ const Calculators: React.FC = () => {
                       </select>
                    </div>
 
-                   {/* GATEKEEPER DE VALIDAÇÃO */}
-                   <div className="mb-8 p-5 bg-slate-50 dark:bg-[#020617] rounded-2xl border border-slate-200 dark:border-slate-800 shadow-inner">
-                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-4 flex items-center gap-2">
-                        <Lock size={12} className={excUnlocked ? 'text-emerald-500' : 'text-slate-400'}/> 
-                        Guardião de Padrão (Validação Visual)
-                      </p>
+                   <div className="mb-8 p-5 bg-slate-50 dark:bg-[#020617] rounded-2xl border border-slate-200 dark:border-slate-800">
+                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-4 flex items-center gap-2"><Lock size={12} className={excUnlocked ? 'text-emerald-500' : 'text-slate-400'}/> Guardião de Padrão</p>
                       <div className="space-y-3">
-                         {excScenariosData[excScenario].checks.map((check: string, idx: number) => (
-                            <button 
-                              key={idx}
-                              onClick={() => handleExcCheck(idx)}
-                              className={`w-full flex items-center gap-3 p-3 rounded-xl border transition-all text-left ${
-                                excChecklist[idx] 
-                                ? 'bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-500/30' 
-                                : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600'
-                              }`}
-                            >
-                               <div className={`shrink-0 ${excChecklist[idx] ? 'text-blue-500' : 'text-slate-400'}`}>
-                                 {excChecklist[idx] ? <CheckSquare size={18} /> : <Square size={18} />}
-                               </div>
-                               <span className={`text-xs font-bold leading-tight ${excChecklist[idx] ? 'text-blue-700 dark:text-blue-300' : 'text-slate-600 dark:text-slate-400'}`}>
-                                 {check}
-                               </span>
+                         {excScenariosData[excScenario].checks.map((check, idx) => (
+                            <button key={idx} onClick={() => handleExcCheck(idx)} className={`w-full flex items-center gap-3 p-3 rounded-xl border text-left ${excChecklist[idx] ? 'bg-emerald-50 dark:bg-emerald-900/20 border-emerald-200 dark:border-emerald-500/30' : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700'}`}>
+                               <div className={`${excChecklist[idx] ? 'text-emerald-500' : 'text-slate-400'}`}>{excChecklist[idx] ? <CheckSquare size={18} /> : <Square size={18} />}</div>
+                               <span className={`text-xs font-bold ${excChecklist[idx] ? 'text-emerald-700 dark:text-emerald-300' : 'text-slate-600 dark:text-slate-400'}`}>{check}</span>
                             </button>
                          ))}
                       </div>
                    </div>
 
-                   {/* MOTOR DA CALCULADORA POISSON */}
                    <AnimatePresence>
                      {excUnlocked && (
-                       <motion.div 
-                         initial={{ opacity: 0, y: 10 }} 
-                         animate={{ opacity: 1, y: 0 }}
-                         className="border-t border-slate-200 dark:border-slate-800 pt-6"
-                       >
-                         <h3 className="text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-4 flex items-center gap-2">
-                           <Activity size={14} className="text-emerald-500"/> Visão Geral do Jogo (Radar Bet365)
-                         </h3>
+                       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="border-t border-slate-200 dark:border-slate-800 pt-6">
+                         <h3 className="text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-4 flex items-center gap-2"><Activity size={14} className="text-emerald-500"/> Input do Radar Bet365</h3>
                          
                          <div className="grid grid-cols-3 gap-4 mb-6">
-                            <div>
-                               <label className="text-[9px] font-bold text-slate-500 uppercase block mb-1">Tempo (Min)</label>
-                               <input type="number" placeholder="Ex: 38" value={excMin} onChange={e => setExcMin(e.target.value)} className="w-full p-3 bg-slate-50 dark:bg-slate-900 rounded-xl font-mono font-bold outline-none border border-slate-200 dark:border-slate-800" />
-                            </div>
-                            <div>
-                               <label className="text-[9px] font-bold text-slate-500 uppercase block mb-1">Cantos Totais</label>
-                               <input type="number" placeholder="Ex: 4" value={excCorners} onChange={e => setExcCorners(e.target.value)} className="w-full p-3 bg-slate-50 dark:bg-slate-900 rounded-xl font-mono font-bold outline-none border border-slate-200 dark:border-slate-800" />
-                            </div>
-                            <div>
-                               <label className="text-[9px] font-bold text-slate-500 uppercase block mb-1 truncate">Ataques P. (Adversário)</label>
-                               <input type="number" placeholder="Ex: 12" value={excAP_Def} onChange={e => setExcAP_Def(e.target.value)} className="w-full p-3 bg-slate-50 dark:bg-slate-900 rounded-xl font-mono font-bold outline-none border border-slate-200 dark:border-slate-800" />
-                            </div>
+                            <div><label className="text-[9px] font-bold text-slate-500 uppercase block mb-1">Tempo (Min)</label><input type="number" value={liveMin} onChange={e => setLiveMin(e.target.value)} className="w-full p-3 bg-slate-50 dark:bg-slate-900 rounded-xl font-mono font-bold outline-none border border-slate-200 dark:border-slate-800" /></div>
+                            <div><label className="text-[9px] font-bold text-slate-500 uppercase block mb-1">Cantos Atuais</label><input type="number" value={liveCurrentTarget} onChange={e => setLiveCurrentTarget(e.target.value)} className="w-full p-3 bg-slate-50 dark:bg-slate-900 rounded-xl font-mono font-bold outline-none border border-slate-200 dark:border-slate-800" /></div>
+                            <div><label className="text-[9px] font-bold text-slate-500 uppercase block mb-1 truncate">Ataques P. (Defesa)</label><input type="number" value={liveAP_Def} onChange={e => setLiveAP_Def(e.target.value)} className="w-full p-3 bg-slate-50 dark:bg-slate-900 rounded-xl font-mono font-bold outline-none border border-slate-200 dark:border-slate-800" /></div>
                          </div>
-
-                         <h3 className="text-[10px] font-black text-blue-600 dark:text-blue-500 uppercase tracking-widest mb-4 flex items-center gap-2">
-                           <Crosshair size={14} /> Time Pressionando (Buscando o Gol)
-                         </h3>
                          
-                         <div className="grid grid-cols-2 gap-4 mb-6 bg-blue-50 dark:bg-blue-900/10 p-4 rounded-2xl border border-blue-100 dark:border-blue-900/30">
-                            <div>
-                               <label className="text-[9px] font-bold text-blue-700 dark:text-blue-400 uppercase block mb-1">Ataques P. (Atual)</label>
-                               <input type="number" placeholder="Ex: 48" value={excAP_Press} onChange={e => setExcAP_Press(e.target.value)} className="w-full p-3 bg-white dark:bg-slate-900 rounded-xl font-mono font-bold outline-none border border-slate-200 dark:border-slate-800 focus:border-blue-500" />
-                            </div>
-                            <div>
-                               <label className="text-[9px] font-bold text-blue-700 dark:text-blue-400 uppercase block mb-1 flex justify-between">Ataques P. <span className="text-[8px] opacity-70">(5 min atrás)</span></label>
-                               <input type="number" placeholder="Opcional para Momentum" value={excAP_5m} onChange={e => setExcAP_5m(e.target.value)} className="w-full p-3 bg-white dark:bg-slate-900 rounded-xl font-mono font-bold outline-none border border-slate-200 dark:border-slate-800 placeholder:text-[10px] focus:border-blue-500" />
-                            </div>
-                            <div>
-                               <label className="text-[9px] font-bold text-blue-700 dark:text-blue-400 uppercase block mb-1">Chutes No Alvo</label>
-                               <input type="number" placeholder="Ex: 3" value={excSoT} onChange={e => setExcSoT(e.target.value)} className="w-full p-3 bg-white dark:bg-slate-900 rounded-xl font-mono font-bold outline-none border border-slate-200 dark:border-slate-800 focus:border-blue-500" />
-                            </div>
-                            <div>
-                               <label className="text-[9px] font-bold text-blue-700 dark:text-blue-400 uppercase block mb-1">Chutes Para Fora</label>
-                               <input type="number" placeholder="Ex: 5" value={excSoffT} onChange={e => setExcSoffT(e.target.value)} className="w-full p-3 bg-white dark:bg-slate-900 rounded-xl font-mono font-bold outline-none border border-slate-200 dark:border-slate-800 focus:border-blue-500" />
-                            </div>
+                         <div className="grid grid-cols-2 gap-4 mb-6 bg-emerald-50 dark:bg-emerald-900/10 p-4 rounded-2xl border border-emerald-100 dark:border-emerald-900/30">
+                            <div className="col-span-2"><p className="text-[10px] font-black text-emerald-600 dark:text-emerald-500 uppercase tracking-widest flex items-center gap-1"><Crosshair size={12}/> Time Pressionando</p></div>
+                            <div><label className="text-[9px] font-bold text-emerald-700 dark:text-emerald-400 uppercase block mb-1">Ataques P.</label><input type="number" value={liveAP_Press} onChange={e => setLiveAP_Press(e.target.value)} className="w-full p-3 bg-white dark:bg-slate-900 rounded-xl font-mono font-bold outline-none border border-slate-200 dark:border-slate-800 focus:border-emerald-500" /></div>
+                            <div><label className="text-[9px] font-bold text-emerald-700 dark:text-emerald-400 uppercase block mb-1">AP (5 min atrás)</label><input type="number" placeholder="Opcional" value={liveAP_5m} onChange={e => setLiveAP_5m(e.target.value)} className="w-full p-3 bg-white dark:bg-slate-900 rounded-xl font-mono font-bold outline-none border border-slate-200 dark:border-slate-800 focus:border-emerald-500" /></div>
+                            <div><label className="text-[9px] font-bold text-emerald-700 dark:text-emerald-400 uppercase block mb-1">No Alvo</label><input type="number" value={liveSoT} onChange={e => setLiveSoT(e.target.value)} className="w-full p-3 bg-white dark:bg-slate-900 rounded-xl font-mono font-bold outline-none border border-slate-200 dark:border-slate-800 focus:border-emerald-500" /></div>
+                            <div><label className="text-[9px] font-bold text-emerald-700 dark:text-emerald-400 uppercase block mb-1">Para Fora</label><input type="number" value={liveSoffT} onChange={e => setLiveSoffT(e.target.value)} className="w-full p-3 bg-white dark:bg-slate-900 rounded-xl font-mono font-bold outline-none border border-slate-200 dark:border-slate-800 focus:border-emerald-500" /></div>
                          </div>
 
-                         {/* CAMPO DE ODD E EV */}
-                         <div className="mb-6 p-1 bg-gradient-to-r from-emerald-500 via-emerald-400 to-teal-500 rounded-2xl">
-                             <div className="bg-slate-950 rounded-xl p-4 flex items-center gap-4">
-                                 <div className="bg-emerald-500/20 p-3 rounded-full shrink-0">
-                                    <DollarSign size={24} className="text-emerald-400" />
-                                 </div>
-                                 <div className="flex-1">
-                                    <label className="text-[10px] font-black text-emerald-500 uppercase tracking-[0.2em] block mb-1">Odd Oferecida (Bet365)</label>
-                                    <input type="number" step="0.01" placeholder="Ex: 1.83 (Opcional - Calcula EV%)" value={excCurrentOdd} onChange={e => setExcCurrentOdd(e.target.value)} className="w-full bg-transparent text-xl font-mono font-black text-white outline-none placeholder:text-slate-700" />
-                                 </div>
+                         <div className="mb-6 p-4 bg-slate-950 rounded-2xl flex items-center gap-4">
+                             <DollarSign size={24} className="text-emerald-400 shrink-0" />
+                             <div className="flex-1">
+                                <label className="text-[10px] font-black text-emerald-500 uppercase tracking-[0.2em] block mb-1">Odd Oferecida (Calcula EV%)</label>
+                                <input type="number" step="0.01" placeholder="1.83" value={liveCurrentOdd} onChange={e => setLiveCurrentOdd(e.target.value)} className="w-full bg-transparent text-xl font-mono font-black text-white outline-none" />
                              </div>
                          </div>
 
-                         {/* TELA DA BLOOMBERG - RESULTADOS QUANTITATIVOS */}
-                         <div className="bg-[#020617] rounded-2xl border border-slate-800 p-6 overflow-hidden relative">
-                             <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-5"></div>
+                         {excResult.crossCheckMsg && (
+                            <div className="mb-4 bg-blue-500/10 border border-blue-500/20 text-blue-400 p-3 rounded-xl text-[11px] font-bold flex items-start gap-2">
+                               <Lightbulb size={14} className="shrink-0 mt-0.5" /> {excResult.crossCheckMsg}
+                            </div>
+                         )}
+
+                         <div className="bg-[#020617] rounded-2xl border border-slate-800 p-6">
+                             <div className="flex justify-between border-b border-slate-800 pb-4 mb-4">
+                                 <div><p className="text-[9px] uppercase text-slate-500 font-bold">Pressão (APPM)</p><p className={`text-lg font-mono font-black ${excResult.appm >= 1.05 ? 'text-emerald-400' : 'text-red-400'}`}>{excResult.appm.toFixed(2)}</p></div>
+                                 <div className="text-right"><p className="text-[9px] uppercase text-slate-500 font-bold">Odd Justa Limite</p><p className="text-lg font-mono font-black text-emerald-400">@{excResult.fairOddLimit.toFixed(2)}</p></div>
+                             </div>
                              
-                             <div className="relative z-10 flex flex-col md:flex-row justify-between mb-6 gap-6">
-                                <div className="space-y-4 flex-1">
-                                    <div>
-                                      <p className="text-[9px] uppercase tracking-widest text-slate-500 font-bold mb-1">Pace (Momentum)</p>
-                                      <div className="flex items-end gap-2">
-                                         <p className={`text-xl font-black font-mono leading-none ${excResult.momentum >= 1.5 ? 'text-indigo-400' : 'text-slate-300'}`}>
-                                           {excResult.paceMsg}
-                                         </p>
-                                      </div>
-                                    </div>
-                                    <div className="flex justify-between items-end border-t border-slate-800 pt-3">
-                                        <div>
-                                          <p className="text-[8px] uppercase tracking-widest text-slate-500 font-bold mb-1">Pressão (APPM)</p>
-                                          <p className={`text-lg font-black font-mono leading-none ${excResult.appm >= 1.05 ? 'text-emerald-400' : 'text-red-400'}`}>
-                                            {excResult.appm.toFixed(2)}
-                                          </p>
-                                        </div>
-                                        <div>
-                                          <p className="text-[8px] uppercase tracking-widest text-slate-500 font-bold mb-1">Domínio</p>
-                                          <p className={`text-lg font-black font-mono leading-none ${excResult.fieldTilt >= 65 ? 'text-blue-400' : 'text-red-400'}`}>
-                                            {excResult.fieldTilt.toFixed(0)}%
-                                          </p>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <div className="flex-1 bg-slate-900 border border-slate-800 p-4 rounded-xl shadow-inner">
-                                    <h4 className="text-[10px] text-slate-400 uppercase tracking-widest font-bold mb-4 flex justify-between items-center gap-2">
-                                       <span className="flex items-center gap-1"><BarChart4 size={12} className="text-indigo-500"/> Probabilidade Real</span>
-                                       <span className="text-[8px] text-emerald-500">Fair Odd (Justa)</span>
-                                    </h4>
-                                    
-                                    <div className="space-y-4">
-                                        <div>
-                                            <div className="flex justify-between items-end mb-1">
-                                               <span className="text-[10px] font-bold text-white uppercase tracking-wider">Limite (+1)</span>
-                                               <div className="text-right">
-                                                   <span className={`text-xs font-black mr-2 ${excResult.probLimit >= 75 ? 'text-emerald-400' : 'text-slate-400'}`}>{excResult.probLimit.toFixed(1)}%</span>
-                                                   <span className="text-[10px] font-mono font-bold text-emerald-500 bg-emerald-500/10 px-1.5 py-0.5 rounded">@{excResult.fairOddLimit.toFixed(2)}</span>
-                                               </div>
-                                            </div>
-                                            <div className="w-full bg-slate-800 rounded-full h-1.5 overflow-hidden">
-                                               <div className={`h-1.5 rounded-full ${excResult.probLimit >= 75 ? 'bg-emerald-500' : 'bg-slate-500'}`} style={{ width: `${excResult.probLimit}%` }}></div>
-                                            </div>
-                                        </div>
-                                        <div>
-                                            <div className="flex justify-between items-end mb-1">
-                                               <span className="text-[10px] font-bold text-white uppercase tracking-wider">Asiático (+2)</span>
-                                               <div className="text-right">
-                                                   <span className={`text-xs font-black mr-2 ${excResult.probAsian >= 50 ? 'text-emerald-400' : 'text-slate-400'}`}>{excResult.probAsian.toFixed(1)}%</span>
-                                                   <span className="text-[10px] font-mono font-bold text-emerald-500 bg-emerald-500/10 px-1.5 py-0.5 rounded">@{excResult.fairOddAsian.toFixed(2)}</span>
-                                               </div>
-                                            </div>
-                                            <div className="w-full bg-slate-800 rounded-full h-1.5 overflow-hidden">
-                                               <div className={`h-1.5 rounded-full ${excResult.probAsian >= 50 ? 'bg-emerald-500' : 'bg-slate-500'}`} style={{ width: `${excResult.probAsian}%` }}></div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
+                             <div className="relative z-10 mb-4">
+                               {excResult.signal === 'green' && <div className="bg-emerald-500 text-slate-950 w-full py-3 rounded-xl font-black text-xs text-center">{excResult.msg}</div>}
+                               {excResult.signal === 'yellow' && <div className="bg-yellow-500 text-slate-950 w-full py-3 rounded-xl font-black text-xs text-center">{excResult.msg}</div>}
+                               {excResult.signal === 'red' && <div className="bg-slate-800 text-red-400 w-full py-3 rounded-xl font-black text-[10px] text-center">{excResult.msg}</div>}
                              </div>
+                         </div>
+                       </motion.div>
+                     )}
+                   </AnimatePresence>
+                </div>
+                )
+            )}
 
-                             {/* Veredito do Semáforo Rigoroso / EV */}
-                             <div className="relative z-10">
-                               {excResult.signal === 'green' && (
-                                  <div className="bg-emerald-500 text-slate-950 w-full py-3 rounded-xl font-black text-xs sm:text-sm tracking-wide uppercase shadow-[0_0_15px_rgba(16,185,129,0.4)] text-center">
-                                     {excResult.msg}
-                                  </div>
-                               )}
-                               {excResult.signal === 'yellow' && (
-                                  <div className="bg-yellow-500 text-slate-950 w-full py-3 rounded-xl font-black text-xs sm:text-sm tracking-wide uppercase shadow-[0_0_15px_rgba(234,179,8,0.3)] text-center">
-                                     {excResult.msg}
-                                  </div>
-                               )}
-                               {excResult.signal === 'red' && (
-                                  <div className="bg-slate-800 border border-red-500/30 text-red-400 w-full py-3 rounded-xl font-black text-[10px] sm:text-xs tracking-wide uppercase text-center flex items-center justify-center gap-2">
-                                     <AlertTriangle size={14} className="shrink-0" /> {excResult.msg}
-                                  </div>
-                               )}
+            {/* =========================================
+                EXPECTATIVA DE GOLS (ExG) - PRO
+            ========================================= */}
+            {activeTab === 'exg' && (
+                !isPro ? <ProLockScreen /> : (
+                <div className="bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-800 rounded-[2rem] p-6 shadow-sm">
+                   <div className="flex justify-between items-start mb-6">
+                      <h2 className="text-lg font-black text-slate-900 dark:text-white uppercase tracking-tighter italic flex items-center gap-2">
+                        <Goal size={20} className="text-orange-500"/> ExG Analytics (Gols)
+                      </h2>
+                      <span className="bg-orange-100 text-orange-700 dark:bg-orange-500/10 dark:text-orange-400 px-2 py-1 rounded text-[9px] font-black uppercase tracking-widest border border-orange-200 dark:border-orange-500/20">Lethality Engine</span>
+                   </div>
+                   
+                   <div className="mb-6">
+                      <label className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase block mb-2 tracking-widest">1. Selecione a Assimetria (Alvo)</label>
+                      <select value={exgScenario} onChange={e => setExgScenario(e.target.value)} className="w-full p-3 bg-slate-50 dark:bg-slate-900 rounded-xl font-bold text-sm outline-none border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-orange-500/50">
+                         <option value="ht_over05">Over 0.5 Gols HT (Primeiro Tempo)</option>
+                         <option value="ft_over05">Over 0.5 Gols FT (Reta Final)</option>
+                         <option value="ft_over15">Over 1.5 Gols FT (Busca do Resultado)</option>
+                      </select>
+                   </div>
+
+                   <div className="mb-8 p-5 bg-slate-50 dark:bg-[#020617] rounded-2xl border border-slate-200 dark:border-slate-800">
+                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-4 flex items-center gap-2"><Lock size={12} className={exgUnlocked ? 'text-orange-500' : 'text-slate-400'}/> Guardião de Padrão</p>
+                      <div className="space-y-3">
+                         {exgScenariosData[exgScenario].checks.map((check, idx) => (
+                            <button key={idx} onClick={() => handleExgCheck(idx)} className={`w-full flex items-center gap-3 p-3 rounded-xl border text-left ${exgChecklist[idx] ? 'bg-orange-50 dark:bg-orange-900/20 border-orange-200 dark:border-orange-500/30' : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700'}`}>
+                               <div className={`${exgChecklist[idx] ? 'text-orange-500' : 'text-slate-400'}`}>{exgChecklist[idx] ? <CheckSquare size={18} /> : <Square size={18} />}</div>
+                               <span className={`text-xs font-bold ${exgChecklist[idx] ? 'text-orange-700 dark:text-orange-300' : 'text-slate-600 dark:text-slate-400'}`}>{check}</span>
+                            </button>
+                         ))}
+                      </div>
+                   </div>
+
+                   <AnimatePresence>
+                     {exgUnlocked && (
+                       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="border-t border-slate-200 dark:border-slate-800 pt-6">
+                         
+                         {/* Usa as MESMAS variáveis do radar, para não precisar digitar de novo se trocar de aba */}
+                         <div className="grid grid-cols-3 gap-4 mb-6">
+                            <div><label className="text-[9px] font-bold text-slate-500 uppercase block mb-1">Tempo (Min)</label><input type="number" value={liveMin} onChange={e => setLiveMin(e.target.value)} className="w-full p-3 bg-slate-50 dark:bg-slate-900 rounded-xl font-mono font-bold outline-none border border-slate-200 dark:border-slate-800" /></div>
+                            <div><label className="text-[9px] font-bold text-slate-500 uppercase block mb-1">Gols Atuais</label><input type="number" value={liveCurrentTarget} onChange={e => setLiveCurrentTarget(e.target.value)} className="w-full p-3 bg-slate-50 dark:bg-slate-900 rounded-xl font-mono font-bold outline-none border border-slate-200 dark:border-slate-800" /></div>
+                            <div><label className="text-[9px] font-bold text-slate-500 uppercase block mb-1 truncate">Ataques P. (Defesa)</label><input type="number" value={liveAP_Def} onChange={e => setLiveAP_Def(e.target.value)} className="w-full p-3 bg-slate-50 dark:bg-slate-900 rounded-xl font-mono font-bold outline-none border border-slate-200 dark:border-slate-800" /></div>
+                         </div>
+                         
+                         <div className="grid grid-cols-2 gap-4 mb-6 bg-orange-50 dark:bg-orange-900/10 p-4 rounded-2xl border border-orange-100 dark:border-orange-900/30">
+                            <div className="col-span-2"><p className="text-[10px] font-black text-orange-600 dark:text-orange-500 uppercase tracking-widest flex items-center gap-1"><Crosshair size={12}/> Eficiência Ofensiva</p></div>
+                            <div><label className="text-[9px] font-bold text-orange-700 dark:text-orange-400 uppercase block mb-1">Ataques P.</label><input type="number" value={liveAP_Press} onChange={e => setLiveAP_Press(e.target.value)} className="w-full p-3 bg-white dark:bg-slate-900 rounded-xl font-mono font-bold outline-none border border-slate-200 dark:border-slate-800 focus:border-orange-500" /></div>
+                            <div></div> {/* Spacer para manter layout similar ao ExC */}
+                            <div><label className="text-[9px] font-bold text-orange-700 dark:text-orange-400 uppercase block mb-1">No Alvo</label><input type="number" value={liveSoT} onChange={e => setLiveSoT(e.target.value)} className="w-full p-3 bg-white dark:bg-slate-900 rounded-xl font-mono font-bold outline-none border border-slate-200 dark:border-slate-800 focus:border-orange-500" /></div>
+                            <div><label className="text-[9px] font-bold text-orange-700 dark:text-orange-400 uppercase block mb-1">Para Fora</label><input type="number" value={liveSoffT} onChange={e => setLiveSoffT(e.target.value)} className="w-full p-3 bg-white dark:bg-slate-900 rounded-xl font-mono font-bold outline-none border border-slate-200 dark:border-slate-800 focus:border-orange-500" /></div>
+                         </div>
+
+                         <div className="mb-6 p-4 bg-slate-950 rounded-2xl flex items-center gap-4">
+                             <DollarSign size={24} className="text-orange-400 shrink-0" />
+                             <div className="flex-1">
+                                <label className="text-[10px] font-black text-orange-500 uppercase tracking-[0.2em] block mb-1">Odd Oferecida (+1 Gol)</label>
+                                <input type="number" step="0.01" placeholder="1.83" value={liveCurrentOdd} onChange={e => setLiveCurrentOdd(e.target.value)} className="w-full bg-transparent text-xl font-mono font-black text-white outline-none" />
+                             </div>
+                         </div>
+
+                         {exgResult.crossCheckMsg && (
+                            <div className="mb-4 bg-blue-500/10 border border-blue-500/20 text-blue-400 p-3 rounded-xl text-[11px] font-bold flex items-start gap-2">
+                               <Lightbulb size={14} className="shrink-0 mt-0.5" /> {exgResult.crossCheckMsg}
+                            </div>
+                         )}
+
+                         <div className="bg-[#020617] rounded-2xl border border-slate-800 p-6">
+                             <div className="flex justify-between border-b border-slate-800 pb-4 mb-4">
+                                 <div><p className="text-[9px] uppercase text-slate-500 font-bold">xG Criado</p><p className={`text-lg font-mono font-black ${exgResult.xgTotal >= 1.0 ? 'text-orange-400' : 'text-slate-400'}`}>{exgResult.xgTotal.toFixed(2)}</p></div>
+                                 <div className="text-right"><p className="text-[9px] uppercase text-slate-500 font-bold">Odd Justa</p><p className="text-lg font-mono font-black text-orange-400">@{exgResult.fairOddGoal.toFixed(2)}</p></div>
+                             </div>
+                             
+                             <div className="relative z-10 mb-4">
+                               {exgResult.signal === 'green' && <div className="bg-emerald-500 text-slate-950 w-full py-3 rounded-xl font-black text-xs text-center">{exgResult.msg}</div>}
+                               {exgResult.signal === 'yellow' && <div className="bg-yellow-500 text-slate-950 w-full py-3 rounded-xl font-black text-xs text-center">{exgResult.msg}</div>}
+                               {exgResult.signal === 'red' && <div className="bg-slate-800 text-red-400 w-full py-3 rounded-xl font-black text-[10px] text-center">{exgResult.msg}</div>}
                              </div>
                          </div>
                        </motion.div>
