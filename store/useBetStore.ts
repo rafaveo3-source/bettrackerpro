@@ -297,6 +297,12 @@ interface BetState {
   setToast: (toast: { type: 'success' | 'error'; message: string } | null) => void;
 
   isTiltLocked: () => boolean;
+
+  // 🔥 LÓGICA DE IA (LIMITES)
+  aiScansUsedToday: number;
+  lastScanDate: string | null;
+  canUseAiScan: () => boolean;
+  incrementAiScan: () => void;
 }
 
 // --- STORE IMPLEMENTATION ---
@@ -1512,6 +1518,30 @@ export const useBetStore = create<BetState>()(
         return true;
       },
 
+      // 🔥 FUNÇÕES DA IA DE VISÃO
+      aiScansUsedToday: 0,
+      lastScanDate: null,
+      
+      canUseAiScan: () => {
+        const state = get();
+        if (!state.isPro) return false;
+        const today = new Date().toISOString().split('T')[0];
+        // Se mudou o dia, ele pode usar
+        if (state.lastScanDate !== today) return true;
+        // Se for hoje, tem que ser menor que 10
+        return state.aiScansUsedToday < 10;
+      },
+
+      incrementAiScan: () => {
+        const today = new Date().toISOString().split('T')[0];
+        set((state) => {
+          if (state.lastScanDate !== today) {
+            return { aiScansUsedToday: 1, lastScanDate: today };
+          }
+          return { aiScansUsedToday: state.aiScansUsedToday + 1 };
+        });
+      },
+
       // 🔥🔥🔥 RESET DATA (DATA WIPER) - ASSÍNCRONO & SEGURO 🔥🔥🔥
       resetData: async () => {
         const user = get().user;
@@ -1710,7 +1740,9 @@ export const useBetStore = create<BetState>()(
         displayMode: state.displayMode,
         unitSize: state.unitSize,
         hasSeenTutorial: state.hasSeenTutorial,
-        activeBankrollId: state.activeBankrollId // 🔥 PERSISTE A BANCA SELECIONADA
+        activeBankrollId: state.activeBankrollId,
+        aiScansUsedToday: state.aiScansUsedToday, // 🔥 Salva os usos de hoje
+        lastScanDate: state.lastScanDate          // 🔥 Salva a data do último uso
       }),
     }
   )
