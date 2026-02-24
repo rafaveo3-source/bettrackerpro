@@ -19,7 +19,9 @@ import {
   Square,
   Activity,
   Crosshair,
-  BarChart4
+  BarChart4,
+  Zap,
+  DollarSign
 } from 'lucide-react';
 import { useBetStore } from '../store/useBetStore';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -66,7 +68,7 @@ const Calculators: React.FC = () => {
   );
 
   // ==========================================
-  // 1-7. OUTRAS CALCULADORAS (MANTIDAS INTACTAS)
+  // LÓGICAS DAS CALCULADORAS BASE (Mantidas 100% intactas)
   // ==========================================
   const [dutchTotalStake, setDutchTotalStake] = useState('100');
   const [dutchSelections, setDutchSelections] = useState([
@@ -137,7 +139,7 @@ const Calculators: React.FC = () => {
   const beWinRate = parseFloat(beOdds) > 1 ? (1 / parseFloat(beOdds)) * 100 : 0;
 
   // ==========================================
-  // 8. LÓGICA ExC QUANTITATIVA (POISSON + TPR)
+  // 8. LÓGICA ExC QUANTITATIVA (POISSON + MOMENTUM + EV%)
   // ==========================================
   const [excScenario, setExcScenario] = useState('ht_asian');
   const [excChecklist, setExcChecklist] = useState<Record<number, boolean>>({});
@@ -147,8 +149,10 @@ const Calculators: React.FC = () => {
   const [excCorners, setExcCorners] = useState('');
   const [excAP_Def, setExcAP_Def] = useState(''); 
   const [excAP_Press, setExcAP_Press] = useState(''); 
+  const [excAP_5m, setExcAP_5m] = useState(''); // NOVO: Momentum Delta
   const [excSoT, setExcSoT] = useState(''); 
   const [excSoffT, setExcSoffT] = useState(''); 
+  const [excCurrentOdd, setExcCurrentOdd] = useState(''); // NOVO: Odd Atual para EV
 
   const excScenariosData: Record<string, { title: string; checks: string[] }> = {
     ht_asian: {
@@ -197,7 +201,7 @@ const Calculators: React.FC = () => {
     setExcUnlocked(Object.keys(newChecklist).filter(k => newChecklist[parseInt(k)]).length === requiredChecks);
   };
 
-  // Helper Estatístico (Fatorial e Poisson)
+  // Helper Estatístico
   const factorial = (n: number): number => (n === 0 || n === 1 ? 1 : n * factorial(n - 1));
   const poissonExact = (k: number, lambda: number) => (Math.pow(lambda, k) * Math.exp(-lambda)) / factorial(k);
 
@@ -206,77 +210,121 @@ const Calculators: React.FC = () => {
       const corners = parseFloat(excCorners) || 0;
       const apDef = parseFloat(excAP_Def) || 0;
       const apPress = parseFloat(excAP_Press) || 0;
+      const ap5m = parseFloat(excAP_5m) || 0; 
+      const currentOdd = parseFloat(excCurrentOdd) || 0;
       const sot = parseFloat(excSoT) || 0;
       const sofft = parseFloat(excSoffT) || 0;
 
-      if (!min || min <= 0 || !apPress) return { appm: 0, fieldTilt: 0, proj: 0, probLimit: 0, probAsian: 0, signal: 'none', msg: 'Aguardando dados estruturados...' };
+      if (!min || min <= 0 || !apPress) return { 
+          appm: 0, fieldTilt: 0, proj: 0, probLimit: 0, probAsian: 0, signal: 'none', msg: 'Aguardando dados estruturados...',
+          fairOddLimit: 0, fairOddAsian: 0, ev: 0, momentum: 0, paceMsg: ''
+      };
 
       const isHT = excScenario.includes('ht');
-      const extraTime = isHT ? 3 : 6; // Projeção de acréscimos
+      const isAsianTarget = excScenario.includes('asian');
+      const extraTime = isHT ? 3 : 6; 
       const maxMin = isHT ? 45 : 90;
       const remainingTime = Math.max(1, (maxMin + extraTime) - min);
 
-      // 1. Métricas de Volume e Domínio
+      // 1. Métricas Base
       const totalAP = apPress + apDef;
       const fieldTilt = totalAP > 0 ? (apPress / totalAP) * 100 : 0;
       const appm = apPress / min;
       
-      // 2. TPR (True Pressure Rate) - Conversão Estimada Realista
-      const expectedCornersSoFar = (apPress * 0.06) + (sot * 0.35) + (sofft * 0.15);
-      const tpr = expectedCornersSoFar / min;
-
-      // Multiplicador de Urgência (Fator Game State)
+      // 2. Momentum (Aceleração nos últimos 5 min)
+      let momentum = 0;
+      let paceMsg = "Padrão";
       let urgencyFactor = 1.0;
+
+      if (ap5m > 0 && apPress > ap5m) {
+          const deltaAP = apPress - ap5m;
+          momentum = deltaAP / 5; // Ataques por minuto recentes
+          
+          if (momentum >= 2.0) {
+              urgencyFactor += 0.35; // Avalanche total
+              paceMsg = "Avalanche (Extremo)";
+          } else if (momentum >= 1.2) {
+              urgencyFactor += 0.15; // Ritmo forte
+              paceMsg = "Acelerado";
+          } else if (momentum < 0.8) {
+              urgencyFactor -= 0.10; // Esfriando
+              paceMsg = "Desacelerando";
+          }
+      }
+
+      // Adiciona peso do domínio territorial
       if (fieldTilt >= 70) urgencyFactor += 0.15;
       if (fieldTilt >= 80) urgencyFactor += 0.10;
       if (isHT && min >= 38) urgencyFactor += 0.10;
       if (!isHT && min >= 80) urgencyFactor += 0.20;
+
+      // 3. True Pressure Rate (TPR)
+      const expectedCornersSoFar = (apPress * 0.06) + (sot * 0.35) + (sofft * 0.15);
+      const tpr = expectedCornersSoFar / min;
       
-      // LAMBDA (λ) para Poisson
       const lambda = tpr * remainingTime * urgencyFactor;
       const totalExc = corners + lambda;
 
-      // 3. Distribuição
+      // 4. Poisson & Fair Odds
       const p0 = poissonExact(0, lambda);
       const p1 = poissonExact(1, lambda);
 
       const probLimit = (1 - p0) * 100; 
       const probAsian = (1 - (p0 + p1)) * 100;
 
-      // 4. ALGORITMO QUANTITATIVO DE DECISÃO (RESTRIÇÕES SEVERAS)
+      const fairOddLimit = probLimit > 0 ? 100 / probLimit : 0;
+      const fairOddAsian = probAsian > 0 ? 100 / probAsian : 0;
+
+      // 5. Calculadora de EV+
+      const targetProb = isAsianTarget ? probAsian : probLimit;
+      const targetFairOdd = isAsianTarget ? fairOddAsian : fairOddLimit;
+      const ev = currentOdd > 0 ? ((targetProb / 100) * currentOdd - 1) * 100 : 0;
+
+      // 6. Motor Quantitativo de Decisão
       let signal = 'red';
       let msg = '';
       
-      // Checagem Rigorosa de Pilares
-      const isVolumeValid = appm >= 1.05;
+      const isVolumeValid = appm >= 1.05 || momentum >= 1.5; // Passa se for lento antes mas explodiu agora
       const isDominanceValid = fieldTilt >= 65;
       const isEfficiencyValid = (sot + sofft) >= (min / 10);
 
-      if (isVolumeValid && isDominanceValid) {
-          if (probLimit >= 75 && isEfficiencyValid) {
-              signal = 'green';
-              msg = '🟢 SINAL VERDE: ASSIMETRIA CLARA (EV+)';
-          } else if (probLimit >= 65 || appm >= 1.2) {
-              signal = 'yellow';
-              msg = '🟡 OBSERVATÓRIO: Risco moderado. Aguarde odd subir.';
-          } else {
+      // Lógica Baseada em EV (Se tiver Odd preenchida, o EV manda em tudo)
+      if (currentOdd > 0) {
+          if (ev < 0) {
               signal = 'red';
-              msg = '🔴 ABORTAR: Baixa probabilidade matemática.';
+              msg = `🔴 ABORTAR: Odd s/ valor (-EV de ${ev.toFixed(1)}%). Justa: @${targetFairOdd.toFixed(2)}`;
+          } else if (ev >= 10 && isDominanceValid) {
+              signal = 'green';
+              msg = `🟢 SINAL VERDE: EV+ GIGANTE (+${ev.toFixed(1)}%). Compre essa Odd!`;
+          } else if (ev > 0) {
+              signal = 'yellow';
+              msg = `🟡 OBSERVATÓRIO: Leve EV+ (+${ev.toFixed(1)}%). Risco tático.`;
           }
-      } else {
-          // Explicações exatas do motivo da rejeição
-          if (!isVolumeValid) msg = `🔴 ABORTAR: Jogo Lento (APPM de ${appm.toFixed(2)} é insuficiente)`;
-          else if (!isDominanceValid) msg = `🔴 ABORTAR: Equilíbrio Tático (Domínio < 65%)`;
-          else msg = '🔴 ABORTAR: Faltam finalizações reais.';
+      } 
+      // Lógica Baseada apenas nos Dados (Sem Odd preenchida)
+      else {
+          if (isVolumeValid && isDominanceValid) {
+              if (targetProb >= 70 && isEfficiencyValid) {
+                  signal = 'green';
+                  msg = '🟢 SINAL VERDE: ASSIMETRIA CLARA (Busque Valor)';
+              } else if (targetProb >= 55 || appm >= 1.2) {
+                  signal = 'yellow';
+                  msg = '🟡 OBSERVATÓRIO: Risco moderado. Aguarde a odd valorizar.';
+              } else {
+                  signal = 'red';
+                  msg = '🔴 ABORTAR: Baixa probabilidade estatística.';
+              }
+          } else {
+              if (!isVolumeValid) msg = `🔴 ABORTAR: Jogo Lento (APPM de ${appm.toFixed(2)})`;
+              else if (!isDominanceValid) msg = `🔴 ABORTAR: Equilíbrio Tático (Domínio < 65%)`;
+              else msg = '🔴 ABORTAR: Faltam finalizações reais.';
+          }
       }
 
-      // Safety Net
-      if (probLimit < 50) {
-          signal = 'red';
-          msg = '🔴 ABORTAR: Modelo matemático acusa EV Negativo (-EV).';
-      }
-
-      return { appm, fieldTilt, proj: totalExc, probLimit, probAsian, signal, msg };
+      return { 
+          appm, fieldTilt, proj: totalExc, probLimit, probAsian, 
+          signal, msg, momentum, paceMsg, fairOddLimit, fairOddAsian, ev, isAsianTarget 
+      };
   };
 
   const excResult = calculateExC();
@@ -284,7 +332,7 @@ const Calculators: React.FC = () => {
   // --- SIDEBAR INFO HELPERS ---
   const getSidebarInfo = () => {
     switch(activeTab) {
-      case 'exc': return { title: 'ExC Analytics (Quant)', text: 'Motor quântico que cruza o Domínio (Field Tilt) com o Volume (APPM). Usa Distribuição de Poisson com exigências estritas de assimetria tática para liberar a entrada.' };
+      case 'exc': return { title: 'ExC Analytics (Quant)', text: 'Motor institucional que usa Distribuição de Poisson, aceleração de momentum e cálculo automático de EV+ para identificar apostas de extremo valor em escanteios.' };
       default: return { title: 'Ferramentas Analíticas', text: 'Utilize os modelos matemáticos para tomar decisões baseadas em dados e não em emoções.' };
     }
   };
@@ -526,8 +574,8 @@ const Calculators: React.FC = () => {
                       <h2 className="text-lg font-black text-slate-900 dark:text-white uppercase tracking-tighter italic flex items-center gap-2">
                         <Radar size={20} className="text-blue-500"/> ExC Poisson Analytics
                       </h2>
-                      <span className="bg-emerald-100 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400 px-2 py-1 rounded text-[9px] font-black uppercase tracking-widest border border-emerald-200 dark:border-emerald-500/20">
-                         Strict Mode (Quant)
+                      <span className="bg-indigo-100 text-indigo-700 dark:bg-indigo-500/10 dark:text-indigo-400 px-2 py-1 rounded text-[9px] font-black uppercase tracking-widest border border-indigo-200 dark:border-indigo-500/20 flex items-center gap-1">
+                         <Zap size={10} /> Market Maker
                       </span>
                    </div>
                    
@@ -551,7 +599,7 @@ const Calculators: React.FC = () => {
                    <div className="mb-8 p-5 bg-slate-50 dark:bg-[#020617] rounded-2xl border border-slate-200 dark:border-slate-800 shadow-inner">
                       <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-4 flex items-center gap-2">
                         <Lock size={12} className={excUnlocked ? 'text-emerald-500' : 'text-slate-400'}/> 
-                        Guardião de Padrão (Validação de Jogo)
+                        Guardião de Padrão (Validação Visual)
                       </p>
                       <div className="space-y-3">
                          {excScenariosData[excScenario].checks.map((check: string, idx: number) => (
@@ -606,66 +654,94 @@ const Calculators: React.FC = () => {
                            <Crosshair size={14} /> Time Pressionando (Buscando o Gol)
                          </h3>
                          
-                         <div className="grid grid-cols-3 gap-4 mb-6 bg-blue-50 dark:bg-blue-900/10 p-4 rounded-2xl border border-blue-100 dark:border-blue-900/30">
+                         <div className="grid grid-cols-2 gap-4 mb-6 bg-blue-50 dark:bg-blue-900/10 p-4 rounded-2xl border border-blue-100 dark:border-blue-900/30">
                             <div>
-                               <label className="text-[9px] font-bold text-blue-700 dark:text-blue-400 uppercase block mb-1">Ataques P.</label>
-                               <input type="number" placeholder="Ex: 48" value={excAP_Press} onChange={e => setExcAP_Press(e.target.value)} className="w-full p-3 bg-white dark:bg-slate-900 rounded-xl font-mono font-bold outline-none border border-slate-200 dark:border-slate-800" />
+                               <label className="text-[9px] font-bold text-blue-700 dark:text-blue-400 uppercase block mb-1">Ataques P. (Atual)</label>
+                               <input type="number" placeholder="Ex: 48" value={excAP_Press} onChange={e => setExcAP_Press(e.target.value)} className="w-full p-3 bg-white dark:bg-slate-900 rounded-xl font-mono font-bold outline-none border border-slate-200 dark:border-slate-800 focus:border-blue-500" />
                             </div>
                             <div>
-                               <label className="text-[9px] font-bold text-blue-700 dark:text-blue-400 uppercase block mb-1">No Alvo</label>
-                               <input type="number" placeholder="Chutes" value={excSoT} onChange={e => setExcSoT(e.target.value)} className="w-full p-3 bg-white dark:bg-slate-900 rounded-xl font-mono font-bold outline-none border border-slate-200 dark:border-slate-800" />
+                               <label className="text-[9px] font-bold text-blue-700 dark:text-blue-400 uppercase block mb-1 flex justify-between">Ataques P. <span className="text-[8px] opacity-70">(5 min atrás)</span></label>
+                               <input type="number" placeholder="Opcional para Momentum" value={excAP_5m} onChange={e => setExcAP_5m(e.target.value)} className="w-full p-3 bg-white dark:bg-slate-900 rounded-xl font-mono font-bold outline-none border border-slate-200 dark:border-slate-800 placeholder:text-[10px] focus:border-blue-500" />
                             </div>
                             <div>
-                               <label className="text-[9px] font-bold text-blue-700 dark:text-blue-400 uppercase block mb-1">Para Fora</label>
-                               <input type="number" placeholder="Chutes" value={excSoffT} onChange={e => setExcSoffT(e.target.value)} className="w-full p-3 bg-white dark:bg-slate-900 rounded-xl font-mono font-bold outline-none border border-slate-200 dark:border-slate-800" />
+                               <label className="text-[9px] font-bold text-blue-700 dark:text-blue-400 uppercase block mb-1">Chutes No Alvo</label>
+                               <input type="number" placeholder="Ex: 3" value={excSoT} onChange={e => setExcSoT(e.target.value)} className="w-full p-3 bg-white dark:bg-slate-900 rounded-xl font-mono font-bold outline-none border border-slate-200 dark:border-slate-800 focus:border-blue-500" />
+                            </div>
+                            <div>
+                               <label className="text-[9px] font-bold text-blue-700 dark:text-blue-400 uppercase block mb-1">Chutes Para Fora</label>
+                               <input type="number" placeholder="Ex: 5" value={excSoffT} onChange={e => setExcSoffT(e.target.value)} className="w-full p-3 bg-white dark:bg-slate-900 rounded-xl font-mono font-bold outline-none border border-slate-200 dark:border-slate-800 focus:border-blue-500" />
                             </div>
                          </div>
 
-                         {/* TELA DA BLOOMBERG - RESULTADOS RÍGIDOS */}
+                         {/* CAMPO DE ODD E EV */}
+                         <div className="mb-6 p-1 bg-gradient-to-r from-emerald-500 via-emerald-400 to-teal-500 rounded-2xl">
+                             <div className="bg-slate-950 rounded-xl p-4 flex items-center gap-4">
+                                 <div className="bg-emerald-500/20 p-3 rounded-full shrink-0">
+                                    <DollarSign size={24} className="text-emerald-400" />
+                                 </div>
+                                 <div className="flex-1">
+                                    <label className="text-[10px] font-black text-emerald-500 uppercase tracking-[0.2em] block mb-1">Odd Oferecida (Bet365)</label>
+                                    <input type="number" step="0.01" placeholder="Ex: 1.83 (Opcional - Calcula EV%)" value={excCurrentOdd} onChange={e => setExcCurrentOdd(e.target.value)} className="w-full bg-transparent text-xl font-mono font-black text-white outline-none placeholder:text-slate-700" />
+                                 </div>
+                             </div>
+                         </div>
+
+                         {/* TELA DA BLOOMBERG - RESULTADOS QUANTITATIVOS */}
                          <div className="bg-[#020617] rounded-2xl border border-slate-800 p-6 overflow-hidden relative">
                              <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-5"></div>
                              
                              <div className="relative z-10 flex flex-col md:flex-row justify-between mb-6 gap-6">
                                 <div className="space-y-4 flex-1">
                                     <div>
-                                      <p className="text-[9px] uppercase tracking-widest text-slate-500 font-bold mb-1">Pressão (APPM)</p>
+                                      <p className="text-[9px] uppercase tracking-widest text-slate-500 font-bold mb-1">Pace (Momentum)</p>
                                       <div className="flex items-end gap-2">
-                                         <p className={`text-xl font-black font-mono leading-none ${excResult.appm >= 1.05 ? 'text-emerald-400' : 'text-red-400'}`}>
-                                           {excResult.appm.toFixed(2)}
+                                         <p className={`text-xl font-black font-mono leading-none ${excResult.momentum >= 1.5 ? 'text-indigo-400' : 'text-slate-300'}`}>
+                                           {excResult.paceMsg}
                                          </p>
-                                         <span className="text-[9px] text-slate-500 mb-0.5">Min: 1.05</span>
                                       </div>
                                     </div>
-                                    <div>
-                                      <p className="text-[9px] uppercase tracking-widest text-slate-500 font-bold mb-1">Field Tilt (Domínio)</p>
-                                      <div className="flex items-end gap-2">
-                                         <p className={`text-xl font-black font-mono leading-none ${excResult.fieldTilt >= 65 ? 'text-blue-400' : 'text-red-400'}`}>
-                                           {excResult.fieldTilt.toFixed(0)}%
-                                         </p>
-                                         <span className="text-[9px] text-slate-500 mb-0.5">Min: 65%</span>
-                                      </div>
+                                    <div className="flex justify-between items-end border-t border-slate-800 pt-3">
+                                        <div>
+                                          <p className="text-[8px] uppercase tracking-widest text-slate-500 font-bold mb-1">Pressão (APPM)</p>
+                                          <p className={`text-lg font-black font-mono leading-none ${excResult.appm >= 1.05 ? 'text-emerald-400' : 'text-red-400'}`}>
+                                            {excResult.appm.toFixed(2)}
+                                          </p>
+                                        </div>
+                                        <div>
+                                          <p className="text-[8px] uppercase tracking-widest text-slate-500 font-bold mb-1">Domínio</p>
+                                          <p className={`text-lg font-black font-mono leading-none ${excResult.fieldTilt >= 65 ? 'text-blue-400' : 'text-red-400'}`}>
+                                            {excResult.fieldTilt.toFixed(0)}%
+                                          </p>
+                                        </div>
                                     </div>
                                 </div>
 
                                 <div className="flex-1 bg-slate-900 border border-slate-800 p-4 rounded-xl shadow-inner">
-                                    <h4 className="text-[10px] text-slate-400 uppercase tracking-widest font-bold mb-4 flex items-center gap-2">
-                                       <BarChart4 size={12} className="text-indigo-500"/> Distribuição de Poisson
+                                    <h4 className="text-[10px] text-slate-400 uppercase tracking-widest font-bold mb-4 flex justify-between items-center gap-2">
+                                       <span className="flex items-center gap-1"><BarChart4 size={12} className="text-indigo-500"/> Probabilidade Real</span>
+                                       <span className="text-[8px] text-emerald-500">Fair Odd (Justa)</span>
                                     </h4>
                                     
-                                    <div className="space-y-3">
+                                    <div className="space-y-4">
                                         <div>
-                                            <div className="flex justify-between text-xs font-bold mb-1">
-                                               <span className="text-white">Canto Limite (+1)</span>
-                                               <span className={excResult.probLimit >= 75 ? 'text-emerald-400' : 'text-slate-400'}>{excResult.probLimit.toFixed(1)}%</span>
+                                            <div className="flex justify-between items-end mb-1">
+                                               <span className="text-[10px] font-bold text-white uppercase tracking-wider">Limite (+1)</span>
+                                               <div className="text-right">
+                                                   <span className={`text-xs font-black mr-2 ${excResult.probLimit >= 75 ? 'text-emerald-400' : 'text-slate-400'}`}>{excResult.probLimit.toFixed(1)}%</span>
+                                                   <span className="text-[10px] font-mono font-bold text-emerald-500 bg-emerald-500/10 px-1.5 py-0.5 rounded">@{excResult.fairOddLimit.toFixed(2)}</span>
+                                               </div>
                                             </div>
                                             <div className="w-full bg-slate-800 rounded-full h-1.5 overflow-hidden">
                                                <div className={`h-1.5 rounded-full ${excResult.probLimit >= 75 ? 'bg-emerald-500' : 'bg-slate-500'}`} style={{ width: `${excResult.probLimit}%` }}></div>
                                             </div>
                                         </div>
                                         <div>
-                                            <div className="flex justify-between text-xs font-bold mb-1">
-                                               <span className="text-white">Canto Asiático (+2)</span>
-                                               <span className={excResult.probAsian >= 50 ? 'text-emerald-400' : 'text-slate-400'}>{excResult.probAsian.toFixed(1)}%</span>
+                                            <div className="flex justify-between items-end mb-1">
+                                               <span className="text-[10px] font-bold text-white uppercase tracking-wider">Asiático (+2)</span>
+                                               <div className="text-right">
+                                                   <span className={`text-xs font-black mr-2 ${excResult.probAsian >= 50 ? 'text-emerald-400' : 'text-slate-400'}`}>{excResult.probAsian.toFixed(1)}%</span>
+                                                   <span className="text-[10px] font-mono font-bold text-emerald-500 bg-emerald-500/10 px-1.5 py-0.5 rounded">@{excResult.fairOddAsian.toFixed(2)}</span>
+                                               </div>
                                             </div>
                                             <div className="w-full bg-slate-800 rounded-full h-1.5 overflow-hidden">
                                                <div className={`h-1.5 rounded-full ${excResult.probAsian >= 50 ? 'bg-emerald-500' : 'bg-slate-500'}`} style={{ width: `${excResult.probAsian}%` }}></div>
@@ -675,21 +751,21 @@ const Calculators: React.FC = () => {
                                 </div>
                              </div>
 
-                             {/* Veredito do Semáforo Rigoroso */}
+                             {/* Veredito do Semáforo Rigoroso / EV */}
                              <div className="relative z-10">
                                {excResult.signal === 'green' && (
-                                  <div className="bg-emerald-500 text-slate-950 w-full py-3 rounded-xl font-black text-sm tracking-wide uppercase shadow-[0_0_15px_rgba(16,185,129,0.4)] text-center">
+                                  <div className="bg-emerald-500 text-slate-950 w-full py-3 rounded-xl font-black text-xs sm:text-sm tracking-wide uppercase shadow-[0_0_15px_rgba(16,185,129,0.4)] text-center">
                                      {excResult.msg}
                                   </div>
                                )}
                                {excResult.signal === 'yellow' && (
-                                  <div className="bg-yellow-500 text-slate-950 w-full py-3 rounded-xl font-black text-sm tracking-wide uppercase shadow-[0_0_15px_rgba(234,179,8,0.3)] text-center">
+                                  <div className="bg-yellow-500 text-slate-950 w-full py-3 rounded-xl font-black text-xs sm:text-sm tracking-wide uppercase shadow-[0_0_15px_rgba(234,179,8,0.3)] text-center">
                                      {excResult.msg}
                                   </div>
                                )}
                                {excResult.signal === 'red' && (
-                                  <div className="bg-slate-800 border border-red-500/30 text-red-400 w-full py-3 rounded-xl font-black text-[11px] sm:text-xs tracking-wide uppercase text-center flex items-center justify-center gap-2">
-                                     <AlertTriangle size={14} /> {excResult.msg}
+                                  <div className="bg-slate-800 border border-red-500/30 text-red-400 w-full py-3 rounded-xl font-black text-[10px] sm:text-xs tracking-wide uppercase text-center flex items-center justify-center gap-2">
+                                     <AlertTriangle size={14} className="shrink-0" /> {excResult.msg}
                                   </div>
                                )}
                              </div>
