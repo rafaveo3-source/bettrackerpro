@@ -3,7 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { 
   Info, ChevronDown, Sparkles, Trash2, Plus, Scale, Percent, ArrowRightLeft, 
   Target, TrendingUp, AlertTriangle, Lock, Crown, Radar, CheckSquare, 
-  Square, Activity, Crosshair, BarChart4, Zap, DollarSign, Goal, Lightbulb
+  Square, Activity, Crosshair, BarChart4, Zap, DollarSign, Goal, Lightbulb,
+  Clock, Flag, ShieldAlert, Swords, Power
 } from 'lucide-react';
 import { useBetStore } from '../store/useBetStore';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -43,13 +44,10 @@ const Calculators: React.FC = () => {
   );
 
   // ==========================================
-  // 1. LÓGICA DUTCHING
+  // LÓGICAS DAS CALCULADORAS BASE 
   // ==========================================
   const [dutchTotalStake, setDutchTotalStake] = useState('100');
-  const [dutchSelections, setDutchSelections] = useState([
-    { id: 1, name: 'Seleção A', odds: '2.50', stake: 0, profit: 0 },
-    { id: 2, name: 'Seleção B', odds: '3.20', stake: 0, profit: 0 }
-  ]);
+  const [dutchSelections, setDutchSelections] = useState([{ id: 1, name: 'Seleção A', odds: '2.50', stake: 0, profit: 0 }, { id: 2, name: 'Seleção B', odds: '3.20', stake: 0, profit: 0 }]);
   const addDutchSelection = () => setDutchSelections([...dutchSelections, { id: Date.now(), name: `Seleção ${String.fromCharCode(65 + dutchSelections.length)}`, odds: '', stake: 0, profit: 0 }]);
   const removeDutchSelection = (id: number) => setDutchSelections(dutchSelections.filter(s => s.id !== id));
   const calculateDutching = () => {
@@ -65,64 +63,25 @@ const Calculators: React.FC = () => {
     }));
   };
 
-  // ==========================================
-  // 2. LÓGICA KELLY
-  // ==========================================
-  const [kellyOdds, setKellyOdds] = useState('2.00'); 
-  const [kellyProb, setKellyProb] = useState('55'); 
-  const [kellyFraction, setKellyFraction] = useState('1'); 
+  const [kellyOdds, setKellyOdds] = useState('2.00'); const [kellyProb, setKellyProb] = useState('55'); const [kellyFraction, setKellyFraction] = useState('1'); 
   const kellyResult = (() => { const b = parseFloat(kellyOdds) - 1; const p = parseFloat(kellyProb) / 100; if (b <= 0) return "0.00"; return (((b * p - (1 - p)) / b) * parseFloat(kellyFraction) * 100).toFixed(2); })();
   const kellyMoney = (parseFloat(kellyResult) / 100) * currentBankrollBalance;
 
-  // ==========================================
-  // 3. LÓGICA VALUE BET
-  // ==========================================
-  const [valOdds, setValOdds] = useState('2.10'); 
-  const [valProb, setValProb] = useState('50'); 
-  const valEV = (parseFloat(valProb) / 100 * parseFloat(valOdds)) - 1; 
-  const valEVPercent = valEV * 100;
+  const [valOdds, setValOdds] = useState('2.10'); const [valProb, setValProb] = useState('50'); 
+  const valEV = (parseFloat(valProb) / 100 * parseFloat(valOdds)) - 1; const valEVPercent = valEV * 100;
 
-  // ==========================================
-  // 4. LÓGICA ARBITRAGEM
-  // ==========================================
-  const [arbOdds1, setArbOdds1] = useState('2.05'); 
-  const [arbOdds2, setArbOdds2] = useState('2.05'); 
-  const [arbTotalStake, setArbTotalStake] = useState('1000');
-  const arbImplied = (1 / parseFloat(arbOdds1)) + (1 / parseFloat(arbOdds2)); 
-  const arbRoi = ((1 / arbImplied) - 1) * 100;
-  const arbStake1 = (parseFloat(arbTotalStake) * (1 / parseFloat(arbOdds1))) / arbImplied; 
-  const arbStake2 = (parseFloat(arbTotalStake) * (1 / parseFloat(arbOdds2))) / arbImplied;
+  const [arbOdds1, setArbOdds1] = useState('2.05'); const [arbOdds2, setArbOdds2] = useState('2.05'); const [arbTotalStake, setArbTotalStake] = useState('1000');
+  const arbImplied = (1 / parseFloat(arbOdds1)) + (1 / parseFloat(arbOdds2)); const arbRoi = ((1 / arbImplied) - 1) * 100;
+  const arbStake1 = (parseFloat(arbTotalStake) * (1 / parseFloat(arbOdds1))) / arbImplied; const arbStake2 = (parseFloat(arbTotalStake) * (1 / parseFloat(arbOdds2))) / arbImplied;
   const arbProfit = (arbStake1 * parseFloat(arbOdds1)) - parseFloat(arbTotalStake);
 
-  // ==========================================
-  // 5. LÓGICA STAKE %
-  // ==========================================
-  const [stakePercent, setStakePercent] = useState('1'); 
-  const stakeValue = (parseFloat(stakePercent) / 100) * currentBankrollBalance;
+  const [stakePercent, setStakePercent] = useState('1'); const stakeValue = (parseFloat(stakePercent) / 100) * currentBankrollBalance;
+  const [convDec, setConvDec] = useState('2.00'); const [convAm, setConvAm] = useState('+100'); const [convProb, setConvProb] = useState('50.00');
+  const handleDecChange = (val: string) => { setConvDec(val); const d = parseFloat(val); if (d > 1) { setConvProb(((1 / d) * 100).toFixed(2)); setConvAm(d >= 2 ? '+' + ((d - 1) * 100).toFixed(0) : (( -100 / (d - 1) )).toFixed(0)); } };
+  const [beOdds, setBeOdds] = useState('1.90'); const beWinRate = parseFloat(beOdds) > 1 ? (1 / parseFloat(beOdds)) * 100 : 0;
 
   // ==========================================
-  // 6. LÓGICA ODDS CONVERTER
-  // ==========================================
-  const [convDec, setConvDec] = useState('2.00'); 
-  const [convAm, setConvAm] = useState('+100'); 
-  const [convProb, setConvProb] = useState('50.00');
-  const handleDecChange = (val: string) => { 
-    setConvDec(val); 
-    const d = parseFloat(val); 
-    if (d > 1) { 
-        setConvProb(((1 / d) * 100).toFixed(2)); 
-        setConvAm(d >= 2 ? '+' + ((d - 1) * 100).toFixed(0) : (( -100 / (d - 1) )).toFixed(0)); 
-    } 
-  };
-
-  // ==========================================
-  // 7. LÓGICA BREAK EVEN
-  // ==========================================
-  const [beOdds, setBeOdds] = useState('1.90'); 
-  const beWinRate = parseFloat(beOdds) > 1 ? (1 / parseFloat(beOdds)) * 100 : 0;
-
-  // ==========================================
-  // ESTADOS COMPARTILHADOS (ExC e ExG usam o mesmo Radar)
+  // ESTADOS COMPARTILHADOS (ExC e ExG)
   // ==========================================
   const [liveMin, setLiveMin] = useState('');
   const [liveCurrentTarget, setLiveCurrentTarget] = useState(''); 
@@ -135,6 +94,28 @@ const Calculators: React.FC = () => {
 
   const factorial = (n: number): number => (n === 0 || n === 1 ? 1 : n * factorial(n - 1));
   const poissonExact = (k: number, lambda: number) => (Math.pow(lambda, k) * Math.exp(-lambda)) / factorial(k);
+
+  // UX Input Component
+  const PodInput = ({ label, value, onChange, icon: Icon, placeholder, colorClass, highlight }: any) => (
+    <div className="relative group">
+        <label className={`text-[9px] font-black uppercase tracking-widest block mb-1.5 transition-colors ${highlight ? colorClass : 'text-slate-500'}`}>
+           {label}
+        </label>
+        <div className="relative">
+            <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
+                <Icon size={14} className={highlight ? colorClass : 'text-slate-400 group-hover:text-slate-300 transition-colors'} />
+            </div>
+            <input 
+                type="number" 
+                value={value} 
+                onChange={onChange} 
+                placeholder={placeholder}
+                className={`w-full bg-slate-950 border rounded-xl pl-10 pr-3 py-3.5 font-mono font-bold text-sm outline-none transition-all
+                ${highlight ? `border-${colorClass.split('-')[1]}-500/50 focus:border-${colorClass.split('-')[1]}-400 text-${colorClass.split('-')[1]}-400 shadow-[inset_0_0_10px_rgba(0,0,0,0.2)]` : 'border-slate-800 text-white focus:border-slate-600 focus:bg-[#09090b]'}`}
+            />
+        </div>
+    </div>
+  );
 
   // ==========================================
   // 8. LÓGICA ExC QUANTITATIVA (CANTOS)
@@ -162,71 +143,48 @@ const Calculators: React.FC = () => {
       const ap5m = parseFloat(liveAP_5m) || 0; const currentOdd = parseFloat(liveCurrentOdd) || 0;
       const sot = parseFloat(liveSoT) || 0; const sofft = parseFloat(liveSoffT) || 0;
 
-      if (!min || min <= 0 || !apPress) return { appm: 0, fieldTilt: 0, proj: 0, probLimit: 0, probAsian: 0, signal: 'none', msg: 'Aguardando dados estruturados...', fairOddLimit: 0, fairOddAsian: 0, ev: 0, momentum: 0, paceMsg: '', crossCheckMsg: '' };
+      if (!min || min <= 0 || !apPress) return { appm: 0, fieldTilt: 0, proj: 0, probLimit: 0, probAsian: 0, signal: 'none', msg: 'Aguardando dados...', fairOddLimit: 0, fairOddAsian: 0, ev: 0, momentum: 0, paceMsg: '', crossCheckMsg: '' };
 
-      const isHT = excScenario.includes('ht');
-      const isAsianTarget = excScenario.includes('asian');
-      const extraTime = isHT ? 3 : 6; const maxMin = isHT ? 45 : 90;
-      const remainingTime = Math.max(1, (maxMin + extraTime) - min);
-
+      const isHT = excScenario.includes('ht'); const isAsianTarget = excScenario.includes('asian');
+      const remainingTime = Math.max(1, ((isHT ? 45 : 90) + (isHT ? 3 : 6)) - min);
       const totalAP = apPress + apDef; const fieldTilt = totalAP > 0 ? (apPress / totalAP) * 100 : 0;
       const appm = apPress / min;
       
       let crossCheckMsg = '';
-      if (sot >= 4 && (sot / apPress) > 0.1) {
-          crossCheckMsg = '💡 Dica de Perfil: Este time está chutando muito ao gol. O cenário pode ser melhor para o mercado de GOLS.';
-      } else if (appm > 1.2 && sot <= 1) {
-          crossCheckMsg = '✅ Perfil Perfeito para Cantos: Muito volume (chuveirinho) e pouca precisão de chutes.';
-      }
+      if (sot >= 4 && (sot / apPress) > 0.1) crossCheckMsg = '💡 Perfil Letal: Muitos chutes ao gol. Considere analisar o mercado de GOLS (ExG).';
+      else if (appm > 1.2 && sot <= 1) crossCheckMsg = '✅ Perfil Perfeito: Muito volume e pouca precisão. Cenário clássico de Cantos.';
 
       let momentum = 0; let paceMsg = "Padrão"; let urgencyFactor = 1.0;
       if (ap5m > 0 && apPress > ap5m) {
           momentum = (apPress - ap5m) / 5;
-          if (momentum >= 2.0) { urgencyFactor += 0.35; paceMsg = "Avalanche (Extremo)"; } 
-          else if (momentum >= 1.2) { urgencyFactor += 0.15; paceMsg = "Acelerado"; } 
-          else if (momentum < 0.8) { urgencyFactor -= 0.10; paceMsg = "Desacelerando"; }
+          if (momentum >= 2.0) { urgencyFactor += 0.35; paceMsg = "Avalanche Absoluta"; } 
+          else if (momentum >= 1.2) { urgencyFactor += 0.15; paceMsg = "Ritmo Acelerado"; } 
+          else if (momentum < 0.8) { urgencyFactor -= 0.10; paceMsg = "Esfriando"; }
       }
 
-      if (fieldTilt >= 70) urgencyFactor += 0.15;
-      if (fieldTilt >= 80) urgencyFactor += 0.10;
-      if (isHT && min >= 38) urgencyFactor += 0.10;
-      if (!isHT && min >= 80) urgencyFactor += 0.20;
+      if (fieldTilt >= 70) urgencyFactor += 0.15; if (fieldTilt >= 80) urgencyFactor += 0.10;
+      if (isHT && min >= 38) urgencyFactor += 0.10; if (!isHT && min >= 80) urgencyFactor += 0.20;
 
-      const expectedCornersSoFar = (apPress * 0.06) + (sot * 0.35) + (sofft * 0.15);
-      const tpr = expectedCornersSoFar / min;
-      const lambda = tpr * remainingTime * urgencyFactor;
+      const lambda = ((apPress * 0.06) + (sot * 0.35) + (sofft * 0.15)) / min * remainingTime * urgencyFactor;
       
       const p0 = poissonExact(0, lambda); const p1 = poissonExact(1, lambda);
       const probLimit = (1 - p0) * 100; const probAsian = (1 - (p0 + p1)) * 100;
-      const fairOddLimit = probLimit > 0 ? 100 / probLimit : 0;
-      const fairOddAsian = probAsian > 0 ? 100 / probAsian : 0;
-      
-      const targetProb = isAsianTarget ? probAsian : probLimit;
-      const targetFairOdd = isAsianTarget ? fairOddAsian : fairOddLimit;
-      const ev = currentOdd > 0 ? ((targetProb / 100) * currentOdd - 1) * 100 : 0;
+      const ev = currentOdd > 0 ? (((isAsianTarget ? probAsian : probLimit) / 100) * currentOdd - 1) * 100 : 0;
 
       let signal = 'red'; let msg = '';
-      const isVolumeValid = appm >= 1.05 || momentum >= 1.5;
-      const isDominanceValid = fieldTilt >= 65;
-      const isEfficiencyValid = (sot + sofft) >= (min / 10);
-
       if (currentOdd > 0) {
-          if (ev < 0) { signal = 'red'; msg = `🔴 ABORTAR: Odd s/ valor (-EV de ${ev.toFixed(1)}%). Justa: @${targetFairOdd.toFixed(2)}`; }
-          else if (ev >= 10 && isDominanceValid) { signal = 'green'; msg = `🟢 SINAL VERDE: EV+ GIGANTE (+${ev.toFixed(1)}%). Compre essa Odd!`; }
-          else if (ev > 0) { signal = 'yellow'; msg = `🟡 OBSERVATÓRIO: Leve EV+ (+${ev.toFixed(1)}%). Risco tático.`; }
+          if (ev < 0) { signal = 'red'; msg = `🔴 ABORTAR: Odd s/ valor (-EV de ${ev.toFixed(1)}%).`; }
+          else if (ev >= 10 && fieldTilt >= 65) { signal = 'green'; msg = `🟢 SINAL VERDE: EV+ GIGANTE (+${ev.toFixed(1)}%). Compre!`; }
+          else if (ev > 0) { signal = 'yellow'; msg = `🟡 OBSERVATÓRIO: Leve EV+ (+${ev.toFixed(1)}%).`; }
       } else {
-          if (isVolumeValid && isDominanceValid) {
-              if (targetProb >= 70 && isEfficiencyValid) { signal = 'green'; msg = '🟢 SINAL VERDE: ASSIMETRIA CLARA (EV+)'; }
-              else if (targetProb >= 55 || appm >= 1.2) { signal = 'yellow'; msg = '🟡 OBSERVATÓRIO: Risco moderado. Aguarde a odd valorizar.'; }
-              else { signal = 'red'; msg = '🔴 ABORTAR: Baixa probabilidade estatística.'; }
-          } else {
-              if (!isVolumeValid) msg = `🔴 ABORTAR: Jogo Lento (APPM de ${appm.toFixed(2)})`;
-              else if (!isDominanceValid) msg = `🔴 ABORTAR: Equilíbrio Tático (Domínio < 65%)`;
-              else msg = '🔴 ABORTAR: Faltam finalizações reais.';
-          }
+          if ((appm >= 1.05 || momentum >= 1.5) && fieldTilt >= 65) {
+              if ((isAsianTarget ? probAsian : probLimit) >= 70 && (sot + sofft) >= (min / 10)) { signal = 'green'; msg = '🟢 SINAL VERDE: ASSIMETRIA CLARA (EV+)'; }
+              else if ((isAsianTarget ? probAsian : probLimit) >= 55) { signal = 'yellow'; msg = '🟡 OBSERVATÓRIO: Aguarde a odd valorizar.'; }
+              else { signal = 'red'; msg = '🔴 ABORTAR: Baixa probabilidade.'; }
+          } else { signal = 'red'; msg = appm < 1.05 ? '🔴 ABORTAR: Jogo Lento (Sem Pressão)' : '🔴 ABORTAR: Equilíbrio Tático (Sem Domínio)'; }
       }
 
-      return { appm, fieldTilt, proj: corners + lambda, probLimit, probAsian, signal, msg, fairOddLimit, fairOddAsian, ev, momentum, paceMsg, crossCheckMsg };
+      return { appm, fieldTilt, proj: corners + lambda, probLimit, probAsian, signal, msg, fairOddLimit: probLimit > 0 ? 100 / probLimit : 0, fairOddAsian: probAsian > 0 ? 100 / probAsian : 0, ev, momentum, paceMsg, crossCheckMsg };
   };
   const excResult = calculateExC();
 
@@ -255,31 +213,19 @@ const Calculators: React.FC = () => {
       const currentOdd = parseFloat(liveCurrentOdd) || 0;
       const sot = parseFloat(liveSoT) || 0; const sofft = parseFloat(liveSoffT) || 0;
 
-      if (!min || min <= 0 || !apPress) return { xgTotal: 0, probGoal: 0, signal: 'none', msg: 'Aguardando dados estruturados...', fairOddGoal: 0, ev: 0, crossCheckMsg: '' };
+      if (!min || min <= 0 || !apPress) return { xgTotal: 0, probGoal: 0, signal: 'none', msg: 'Aguardando dados...', fairOddGoal: 0, ev: 0, crossCheckMsg: '' };
 
       const isHT = exgScenario.includes('ht');
-      const maxMin = isHT ? 45 : 90;
-      const remainingTime = Math.max(1, (maxMin + (isHT?3:6)) - min);
+      const remainingTime = Math.max(1, ((isHT ? 45 : 90) + (isHT ? 3 : 6)) - min);
 
       let crossCheckMsg = '';
-      if (apPress > 40 && sot === 0) {
-          crossCheckMsg = '⚠️ ALERTA: O time tem volume, mas não chuta (0 no Alvo). O mercado de CANTOS (ExC) é muito mais seguro aqui.';
-      } else if (sot >= 4) {
-          crossCheckMsg = '🎯 Perfil Letal: Excelente taxa de chutes no alvo. Cenário ideal para Gols.';
-      }
+      if (apPress > 40 && sot === 0) crossCheckMsg = '⚠️ ALERTA: Volume alto sem chutes no gol. Mercado de CANTOS (ExC) é mais seguro.';
+      else if (sot >= 4) crossCheckMsg = '🎯 Radar Confirmado: Excelente taxa de chutes no alvo. Cenário ideal.';
 
       const expectedGoalsSoFar = (sot * 0.14) + (sofft * 0.04) + (apPress * 0.005); 
-      const xgPerMin = expectedGoalsSoFar / min;
+      const lambdaGoals = (expectedGoalsSoFar / min) * remainingTime * (apDef > (apPress * 0.5) ? 1.2 : 1.0);
       
-      let opennessFactor = 1.0;
-      if (apDef > (apPress * 0.5)) opennessFactor = 1.2; 
-      
-      const lambdaGoals = xgPerMin * remainingTime * opennessFactor;
-      
-      const p0 = poissonExact(0, lambdaGoals);
-      const probGoal = (1 - p0) * 100; 
-      const fairOddGoal = probGoal > 0 ? 100 / probGoal : 0;
-      
+      const probGoal = (1 - poissonExact(0, lambdaGoals)) * 100; 
       const ev = currentOdd > 0 ? ((probGoal / 100) * currentOdd - 1) * 100 : 0;
 
       let signal = 'red'; let msg = '';
@@ -291,43 +237,35 @@ const Calculators: React.FC = () => {
           if (sot >= (min/15) || (sot+sofft) >= (min/6)) { 
               if (probGoal >= 70) { signal = 'green'; msg = '🟢 SINAL VERDE: ALTA TENDÊNCIA DE GOL'; }
               else if (probGoal >= 55) { signal = 'yellow'; msg = '🟡 OBSERVATÓRIO: Jogo com potencial. Aguarde odd.'; }
-              else { signal = 'red'; msg = '🔴 ABORTAR: Frequência de finalização caindo.'; }
+              else { signal = 'red'; msg = '🔴 ABORTAR: Frequência caindo.'; }
           } else { signal = 'red'; msg = '🔴 ABORTAR: Faltam finalizações reais no alvo.'; }
       }
 
-      return { xgTotal: expectedGoalsSoFar + lambdaGoals, probGoal, signal, msg, fairOddGoal, ev, crossCheckMsg };
+      return { xgTotal: expectedGoalsSoFar + lambdaGoals, probGoal, signal, msg, fairOddGoal: probGoal > 0 ? 100 / probGoal : 0, ev, crossCheckMsg };
   };
   const exgResult = calculateExG();
 
 
-  // --- SIDEBAR INFO HELPERS ---
-  const getSidebarInfo = () => {
+  const sidebarInfo = (() => {
     switch(activeTab) {
       case 'dutching': return { title: 'Gestão de Risco', text: 'O Dutching divide a sua exposição entre múltiplas seleções, diluindo o risco do investimento em um único evento.' };
-      case 'kelly': return { title: 'Cálculo de Exposição', text: 'O Critério de Kelly ajusta matematicamente a stake ideal com base na probabilidade e na odd (cotação) apresentada.' };
-      case 'value': return { title: 'Análise de EV+', text: 'O conceito de Value Bet compara a cotação oferecida pelo mercado com a probabilidade real estatística de um evento ocorrer.' };
-      case 'arb': return { title: 'Arbitragem Matemática', text: 'Calcula o volume exato a ser distribuído em duas vias para anular o risco direcional. (Atenção aos limites do mercado).' };
-      case 'stake': return { title: 'Gestão Fixa', text: 'O cálculo de stake fixa percentual ajuda a manter o controle do drawdown em fases de oscilação do mercado.' };
-      case 'odds': return { title: 'Leitura Global', text: 'Conversão automática de formatos de cotações utilizados em bolsas esportivas americanas e europeias.' };
-      case 'breakeven': return { title: 'Ponto de Equilíbrio', text: 'A taxa de acerto (Hit-Rate) estatística necessária para manter a estabilidade do capital com a odd informada.' };
-      case 'exc': return { title: 'ExC Analytics (Cantos)', text: 'Mede o VOLUME de pressão (Ataques Perigosos e Field Tilt) para prever escanteios usando Poisson e Momentum.' };
-      case 'exg': return { title: 'ExG Analytics (Gols)', text: 'Mede a EFICIÊNCIA (Chutes no Alvo e Jogo Aberto) para calcular a probabilidade matemática de um Gol sair.' };
-      default: return { title: 'Ferramentas Analíticas', text: 'Utilize os modelos matemáticos para tomar decisões baseadas em dados e não em emoções.' };
+      case 'kelly': return { title: 'Cálculo de Exposição', text: 'O Critério de Kelly ajusta matematicamente a stake ideal com base na probabilidade e na odd apresentada.' };
+      case 'value': return { title: 'Análise de EV+', text: 'O conceito de Value Bet compara a cotação oferecida pelo mercado com a probabilidade real.' };
+      case 'arb': return { title: 'Arbitragem Matemática', text: 'Calcula o volume exato a ser distribuído em duas vias para anular o risco direcional.' };
+      case 'stake': return { title: 'Gestão Fixa', text: 'O cálculo de stake fixa percentual ajuda a manter o controle do drawdown em fases de oscilação.' };
+      case 'odds': return { title: 'Leitura Global', text: 'Conversão automática de formatos de cotações utilizados em bolsas esportivas.' };
+      case 'breakeven': return { title: 'Ponto de Equilíbrio', text: 'A taxa de acerto (Hit-Rate) necessária para manter a estabilidade do capital com a odd informada.' };
+      case 'exc': return { title: 'ExC Analytics (Cantos)', text: 'Motor HFT que cruza Domínio (Field Tilt), Momentum e Poisson para achar EV+ em escanteios.' };
+      case 'exg': return { title: 'ExG Analytics (Gols)', text: 'Calcula a letalidade do time (SoT) e a abertura tática para precificar a Odd Justa de Gols em tempo real.' };
+      default: return { title: 'Ferramentas Analíticas', text: 'Tome decisões baseadas em dados.' };
     }
-  };
+  })();
 
-  const sidebarInfo = getSidebarInfo();
-
-  // A LISTA COMPLETA COM AS 9 ABAS
   const tabs = [
-    { id: 'dutching', label: 'Dutching', pro: false },
-    { id: 'kelly', label: 'Kelly', pro: false },
-    { id: 'value', label: 'Value Bet', pro: true },
-    { id: 'arb', label: 'Arbitragem', pro: true },
-    { id: 'stake', label: 'Stake %', pro: false },
-    { id: 'odds', label: 'Odds Conv.', pro: false },
-    { id: 'breakeven', label: 'Break Even', pro: true },
-    { id: 'exc', label: 'ExC (Cantos)', pro: true },
+    { id: 'dutching', label: 'Dutching', pro: false }, { id: 'kelly', label: 'Kelly', pro: false },
+    { id: 'value', label: 'Value Bet', pro: true }, { id: 'arb', label: 'Arbitragem', pro: true },
+    { id: 'stake', label: 'Stake %', pro: false }, { id: 'odds', label: 'Odds Conv.', pro: false },
+    { id: 'breakeven', label: 'Break Even', pro: true }, { id: 'exc', label: 'ExC (Cantos)', pro: true },
     { id: 'exg', label: 'ExG (Gols)', pro: true },
   ];
 
@@ -374,7 +312,6 @@ const Calculators: React.FC = () => {
             {/* =========================================
                 RENDERIZAÇÃO DAS CALCULADORAS CLÁSSICAS
             ========================================= */}
-
             {activeTab === 'dutching' && (
                 <div className="bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-800 rounded-[2rem] p-6 shadow-sm w-full overflow-hidden">
                     <h2 className="text-lg font-black text-slate-900 dark:text-white uppercase tracking-tighter italic mb-4">Calculadora Dutching</h2>
@@ -550,142 +487,178 @@ const Calculators: React.FC = () => {
             )}
 
             {/* =========================================
-                EXPECTATIVA DE CANTOS (ExC) - PRO
+                EXPECTATIVA DE CANTOS (ExC) - PRO (UI AVANÇADA)
             ========================================= */}
             {activeTab === 'exc' && (
                 !isPro ? <ProLockScreen /> : (
-                <div className="bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-800 rounded-[2rem] p-6 shadow-sm">
-                   <div className="flex justify-between items-start mb-6">
-                      <h2 className="text-lg font-black text-slate-900 dark:text-white uppercase tracking-tighter italic flex items-center gap-2">
-                        <Radar size={20} className="text-emerald-500"/> ExC Analytics (Cantos)
-                      </h2>
-                      <span className="bg-emerald-100 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400 px-2 py-1 rounded text-[9px] font-black uppercase tracking-widest border border-emerald-200 dark:border-emerald-500/20">Market Maker</span>
+                <div className="bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-800 rounded-[2.5rem] p-6 sm:p-8 shadow-sm relative overflow-hidden">
+                   <div className="flex justify-between items-start mb-8 relative z-10">
+                      <div>
+                        <h2 className="text-2xl font-black text-slate-900 dark:text-white uppercase tracking-tighter italic flex items-center gap-2">
+                          <Radar size={24} className="text-emerald-500"/> ExC Analytics
+                        </h2>
+                        <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest mt-1">High-Frequency Corner Prediction</p>
+                      </div>
+                      <span className="bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 px-3 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest flex items-center gap-1.5">
+                         <Zap size={12} fill="currentColor" /> Market Maker
+                      </span>
                    </div>
                    
-                   <div className="mb-6">
-                      <label className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase block mb-2 tracking-widest">1. Selecione a Assimetria (Alvo)</label>
-                      <select value={excScenario} onChange={e => setExcScenario(e.target.value)} className="w-full p-3 bg-slate-50 dark:bg-slate-900 rounded-xl font-bold text-sm outline-none border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-emerald-500/50">
-                         <option value="ht_asian">Canto Asiático HT (Volume Seguro)</option>
-                         <option value="ht_limit">Canto Limite HT (Abafa)</option>
-                         <option value="ft_asian">Canto Asiático FT (Volta do Intervalo)</option>
-                         <option value="ft_limit">Canto Limite FT (Desespero Final)</option>
-                      </select>
-                   </div>
-
-                   <div className="mb-8 p-5 bg-slate-50 dark:bg-[#020617] rounded-2xl border border-slate-200 dark:border-slate-800">
-                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-4 flex items-center gap-2"><Lock size={12} className={excUnlocked ? 'text-emerald-500' : 'text-slate-400'}/> Guardião de Padrão</p>
-                      <div className="space-y-3">
-                         {excScenariosData[excScenario].checks.map((check, idx) => (
-                            <button key={idx} onClick={() => handleExcCheck(idx)} className={`w-full flex items-center gap-3 p-3 rounded-xl border text-left ${excChecklist[idx] ? 'bg-emerald-50 dark:bg-emerald-900/20 border-emerald-200 dark:border-emerald-500/30' : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700'}`}>
-                               <div className={`${excChecklist[idx] ? 'text-emerald-500' : 'text-slate-400'}`}>{excChecklist[idx] ? <CheckSquare size={18} /> : <Square size={18} />}</div>
-                               <span className={`text-xs font-bold ${excChecklist[idx] ? 'text-emerald-700 dark:text-emerald-300' : 'text-slate-600 dark:text-slate-400'}`}>{check}</span>
-                            </button>
-                         ))}
+                   {/* GATEKEEPER */}
+                   <div className="mb-8 bg-slate-50 dark:bg-slate-900/50 p-1 rounded-[1.5rem] border border-slate-200 dark:border-slate-800 relative z-10">
+                      <div className="p-4 border-b border-slate-200 dark:border-slate-800">
+                        <label className="text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase block mb-2 tracking-widest">1. Selecione o Cenário</label>
+                        <select value={excScenario} onChange={e => setExcScenario(e.target.value)} className="w-full bg-white dark:bg-[#09090b] border border-slate-200 dark:border-slate-700 p-3.5 rounded-xl font-bold text-sm outline-none text-slate-900 dark:text-white focus:ring-2 focus:ring-emerald-500/50 transition-all cursor-pointer">
+                           <option value="ht_asian">Canto Asiático HT (Volume Seguro)</option>
+                           <option value="ht_limit">Canto Limite HT (Abafa Retranca)</option>
+                           <option value="ft_asian">Canto Asiático FT (Volta do Intervalo)</option>
+                           <option value="ft_limit">Canto Limite FT (Desespero Final)</option>
+                        </select>
+                      </div>
+                      <div className="p-5">
+                        <p className="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em] mb-4 flex items-center gap-2">
+                           <Lock size={12} className={excUnlocked ? 'text-emerald-500' : 'text-slate-500'}/> Guardião de Padrão (Validação Visual)
+                        </p>
+                        <div className="space-y-2">
+                           {excScenariosData[excScenario].checks.map((check, idx) => (
+                              <button key={idx} onClick={() => handleExcCheck(idx)} className={`w-full flex items-center gap-3 p-3.5 rounded-xl border transition-all text-left group ${excChecklist[idx] ? 'bg-emerald-50 dark:bg-emerald-500/10 border-emerald-200 dark:border-emerald-500/30' : 'bg-white dark:bg-[#020617] border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700'}`}>
+                                 <div className={`shrink-0 transition-transform ${excChecklist[idx] ? 'text-emerald-500 scale-110' : 'text-slate-400 group-hover:text-slate-300'}`}>{excChecklist[idx] ? <CheckSquare size={18} /> : <Square size={18} />}</div>
+                                 <span className={`text-[11px] sm:text-xs font-bold leading-tight ${excChecklist[idx] ? 'text-emerald-700 dark:text-emerald-400' : 'text-slate-600 dark:text-slate-400'}`}>{check}</span>
+                              </button>
+                           ))}
+                        </div>
                       </div>
                    </div>
 
                    <AnimatePresence>
                      {excUnlocked && (
-                       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="border-t border-slate-200 dark:border-slate-800 pt-6">
-                         <h3 className="text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-4 flex items-center gap-2"><Activity size={14} className="text-emerald-500"/> Input do Radar Bet365</h3>
+                       <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} className="relative z-10 overflow-hidden">
                          
-                         <div className="grid grid-cols-3 gap-4 mb-6">
-                            <div><label className="text-[9px] font-bold text-slate-500 uppercase block mb-1">Tempo (Min)</label><input type="number" value={liveMin} onChange={e => setLiveMin(e.target.value)} className="w-full p-3 bg-slate-50 dark:bg-slate-900 rounded-xl font-mono font-bold outline-none border border-slate-200 dark:border-slate-800" /></div>
-                            <div><label className="text-[9px] font-bold text-slate-500 uppercase block mb-1">Cantos Atuais</label><input type="number" value={liveCurrentTarget} onChange={e => setLiveCurrentTarget(e.target.value)} className="w-full p-3 bg-slate-50 dark:bg-slate-900 rounded-xl font-mono font-bold outline-none border border-slate-200 dark:border-slate-800" /></div>
-                            <div><label className="text-[9px] font-bold text-slate-500 uppercase block mb-1 truncate">Ataques P. (Defesa)</label><input type="number" value={liveAP_Def} onChange={e => setLiveAP_Def(e.target.value)} className="w-full p-3 bg-slate-50 dark:bg-slate-900 rounded-xl font-mono font-bold outline-none border border-slate-200 dark:border-slate-800" /></div>
-                         </div>
-                         
-                         <div className="grid grid-cols-2 gap-4 mb-6 bg-emerald-50 dark:bg-emerald-900/10 p-4 rounded-2xl border border-emerald-100 dark:border-emerald-900/30">
-                            <div className="col-span-2"><p className="text-[10px] font-black text-emerald-600 dark:text-emerald-500 uppercase tracking-widest flex items-center gap-1"><Crosshair size={12}/> Time Pressionando</p></div>
-                            <div><label className="text-[9px] font-bold text-emerald-700 dark:text-emerald-400 uppercase block mb-1">Ataques P.</label><input type="number" value={liveAP_Press} onChange={e => setLiveAP_Press(e.target.value)} className="w-full p-3 bg-white dark:bg-slate-900 rounded-xl font-mono font-bold outline-none border border-slate-200 dark:border-slate-800 focus:border-emerald-500" /></div>
-                            <div><label className="text-[9px] font-bold text-emerald-700 dark:text-emerald-400 uppercase block mb-1">AP (5 min atrás)</label><input type="number" placeholder="Opcional" value={liveAP_5m} onChange={e => setLiveAP_5m(e.target.value)} className="w-full p-3 bg-white dark:bg-slate-900 rounded-xl font-mono font-bold outline-none border border-slate-200 dark:border-slate-800 focus:border-emerald-500" /></div>
-                            <div><label className="text-[9px] font-bold text-emerald-700 dark:text-emerald-400 uppercase block mb-1">No Alvo</label><input type="number" value={liveSoT} onChange={e => setLiveSoT(e.target.value)} className="w-full p-3 bg-white dark:bg-slate-900 rounded-xl font-mono font-bold outline-none border border-slate-200 dark:border-slate-800 focus:border-emerald-500" /></div>
-                            <div><label className="text-[9px] font-bold text-emerald-700 dark:text-emerald-400 uppercase block mb-1">Para Fora</label><input type="number" value={liveSoffT} onChange={e => setLiveSoffT(e.target.value)} className="w-full p-3 bg-white dark:bg-slate-900 rounded-xl font-mono font-bold outline-none border border-slate-200 dark:border-slate-800 focus:border-emerald-500" /></div>
+                         {/* INPUTS AVANÇADOS COM ÍCONES */}
+                         <div className="bg-slate-900 rounded-[2rem] p-6 mb-6 border border-slate-800 shadow-inner">
+                            <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-5 flex items-center gap-2"><Activity size={14} className="text-emerald-500"/> Global Match Data</h3>
+                            <div className="grid grid-cols-3 gap-3 mb-6">
+                               <PodInput label="Minuto" value={liveMin} onChange={(e:any) => setLiveMin(e.target.value)} icon={Clock} placeholder="00" colorClass="text-slate-500" />
+                               <PodInput label="Cantos" value={liveCurrentTarget} onChange={(e:any) => setLiveCurrentTarget(e.target.value)} icon={Flag} placeholder="0" colorClass="text-slate-500" />
+                               <PodInput label="AP (Defesa)" value={liveAP_Def} onChange={(e:any) => setLiveAP_Def(e.target.value)} icon={ShieldAlert} placeholder="0" colorClass="text-slate-500" />
+                            </div>
+                            
+                            <div className="border-t border-slate-800/80 pt-5">
+                                <h3 className="text-[10px] font-black text-emerald-500 uppercase tracking-widest mb-4 flex items-center gap-2"><Crosshair size={14} /> Attacking Team (Pressão)</h3>
+                                <div className="grid grid-cols-2 gap-3">
+                                   <PodInput label="Ataques P. Atual" value={liveAP_Press} onChange={(e:any) => setLiveAP_Press(e.target.value)} icon={Swords} placeholder="00" highlight colorClass="text-emerald-500" />
+                                   <PodInput label="AP (Há 5 min)" value={liveAP_5m} onChange={(e:any) => setLiveAP_5m(e.target.value)} icon={TrendingUp} placeholder="Opcional" highlight colorClass="text-emerald-500" />
+                                   <PodInput label="Chutes no Alvo" value={liveSoT} onChange={(e:any) => setLiveSoT(e.target.value)} icon={Target} placeholder="0" highlight colorClass="text-emerald-500" />
+                                   <PodInput label="Chutes Fora" value={liveSoffT} onChange={(e:any) => setLiveSoffT(e.target.value)} icon={Target} placeholder="0" highlight colorClass="text-emerald-500" />
+                                </div>
+                            </div>
                          </div>
 
-                         <div className="mb-6 p-4 bg-slate-950 rounded-2xl flex items-center gap-4">
-                             <DollarSign size={24} className="text-emerald-400 shrink-0" />
-                             <div className="flex-1">
-                                <label className="text-[10px] font-black text-emerald-500 uppercase tracking-[0.2em] block mb-1">Odd Oferecida (Calcula EV%)</label>
-                                <input type="number" step="0.01" placeholder="Ex: 1.83" value={liveCurrentOdd} onChange={e => setLiveCurrentOdd(e.target.value)} className="w-full bg-transparent text-xl font-mono font-black text-white outline-none" />
+                         {/* ENTRADA DE ODD COM GLASSMORPHISM */}
+                         <div className="mb-6 relative overflow-hidden rounded-2xl group">
+                             <div className="absolute inset-0 bg-gradient-to-r from-emerald-500 to-teal-500 opacity-20 group-hover:opacity-30 transition-opacity"></div>
+                             <div className="bg-[#09090b]/80 backdrop-blur-sm p-5 border border-emerald-500/20 relative flex items-center gap-4">
+                                 <div className="bg-emerald-500/10 p-3.5 rounded-xl shrink-0 border border-emerald-500/20 shadow-[0_0_15px_rgba(16,185,129,0.2)]">
+                                    <DollarSign size={24} className="text-emerald-400" />
+                                 </div>
+                                 <div className="flex-1">
+                                    <label className="text-[9px] font-black text-emerald-500 uppercase tracking-[0.2em] block mb-1">Odd Oferecida Bet365 (Scanner de EV%)</label>
+                                    <input type="number" step="0.01" placeholder="Ex: 1.83" value={liveCurrentOdd} onChange={e => setLiveCurrentOdd(e.target.value)} className="w-full bg-transparent text-2xl font-mono font-black text-white outline-none placeholder:text-slate-700" />
+                                 </div>
                              </div>
                          </div>
 
                          {excResult.crossCheckMsg && (
-                            <div className="mb-4 bg-blue-500/10 border border-blue-500/20 text-blue-400 p-3 rounded-xl text-[11px] font-bold flex items-start gap-2">
-                               <Lightbulb size={14} className="shrink-0 mt-0.5" /> {excResult.crossCheckMsg}
+                            <div className="mb-6 bg-blue-500/10 border border-blue-500/20 text-blue-400 p-4 rounded-2xl text-xs font-bold flex items-start gap-3 shadow-inner">
+                               <Lightbulb size={18} className="shrink-0 mt-0.5 text-blue-400" /> 
+                               <span className="leading-relaxed">{excResult.crossCheckMsg}</span>
                             </div>
                          )}
 
-                         {/* BLOOMBERG TERMINAL UI - EXC */}
-                         <div className="bg-[#020617] rounded-2xl border border-slate-800 p-6 overflow-hidden relative">
-                             <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-5"></div>
+                         {/* BLOOMBERG TERMINAL UI DEFINITIVO */}
+                         <div className="bg-[#020617] rounded-[2rem] border border-slate-800 p-6 overflow-hidden relative shadow-2xl mt-4">
+                             {/* Fundo Tático */}
+                             <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-[0.03]"></div>
                              
-                             <div className="relative z-10 flex flex-col md:flex-row justify-between mb-6 gap-6">
+                             {/* Brilho Dinâmico Radial Baseado no Resultado */}
+                             <div className={`absolute top-0 right-0 w-64 h-64 rounded-full blur-[80px] -mr-20 -mt-20 pointer-events-none transition-colors duration-1000 ${
+                                excResult.signal === 'green' ? 'bg-emerald-500/20' : 
+                                excResult.signal === 'yellow' ? 'bg-yellow-500/10' : 'bg-red-500/10'
+                             }`}></div>
+                             
+                             <div className="relative z-10 flex flex-col md:flex-row justify-between mb-8 gap-8">
+                                {/* Cápsulas de Métricas */}
                                 <div className="space-y-4 flex-1">
-                                    <div>
-                                      <p className="text-[9px] uppercase tracking-widest text-slate-500 font-bold mb-1">Pace (Momentum)</p>
-                                      <div className="flex items-end gap-2">
-                                         <p className={`text-xl font-black font-mono leading-none ${excResult.momentum >= 1.5 ? 'text-indigo-400' : 'text-slate-300'}`}>
-                                           {excResult.paceMsg}
-                                         </p>
-                                      </div>
+                                    <div className="bg-slate-900/80 p-4 rounded-2xl border border-slate-800 flex justify-between items-center">
+                                       <span className="text-[10px] uppercase tracking-widest text-slate-500 font-bold flex items-center gap-2"><Activity size={14}/> Pressão (APPM)</span>
+                                       <span className={`text-xl font-black font-mono ${excResult.appm >= 1.05 ? 'text-emerald-400 drop-shadow-[0_0_8px_rgba(52,211,153,0.4)]' : 'text-slate-400'}`}>{excResult.appm.toFixed(2)}</span>
                                     </div>
-                                    <div className="flex justify-between items-end border-t border-slate-800 pt-3">
-                                        <div>
-                                          <p className="text-[8px] uppercase tracking-widest text-slate-500 font-bold mb-1">Pressão (APPM)</p>
-                                          <p className={`text-lg font-black font-mono leading-none ${excResult.appm >= 1.05 ? 'text-emerald-400' : 'text-red-400'}`}>
-                                            {excResult.appm.toFixed(2)}
-                                          </p>
-                                        </div>
-                                        <div>
-                                          <p className="text-[8px] uppercase tracking-widest text-slate-500 font-bold mb-1">Domínio</p>
-                                          <p className={`text-lg font-black font-mono leading-none ${excResult.fieldTilt >= 65 ? 'text-blue-400' : 'text-red-400'}`}>
-                                            {excResult.fieldTilt.toFixed(0)}%
-                                          </p>
-                                        </div>
+                                    <div className="bg-slate-900/80 p-4 rounded-2xl border border-slate-800 flex justify-between items-center">
+                                       <span className="text-[10px] uppercase tracking-widest text-slate-500 font-bold flex items-center gap-2"><Map size={14}/> Field Tilt</span>
+                                       <span className={`text-xl font-black font-mono ${excResult.fieldTilt >= 65 ? 'text-blue-400 drop-shadow-[0_0_8px_rgba(96,165,250,0.4)]' : 'text-slate-400'}`}>{excResult.fieldTilt.toFixed(0)}%</span>
+                                    </div>
+                                    <div className="bg-slate-900/80 p-4 rounded-2xl border border-slate-800 flex justify-between items-center">
+                                       <span className="text-[10px] uppercase tracking-widest text-slate-500 font-bold flex items-center gap-2"><Zap size={14}/> Momentum</span>
+                                       <span className={`text-xs font-black uppercase tracking-widest ${excResult.momentum >= 1.5 ? 'text-indigo-400' : 'text-slate-400'}`}>{excResult.paceMsg}</span>
                                     </div>
                                 </div>
 
-                                <div className="flex-1 bg-slate-900 border border-slate-800 p-4 rounded-xl shadow-inner">
-                                    <h4 className="text-[10px] text-slate-400 uppercase tracking-widest font-bold mb-4 flex justify-between items-center gap-2">
-                                       <span className="flex items-center gap-1"><BarChart4 size={12} className="text-indigo-500"/> Probabilidade Real</span>
-                                       <span className="text-[8px] text-emerald-500">Fair Odd (Justa)</span>
+                                {/* Gráfico Poisson */}
+                                <div className="flex-[1.5] bg-slate-900/80 border border-slate-800 p-5 rounded-2xl shadow-inner flex flex-col justify-center">
+                                    <h4 className="text-[10px] text-slate-400 uppercase tracking-widest font-black mb-5 flex justify-between items-center">
+                                       <span className="flex items-center gap-1.5"><BarChart4 size={14} className="text-emerald-500"/> Modelo Poisson</span>
+                                       <span className="text-[8px] text-emerald-500 bg-emerald-500/10 px-2 py-1 rounded">FAIR ODD</span>
                                     </h4>
                                     
-                                    <div className="space-y-4">
+                                    <div className="space-y-5">
                                         <div>
-                                            <div className="flex justify-between items-end mb-1">
-                                               <span className="text-[10px] font-bold text-white uppercase tracking-wider">Limite (+1)</span>
-                                               <div className="text-right">
-                                                   <span className={`text-xs font-black mr-2 ${excResult.probLimit >= 75 ? 'text-emerald-400' : 'text-slate-400'}`}>{excResult.probLimit.toFixed(1)}%</span>
-                                                   <span className="text-[10px] font-mono font-bold text-emerald-500 bg-emerald-500/10 px-1.5 py-0.5 rounded">@{excResult.fairOddLimit.toFixed(2)}</span>
+                                            <div className="flex justify-between items-end mb-2">
+                                               <span className="text-[10px] font-bold text-slate-300 uppercase tracking-wider">Canto Limite (+1)</span>
+                                               <div className="text-right flex items-center gap-3">
+                                                   <span className={`text-sm font-black font-mono ${excResult.probLimit >= 75 ? 'text-emerald-400' : 'text-slate-400'}`}>{excResult.probLimit.toFixed(1)}%</span>
+                                                   <span className="text-[11px] font-mono font-black text-emerald-500 bg-[#020617] border border-emerald-500/30 px-2 py-1 rounded shadow-inner">@{excResult.fairOddLimit.toFixed(2)}</span>
                                                </div>
                                             </div>
-                                            <div className="w-full bg-slate-800 rounded-full h-1.5 overflow-hidden">
-                                               <div className={`h-1.5 rounded-full ${excResult.probLimit >= 75 ? 'bg-emerald-500' : 'bg-slate-500'}`} style={{ width: `${excResult.probLimit}%` }}></div>
+                                            <div className="w-full bg-slate-950 rounded-full h-2 overflow-hidden border border-slate-800">
+                                               <motion.div initial={{ width: 0 }} animate={{ width: `${excResult.probLimit}%` }} transition={{ duration: 1, ease: "easeOut" }} className={`h-full rounded-full ${excResult.probLimit >= 75 ? 'bg-gradient-to-r from-emerald-600 to-emerald-400 shadow-[0_0_10px_rgba(52,211,153,0.5)]' : 'bg-slate-600'}`}></motion.div>
                                             </div>
                                         </div>
                                         <div>
-                                            <div className="flex justify-between items-end mb-1">
-                                               <span className="text-[10px] font-bold text-white uppercase tracking-wider">Asiático (+2)</span>
-                                               <div className="text-right">
-                                                   <span className={`text-xs font-black mr-2 ${excResult.probAsian >= 50 ? 'text-emerald-400' : 'text-slate-400'}`}>{excResult.probAsian.toFixed(1)}%</span>
-                                                   <span className="text-[10px] font-mono font-bold text-emerald-500 bg-emerald-500/10 px-1.5 py-0.5 rounded">@{excResult.fairOddAsian.toFixed(2)}</span>
+                                            <div className="flex justify-between items-end mb-2">
+                                               <span className="text-[10px] font-bold text-slate-300 uppercase tracking-wider">Canto Asiático (+2)</span>
+                                               <div className="text-right flex items-center gap-3">
+                                                   <span className={`text-sm font-black font-mono ${excResult.probAsian >= 50 ? 'text-emerald-400' : 'text-slate-400'}`}>{excResult.probAsian.toFixed(1)}%</span>
+                                                   <span className="text-[11px] font-mono font-black text-emerald-500 bg-[#020617] border border-emerald-500/30 px-2 py-1 rounded shadow-inner">@{excResult.fairOddAsian.toFixed(2)}</span>
                                                </div>
                                             </div>
-                                            <div className="w-full bg-slate-800 rounded-full h-1.5 overflow-hidden">
-                                               <div className={`h-1.5 rounded-full ${excResult.probAsian >= 50 ? 'bg-emerald-500' : 'bg-slate-500'}`} style={{ width: `${excResult.probAsian}%` }}></div>
+                                            <div className="w-full bg-slate-950 rounded-full h-2 overflow-hidden border border-slate-800">
+                                               <motion.div initial={{ width: 0 }} animate={{ width: `${excResult.probAsian}%` }} transition={{ duration: 1, ease: "easeOut", delay: 0.2 }} className={`h-full rounded-full ${excResult.probAsian >= 50 ? 'bg-gradient-to-r from-emerald-600 to-emerald-400 shadow-[0_0_10px_rgba(52,211,153,0.5)]' : 'bg-slate-600'}`}></motion.div>
                                             </div>
                                         </div>
                                     </div>
                                 </div>
                              </div>
 
-                             <div className="relative z-10 mt-2">
-                               {excResult.signal === 'green' && <div className="bg-emerald-500 text-slate-950 w-full py-3 rounded-xl font-black text-xs sm:text-sm tracking-wide uppercase shadow-[0_0_15px_rgba(16,185,129,0.4)] text-center">{excResult.msg}</div>}
-                               {excResult.signal === 'yellow' && <div className="bg-yellow-500 text-slate-950 w-full py-3 rounded-xl font-black text-xs sm:text-sm tracking-wide uppercase shadow-[0_0_15px_rgba(234,179,8,0.3)] text-center">{excResult.msg}</div>}
-                               {excResult.signal === 'red' && <div className="bg-slate-800 border border-red-500/30 text-red-400 w-full py-3 rounded-xl font-black text-[10px] sm:text-xs tracking-wide uppercase text-center flex items-center justify-center gap-2"><AlertTriangle size={14} className="shrink-0"/> {excResult.msg}</div>}
+                             {/* SINAL RADIOATIVO (Neon Button) */}
+                             <div className="relative z-20 mt-4">
+                               {excResult.signal === 'green' && (
+                                  <motion.div initial={{ scale: 0.95 }} animate={{ scale: 1 }} className="relative group">
+                                      <div className="absolute -inset-0.5 bg-gradient-to-r from-emerald-600 to-teal-400 rounded-2xl blur opacity-40 group-hover:opacity-60 transition duration-1000 animate-pulse"></div>
+                                      <div className="relative bg-gradient-to-r from-emerald-500 to-emerald-400 text-slate-950 w-full py-5 rounded-2xl font-black text-xs sm:text-sm tracking-widest uppercase text-center shadow-xl flex items-center justify-center gap-2">
+                                         <Zap fill="currentColor" size={18} className="animate-bounce"/> {excResult.msg}
+                                      </div>
+                                  </motion.div>
+                               )}
+                               {excResult.signal === 'yellow' && (
+                                  <div className="bg-gradient-to-r from-yellow-500 to-yellow-400 text-slate-950 w-full py-5 rounded-2xl font-black text-xs sm:text-sm tracking-widest uppercase text-center shadow-[0_0_20px_rgba(234,179,8,0.3)]">
+                                     {excResult.msg}
+                                  </div>
+                               )}
+                               {excResult.signal === 'red' && (
+                                  <div className="bg-[#09090b] border border-red-500/30 text-red-400 w-full py-5 rounded-2xl font-black text-[10px] sm:text-xs tracking-widest uppercase text-center flex items-center justify-center gap-2 shadow-inner">
+                                     <AlertTriangle size={16} className="shrink-0 text-red-500"/> {excResult.msg}
+                                  </div>
+                               )}
                              </div>
                          </div>
                        </motion.div>
@@ -696,114 +669,156 @@ const Calculators: React.FC = () => {
             )}
 
             {/* =========================================
-                EXPECTATIVA DE GOLS (ExG) - PRO
+                EXPECTATIVA DE GOLS (ExG) - PRO (UI AVANÇADA)
             ========================================= */}
             {activeTab === 'exg' && (
                 !isPro ? <ProLockScreen /> : (
-                <div className="bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-800 rounded-[2rem] p-6 shadow-sm">
-                   <div className="flex justify-between items-start mb-6">
-                      <h2 className="text-lg font-black text-slate-900 dark:text-white uppercase tracking-tighter italic flex items-center gap-2">
-                        <Goal size={20} className="text-orange-500"/> ExG Analytics (Gols)
-                      </h2>
-                      <span className="bg-orange-100 text-orange-700 dark:bg-orange-500/10 dark:text-orange-400 px-2 py-1 rounded text-[9px] font-black uppercase tracking-widest border border-orange-200 dark:border-orange-500/20">Lethality Engine</span>
+                <div className="bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-800 rounded-[2.5rem] p-6 sm:p-8 shadow-sm relative overflow-hidden">
+                   <div className="flex justify-between items-start mb-8 relative z-10">
+                      <div>
+                        <h2 className="text-2xl font-black text-slate-900 dark:text-white uppercase tracking-tighter italic flex items-center gap-2">
+                          <Goal size={24} className="text-orange-500"/> ExG Analytics
+                        </h2>
+                        <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest mt-1">Lethality Engine (Live xG)</p>
+                      </div>
+                      <span className="bg-orange-500/10 text-orange-500 border border-orange-500/20 px-3 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest flex items-center gap-1.5">
+                         <Target size={12} /> Sniper Mode
+                      </span>
                    </div>
                    
-                   <div className="mb-6">
-                      <label className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase block mb-2 tracking-widest">1. Selecione a Assimetria (Alvo)</label>
-                      <select value={exgScenario} onChange={e => setExgScenario(e.target.value)} className="w-full p-3 bg-slate-50 dark:bg-slate-900 rounded-xl font-bold text-sm outline-none border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-orange-500/50">
-                         <option value="ht_over05">Over 0.5 Gols HT (Primeiro Tempo)</option>
-                         <option value="ft_over05">Over 0.5 Gols FT (Reta Final)</option>
-                         <option value="ft_over15">Over 1.5 Gols FT (Busca do Resultado)</option>
-                      </select>
-                   </div>
-
-                   <div className="mb-8 p-5 bg-slate-50 dark:bg-[#020617] rounded-2xl border border-slate-200 dark:border-slate-800">
-                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-4 flex items-center gap-2"><Lock size={12} className={exgUnlocked ? 'text-orange-500' : 'text-slate-400'}/> Guardião de Padrão</p>
-                      <div className="space-y-3">
-                         {exgScenariosData[exgScenario].checks.map((check, idx) => (
-                            <button key={idx} onClick={() => handleExgCheck(idx)} className={`w-full flex items-center gap-3 p-3 rounded-xl border text-left ${exgChecklist[idx] ? 'bg-orange-50 dark:bg-orange-900/20 border-orange-200 dark:border-orange-500/30' : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700'}`}>
-                               <div className={`${exgChecklist[idx] ? 'text-orange-500' : 'text-slate-400'}`}>{exgChecklist[idx] ? <CheckSquare size={18} /> : <Square size={18} />}</div>
-                               <span className={`text-xs font-bold ${exgChecklist[idx] ? 'text-orange-700 dark:text-orange-300' : 'text-slate-600 dark:text-slate-400'}`}>{check}</span>
-                            </button>
-                         ))}
+                   {/* GATEKEEPER */}
+                   <div className="mb-8 bg-slate-50 dark:bg-slate-900/50 p-1 rounded-[1.5rem] border border-slate-200 dark:border-slate-800 relative z-10">
+                      <div className="p-4 border-b border-slate-200 dark:border-slate-800">
+                        <label className="text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase block mb-2 tracking-widest">1. Selecione o Cenário</label>
+                        <select value={exgScenario} onChange={e => setExgScenario(e.target.value)} className="w-full bg-white dark:bg-[#09090b] border border-slate-200 dark:border-slate-700 p-3.5 rounded-xl font-bold text-sm outline-none text-slate-900 dark:text-white focus:ring-2 focus:ring-orange-500/50 transition-all cursor-pointer">
+                           <option value="ht_over05">Over 0.5 Gols HT (Primeiro Tempo)</option>
+                           <option value="ft_over05">Over 0.5 Gols FT (Reta Final)</option>
+                           <option value="ft_over15">Over 1.5 Gols FT (Busca do Resultado)</option>
+                        </select>
+                      </div>
+                      <div className="p-5">
+                        <p className="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em] mb-4 flex items-center gap-2">
+                           <Lock size={12} className={exgUnlocked ? 'text-orange-500' : 'text-slate-500'}/> Guardião de Padrão (Validação Tática)
+                        </p>
+                        <div className="space-y-2">
+                           {exgScenariosData[exgScenario].checks.map((check, idx) => (
+                              <button key={idx} onClick={() => handleExgCheck(idx)} className={`w-full flex items-center gap-3 p-3.5 rounded-xl border transition-all text-left group ${exgChecklist[idx] ? 'bg-orange-50 dark:bg-orange-500/10 border-orange-200 dark:border-orange-500/30' : 'bg-white dark:bg-[#020617] border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700'}`}>
+                                 <div className={`shrink-0 transition-transform ${exgChecklist[idx] ? 'text-orange-500 scale-110' : 'text-slate-400 group-hover:text-slate-300'}`}>{exgChecklist[idx] ? <CheckSquare size={18} /> : <Square size={18} />}</div>
+                                 <span className={`text-[11px] sm:text-xs font-bold leading-tight ${exgChecklist[idx] ? 'text-orange-700 dark:text-orange-400' : 'text-slate-600 dark:text-slate-400'}`}>{check}</span>
+                              </button>
+                           ))}
+                        </div>
                       </div>
                    </div>
 
                    <AnimatePresence>
                      {exgUnlocked && (
-                       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="border-t border-slate-200 dark:border-slate-800 pt-6">
+                       <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} className="relative z-10 overflow-hidden">
                          
-                         <div className="grid grid-cols-3 gap-4 mb-6">
-                            <div><label className="text-[9px] font-bold text-slate-500 uppercase block mb-1">Tempo (Min)</label><input type="number" value={liveMin} onChange={e => setLiveMin(e.target.value)} className="w-full p-3 bg-slate-50 dark:bg-slate-900 rounded-xl font-mono font-bold outline-none border border-slate-200 dark:border-slate-800" /></div>
-                            <div><label className="text-[9px] font-bold text-slate-500 uppercase block mb-1">Gols Atuais</label><input type="number" value={liveCurrentTarget} onChange={e => setLiveCurrentTarget(e.target.value)} className="w-full p-3 bg-slate-50 dark:bg-slate-900 rounded-xl font-mono font-bold outline-none border border-slate-200 dark:border-slate-800" /></div>
-                            <div><label className="text-[9px] font-bold text-slate-500 uppercase block mb-1 truncate">Ataques P. (Defesa)</label><input type="number" value={liveAP_Def} onChange={e => setLiveAP_Def(e.target.value)} className="w-full p-3 bg-slate-50 dark:bg-slate-900 rounded-xl font-mono font-bold outline-none border border-slate-200 dark:border-slate-800" /></div>
-                         </div>
-                         
-                         <div className="grid grid-cols-2 gap-4 mb-6 bg-orange-50 dark:bg-orange-900/10 p-4 rounded-2xl border border-orange-100 dark:border-orange-900/30">
-                            <div className="col-span-2"><p className="text-[10px] font-black text-orange-600 dark:text-orange-500 uppercase tracking-widest flex items-center gap-1"><Crosshair size={12}/> Eficiência Ofensiva</p></div>
-                            <div><label className="text-[9px] font-bold text-orange-700 dark:text-orange-400 uppercase block mb-1">Ataques P.</label><input type="number" value={liveAP_Press} onChange={e => setLiveAP_Press(e.target.value)} className="w-full p-3 bg-white dark:bg-slate-900 rounded-xl font-mono font-bold outline-none border border-slate-200 dark:border-slate-800 focus:border-orange-500" /></div>
-                            <div></div> {/* Spacer */}
-                            <div><label className="text-[9px] font-bold text-orange-700 dark:text-orange-400 uppercase block mb-1">No Alvo</label><input type="number" value={liveSoT} onChange={e => setLiveSoT(e.target.value)} className="w-full p-3 bg-white dark:bg-slate-900 rounded-xl font-mono font-bold outline-none border border-slate-200 dark:border-slate-800 focus:border-orange-500" /></div>
-                            <div><label className="text-[9px] font-bold text-orange-700 dark:text-orange-400 uppercase block mb-1">Para Fora</label><input type="number" value={liveSoffT} onChange={e => setLiveSoffT(e.target.value)} className="w-full p-3 bg-white dark:bg-slate-900 rounded-xl font-mono font-bold outline-none border border-slate-200 dark:border-slate-800 focus:border-orange-500" /></div>
+                         {/* INPUTS AVANÇADOS COM ÍCONES */}
+                         <div className="bg-slate-900 rounded-[2rem] p-6 mb-6 border border-slate-800 shadow-inner">
+                            <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-5 flex items-center gap-2"><Activity size={14} className="text-orange-500"/> Global Match Data</h3>
+                            <div className="grid grid-cols-3 gap-3 mb-6">
+                               <PodInput label="Minuto" value={liveMin} onChange={(e:any) => setLiveMin(e.target.value)} icon={Clock} placeholder="00" colorClass="text-slate-500" />
+                               <PodInput label="Gols" value={liveCurrentTarget} onChange={(e:any) => setLiveCurrentTarget(e.target.value)} icon={Goal} placeholder="0" colorClass="text-slate-500" />
+                               <PodInput label="AP (Defesa)" value={liveAP_Def} onChange={(e:any) => setLiveAP_Def(e.target.value)} icon={ShieldAlert} placeholder="0" colorClass="text-slate-500" />
+                            </div>
+                            
+                            <div className="border-t border-slate-800/80 pt-5">
+                                <h3 className="text-[10px] font-black text-orange-500 uppercase tracking-widest mb-4 flex items-center gap-2"><Crosshair size={14} /> Lethality Metrics (Ataque)</h3>
+                                <div className="grid grid-cols-2 gap-3">
+                                   <PodInput label="Ataques P. Atual" value={liveAP_Press} onChange={(e:any) => setLiveAP_Press(e.target.value)} icon={Swords} placeholder="00" highlight colorClass="text-orange-500" />
+                                   <div className="hidden md:block"></div> {/* Espaçador mantendo consistência com layout de cantos */}
+                                   <PodInput label="Chutes no Alvo" value={liveSoT} onChange={(e:any) => setLiveSoT(e.target.value)} icon={Target} placeholder="0" highlight colorClass="text-orange-500" />
+                                   <PodInput label="Chutes Fora" value={liveSoffT} onChange={(e:any) => setLiveSoffT(e.target.value)} icon={Target} placeholder="0" highlight colorClass="text-orange-500" />
+                                </div>
+                            </div>
                          </div>
 
-                         <div className="mb-6 p-4 bg-slate-950 rounded-2xl flex items-center gap-4">
-                             <DollarSign size={24} className="text-orange-400 shrink-0" />
-                             <div className="flex-1">
-                                <label className="text-[10px] font-black text-orange-500 uppercase tracking-[0.2em] block mb-1">Odd Oferecida (+1 Gol)</label>
-                                <input type="number" step="0.01" placeholder="Ex: 1.83" value={liveCurrentOdd} onChange={e => setLiveCurrentOdd(e.target.value)} className="w-full bg-transparent text-xl font-mono font-black text-white outline-none" />
+                         {/* ENTRADA DE ODD COM GLASSMORPHISM */}
+                         <div className="mb-6 relative overflow-hidden rounded-2xl group">
+                             <div className="absolute inset-0 bg-gradient-to-r from-orange-500 to-amber-500 opacity-20 group-hover:opacity-30 transition-opacity"></div>
+                             <div className="bg-[#09090b]/80 backdrop-blur-sm p-5 border border-orange-500/20 relative flex items-center gap-4">
+                                 <div className="bg-orange-500/10 p-3.5 rounded-xl shrink-0 border border-orange-500/20 shadow-[0_0_15px_rgba(249,115,22,0.2)]">
+                                    <DollarSign size={24} className="text-orange-400" />
+                                 </div>
+                                 <div className="flex-1">
+                                    <label className="text-[10px] font-black text-orange-500 uppercase tracking-[0.2em] block mb-1">Odd Oferecida (Scanner de EV%)</label>
+                                    <input type="number" step="0.01" placeholder="Ex: 1.83" value={liveCurrentOdd} onChange={e => setLiveCurrentOdd(e.target.value)} className="w-full bg-transparent text-2xl font-mono font-black text-white outline-none placeholder:text-slate-700" />
+                                 </div>
                              </div>
                          </div>
 
                          {exgResult.crossCheckMsg && (
-                            <div className="mb-4 bg-blue-500/10 border border-blue-500/20 text-blue-400 p-3 rounded-xl text-[11px] font-bold flex items-start gap-2">
-                               <Lightbulb size={14} className="shrink-0 mt-0.5" /> {exgResult.crossCheckMsg}
+                            <div className="mb-6 bg-blue-500/10 border border-blue-500/20 text-blue-400 p-4 rounded-2xl text-xs font-bold flex items-start gap-3 shadow-inner">
+                               <Lightbulb size={18} className="shrink-0 mt-0.5 text-blue-400" /> 
+                               <span className="leading-relaxed">{exgResult.crossCheckMsg}</span>
                             </div>
                          )}
 
-                         {/* BLOOMBERG TERMINAL UI - EXG */}
-                         <div className="bg-[#020617] rounded-2xl border border-slate-800 p-6 overflow-hidden relative">
-                             <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-5"></div>
+                         {/* BLOOMBERG TERMINAL UI DEFINITIVO - GOLS */}
+                         <div className="bg-[#020617] rounded-[2rem] border border-slate-800 p-6 overflow-hidden relative shadow-2xl mt-4">
+                             <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-[0.03]"></div>
                              
-                             <div className="relative z-10 flex flex-col md:flex-row justify-between mb-6 gap-6">
+                             {/* Brilho Dinâmico Radial Baseado no Resultado */}
+                             <div className={`absolute top-0 right-0 w-64 h-64 rounded-full blur-[80px] -mr-20 -mt-20 pointer-events-none transition-colors duration-1000 ${
+                                exgResult.signal === 'green' ? 'bg-orange-500/20' : 
+                                exgResult.signal === 'yellow' ? 'bg-yellow-500/10' : 'bg-red-500/10'
+                             }`}></div>
+                             
+                             <div className="relative z-10 flex flex-col md:flex-row justify-between mb-8 gap-8">
+                                {/* Cápsulas de Métricas */}
                                 <div className="space-y-4 flex-1 flex flex-col justify-center">
-                                    <div>
-                                      <p className="text-[9px] uppercase tracking-widest text-slate-500 font-bold mb-1">xG Criado (Gols Esperados)</p>
-                                      <div className="flex items-end gap-2">
-                                         <p className={`text-3xl font-black font-mono leading-none ${exgResult.xgTotal >= 1.0 ? 'text-orange-400' : 'text-slate-300'}`}>
-                                           {exgResult.xgTotal.toFixed(2)}
-                                         </p>
-                                      </div>
+                                    <div className="bg-slate-900/80 p-5 rounded-2xl border border-slate-800 text-center">
+                                       <span className="text-[10px] uppercase tracking-widest text-slate-500 font-bold block mb-2"><Activity size={14} className="inline mr-1"/> xG Criado (Gols Esperados)</span>
+                                       <span className={`text-5xl font-black font-mono tracking-tighter ${exgResult.xgTotal >= 1.0 ? 'text-orange-400 drop-shadow-[0_0_10px_rgba(251,146,60,0.4)]' : 'text-slate-400'}`}>{exgResult.xgTotal.toFixed(2)}</span>
                                     </div>
                                 </div>
 
-                                <div className="flex-1 bg-slate-900 border border-slate-800 p-4 rounded-xl shadow-inner">
-                                    <h4 className="text-[10px] text-slate-400 uppercase tracking-widest font-bold mb-4 flex justify-between items-center gap-2">
-                                       <span className="flex items-center gap-1"><BarChart4 size={12} className="text-orange-500"/> Probabilidade Real</span>
-                                       <span className="text-[8px] text-orange-500">Fair Odd (Justa)</span>
+                                {/* Gráfico Poisson */}
+                                <div className="flex-[1.5] bg-slate-900/80 border border-slate-800 p-5 rounded-2xl shadow-inner flex flex-col justify-center">
+                                    <h4 className="text-[10px] text-slate-400 uppercase tracking-widest font-black mb-5 flex justify-between items-center">
+                                       <span className="flex items-center gap-1.5"><BarChart4 size={14} className="text-orange-500"/> Modelo Poisson</span>
+                                       <span className="text-[8px] text-orange-500 bg-orange-500/10 px-2 py-1 rounded">FAIR ODD</span>
                                     </h4>
                                     
-                                    <div className="space-y-4">
+                                    <div className="space-y-5">
                                         <div>
-                                            <div className="flex justify-between items-end mb-1">
-                                               <span className="text-[10px] font-bold text-white uppercase tracking-wider">Sair +1 Gol</span>
-                                               <div className="text-right">
-                                                   <span className={`text-xs font-black mr-2 ${exgResult.probGoal >= 70 ? 'text-orange-400' : 'text-slate-400'}`}>{exgResult.probGoal.toFixed(1)}%</span>
-                                                   <span className="text-[10px] font-mono font-bold text-orange-500 bg-orange-500/10 px-1.5 py-0.5 rounded">@{exgResult.fairOddGoal.toFixed(2)}</span>
+                                            <div className="flex justify-between items-end mb-2">
+                                               <span className="text-[10px] font-bold text-slate-300 uppercase tracking-wider">Sair +1 Gol</span>
+                                               <div className="text-right flex items-center gap-3">
+                                                   <span className={`text-sm font-black font-mono ${exgResult.probGoal >= 70 ? 'text-orange-400' : 'text-slate-400'}`}>{exgResult.probGoal.toFixed(1)}%</span>
+                                                   <span className="text-[11px] font-mono font-black text-orange-500 bg-[#020617] border border-orange-500/30 px-2 py-1 rounded shadow-inner">@{exgResult.fairOddGoal.toFixed(2)}</span>
                                                </div>
                                             </div>
-                                            <div className="w-full bg-slate-800 rounded-full h-1.5 overflow-hidden">
-                                               <div className={`h-1.5 rounded-full ${exgResult.probGoal >= 70 ? 'bg-orange-500' : 'bg-slate-500'}`} style={{ width: `${exgResult.probGoal}%` }}></div>
+                                            <div className="w-full bg-slate-950 rounded-full h-2 overflow-hidden border border-slate-800">
+                                               <motion.div initial={{ width: 0 }} animate={{ width: `${exgResult.probGoal}%` }} transition={{ duration: 1, ease: "easeOut" }} className={`h-full rounded-full ${exgResult.probGoal >= 70 ? 'bg-gradient-to-r from-orange-600 to-orange-400 shadow-[0_0_10px_rgba(251,146,60,0.5)]' : 'bg-slate-600'}`}></motion.div>
                                             </div>
                                         </div>
                                     </div>
                                 </div>
                              </div>
 
-                             <div className="relative z-10 mt-2">
-                               {exgResult.signal === 'green' && <div className="bg-emerald-500 text-slate-950 w-full py-3 rounded-xl font-black text-xs sm:text-sm tracking-wide uppercase shadow-[0_0_15px_rgba(16,185,129,0.4)] text-center">{exgResult.msg}</div>}
-                               {exgResult.signal === 'yellow' && <div className="bg-yellow-500 text-slate-950 w-full py-3 rounded-xl font-black text-xs sm:text-sm tracking-wide uppercase shadow-[0_0_15px_rgba(234,179,8,0.3)] text-center">{exgResult.msg}</div>}
-                               {exgResult.signal === 'red' && <div className="bg-slate-800 border border-red-500/30 text-red-400 w-full py-3 rounded-xl font-black text-[10px] sm:text-xs tracking-wide uppercase text-center flex items-center justify-center gap-2"><AlertTriangle size={14} className="shrink-0"/> {exgResult.msg}</div>}
+                             {/* SINAL RADIOATIVO (Neon Button) */}
+                             <div className="relative z-20 mt-4">
+                               {exgResult.signal === 'green' && (
+                                  <motion.div initial={{ scale: 0.95 }} animate={{ scale: 1 }} className="relative group">
+                                      <div className="absolute -inset-0.5 bg-gradient-to-r from-orange-600 to-amber-400 rounded-2xl blur opacity-40 group-hover:opacity-60 transition duration-1000 animate-pulse"></div>
+                                      <div className="relative bg-gradient-to-r from-orange-500 to-orange-400 text-slate-950 w-full py-5 rounded-2xl font-black text-xs sm:text-sm tracking-widest uppercase text-center shadow-xl flex items-center justify-center gap-2">
+                                         <Target fill="currentColor" size={18} className="animate-bounce"/> {exgResult.msg}
+                                      </div>
+                                  </motion.div>
+                               )}
+                               {exgResult.signal === 'yellow' && (
+                                  <div className="bg-gradient-to-r from-yellow-500 to-yellow-400 text-slate-950 w-full py-5 rounded-2xl font-black text-xs sm:text-sm tracking-widest uppercase text-center shadow-[0_0_20px_rgba(234,179,8,0.3)]">
+                                     {exgResult.msg}
+                                  </div>
+                               )}
+                               {exgResult.signal === 'red' && (
+                                  <div className="bg-[#09090b] border border-red-500/30 text-red-400 w-full py-5 rounded-2xl font-black text-[10px] sm:text-xs tracking-widest uppercase text-center flex items-center justify-center gap-2 shadow-inner">
+                                     <AlertTriangle size={16} className="shrink-0 text-red-500"/> {exgResult.msg}
+                                  </div>
+                               )}
                              </div>
                          </div>
                        </motion.div>
@@ -841,5 +856,14 @@ const Calculators: React.FC = () => {
     </div> 
   );
 };
+
+// Ícone customizado improvisado para Field Tilt
+const Map = ({ size, className }: any) => (
+  <svg width={size} height={size} className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinelinejoin="round">
+    <polygon points="3 6 9 3 15 6 21 3 21 18 15 21 9 18 3 21"></polygon>
+    <line x1="9" y1="3" x2="9" y2="21"></line>
+    <line x1="15" y1="3" x2="15" y2="21"></line>
+  </svg>
+);
 
 export default Calculators;
