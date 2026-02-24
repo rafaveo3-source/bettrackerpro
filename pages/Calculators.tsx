@@ -41,6 +41,16 @@ const MapIcon = ({ size, className }: any) => (
   </svg>
 );
 
+// 🔥 CORREÇÃO DA BUILD: Função auxiliar para ler a imagem de forma moderna (Promise)
+const fileToBase64 = (file: File): Promise<string> => {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onload = () => resolve((reader.result as string).split(',')[1]);
+    reader.onerror = (error) => reject(error);
+  });
+};
+
 const Calculators: React.FC = () => {
   const { 
     currentBankrollBalance, 
@@ -76,6 +86,8 @@ const Calculators: React.FC = () => {
   const [isScanning, setIsScanning] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  const VALID_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
+
   useEffect(() => {
     const handleGlobalPaste = (e: ClipboardEvent) => {
       if (activeTab !== 'exc' && activeTab !== 'exg') return;
@@ -85,7 +97,13 @@ const Calculators: React.FC = () => {
       for (let i = 0; i < items.length; i++) {
         if (items[i].type.indexOf('image') !== -1) {
           const blob = items[i].getAsFile();
-          if (blob) processVisionAI(blob);
+          if (blob) {
+             if (!VALID_IMAGE_TYPES.includes(blob.type)) {
+                 setToast({ type: 'error', message: '⚠️ Formato inválido! Cole apenas imagens PNG, JPG ou WEBP.' });
+                 return;
+             }
+             processVisionAI(blob);
+          }
         }
       }
     };
@@ -95,9 +113,16 @@ const Calculators: React.FC = () => {
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) processVisionAI(file);
+    if (file) {
+        if (!VALID_IMAGE_TYPES.includes(file.type)) {
+            setToast({ type: 'error', message: '⚠️ Formato inválido! Use apenas PNG, JPG ou WEBP.' });
+            return;
+        }
+        processVisionAI(file);
+    }
   };
 
+  // 🔥 CORREÇÃO DA BUILD: Função async limpa e sem callbacks aninhados
   const processVisionAI = async (file: File) => {
     if (!isPro) {
         setToast({ type: 'error', message: 'Recurso exclusivo para Membros PRO.' });
@@ -114,103 +139,59 @@ const Calculators: React.FC = () => {
     setIsScanning(true);
 
     try {
-        const reader = new FileReader();
-        reader.readAsDataURL(file);
-        reader.onload = async () => {
-            const resultString = reader.result as string;
-            const base64Data = resultString.split(',')[1];
-            const mimeType = file.type || 'image/png'; 
-            
-            const response = await fetch('/api/vision', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ image: base64Data, mimeType })
-            });
+        const base64Data = await fileToBase64(file);
+        const mimeType = file.type || 'image/png'; 
+        
+        const response = await fetch('/api/vision', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ image: base64Data, mimeType })
+        });
 
-            if (!response.ok) {
-                const errorData = await response.json().catch(() => ({}));
-                setToast({ type: 'error', message: errorData.error || 'Falha na conexão com a IA.' });
-                setIsScanning(false);
-                return;
-            }
-            
-            const data = await response.json();
-            
-            if (data) {
-               const cleanVal = (val: any) => (val !== null && val !== undefined && val !== "" && String(val).toLowerCase() !== "null") ? String(val) : "";
-
-               const extMin = cleanVal(data.min);
-               const extGoals = cleanVal(data.goals);
-               const extCorners = cleanVal(data.corners);
-               const extApDef = cleanVal(data.apDef);
-               const extApPress = cleanVal(data.apPress);
-               const extSoT = cleanVal(data.sot);
-               const extSoffT = cleanVal(data.sofft);
-
-               setLiveMin(extMin);
-               
-               // Lógica inteligente: Pega o Alvo correto dependendo de qual aba o usuário está
-               if (activeTab === 'exg') {
-                   setLiveCurrentTarget(extGoals);
-               } else {
-                   setLiveCurrentTarget(extCorners);
-               }
-               
-               setLiveAP_Def(extApDef);
-               setLiveAP_Press(extApPress);
-               setLiveSoT(extSoT);
-               setLiveSoffT(extSoffT);
-               
-               if (typeof incrementAiScan === 'function') incrementAiScan();
-
-               // Verifica se os dados vitais chegaram
-               const targetCheck = activeTab === 'exg' ? extGoals : extCorners;
-               if (!extMin || !targetCheck || !extApDef || !extApPress || !extSoT || !extSoffT) {
-                   setToast({ type: 'error', message: '⚠️ Dados parciais extraídos. Preencha os campos vazios manualmente.' });
-               } else {
-                   setToast({ type: 'success', message: 'Radar mapeado com precisão cirúrgica!' });
-               }
-            }
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            console.error("Erro do Backend:", errorData);
+            setToast({ type: 'error', message: errorData.error || 'Falha na conexão com a IA.' });
             setIsScanning(false);
-        };
-    } catch (error) {
-        console.error("Erro na leitura:", error);
-        setToast({ type: 'error', message: 'Erro ao processar imagem. Preencha manualmente.' });
+            return;
+        }
+        
+        const data = await response.json();
+        
+        if (data) {
+           const cleanVal = (val: any) => (val !== null && val !== undefined && val !== "" && String(val).toLowerCase() !== "null") ? String(val) : "";
+
+           const extMin = cleanVal(data.min);
+           const extGoals = cleanVal(data.goals);
+           const extCorners = cleanVal(data.corners);
+           const extApDef = cleanVal(data.apDef);
+           const extApPress = cleanVal(data.apPress);
+           const extSoT = cleanVal(data.sot);
+           const extSoffT = cleanVal(data.sofft);
+
+           setLiveMin(extMin);
+           
+           if (activeTab === 'exg') {
+               setLiveCurrentTarget(extGoals);
+           } else {
+               setLiveCurrentTarget(extCorners);
+           }
+           
+           setLiveAP_Def(extApDef);
+           setLiveAP_Press(extApPress);
+           setLiveSoT(extSoT);
+           setLiveSoffT(extSoffT);
+           
+           if (typeof incrementAiScan === 'function') incrementAiScan();
+
+           const targetCheck = activeTab === 'exg' ? extGoals : extCorners;
+           if (!extMin || !targetCheck || !extApDef || !extApPress || !extSoT || !extSoffT) {
+               setToast({ type: 'error', message: '⚠️ Dados parciais extraídos. Preencha os campos vazios manualmente.' });
+           } else {
+               setToast({ type: 'success', message: 'Radar mapeado com precisão cirúrgica!' });
+           }
+        }
         setIsScanning(false);
-    }
-  };
-            
-            const data = await response.json();
-            
-            if (data) {
-               // Validador inteligente para evitar "0" nos campos quando a informação não existe
-               const cleanVal = (val: any) => (val !== null && val !== undefined && val !== "" && String(val).toLowerCase() !== "null") ? String(val) : "";
-
-               const extMin = cleanVal(data.min);
-               const extTarget = cleanVal(data.target);
-               const extApDef = cleanVal(data.apDef);
-               const extApPress = cleanVal(data.apPress);
-               const extSoT = cleanVal(data.sot);
-               const extSoffT = cleanVal(data.sofft);
-
-               setLiveMin(extMin);
-               setLiveCurrentTarget(extTarget);
-               setLiveAP_Def(extApDef);
-               setLiveAP_Press(extApPress);
-               setLiveSoT(extSoT);
-               setLiveSoffT(extSoffT);
-               
-               if (typeof incrementAiScan === 'function') incrementAiScan();
-
-               // Se faltar algum dado essencial, pede pro usuário completar
-               if (!extMin || !extTarget || !extApDef || !extApPress || !extSoT || !extSoffT) {
-                   setToast({ type: 'error', message: '⚠️ Dados parciais. Preencha os campos vazios manualmente.' });
-               } else {
-                   setToast({ type: 'success', message: 'Dados extraídos com precisão cirúrgica!' });
-               }
-            }
-            setIsScanning(false);
-        };
     } catch (error) {
         console.error("Erro na leitura:", error);
         setToast({ type: 'error', message: 'Erro ao processar imagem. Preencha manualmente.' });
@@ -242,6 +223,7 @@ const Calculators: React.FC = () => {
       </div>
   );
 
+  // Lógicas Clássicas
   const [dutchTotalStake, setDutchTotalStake] = useState('100');
   const [dutchSelections, setDutchSelections] = useState([{ id: 1, name: 'Seleção A', odds: '2.50', stake: 0, profit: 0 }, { id: 2, name: 'Seleção B', odds: '3.20', stake: 0, profit: 0 }]);
   const addDutchSelection = () => setDutchSelections([...dutchSelections, { id: Date.now(), name: `Seleção ${String.fromCharCode(65 + dutchSelections.length)}`, odds: '', stake: 0, profit: 0 }]);
@@ -274,9 +256,6 @@ const Calculators: React.FC = () => {
   const [beOdds, setBeOdds] = useState('1.90'); const beWinRate = parseFloat(beOdds) > 1 ? (1 / parseFloat(beOdds)) * 100 : 0;
 
 
-  const factorial = (n: number): number => (n === 0 || n === 1 ? 1 : n * factorial(n - 1));
-  const poissonExact = (k: number, lambda: number) => (Math.pow(lambda, k) * Math.exp(-lambda)) / factorial(k);
-
   // ==========================================
   // 8. LÓGICA ExC QUANTITATIVA (CANTOS)
   // ==========================================
@@ -285,10 +264,12 @@ const Calculators: React.FC = () => {
   const [excUnlocked, setExcUnlocked] = useState(false);
 
   const excScenariosData: Record<string, { title: string; checks: string[] }> = {
-    ht_asian: { title: 'Canto Asiático HT', checks: ['Entre 25 e 36 minutos?', 'Favorito pressionando ativamente?', 'Assimetria visível no radar?'] },
-    ht_limit: { title: 'Canto Limite HT', checks: ['Entre 38 e 43 minutos?', 'Ataques rápidos e finalizações?', 'Adversário empurrado para a área?'] },
-    ft_asian: { title: 'Canto Asiático FT', checks: ['Entre 65 e 78 minutos?', 'Time dominou a posse no 2º tempo?', 'Zagueiros rebatendo muitas bolas?'] },
-    ft_limit: { title: 'Canto Limite FT', checks: ['Entre 83 e 88 minutos?', 'Modo desespero (Abafa)?', 'Adversário não segura a bola?'] }
+    ht_asian: { title: 'Canto Asiático HT (Margem Segura)', checks: ['Relógio entre 25 e 36 minutos?', 'Favorito pressionando ativamente?', 'Assimetria visível no radar?'] },
+    ht_limit: { title: 'Canto Limite HT (Abafa Retranca)', checks: ['Relógio entre 37 e 41 minutos?', 'Ataques rápidos e finalizações ocorrendo?', 'Adversário empurrado para a própria área?'] },
+    ht_zoio: { title: 'Canto Zóio HT (Kamikaze 43+)', checks: ['Relógio passando dos 42 minutos?', 'Favorito perdendo/empatando no sufoco?', 'Bolas sendo jogadas direto na área (chuveirinho)?'] },
+    ft_asian: { title: 'Canto Asiático FT (Volta do Intervalo)', checks: ['Relógio entre 65 e 78 minutos?', 'Time dominou a posse no 2º tempo?', 'Zagueiros rebatendo muitas bolas?'] },
+    ft_limit: { title: 'Canto Limite FT (Desespero Final)', checks: ['Relógio entre 82 e 87 minutos?', 'Modo desespero (Abafa Absoluto)?', 'Adversário não consegue segurar a bola no ataque?'] },
+    ft_zoio: { title: 'Canto Zóio FT (Kamikaze 88+)', checks: ['Relógio passando dos 88 minutos?', 'Goleiro do time perdendo indo pro ataque?', 'Defesa adversária cortando bola pra qualquer lado?'] }
   };
 
   useEffect(() => { setExcChecklist({}); setExcUnlocked(false); }, [excScenario]);
@@ -305,7 +286,10 @@ const Calculators: React.FC = () => {
 
       if (!min || min <= 0 || !apPress) return { appm: 0, fieldTilt: 0, proj: 0, probLimit: 0, probAsian: 0, signal: 'none', msg: 'Aguardando dados estruturados...', fairOddLimit: 0, fairOddAsian: 0, ev: 0, momentum: 0, paceMsg: '', crossCheckMsg: '' };
 
-      const isHT = excScenario.includes('ht'); const isAsianTarget = excScenario.includes('asian');
+      const isHT = excScenario.includes('ht'); 
+      const isAsianTarget = excScenario.includes('asian');
+      const isZoio = excScenario.includes('zoio');
+      
       const remainingTime = Math.max(1, ((isHT ? 45 : 90) + (isHT ? 3 : 6)) - min);
       const totalAP = apPress + apDef; const fieldTilt = totalAP > 0 ? (apPress / totalAP) * 100 : 0;
       const appm = apPress / min;
@@ -324,6 +308,7 @@ const Calculators: React.FC = () => {
 
       if (fieldTilt >= 70) urgencyFactor += 0.15; if (fieldTilt >= 80) urgencyFactor += 0.10;
       if (isHT && min >= 38) urgencyFactor += 0.10; if (!isHT && min >= 80) urgencyFactor += 0.20;
+      if (isZoio) urgencyFactor += 0.30; 
 
       const lambda = ((apPress * 0.06) + (sot * 0.35) + (sofft * 0.15)) / min * remainingTime * urgencyFactor;
       
@@ -337,11 +322,14 @@ const Calculators: React.FC = () => {
           else if (ev >= 10 && fieldTilt >= 65) { signal = 'green'; msg = `🟢 SINAL VERDE: EV+ GIGANTE (+${ev.toFixed(1)}%). Compre!`; }
           else if (ev > 0) { signal = 'yellow'; msg = `🟡 OBSERVATÓRIO: Leve EV+ (+${ev.toFixed(1)}%).`; }
       } else {
-          if ((appm >= 1.05 || momentum >= 1.5) && fieldTilt >= 65) {
-              if ((isAsianTarget ? probAsian : probLimit) >= 70 && (sot + sofft) >= (min / 10)) { signal = 'green'; msg = '🟢 SINAL VERDE: ASSIMETRIA CLARA (EV+)'; }
-              else if ((isAsianTarget ? probAsian : probLimit) >= 55) { signal = 'yellow'; msg = '🟡 OBSERVATÓRIO: Aguarde a odd valorizar.'; }
-              else { signal = 'red'; msg = '🔴 ABORTAR: Baixa probabilidade.'; }
-          } else { signal = 'red'; msg = appm < 1.05 ? '🔴 ABORTAR: Jogo Lento (Sem Pressão)' : '🔴 ABORTAR: Equilíbrio Tático (Sem Domínio)'; }
+          const targetProbCheck = isZoio ? probLimit : (isAsianTarget ? probAsian : probLimit);
+          const reqVolume = isZoio ? 0.9 : 1.05;
+
+          if ((appm >= reqVolume || momentum >= 1.5) && fieldTilt >= (isZoio ? 60 : 65)) {
+              if (targetProbCheck >= (isZoio ? 60 : 70) && (sot + sofft) >= (min / 10)) { signal = 'green'; msg = '🟢 SINAL VERDE: ASSIMETRIA CLARA (EV+)'; }
+              else if (targetProbCheck >= 50) { signal = 'yellow'; msg = '🟡 OBSERVATÓRIO: Aguarde a odd valorizar.'; }
+              else { signal = 'red'; msg = '🔴 ABORTAR: Baixa probabilidade matemática.'; }
+          } else { signal = 'red'; msg = appm < reqVolume ? '🔴 ABORTAR: Jogo Lento (Sem Pressão)' : '🔴 ABORTAR: Equilíbrio Tático (Sem Domínio)'; }
       }
 
       return { appm, fieldTilt, proj: corners + lambda, probLimit, probAsian, signal, msg, fairOddLimit: probLimit > 0 ? 100 / probLimit : 0, fairOddAsian: probAsian > 0 ? 100 / probAsian : 0, ev, momentum, paceMsg, crossCheckMsg };
@@ -356,9 +344,11 @@ const Calculators: React.FC = () => {
   const [exgUnlocked, setExgUnlocked] = useState(false);
 
   const exgScenariosData: Record<string, { title: string; checks: string[] }> = {
-    ht_over05: { title: 'Over 0.5 Gols HT', checks: ['Antes dos 30 minutos?', 'Jogo aberto (Lá e cá) ou favorito amassando?', 'Goleiros já fizeram defesas difíceis?'] },
-    ft_over05: { title: 'Over 0.5 Gols FT (Reta Final)', checks: ['Entre 70 e 80 minutos?', 'Pelo menos um time precisa da vitória?', 'Muitos espaços deixados para contra-ataque?'] },
-    ft_over15: { title: 'Over 1.5 Gols FT', checks: ['Segundo tempo recém iniciado (45 a 60 min)?', 'Time perdendo se lançou pro ataque?', 'Alto índice de chutes dentro da área?'] }
+    ht_over05: { title: 'Over 0.5 Gols HT', checks: ['Relógio antes dos 30 minutos?', 'Jogo aberto (Lá e cá) ou favorito amassando?', 'Goleiros já fizeram defesas difíceis?'] },
+    ht_over15: { title: 'Over 1.5 Gols HT (Insanidade)', checks: ['Relógio antes dos 20 minutos?', 'Pelo menos 1 gol já saiu rápido?', 'Ambos os times com linhas defensivas altas?'] },
+    ft_over05: { title: 'Over 0.5 Gols FT (Reta Final)', checks: ['Relógio entre 70 e 80 minutos?', 'Pelo menos um time precisa da vitória desesperadamente?', 'Muitos espaços sendo deixados para contra-ataque?'] },
+    ft_over15: { title: 'Over 1.5 Gols FT', checks: ['Segundo tempo recém iniciado (45 a 60 min)?', 'Time perdendo se lançou pro ataque?', 'Alto índice de chutes dentro da área (SoT alto)?'] },
+    ft_over25: { title: 'Over 2.5 Gols FT', checks: ['Relógio entre 50 e 65 minutos?', 'Os dois times demonstram capacidade ofensiva?', 'Jogo muito faltoso perto da área (Bolas paradas)?'] }
   };
 
   useEffect(() => { setExgChecklist({}); setExgUnlocked(false); }, [exgScenario]);
@@ -373,7 +363,7 @@ const Calculators: React.FC = () => {
       const currentOdd = parseFloat(liveCurrentOdd) || 0;
       const sot = parseFloat(liveSoT) || 0; const sofft = parseFloat(liveSoffT) || 0;
 
-      if (!min || min <= 0 || !apPress) return { xgTotal: 0, probGoal: 0, signal: 'none', msg: 'Aguardando dados estruturados...', fairOddGoal: 0, ev: 0, crossCheckMsg: '' };
+      if (!min || min <= 0 || !apPress) return { xgTotal: 0, probPlus1: 0, probPlus2: 0, probPlus3: 0, mainProb: 0, signal: 'none', msg: 'Aguardando dados estruturados...', fairOddGoal: 0, ev: 0, crossCheckMsg: '' };
 
       const isHT = exgScenario.includes('ht');
       const remainingTime = Math.max(1, ((isHT ? 45 : 90) + (isHT ? 3 : 6)) - min);
@@ -385,8 +375,20 @@ const Calculators: React.FC = () => {
       const expectedGoalsSoFar = (sot * 0.14) + (sofft * 0.04) + (apPress * 0.005); 
       const lambdaGoals = (expectedGoalsSoFar / min) * remainingTime * (apDef > (apPress * 0.5) ? 1.2 : 1.0);
       
-      const probGoal = (1 - poissonExact(0, lambdaGoals)) * 100; 
-      const ev = currentOdd > 0 ? ((probGoal / 100) * currentOdd - 1) * 100 : 0;
+      const p0 = poissonExact(0, lambdaGoals);
+      const p1 = poissonExact(1, lambdaGoals);
+      const p2 = poissonExact(2, lambdaGoals);
+
+      const probPlus1 = (1 - p0) * 100; 
+      const probPlus2 = (1 - (p0 + p1)) * 100; 
+      const probPlus3 = (1 - (p0 + p1 + p2)) * 100; 
+
+      let mainProb = probPlus1;
+      if (exgScenario.includes('15')) mainProb = probPlus2;
+      if (exgScenario.includes('25')) mainProb = probPlus3;
+
+      const fairOddGoal = mainProb > 0 ? 100 / mainProb : 0;
+      const ev = currentOdd > 0 ? ((mainProb / 100) * currentOdd - 1) * 100 : 0;
 
       let signal = 'red'; let msg = '';
       if (currentOdd > 0) {
@@ -395,13 +397,13 @@ const Calculators: React.FC = () => {
           else if (ev > 0) { signal = 'yellow'; msg = `🟡 OBSERVATÓRIO: Leve EV+.`; }
       } else {
           if (sot >= (min/15) || (sot+sofft) >= (min/6)) { 
-              if (probGoal >= 70) { signal = 'green'; msg = '🟢 SINAL VERDE: ALTA TENDÊNCIA DE GOL'; }
-              else if (probGoal >= 55) { signal = 'yellow'; msg = '🟡 OBSERVATÓRIO: Jogo com potencial. Aguarde odd.'; }
-              else { signal = 'red'; msg = '🔴 ABORTAR: Frequência caindo.'; }
+              if (mainProb >= 65) { signal = 'green'; msg = '🟢 SINAL VERDE: ALTA TENDÊNCIA DE GOL'; }
+              else if (mainProb >= 45) { signal = 'yellow'; msg = '🟡 OBSERVATÓRIO: Jogo com potencial. Aguarde odd.'; }
+              else { signal = 'red'; msg = '🔴 ABORTAR: Probabilidade matemática baixa para esta linha.'; }
           } else { signal = 'red'; msg = '🔴 ABORTAR: Faltam finalizações reais no alvo.'; }
       }
 
-      return { xgTotal: expectedGoalsSoFar + lambdaGoals, probGoal, signal, msg, fairOddGoal: probGoal > 0 ? 100 / probGoal : 0, ev, crossCheckMsg };
+      return { xgTotal: expectedGoalsSoFar + lambdaGoals, probPlus1, probPlus2, probPlus3, mainProb, signal, msg, fairOddGoal, ev, crossCheckMsg };
   };
   const exgResult = calculateExG();
 
@@ -670,11 +672,11 @@ const Calculators: React.FC = () => {
                                    <Scan size={24} />
                                </div>
                                <h3 className="text-sm font-black text-slate-700 dark:text-slate-300 mb-1">Upload ou Cole (Ctrl+V)</h3>
-                               <p className="text-[10px] text-slate-500 uppercase tracking-widest font-bold text-center mb-3">Print do Radar Bet365 para auto-preenchimento via IA.</p>
+                               <p className="text-[10px] text-slate-500 uppercase tracking-widest font-bold text-center mb-3">Print do Radar Bet365 para auto-preenchimento via IA. (Aceita PNG, JPG, WEBP)</p>
                                <div className="bg-emerald-500/10 border border-emerald-500/20 text-emerald-500 px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest flex items-center gap-1 shadow-sm">
                                   <Zap size={10} fill="currentColor" /> {Math.max(0, 10 - (aiScansUsedToday || 0))} Scans Restantes Hoje
                                </div>
-                               <input type="file" accept="image/*" className="hidden" onChange={handleFileUpload} ref={fileInputRef} />
+                               <input type="file" accept="image/jpeg, image/png, image/webp" className="hidden" onChange={handleFileUpload} ref={fileInputRef} />
                            </label>
                        )}
 
@@ -713,10 +715,9 @@ const Calculators: React.FC = () => {
                       <div className="p-4 border-b border-slate-200 dark:border-slate-800">
                         <label className="text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase block mb-2 tracking-widest">1. Selecione o Cenário</label>
                         <select value={excScenario} onChange={e => setExcScenario(e.target.value)} className="w-full bg-white dark:bg-[#09090b] border border-slate-200 dark:border-slate-700 p-3.5 rounded-xl font-bold text-sm outline-none text-slate-900 dark:text-white focus:ring-2 focus:ring-emerald-500/50 transition-all cursor-pointer">
-                           <option value="ht_asian">Canto Asiático HT (Volume Seguro)</option>
-                           <option value="ht_limit">Canto Limite HT (Abafa Retranca)</option>
-                           <option value="ft_asian">Canto Asiático FT (Volta do Intervalo)</option>
-                           <option value="ft_limit">Canto Limite FT (Desespero Final)</option>
+                           {Object.entries(excScenariosData).map(([key, data]) => (
+                               <option key={key} value={key}>{data.title}</option>
+                           ))}
                         </select>
                       </div>
                       <div className="p-5">
@@ -903,11 +904,11 @@ const Calculators: React.FC = () => {
                                    <Scan size={24} />
                                </div>
                                <h3 className="text-sm font-black text-slate-700 dark:text-slate-300 mb-1">Upload ou Cole (Ctrl+V)</h3>
-                               <p className="text-[10px] text-slate-500 uppercase tracking-widest font-bold text-center mb-3">Print do Radar Bet365 para auto-preenchimento via IA.</p>
+                               <p className="text-[10px] text-slate-500 uppercase tracking-widest font-bold text-center mb-3">Print do Radar Bet365 para auto-preenchimento via IA. (Aceita PNG, JPG, WEBP)</p>
                                <div className="bg-orange-500/10 border border-orange-500/20 text-orange-500 px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest flex items-center gap-1 shadow-sm">
                                   <Zap size={10} fill="currentColor" /> {Math.max(0, 10 - (aiScansUsedToday || 0))} Scans Restantes Hoje
                                </div>
-                               <input type="file" accept="image/*" className="hidden" onChange={handleFileUpload} ref={fileInputRef} />
+                               <input type="file" accept="image/jpeg, image/png, image/webp" className="hidden" onChange={handleFileUpload} ref={fileInputRef} />
                            </label>
                        )}
 
@@ -945,10 +946,10 @@ const Calculators: React.FC = () => {
                    <div className="mb-8 bg-slate-50 dark:bg-slate-900/50 p-1 rounded-[1.5rem] border border-slate-200 dark:border-slate-800 relative z-10">
                       <div className="p-4 border-b border-slate-200 dark:border-slate-800">
                         <label className="text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase block mb-2 tracking-widest">1. Selecione o Cenário</label>
-                        <select value={exgScenario} onChange={e => setexgScenario(e.target.value)} className="w-full bg-white dark:bg-[#09090b] border border-slate-200 dark:border-slate-700 p-3.5 rounded-xl font-bold text-sm outline-none text-slate-900 dark:text-white focus:ring-2 focus:ring-orange-500/50 transition-all cursor-pointer">
-                           <option value="ht_over05">Over 0.5 Gols HT (Primeiro Tempo)</option>
-                           <option value="ft_over05">Over 0.5 Gols FT (Reta Final)</option>
-                           <option value="ft_over15">Over 1.5 Gols FT (Busca do Resultado)</option>
+                        <select value={exgScenario} onChange={e => setExgScenario(e.target.value)} className="w-full bg-white dark:bg-[#09090b] border border-slate-200 dark:border-slate-700 p-3.5 rounded-xl font-bold text-sm outline-none text-slate-900 dark:text-white focus:ring-2 focus:ring-orange-500/50 transition-all cursor-pointer">
+                           {Object.entries(exgScenariosData).map(([key, data]) => (
+                               <option key={key} value={key}>{data.title}</option>
+                           ))}
                         </select>
                       </div>
                       <div className="p-5">
@@ -983,7 +984,7 @@ const Calculators: React.FC = () => {
                                 <h3 className="text-[10px] font-black text-orange-500 uppercase tracking-widest mb-4 flex items-center gap-2"><Crosshair size={14} /> Lethality Metrics (Ataque)</h3>
                                 <div className="grid grid-cols-2 gap-3">
                                    <PodInput label="Ataques P. Atual" value={liveAP_Press} onChange={(e:any) => setLiveAP_Press(e.target.value)} icon={Swords} placeholder="00" highlight colorClass="text-orange-500" />
-                                   <div className="hidden md:block"></div> {/* Espaçador */}
+                                   <div className="hidden md:block"></div> {/* Espaçador mantendo consistência com layout de cantos */}
                                    <PodInput label="Chutes no Alvo" value={liveSoT} onChange={(e:any) => setLiveSoT(e.target.value)} icon={Target} placeholder="0" highlight colorClass="text-orange-500" />
                                    <PodInput label="Chutes Fora" value={liveSoffT} onChange={(e:any) => setLiveSoffT(e.target.value)} icon={Target} placeholder="0" highlight colorClass="text-orange-500" />
                                 </div>
@@ -1030,7 +1031,7 @@ const Calculators: React.FC = () => {
                                     </div>
                                 </div>
 
-                                {/* Gráfico Poisson */}
+                                {/* Gráfico Poisson Dinâmico Baseado no Cenário */}
                                 <div className="flex-[1.5] bg-slate-900/80 border border-slate-800 p-5 rounded-2xl shadow-inner flex flex-col justify-center">
                                     <h4 className="text-[10px] text-slate-400 uppercase tracking-widest font-black mb-5 flex justify-between items-center">
                                        <span className="flex items-center gap-1.5"><BarChart4 size={14} className="text-orange-500"/> Modelo Poisson</span>
@@ -1038,18 +1039,51 @@ const Calculators: React.FC = () => {
                                     </h4>
                                     
                                     <div className="space-y-5">
+                                        {/* EXIBE +1 GOL */}
                                         <div>
                                             <div className="flex justify-between items-end mb-2">
-                                               <span className="text-[10px] font-bold text-slate-300 uppercase tracking-wider">Sair +1 Gol</span>
+                                               <span className="text-[10px] font-bold text-slate-300 uppercase tracking-wider">Lim / Over 0.5 (+1 Gol)</span>
                                                <div className="text-right flex items-center gap-3">
-                                                   <span className={`text-sm font-black font-mono ${exgResult.probGoal >= 70 ? 'text-orange-400' : 'text-slate-400'}`}>{exgResult.probGoal.toFixed(1)}%</span>
-                                                   <span className="text-[11px] font-mono font-black text-orange-500 bg-[#020617] border border-orange-500/30 px-2 py-1 rounded shadow-inner">@{exgResult.fairOddGoal.toFixed(2)}</span>
+                                                   <span className={`text-sm font-black font-mono ${exgResult.probPlus1 >= 70 ? 'text-orange-400' : 'text-slate-400'}`}>{exgResult.probPlus1.toFixed(1)}%</span>
+                                                   <span className="text-[11px] font-mono font-black text-orange-500 bg-[#020617] border border-orange-500/30 px-2 py-1 rounded shadow-inner">@{(exgResult.probPlus1 > 0 ? 100/exgResult.probPlus1 : 0).toFixed(2)}</span>
                                                </div>
                                             </div>
                                             <div className="w-full bg-slate-950 rounded-full h-2 overflow-hidden border border-slate-800">
-                                               <motion.div initial={{ width: 0 }} animate={{ width: `${exgResult.probGoal}%` }} transition={{ duration: 1, ease: "easeOut" }} className={`h-full rounded-full ${exgResult.probGoal >= 70 ? 'bg-gradient-to-r from-orange-600 to-orange-400 shadow-[0_0_10px_rgba(251,146,60,0.5)]' : 'bg-slate-600'}`}></motion.div>
+                                               <motion.div initial={{ width: 0 }} animate={{ width: `${exgResult.probPlus1}%` }} transition={{ duration: 1, ease: "easeOut" }} className={`h-full rounded-full ${exgResult.probPlus1 >= 70 ? 'bg-gradient-to-r from-orange-600 to-orange-400 shadow-[0_0_10px_rgba(251,146,60,0.5)]' : 'bg-slate-600'}`}></motion.div>
                                             </div>
                                         </div>
+
+                                        {/* EXIBE +2 GOLS SE O MERCADO FOR 1.5 OU MAIOR */}
+                                        {(exgScenario.includes('15') || exgScenario.includes('25')) && (
+                                        <div>
+                                            <div className="flex justify-between items-end mb-2">
+                                               <span className="text-[10px] font-bold text-slate-300 uppercase tracking-wider">Asiático / Over 1.5 (+2 Gols)</span>
+                                               <div className="text-right flex items-center gap-3">
+                                                   <span className={`text-sm font-black font-mono ${exgResult.probPlus2 >= 50 ? 'text-orange-400' : 'text-slate-400'}`}>{exgResult.probPlus2.toFixed(1)}%</span>
+                                                   <span className="text-[11px] font-mono font-black text-orange-500 bg-[#020617] border border-orange-500/30 px-2 py-1 rounded shadow-inner">@{(exgResult.probPlus2 > 0 ? 100/exgResult.probPlus2 : 0).toFixed(2)}</span>
+                                               </div>
+                                            </div>
+                                            <div className="w-full bg-slate-950 rounded-full h-2 overflow-hidden border border-slate-800">
+                                               <motion.div initial={{ width: 0 }} animate={{ width: `${exgResult.probPlus2}%` }} transition={{ duration: 1, ease: "easeOut", delay: 0.2 }} className={`h-full rounded-full ${exgResult.probPlus2 >= 50 ? 'bg-gradient-to-r from-orange-600 to-orange-400 shadow-[0_0_10px_rgba(251,146,60,0.5)]' : 'bg-slate-600'}`}></motion.div>
+                                            </div>
+                                        </div>
+                                        )}
+
+                                        {/* EXIBE +3 GOLS SE O MERCADO FOR OVER 2.5 */}
+                                        {exgScenario.includes('25') && (
+                                        <div>
+                                            <div className="flex justify-between items-end mb-2">
+                                               <span className="text-[10px] font-bold text-slate-300 uppercase tracking-wider">Over 2.5 (+3 Gols)</span>
+                                               <div className="text-right flex items-center gap-3">
+                                                   <span className={`text-sm font-black font-mono ${exgResult.probPlus3 >= 40 ? 'text-orange-400' : 'text-slate-400'}`}>{exgResult.probPlus3.toFixed(1)}%</span>
+                                                   <span className="text-[11px] font-mono font-black text-orange-500 bg-[#020617] border border-orange-500/30 px-2 py-1 rounded shadow-inner">@{(exgResult.probPlus3 > 0 ? 100/exgResult.probPlus3 : 0).toFixed(2)}</span>
+                                               </div>
+                                            </div>
+                                            <div className="w-full bg-slate-950 rounded-full h-2 overflow-hidden border border-slate-800">
+                                               <motion.div initial={{ width: 0 }} animate={{ width: `${exgResult.probPlus3}%` }} transition={{ duration: 1, ease: "easeOut", delay: 0.4 }} className={`h-full rounded-full ${exgResult.probPlus3 >= 40 ? 'bg-gradient-to-r from-orange-600 to-orange-400 shadow-[0_0_10px_rgba(251,146,60,0.5)]' : 'bg-slate-600'}`}></motion.div>
+                                            </div>
+                                        </div>
+                                        )}
                                     </div>
                                 </div>
                              </div>
