@@ -162,7 +162,7 @@ const Calculators: React.FC = () => {
       const ap5m = parseFloat(liveAP_5m) || 0; const currentOdd = parseFloat(liveCurrentOdd) || 0;
       const sot = parseFloat(liveSoT) || 0; const sofft = parseFloat(liveSoffT) || 0;
 
-      if (!min || min <= 0 || !apPress) return { appm: 0, fieldTilt: 0, proj: 0, probLimit: 0, probAsian: 0, signal: 'none', msg: 'Aguardando dados...', fairOddLimit: 0, fairOddAsian: 0, ev: 0, momentum: 0, paceMsg: '', crossCheckMsg: '' };
+      if (!min || min <= 0 || !apPress) return { appm: 0, fieldTilt: 0, proj: 0, probLimit: 0, probAsian: 0, signal: 'none', msg: 'Aguardando dados estruturados...', fairOddLimit: 0, fairOddAsian: 0, ev: 0, momentum: 0, paceMsg: '', crossCheckMsg: '' };
 
       const isHT = excScenario.includes('ht');
       const isAsianTarget = excScenario.includes('asian');
@@ -172,7 +172,6 @@ const Calculators: React.FC = () => {
       const totalAP = apPress + apDef; const fieldTilt = totalAP > 0 ? (apPress / totalAP) * 100 : 0;
       const appm = apPress / min;
       
-      // Inteligência Cruzada
       let crossCheckMsg = '';
       if (sot >= 4 && (sot / apPress) > 0.1) {
           crossCheckMsg = '💡 Dica de Perfil: Este time está chutando muito ao gol. O cenário pode ser melhor para o mercado de GOLS.';
@@ -213,12 +212,12 @@ const Calculators: React.FC = () => {
 
       if (currentOdd > 0) {
           if (ev < 0) { signal = 'red'; msg = `🔴 ABORTAR: Odd s/ valor (-EV de ${ev.toFixed(1)}%). Justa: @${targetFairOdd.toFixed(2)}`; }
-          else if (ev >= 10 && isDominanceValid) { signal = 'green'; msg = `🟢 SINAL VERDE: EV+ GIGANTE (+${ev.toFixed(1)}%).`; }
-          else if (ev > 0) { signal = 'yellow'; msg = `🟡 OBSERVATÓRIO: Leve EV+ (+${ev.toFixed(1)}%).`; }
+          else if (ev >= 10 && isDominanceValid) { signal = 'green'; msg = `🟢 SINAL VERDE: EV+ GIGANTE (+${ev.toFixed(1)}%). Compre essa Odd!`; }
+          else if (ev > 0) { signal = 'yellow'; msg = `🟡 OBSERVATÓRIO: Leve EV+ (+${ev.toFixed(1)}%). Risco tático.`; }
       } else {
           if (isVolumeValid && isDominanceValid) {
               if (targetProb >= 70 && isEfficiencyValid) { signal = 'green'; msg = '🟢 SINAL VERDE: ASSIMETRIA CLARA (EV+)'; }
-              else if (targetProb >= 55 || appm >= 1.2) { signal = 'yellow'; msg = '🟡 OBSERVATÓRIO: Risco moderado. Aguarde a odd.'; }
+              else if (targetProb >= 55 || appm >= 1.2) { signal = 'yellow'; msg = '🟡 OBSERVATÓRIO: Risco moderado. Aguarde a odd valorizar.'; }
               else { signal = 'red'; msg = '🔴 ABORTAR: Baixa probabilidade estatística.'; }
           } else {
               if (!isVolumeValid) msg = `🔴 ABORTAR: Jogo Lento (APPM de ${appm.toFixed(2)})`;
@@ -256,13 +255,12 @@ const Calculators: React.FC = () => {
       const currentOdd = parseFloat(liveCurrentOdd) || 0;
       const sot = parseFloat(liveSoT) || 0; const sofft = parseFloat(liveSoffT) || 0;
 
-      if (!min || min <= 0 || !apPress) return { xgTotal: 0, probGoal: 0, signal: 'none', msg: 'Aguardando dados...', fairOddGoal: 0, ev: 0, crossCheckMsg: '' };
+      if (!min || min <= 0 || !apPress) return { xgTotal: 0, probGoal: 0, signal: 'none', msg: 'Aguardando dados estruturados...', fairOddGoal: 0, ev: 0, crossCheckMsg: '' };
 
       const isHT = exgScenario.includes('ht');
       const maxMin = isHT ? 45 : 90;
       const remainingTime = Math.max(1, (maxMin + (isHT?3:6)) - min);
 
-      // Inteligência Cruzada
       let crossCheckMsg = '';
       if (apPress > 40 && sot === 0) {
           crossCheckMsg = '⚠️ ALERTA: O time tem volume, mas não chuta (0 no Alvo). O mercado de CANTOS (ExC) é muito mais seguro aqui.';
@@ -351,7 +349,7 @@ const Calculators: React.FC = () => {
         </div>
       </div>
       
-      {/* TABS GRID - Ajustado para caber as 9 abas de forma elegante */}
+      {/* TABS GRID */}
       <div className="flex flex-wrap md:grid md:grid-cols-4 xl:grid-cols-9 gap-2 mb-6 px-4 md:px-0">
         {tabs.map(tab => (
           <button
@@ -609,7 +607,7 @@ const Calculators: React.FC = () => {
                              <DollarSign size={24} className="text-emerald-400 shrink-0" />
                              <div className="flex-1">
                                 <label className="text-[10px] font-black text-emerald-500 uppercase tracking-[0.2em] block mb-1">Odd Oferecida (Calcula EV%)</label>
-                                <input type="number" step="0.01" placeholder="1.83" value={liveCurrentOdd} onChange={e => setLiveCurrentOdd(e.target.value)} className="w-full bg-transparent text-xl font-mono font-black text-white outline-none" />
+                                <input type="number" step="0.01" placeholder="Ex: 1.83" value={liveCurrentOdd} onChange={e => setLiveCurrentOdd(e.target.value)} className="w-full bg-transparent text-xl font-mono font-black text-white outline-none" />
                              </div>
                          </div>
 
@@ -619,16 +617,75 @@ const Calculators: React.FC = () => {
                             </div>
                          )}
 
-                         <div className="bg-[#020617] rounded-2xl border border-slate-800 p-6">
-                             <div className="flex justify-between border-b border-slate-800 pb-4 mb-4">
-                                 <div><p className="text-[9px] uppercase text-slate-500 font-bold">Pressão (APPM)</p><p className={`text-lg font-mono font-black ${excResult.appm >= 1.05 ? 'text-emerald-400' : 'text-red-400'}`}>{excResult.appm.toFixed(2)}</p></div>
-                                 <div className="text-right"><p className="text-[9px] uppercase text-slate-500 font-bold">Odd Justa Limite</p><p className="text-lg font-mono font-black text-emerald-400">@{excResult.fairOddLimit.toFixed(2)}</p></div>
-                             </div>
+                         {/* BLOOMBERG TERMINAL UI - EXC */}
+                         <div className="bg-[#020617] rounded-2xl border border-slate-800 p-6 overflow-hidden relative">
+                             <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-5"></div>
                              
-                             <div className="relative z-10 mb-4">
-                               {excResult.signal === 'green' && <div className="bg-emerald-500 text-slate-950 w-full py-3 rounded-xl font-black text-xs text-center">{excResult.msg}</div>}
-                               {excResult.signal === 'yellow' && <div className="bg-yellow-500 text-slate-950 w-full py-3 rounded-xl font-black text-xs text-center">{excResult.msg}</div>}
-                               {excResult.signal === 'red' && <div className="bg-slate-800 text-red-400 w-full py-3 rounded-xl font-black text-[10px] text-center">{excResult.msg}</div>}
+                             <div className="relative z-10 flex flex-col md:flex-row justify-between mb-6 gap-6">
+                                <div className="space-y-4 flex-1">
+                                    <div>
+                                      <p className="text-[9px] uppercase tracking-widest text-slate-500 font-bold mb-1">Pace (Momentum)</p>
+                                      <div className="flex items-end gap-2">
+                                         <p className={`text-xl font-black font-mono leading-none ${excResult.momentum >= 1.5 ? 'text-indigo-400' : 'text-slate-300'}`}>
+                                           {excResult.paceMsg}
+                                         </p>
+                                      </div>
+                                    </div>
+                                    <div className="flex justify-between items-end border-t border-slate-800 pt-3">
+                                        <div>
+                                          <p className="text-[8px] uppercase tracking-widest text-slate-500 font-bold mb-1">Pressão (APPM)</p>
+                                          <p className={`text-lg font-black font-mono leading-none ${excResult.appm >= 1.05 ? 'text-emerald-400' : 'text-red-400'}`}>
+                                            {excResult.appm.toFixed(2)}
+                                          </p>
+                                        </div>
+                                        <div>
+                                          <p className="text-[8px] uppercase tracking-widest text-slate-500 font-bold mb-1">Domínio</p>
+                                          <p className={`text-lg font-black font-mono leading-none ${excResult.fieldTilt >= 65 ? 'text-blue-400' : 'text-red-400'}`}>
+                                            {excResult.fieldTilt.toFixed(0)}%
+                                          </p>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div className="flex-1 bg-slate-900 border border-slate-800 p-4 rounded-xl shadow-inner">
+                                    <h4 className="text-[10px] text-slate-400 uppercase tracking-widest font-bold mb-4 flex justify-between items-center gap-2">
+                                       <span className="flex items-center gap-1"><BarChart4 size={12} className="text-indigo-500"/> Probabilidade Real</span>
+                                       <span className="text-[8px] text-emerald-500">Fair Odd (Justa)</span>
+                                    </h4>
+                                    
+                                    <div className="space-y-4">
+                                        <div>
+                                            <div className="flex justify-between items-end mb-1">
+                                               <span className="text-[10px] font-bold text-white uppercase tracking-wider">Limite (+1)</span>
+                                               <div className="text-right">
+                                                   <span className={`text-xs font-black mr-2 ${excResult.probLimit >= 75 ? 'text-emerald-400' : 'text-slate-400'}`}>{excResult.probLimit.toFixed(1)}%</span>
+                                                   <span className="text-[10px] font-mono font-bold text-emerald-500 bg-emerald-500/10 px-1.5 py-0.5 rounded">@{excResult.fairOddLimit.toFixed(2)}</span>
+                                               </div>
+                                            </div>
+                                            <div className="w-full bg-slate-800 rounded-full h-1.5 overflow-hidden">
+                                               <div className={`h-1.5 rounded-full ${excResult.probLimit >= 75 ? 'bg-emerald-500' : 'bg-slate-500'}`} style={{ width: `${excResult.probLimit}%` }}></div>
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <div className="flex justify-between items-end mb-1">
+                                               <span className="text-[10px] font-bold text-white uppercase tracking-wider">Asiático (+2)</span>
+                                               <div className="text-right">
+                                                   <span className={`text-xs font-black mr-2 ${excResult.probAsian >= 50 ? 'text-emerald-400' : 'text-slate-400'}`}>{excResult.probAsian.toFixed(1)}%</span>
+                                                   <span className="text-[10px] font-mono font-bold text-emerald-500 bg-emerald-500/10 px-1.5 py-0.5 rounded">@{excResult.fairOddAsian.toFixed(2)}</span>
+                                               </div>
+                                            </div>
+                                            <div className="w-full bg-slate-800 rounded-full h-1.5 overflow-hidden">
+                                               <div className={`h-1.5 rounded-full ${excResult.probAsian >= 50 ? 'bg-emerald-500' : 'bg-slate-500'}`} style={{ width: `${excResult.probAsian}%` }}></div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                             </div>
+
+                             <div className="relative z-10 mt-2">
+                               {excResult.signal === 'green' && <div className="bg-emerald-500 text-slate-950 w-full py-3 rounded-xl font-black text-xs sm:text-sm tracking-wide uppercase shadow-[0_0_15px_rgba(16,185,129,0.4)] text-center">{excResult.msg}</div>}
+                               {excResult.signal === 'yellow' && <div className="bg-yellow-500 text-slate-950 w-full py-3 rounded-xl font-black text-xs sm:text-sm tracking-wide uppercase shadow-[0_0_15px_rgba(234,179,8,0.3)] text-center">{excResult.msg}</div>}
+                               {excResult.signal === 'red' && <div className="bg-slate-800 border border-red-500/30 text-red-400 w-full py-3 rounded-xl font-black text-[10px] sm:text-xs tracking-wide uppercase text-center flex items-center justify-center gap-2"><AlertTriangle size={14} className="shrink-0"/> {excResult.msg}</div>}
                              </div>
                          </div>
                        </motion.div>
@@ -676,7 +733,6 @@ const Calculators: React.FC = () => {
                      {exgUnlocked && (
                        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="border-t border-slate-200 dark:border-slate-800 pt-6">
                          
-                         {/* Usa as MESMAS variáveis do radar, para não precisar digitar de novo se trocar de aba */}
                          <div className="grid grid-cols-3 gap-4 mb-6">
                             <div><label className="text-[9px] font-bold text-slate-500 uppercase block mb-1">Tempo (Min)</label><input type="number" value={liveMin} onChange={e => setLiveMin(e.target.value)} className="w-full p-3 bg-slate-50 dark:bg-slate-900 rounded-xl font-mono font-bold outline-none border border-slate-200 dark:border-slate-800" /></div>
                             <div><label className="text-[9px] font-bold text-slate-500 uppercase block mb-1">Gols Atuais</label><input type="number" value={liveCurrentTarget} onChange={e => setLiveCurrentTarget(e.target.value)} className="w-full p-3 bg-slate-50 dark:bg-slate-900 rounded-xl font-mono font-bold outline-none border border-slate-200 dark:border-slate-800" /></div>
@@ -686,7 +742,7 @@ const Calculators: React.FC = () => {
                          <div className="grid grid-cols-2 gap-4 mb-6 bg-orange-50 dark:bg-orange-900/10 p-4 rounded-2xl border border-orange-100 dark:border-orange-900/30">
                             <div className="col-span-2"><p className="text-[10px] font-black text-orange-600 dark:text-orange-500 uppercase tracking-widest flex items-center gap-1"><Crosshair size={12}/> Eficiência Ofensiva</p></div>
                             <div><label className="text-[9px] font-bold text-orange-700 dark:text-orange-400 uppercase block mb-1">Ataques P.</label><input type="number" value={liveAP_Press} onChange={e => setLiveAP_Press(e.target.value)} className="w-full p-3 bg-white dark:bg-slate-900 rounded-xl font-mono font-bold outline-none border border-slate-200 dark:border-slate-800 focus:border-orange-500" /></div>
-                            <div></div> {/* Spacer para manter layout similar ao ExC */}
+                            <div></div> {/* Spacer */}
                             <div><label className="text-[9px] font-bold text-orange-700 dark:text-orange-400 uppercase block mb-1">No Alvo</label><input type="number" value={liveSoT} onChange={e => setLiveSoT(e.target.value)} className="w-full p-3 bg-white dark:bg-slate-900 rounded-xl font-mono font-bold outline-none border border-slate-200 dark:border-slate-800 focus:border-orange-500" /></div>
                             <div><label className="text-[9px] font-bold text-orange-700 dark:text-orange-400 uppercase block mb-1">Para Fora</label><input type="number" value={liveSoffT} onChange={e => setLiveSoffT(e.target.value)} className="w-full p-3 bg-white dark:bg-slate-900 rounded-xl font-mono font-bold outline-none border border-slate-200 dark:border-slate-800 focus:border-orange-500" /></div>
                          </div>
@@ -695,7 +751,7 @@ const Calculators: React.FC = () => {
                              <DollarSign size={24} className="text-orange-400 shrink-0" />
                              <div className="flex-1">
                                 <label className="text-[10px] font-black text-orange-500 uppercase tracking-[0.2em] block mb-1">Odd Oferecida (+1 Gol)</label>
-                                <input type="number" step="0.01" placeholder="1.83" value={liveCurrentOdd} onChange={e => setLiveCurrentOdd(e.target.value)} className="w-full bg-transparent text-xl font-mono font-black text-white outline-none" />
+                                <input type="number" step="0.01" placeholder="Ex: 1.83" value={liveCurrentOdd} onChange={e => setLiveCurrentOdd(e.target.value)} className="w-full bg-transparent text-xl font-mono font-black text-white outline-none" />
                              </div>
                          </div>
 
@@ -705,16 +761,49 @@ const Calculators: React.FC = () => {
                             </div>
                          )}
 
-                         <div className="bg-[#020617] rounded-2xl border border-slate-800 p-6">
-                             <div className="flex justify-between border-b border-slate-800 pb-4 mb-4">
-                                 <div><p className="text-[9px] uppercase text-slate-500 font-bold">xG Criado</p><p className={`text-lg font-mono font-black ${exgResult.xgTotal >= 1.0 ? 'text-orange-400' : 'text-slate-400'}`}>{exgResult.xgTotal.toFixed(2)}</p></div>
-                                 <div className="text-right"><p className="text-[9px] uppercase text-slate-500 font-bold">Odd Justa</p><p className="text-lg font-mono font-black text-orange-400">@{exgResult.fairOddGoal.toFixed(2)}</p></div>
-                             </div>
+                         {/* BLOOMBERG TERMINAL UI - EXG */}
+                         <div className="bg-[#020617] rounded-2xl border border-slate-800 p-6 overflow-hidden relative">
+                             <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-5"></div>
                              
-                             <div className="relative z-10 mb-4">
-                               {exgResult.signal === 'green' && <div className="bg-emerald-500 text-slate-950 w-full py-3 rounded-xl font-black text-xs text-center">{exgResult.msg}</div>}
-                               {exgResult.signal === 'yellow' && <div className="bg-yellow-500 text-slate-950 w-full py-3 rounded-xl font-black text-xs text-center">{exgResult.msg}</div>}
-                               {exgResult.signal === 'red' && <div className="bg-slate-800 text-red-400 w-full py-3 rounded-xl font-black text-[10px] text-center">{exgResult.msg}</div>}
+                             <div className="relative z-10 flex flex-col md:flex-row justify-between mb-6 gap-6">
+                                <div className="space-y-4 flex-1 flex flex-col justify-center">
+                                    <div>
+                                      <p className="text-[9px] uppercase tracking-widest text-slate-500 font-bold mb-1">xG Criado (Gols Esperados)</p>
+                                      <div className="flex items-end gap-2">
+                                         <p className={`text-3xl font-black font-mono leading-none ${exgResult.xgTotal >= 1.0 ? 'text-orange-400' : 'text-slate-300'}`}>
+                                           {exgResult.xgTotal.toFixed(2)}
+                                         </p>
+                                      </div>
+                                    </div>
+                                </div>
+
+                                <div className="flex-1 bg-slate-900 border border-slate-800 p-4 rounded-xl shadow-inner">
+                                    <h4 className="text-[10px] text-slate-400 uppercase tracking-widest font-bold mb-4 flex justify-between items-center gap-2">
+                                       <span className="flex items-center gap-1"><BarChart4 size={12} className="text-orange-500"/> Probabilidade Real</span>
+                                       <span className="text-[8px] text-orange-500">Fair Odd (Justa)</span>
+                                    </h4>
+                                    
+                                    <div className="space-y-4">
+                                        <div>
+                                            <div className="flex justify-between items-end mb-1">
+                                               <span className="text-[10px] font-bold text-white uppercase tracking-wider">Sair +1 Gol</span>
+                                               <div className="text-right">
+                                                   <span className={`text-xs font-black mr-2 ${exgResult.probGoal >= 70 ? 'text-orange-400' : 'text-slate-400'}`}>{exgResult.probGoal.toFixed(1)}%</span>
+                                                   <span className="text-[10px] font-mono font-bold text-orange-500 bg-orange-500/10 px-1.5 py-0.5 rounded">@{exgResult.fairOddGoal.toFixed(2)}</span>
+                                               </div>
+                                            </div>
+                                            <div className="w-full bg-slate-800 rounded-full h-1.5 overflow-hidden">
+                                               <div className={`h-1.5 rounded-full ${exgResult.probGoal >= 70 ? 'bg-orange-500' : 'bg-slate-500'}`} style={{ width: `${exgResult.probGoal}%` }}></div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                             </div>
+
+                             <div className="relative z-10 mt-2">
+                               {exgResult.signal === 'green' && <div className="bg-emerald-500 text-slate-950 w-full py-3 rounded-xl font-black text-xs sm:text-sm tracking-wide uppercase shadow-[0_0_15px_rgba(16,185,129,0.4)] text-center">{exgResult.msg}</div>}
+                               {exgResult.signal === 'yellow' && <div className="bg-yellow-500 text-slate-950 w-full py-3 rounded-xl font-black text-xs sm:text-sm tracking-wide uppercase shadow-[0_0_15px_rgba(234,179,8,0.3)] text-center">{exgResult.msg}</div>}
+                               {exgResult.signal === 'red' && <div className="bg-slate-800 border border-red-500/30 text-red-400 w-full py-3 rounded-xl font-black text-[10px] sm:text-xs tracking-wide uppercase text-center flex items-center justify-center gap-2"><AlertTriangle size={14} className="shrink-0"/> {exgResult.msg}</div>}
                              </div>
                          </div>
                        </motion.div>
