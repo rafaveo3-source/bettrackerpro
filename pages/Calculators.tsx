@@ -41,7 +41,6 @@ const MapIcon = ({ size, className }: any) => (
   </svg>
 );
 
-// 🔥 CORREÇÃO DA BUILD: Função auxiliar para ler a imagem de forma moderna (Promise)
 const fileToBase64 = (file: File): Promise<string> => {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -68,10 +67,11 @@ const Calculators: React.FC = () => {
   >('dutching');
 
   // ==========================================
-  // ESTADOS COMPARTILHADOS (ExC e ExG)
+  // ESTADOS COMPARTILHADOS (ExC e ExG) - 🔥 SEPARADOS
   // ==========================================
   const [liveMin, setLiveMin] = useState('');
-  const [liveCurrentTarget, setLiveCurrentTarget] = useState(''); 
+  const [liveCorners, setLiveCorners] = useState(''); // Separado para Cantos
+  const [liveGoals, setLiveGoals] = useState('');     // Separado para Gols
   const [liveAP_Def, setLiveAP_Def] = useState(''); 
   const [liveAP_Press, setLiveAP_Press] = useState(''); 
   const [liveAP_5m, setLiveAP_5m] = useState(''); 
@@ -122,7 +122,6 @@ const Calculators: React.FC = () => {
     }
   };
 
-  // 🔥 CORREÇÃO DA BUILD: Função async limpa e sem callbacks aninhados
   const processVisionAI = async (file: File) => {
     if (!isPro) {
         setToast({ type: 'error', message: 'Recurso exclusivo para Membros PRO.' });
@@ -171,11 +170,9 @@ const Calculators: React.FC = () => {
 
            setLiveMin(extMin);
            
-           if (activeTab === 'exg') {
-               setLiveCurrentTarget(extGoals);
-           } else {
-               setLiveCurrentTarget(extCorners);
-           }
+           // 🔥 Atribui corretamente cada alvo para sua própria memória
+           setLiveGoals(extGoals);
+           setLiveCorners(extCorners);
            
            setLiveAP_Def(extApDef);
            setLiveAP_Press(extApPress);
@@ -201,7 +198,7 @@ const Calculators: React.FC = () => {
 
   const resetScanner = () => {
       setScannedImage(null);
-      setLiveMin(''); setLiveCurrentTarget(''); setLiveAP_Def(''); 
+      setLiveMin(''); setLiveCorners(''); setLiveGoals(''); setLiveAP_Def(''); 
       setLiveAP_Press(''); setLiveAP_5m(''); setLiveSoT(''); setLiveSoffT('');
   };
 
@@ -256,6 +253,9 @@ const Calculators: React.FC = () => {
   const [beOdds, setBeOdds] = useState('1.90'); const beWinRate = parseFloat(beOdds) > 1 ? (1 / parseFloat(beOdds)) * 100 : 0;
 
 
+  const factorial = (n: number): number => (n === 0 || n === 1 ? 1 : n * factorial(n - 1));
+  const poissonExact = (k: number, lambda: number) => (Math.pow(lambda, k) * Math.exp(-lambda)) / factorial(k);
+
   // ==========================================
   // 8. LÓGICA ExC QUANTITATIVA (CANTOS)
   // ==========================================
@@ -279,7 +279,7 @@ const Calculators: React.FC = () => {
   };
 
   const calculateExC = () => {
-      const min = parseFloat(liveMin); const corners = parseFloat(liveCurrentTarget) || 0;
+      const min = parseFloat(liveMin); const corners = parseFloat(liveCorners) || 0; // Puxa a variável correta
       const apDef = parseFloat(liveAP_Def) || 0; const apPress = parseFloat(liveAP_Press) || 0;
       const ap5m = parseFloat(liveAP_5m) || 0; const currentOdd = parseFloat(liveCurrentOdd) || 0;
       const sot = parseFloat(liveSoT) || 0; const sofft = parseFloat(liveSoffT) || 0;
@@ -358,7 +358,7 @@ const Calculators: React.FC = () => {
   };
 
   const calculateExG = () => {
-      const min = parseFloat(liveMin); const goals = parseFloat(liveCurrentTarget) || 0; 
+      const min = parseFloat(liveMin); const goals = parseFloat(liveGoals) || 0; // Puxa a variável correta
       const apDef = parseFloat(liveAP_Def) || 0; const apPress = parseFloat(liveAP_Press) || 0;
       const currentOdd = parseFloat(liveCurrentOdd) || 0;
       const sot = parseFloat(liveSoT) || 0; const sofft = parseFloat(liveSoffT) || 0;
@@ -471,7 +471,9 @@ const Calculators: React.FC = () => {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 px-4 md:px-0">
         <div className="lg:col-span-2 space-y-6 min-w-0 w-full">
             
-            {/* CALCULADORAS SIMPLES */}
+            {/* =========================================
+                RENDERIZAÇÃO DAS CALCULADORAS CLÁSSICAS
+            ========================================= */}
             {activeTab === 'dutching' && (
                 <div className="bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-800 rounded-[2rem] p-6 shadow-sm w-full overflow-hidden">
                     <h2 className="text-lg font-black text-slate-900 dark:text-white uppercase tracking-tighter italic mb-4">Calculadora Dutching</h2>
@@ -744,7 +746,7 @@ const Calculators: React.FC = () => {
                             <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-5 flex items-center gap-2"><Activity size={14} className="text-emerald-500"/> Global Match Data</h3>
                             <div className="grid grid-cols-3 gap-3 mb-6">
                                <PodInput label="Minuto" value={liveMin} onChange={(e:any) => setLiveMin(e.target.value)} icon={Clock} placeholder="00" colorClass="text-slate-500" />
-                               <PodInput label="Cantos" value={liveCurrentTarget} onChange={(e:any) => setLiveCurrentTarget(e.target.value)} icon={Flag} placeholder="0" colorClass="text-slate-500" />
+                               <PodInput label="Cantos" value={liveCorners} onChange={(e:any) => setLiveCorners(e.target.value)} icon={Flag} placeholder="0" colorClass="text-slate-500" />
                                <PodInput label="AP (Defesa)" value={liveAP_Def} onChange={(e:any) => setLiveAP_Def(e.target.value)} icon={ShieldAlert} placeholder="0" colorClass="text-slate-500" />
                             </div>
                             
@@ -782,7 +784,6 @@ const Calculators: React.FC = () => {
 
                          {/* BLOOMBERG TERMINAL UI DEFINITIVO */}
                          <div className="bg-[#020617] rounded-[2rem] border border-slate-800 p-6 overflow-hidden relative shadow-2xl mt-4">
-                             {/* Fundo Tático */}
                              <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-[0.03]"></div>
                              
                              {/* Brilho Dinâmico Radial Baseado no Resultado */}
@@ -976,7 +977,7 @@ const Calculators: React.FC = () => {
                             <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-5 flex items-center gap-2"><Activity size={14} className="text-orange-500"/> Global Match Data</h3>
                             <div className="grid grid-cols-3 gap-3 mb-6">
                                <PodInput label="Minuto" value={liveMin} onChange={(e:any) => setLiveMin(e.target.value)} icon={Clock} placeholder="00" colorClass="text-slate-500" />
-                               <PodInput label="Gols" value={liveCurrentTarget} onChange={(e:any) => setLiveCurrentTarget(e.target.value)} icon={Goal} placeholder="0" colorClass="text-slate-500" />
+                               <PodInput label="Gols" value={liveGoals} onChange={(e:any) => setLiveGoals(e.target.value)} icon={Goal} placeholder="0" colorClass="text-slate-500" />
                                <PodInput label="AP (Defesa)" value={liveAP_Def} onChange={(e:any) => setLiveAP_Def(e.target.value)} icon={ShieldAlert} placeholder="0" colorClass="text-slate-500" />
                             </div>
                             
@@ -984,7 +985,7 @@ const Calculators: React.FC = () => {
                                 <h3 className="text-[10px] font-black text-orange-500 uppercase tracking-widest mb-4 flex items-center gap-2"><Crosshair size={14} /> Lethality Metrics (Ataque)</h3>
                                 <div className="grid grid-cols-2 gap-3">
                                    <PodInput label="Ataques P. Atual" value={liveAP_Press} onChange={(e:any) => setLiveAP_Press(e.target.value)} icon={Swords} placeholder="00" highlight colorClass="text-orange-500" />
-                                   <div className="hidden md:block"></div> {/* Espaçador mantendo consistência com layout de cantos */}
+                                   <div className="hidden md:block"></div> {/* Espaçador */}
                                    <PodInput label="Chutes no Alvo" value={liveSoT} onChange={(e:any) => setLiveSoT(e.target.value)} icon={Target} placeholder="0" highlight colorClass="text-orange-500" />
                                    <PodInput label="Chutes Fora" value={liveSoffT} onChange={(e:any) => setLiveSoffT(e.target.value)} icon={Target} placeholder="0" highlight colorClass="text-orange-500" />
                                 </div>
