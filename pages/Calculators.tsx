@@ -42,7 +42,16 @@ const MapIcon = ({ size, className }: any) => (
 );
 
 const Calculators: React.FC = () => {
-  const { currentBankrollBalance, isPro } = useBetStore();
+  // 🔥 CORREÇÃO AQUI: Importando TODAS as variáveis e funções da IA que estavam faltando!
+  const { 
+    currentBankrollBalance, 
+    isPro, 
+    aiScansUsedToday, 
+    canUseAiScan, 
+    incrementAiScan, 
+    setToast 
+  } = useBetStore();
+  
   const navigate = useNavigate();
 
   const [activeTab, setActiveTab] = useState<
@@ -93,26 +102,31 @@ const Calculators: React.FC = () => {
   };
 
   const processVisionAI = async (file: File) => {
+    // 1. Validar Limites e PRO
     if (!isPro) {
-        setToast({ type: 'error', message: 'Recurso exclusivo PRO.' });
+        setToast({ type: 'error', message: 'Recurso exclusivo para Membros PRO.' });
         return;
     }
-    if (!canUseAiScan()) {
+    
+    // Checa se a função existe para evitar crashes (fallback de segurança)
+    if (typeof canUseAiScan === 'function' && !canUseAiScan()) {
         setToast({ type: 'error', message: 'Limite diário de 10 scans atingido.' });
         return;
     }
 
+    // 2. Mostrar Preview Visual do HUD
     const imageUrl = URL.createObjectURL(file);
     setScannedImage(imageUrl);
     setIsScanning(true);
 
+    // 3. Processar API Real
     try {
         const reader = new FileReader();
         reader.readAsDataURL(file);
         reader.onload = async () => {
             const base64Data = (reader.result as string).split(',')[1];
             
-            // Chama a sua função Serverless na Vercel
+            // Chama a API que criamos na Vercel
             const response = await fetch('/api/vision', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -131,8 +145,8 @@ const Calculators: React.FC = () => {
                setLiveSoT(data.sot ? data.sot.toString() : '0');
                setLiveSoffT(data.sofft ? data.sofft.toString() : '0');
                
-               incrementAiScan();
-               setToast({ type: 'success', message: 'Radar extraído via IA com sucesso!' });
+               if (typeof incrementAiScan === 'function') incrementAiScan();
+               setToast({ type: 'success', message: 'Dados extraídos com sucesso pela IA!' });
             }
             setIsScanning(false);
         };
@@ -148,6 +162,7 @@ const Calculators: React.FC = () => {
       setLiveMin(''); setLiveCurrentTarget(''); setLiveAP_Def(''); 
       setLiveAP_Press(''); setLiveAP_5m(''); setLiveSoT(''); setLiveSoffT('');
   };
+
 
   const ProLockScreen = () => (
       <div className="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-[2rem] p-8 text-center flex flex-col items-center justify-center min-h-[300px] relative overflow-hidden shadow-sm">
@@ -167,7 +182,7 @@ const Calculators: React.FC = () => {
       </div>
   );
 
-  // Lógicas Clássicas (Omitidas para brevidade na visualização, mas intactas)
+  // Lógicas Clássicas
   const [dutchTotalStake, setDutchTotalStake] = useState('100');
   const [dutchSelections, setDutchSelections] = useState([{ id: 1, name: 'Seleção A', odds: '2.50', stake: 0, profit: 0 }, { id: 2, name: 'Seleção B', odds: '3.20', stake: 0, profit: 0 }]);
   const addDutchSelection = () => setDutchSelections([...dutchSelections, { id: Date.now(), name: `Seleção ${String.fromCharCode(65 + dutchSelections.length)}`, odds: '', stake: 0, profit: 0 }]);
@@ -206,7 +221,7 @@ const Calculators: React.FC = () => {
   // ==========================================
   // 8. LÓGICA ExC QUANTITATIVA (CANTOS)
   // ==========================================
-  const [excScenario, setExcScenario] = useState('ft_asian');
+  const [excScenario, setExcScenario] = useState('ht_asian');
   const [excChecklist, setExcChecklist] = useState<Record<number, boolean>>({});
   const [excUnlocked, setExcUnlocked] = useState(false);
 
@@ -331,6 +346,7 @@ const Calculators: React.FC = () => {
   };
   const exgResult = calculateExG();
 
+
   const sidebarInfo = (() => {
     switch(activeTab) {
       case 'dutching': return { title: 'Gestão de Risco', text: 'O Dutching divide a sua exposição entre múltiplas seleções, diluindo o risco do investimento em um único evento.' };
@@ -394,7 +410,9 @@ const Calculators: React.FC = () => {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 px-4 md:px-0">
         <div className="lg:col-span-2 space-y-6 min-w-0 w-full">
             
-            {/* CALCULADORAS SIMPLES */}
+            {/* =========================================
+                RENDERIZAÇÃO DAS CALCULADORAS CLÁSSICAS
+            ========================================= */}
             {activeTab === 'dutching' && (
                 <div className="bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-800 rounded-[2rem] p-6 shadow-sm w-full overflow-hidden">
                     <h2 className="text-lg font-black text-slate-900 dark:text-white uppercase tracking-tighter italic mb-4">Calculadora Dutching</h2>
@@ -589,7 +607,6 @@ const Calculators: React.FC = () => {
 
                    {/* MÓDULO SCANNER VISION IA */}
                    <div className="mb-6 relative group overflow-hidden rounded-[1.5rem] border-2 border-dashed border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-[#09090b] transition-all hover:border-emerald-500/50">
-                       {/* Dropzone Area */}
                        {!scannedImage && !isScanning && (
                            <label className="flex flex-col items-center justify-center p-8 cursor-pointer w-full h-full">
                                <div className="w-12 h-12 rounded-full bg-slate-200 dark:bg-slate-800 flex items-center justify-center mb-4 text-slate-500 group-hover:text-emerald-500 transition-colors group-hover:scale-110 duration-300">
@@ -604,11 +621,9 @@ const Calculators: React.FC = () => {
                            </label>
                        )}
 
-                       {/* Scanning Animation */}
                        {isScanning && scannedImage && (
                            <div className="relative w-full h-48 bg-black flex items-center justify-center overflow-hidden">
                                <img src={scannedImage} alt="Scanning" className="object-cover opacity-30 w-full h-full blur-sm" />
-                               {/* Laser Line */}
                                <motion.div 
                                   initial={{ top: '0%' }} 
                                   animate={{ top: '100%' }} 
@@ -622,7 +637,6 @@ const Calculators: React.FC = () => {
                            </div>
                        )}
 
-                       {/* Scanned Result Preview */}
                        {!isScanning && scannedImage && (
                            <div className="relative w-full h-48 bg-black flex items-center justify-center group/preview">
                                <img src={scannedImage} alt="Scanned" className="object-cover opacity-60 w-full h-full" />
@@ -794,6 +808,7 @@ const Calculators: React.FC = () => {
                                )}
                              </div>
                              
+                             {/* DISCLAIMER DE RESPONSABILIDADE */}
                              <p className="text-center text-[8px] sm:text-[9px] text-slate-500/70 font-bold uppercase tracking-[0.2em] mt-6">
                                ⚠️ Atenção: Esta é uma projeção baseada em probabilidade estatística e não constitui recomendação de aposta ou dica financeira.
                              </p>
@@ -806,7 +821,7 @@ const Calculators: React.FC = () => {
             )}
 
             {/* =========================================
-                EXPECTATIVA DE GOLS (ExG) - PRO 
+                EXPECTATIVA DE GOLS (ExG) - PRO (UI AVANÇADA)
             ========================================= */}
             {activeTab === 'exg' && (
                 !isPro ? <ProLockScreen /> : (
@@ -831,7 +846,10 @@ const Calculators: React.FC = () => {
                                    <Scan size={24} />
                                </div>
                                <h3 className="text-sm font-black text-slate-700 dark:text-slate-300 mb-1">Upload ou Cole (Ctrl+V)</h3>
-                               <p className="text-[10px] text-slate-500 uppercase tracking-widest font-bold text-center">Print do Radar Bet365 para auto-preenchimento via IA.</p>
+                               <p className="text-[10px] text-slate-500 uppercase tracking-widest font-bold text-center mb-3">Print do Radar Bet365 para auto-preenchimento via IA.</p>
+                               <div className="bg-orange-500/10 border border-orange-500/20 text-orange-500 px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest flex items-center gap-1 shadow-sm">
+                                  <Zap size={10} fill="currentColor" /> {Math.max(0, 10 - (aiScansUsedToday || 0))} Scans Restantes Hoje
+                               </div>
                                <input type="file" accept="image/*" className="hidden" onChange={handleFileUpload} ref={fileInputRef} />
                            </label>
                        )}
@@ -908,7 +926,7 @@ const Calculators: React.FC = () => {
                                 <h3 className="text-[10px] font-black text-orange-500 uppercase tracking-widest mb-4 flex items-center gap-2"><Crosshair size={14} /> Lethality Metrics (Ataque)</h3>
                                 <div className="grid grid-cols-2 gap-3">
                                    <PodInput label="Ataques P. Atual" value={liveAP_Press} onChange={(e:any) => setLiveAP_Press(e.target.value)} icon={Swords} placeholder="00" highlight colorClass="text-orange-500" />
-                                   <div className="hidden md:block"></div> {/* Espaçador mantendo consistência com layout de cantos */}
+                                   <div className="hidden md:block"></div> {/* Espaçador */}
                                    <PodInput label="Chutes no Alvo" value={liveSoT} onChange={(e:any) => setLiveSoT(e.target.value)} icon={Target} placeholder="0" highlight colorClass="text-orange-500" />
                                    <PodInput label="Chutes Fora" value={liveSoffT} onChange={(e:any) => setLiveSoffT(e.target.value)} icon={Target} placeholder="0" highlight colorClass="text-orange-500" />
                                 </div>
