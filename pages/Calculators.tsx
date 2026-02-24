@@ -9,6 +9,39 @@ import {
 import { useBetStore } from '../store/useBetStore';
 import { motion, AnimatePresence } from 'framer-motion';
 
+// ==========================================
+// UX INPUT COMPONENT (MOVIDO PARA FORA PARA NÃO PERDER O FOCO)
+// ==========================================
+const PodInput = ({ label, value, onChange, icon: Icon, placeholder, colorClass, highlight }: any) => (
+  <div className="relative group">
+      <label className={`text-[9px] font-black uppercase tracking-widest block mb-1.5 transition-colors ${highlight ? colorClass : 'text-slate-500'}`}>
+         {label}
+      </label>
+      <div className="relative">
+          <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
+              <Icon size={14} className={highlight ? colorClass : 'text-slate-400 group-hover:text-slate-300 transition-colors'} />
+          </div>
+          <input 
+              type="number" 
+              value={value} 
+              onChange={onChange} 
+              placeholder={placeholder}
+              className={`w-full bg-slate-950 border rounded-xl pl-10 pr-3 py-3.5 font-mono font-bold text-sm outline-none transition-all
+              ${highlight ? `border-${colorClass.split('-')[1]}-500/50 focus:border-${colorClass.split('-')[1]}-400 text-${colorClass.split('-')[1]}-400 shadow-[inset_0_0_10px_rgba(0,0,0,0.2)]` : 'border-slate-800 text-white focus:border-slate-600 focus:bg-[#09090b]'}`}
+          />
+      </div>
+  </div>
+);
+
+// Ícone customizado improvisado para Field Tilt
+const Map = ({ size, className }: any) => (
+  <svg width={size} height={size} className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <polygon points="3 6 9 3 15 6 21 3 21 18 15 21 9 18 3 21"></polygon>
+    <line x1="9" y1="3" x2="9" y2="21"></line>
+    <line x1="15" y1="3" x2="15" y2="21"></line>
+  </svg>
+);
+
 const Calculators: React.FC = () => {
   const { currentBankrollBalance, isPro } = useBetStore();
   const navigate = useNavigate();
@@ -94,28 +127,6 @@ const Calculators: React.FC = () => {
 
   const factorial = (n: number): number => (n === 0 || n === 1 ? 1 : n * factorial(n - 1));
   const poissonExact = (k: number, lambda: number) => (Math.pow(lambda, k) * Math.exp(-lambda)) / factorial(k);
-
-  // UX Input Component
-  const PodInput = ({ label, value, onChange, icon: Icon, placeholder, colorClass, highlight }: any) => (
-    <div className="relative group">
-        <label className={`text-[9px] font-black uppercase tracking-widest block mb-1.5 transition-colors ${highlight ? colorClass : 'text-slate-500'}`}>
-           {label}
-        </label>
-        <div className="relative">
-            <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
-                <Icon size={14} className={highlight ? colorClass : 'text-slate-400 group-hover:text-slate-300 transition-colors'} />
-            </div>
-            <input 
-                type="number" 
-                value={value} 
-                onChange={onChange} 
-                placeholder={placeholder}
-                className={`w-full bg-slate-950 border rounded-xl pl-10 pr-3 py-3.5 font-mono font-bold text-sm outline-none transition-all
-                ${highlight ? `border-${colorClass.split('-')[1]}-500/50 focus:border-${colorClass.split('-')[1]}-400 text-${colorClass.split('-')[1]}-400 shadow-[inset_0_0_10px_rgba(0,0,0,0.2)]` : 'border-slate-800 text-white focus:border-slate-600 focus:bg-[#09090b]'}`}
-            />
-        </div>
-    </div>
-  );
 
   // ==========================================
   // 8. LÓGICA ExC QUANTITATIVA (CANTOS)
