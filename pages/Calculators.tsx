@@ -42,7 +42,6 @@ const MapIcon = ({ size, className }: any) => (
 );
 
 const Calculators: React.FC = () => {
-  // 🔥 CORREÇÃO AQUI: Importando TODAS as variáveis e funções da IA que estavam faltando!
   const { 
     currentBankrollBalance, 
     isPro, 
@@ -77,11 +76,9 @@ const Calculators: React.FC = () => {
   const [isScanning, setIsScanning] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Escuta o Ctrl+V globalmente
   useEffect(() => {
     const handleGlobalPaste = (e: ClipboardEvent) => {
       if (activeTab !== 'exc' && activeTab !== 'exg') return;
-      
       const items = e.clipboardData?.items;
       if (!items) return;
 
@@ -102,33 +99,28 @@ const Calculators: React.FC = () => {
   };
 
   const processVisionAI = async (file: File) => {
-    // 1. Validar Limites e PRO
     if (!isPro) {
         setToast({ type: 'error', message: 'Recurso exclusivo para Membros PRO.' });
         return;
     }
     
-    // Checa se a função existe para evitar crashes (fallback de segurança)
     if (typeof canUseAiScan === 'function' && !canUseAiScan()) {
         setToast({ type: 'error', message: 'Limite diário de 10 scans atingido.' });
         return;
     }
 
-    // 2. Mostrar Preview Visual do HUD
     const imageUrl = URL.createObjectURL(file);
     setScannedImage(imageUrl);
     setIsScanning(true);
 
-    // 3. Processar API Real
     try {
         const reader = new FileReader();
         reader.readAsDataURL(file);
         reader.onload = async () => {
             const resultString = reader.result as string;
             const base64Data = resultString.split(',')[1];
-            const mimeType = file.type || 'image/png'; // Envia se é PNG ou JPEG
+            const mimeType = file.type || 'image/png'; 
             
-            // Chama a API na Vercel
             const response = await fetch('/api/vision', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -136,7 +128,6 @@ const Calculators: React.FC = () => {
             });
 
             if (!response.ok) {
-                // Tenta ler qual foi o erro exato que o backend enviou
                 const errorData = await response.json().catch(() => ({}));
                 console.error("Erro do Backend:", errorData);
                 setToast({ type: 'error', message: errorData.error || 'Falha na conexão com a IA.' });
@@ -147,15 +138,31 @@ const Calculators: React.FC = () => {
             const data = await response.json();
             
             if (data) {
-               setLiveMin(data.min ? data.min.toString() : '0');
-               setLiveCurrentTarget(data.target ? data.target.toString() : '0');
-               setLiveAP_Def(data.apDef ? data.apDef.toString() : '0');
-               setLiveAP_Press(data.apPress ? data.apPress.toString() : '0');
-               setLiveSoT(data.sot ? data.sot.toString() : '0');
-               setLiveSoffT(data.sofft ? data.sofft.toString() : '0');
+               // Validador inteligente para evitar "0" nos campos quando a informação não existe
+               const cleanVal = (val: any) => (val !== null && val !== undefined && val !== "" && String(val).toLowerCase() !== "null") ? String(val) : "";
+
+               const extMin = cleanVal(data.min);
+               const extTarget = cleanVal(data.target);
+               const extApDef = cleanVal(data.apDef);
+               const extApPress = cleanVal(data.apPress);
+               const extSoT = cleanVal(data.sot);
+               const extSoffT = cleanVal(data.sofft);
+
+               setLiveMin(extMin);
+               setLiveCurrentTarget(extTarget);
+               setLiveAP_Def(extApDef);
+               setLiveAP_Press(extApPress);
+               setLiveSoT(extSoT);
+               setLiveSoffT(extSoffT);
                
                if (typeof incrementAiScan === 'function') incrementAiScan();
-               setToast({ type: 'success', message: 'Dados extraídos com sucesso pela IA!' });
+
+               // Se faltar algum dado essencial, pede pro usuário completar
+               if (!extMin || !extTarget || !extApDef || !extApPress || !extSoT || !extSoffT) {
+                   setToast({ type: 'error', message: '⚠️ Dados parciais. Preencha os campos vazios manualmente.' });
+               } else {
+                   setToast({ type: 'success', message: 'Dados extraídos com precisão cirúrgica!' });
+               }
             }
             setIsScanning(false);
         };
@@ -171,7 +178,6 @@ const Calculators: React.FC = () => {
       setLiveMin(''); setLiveCurrentTarget(''); setLiveAP_Def(''); 
       setLiveAP_Press(''); setLiveAP_5m(''); setLiveSoT(''); setLiveSoffT('');
   };
-
 
   const ProLockScreen = () => (
       <div className="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-[2rem] p-8 text-center flex flex-col items-center justify-center min-h-[300px] relative overflow-hidden shadow-sm">
@@ -191,7 +197,6 @@ const Calculators: React.FC = () => {
       </div>
   );
 
-  // Lógicas Clássicas
   const [dutchTotalStake, setDutchTotalStake] = useState('100');
   const [dutchSelections, setDutchSelections] = useState([{ id: 1, name: 'Seleção A', odds: '2.50', stake: 0, profit: 0 }, { id: 2, name: 'Seleção B', odds: '3.20', stake: 0, profit: 0 }]);
   const addDutchSelection = () => setDutchSelections([...dutchSelections, { id: Date.now(), name: `Seleção ${String.fromCharCode(65 + dutchSelections.length)}`, odds: '', stake: 0, profit: 0 }]);
@@ -419,9 +424,7 @@ const Calculators: React.FC = () => {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 px-4 md:px-0">
         <div className="lg:col-span-2 space-y-6 min-w-0 w-full">
             
-            {/* =========================================
-                RENDERIZAÇÃO DAS CALCULADORAS CLÁSSICAS
-            ========================================= */}
+            {/* CALCULADORAS SIMPLES */}
             {activeTab === 'dutching' && (
                 <div className="bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-800 rounded-[2rem] p-6 shadow-sm w-full overflow-hidden">
                     <h2 className="text-lg font-black text-slate-900 dark:text-white uppercase tracking-tighter italic mb-4">Calculadora Dutching</h2>
@@ -830,7 +833,7 @@ const Calculators: React.FC = () => {
             )}
 
             {/* =========================================
-                EXPECTATIVA DE GOLS (ExG) - PRO (UI AVANÇADA)
+                EXPECTATIVA DE GOLS (ExG) - PRO 
             ========================================= */}
             {activeTab === 'exg' && (
                 !isPro ? <ProLockScreen /> : (
@@ -897,7 +900,7 @@ const Calculators: React.FC = () => {
                    <div className="mb-8 bg-slate-50 dark:bg-slate-900/50 p-1 rounded-[1.5rem] border border-slate-200 dark:border-slate-800 relative z-10">
                       <div className="p-4 border-b border-slate-200 dark:border-slate-800">
                         <label className="text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase block mb-2 tracking-widest">1. Selecione o Cenário</label>
-                        <select value={exgScenario} onChange={e => setExgScenario(e.target.value)} className="w-full bg-white dark:bg-[#09090b] border border-slate-200 dark:border-slate-700 p-3.5 rounded-xl font-bold text-sm outline-none text-slate-900 dark:text-white focus:ring-2 focus:ring-orange-500/50 transition-all cursor-pointer">
+                        <select value={exgScenario} onChange={e => setexgScenario(e.target.value)} className="w-full bg-white dark:bg-[#09090b] border border-slate-200 dark:border-slate-700 p-3.5 rounded-xl font-bold text-sm outline-none text-slate-900 dark:text-white focus:ring-2 focus:ring-orange-500/50 transition-all cursor-pointer">
                            <option value="ht_over05">Over 0.5 Gols HT (Primeiro Tempo)</option>
                            <option value="ft_over05">Over 0.5 Gols FT (Reta Final)</option>
                            <option value="ft_over15">Over 1.5 Gols FT (Busca do Resultado)</option>
