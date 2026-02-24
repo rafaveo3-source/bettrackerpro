@@ -17,8 +17,8 @@ import {
   Radar,
   CheckSquare,
   Square,
-  Unlock,
-  Activity
+  Activity,
+  Crosshair
 } from 'lucide-react';
 import { useBetStore } from '../store/useBetStore';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -151,7 +151,7 @@ const Calculators: React.FC = () => {
   // ==========================================
   // 5. LÓGICA STAKE %
   // ==========================================
-  const [stakePercent, setStakePercent] = useState('1'); // 1%
+  const [stakePercent, setStakePercent] = useState('1'); 
   const stakeValue = (parseFloat(stakePercent) / 100) * currentBankrollBalance;
 
   // ==========================================
@@ -178,17 +178,20 @@ const Calculators: React.FC = () => {
   const beWinRate = parseFloat(beOdds) > 1 ? (1 / parseFloat(beOdds)) * 100 : 0;
 
   // ==========================================
-  // 8. LÓGICA EXPECTATIVA DE CANTOS (ExC) - NOVO
+  // 8. LÓGICA EXPECTATIVA DE CANTOS (ExC) - MELHORADA
   // ==========================================
   const [excScenario, setExcScenario] = useState('ht_asian');
   const [excChecklist, setExcChecklist] = useState<Record<number, boolean>>({});
   const [excUnlocked, setExcUnlocked] = useState(false);
 
+  // Variáveis atualizadas de acordo com o Radar real
   const [excMin, setExcMin] = useState('');
   const [excCorners, setExcCorners] = useState('');
-  const [excAP, setExcAP] = useState('');
-  const [excSoT, setExcSoT] = useState('');
-  const [excSoffT, setExcSoffT] = useState('');
+  const [excAP_Def, setExcAP_Def] = useState(''); // APs do adversário
+  
+  const [excAP_Press, setExcAP_Press] = useState(''); // APs do time buscando o gol
+  const [excSoT, setExcSoT] = useState(''); // No Alvo
+  const [excSoffT, setExcSoffT] = useState(''); // Fora do Alvo
 
   const excScenariosData: any = {
     ht_asian: {
@@ -204,7 +207,7 @@ const Calculators: React.FC = () => {
       checks: [
         'Relógio de jogo entre 37 e 41 minutos?',
         'Ataques Perigosos subindo freneticamente?',
-        'Triplo de APs em relação ao adversário?'
+        'Time pressionando tem grande vantagem de APs?'
       ]
     },
     ft_asian: {
@@ -234,7 +237,6 @@ const Calculators: React.FC = () => {
     const newChecklist = { ...excChecklist, [idx]: !excChecklist[idx] };
     setExcChecklist(newChecklist);
     
-    // Verifica se todos foram marcados
     const requiredChecks = excScenariosData[excScenario].checks.length;
     const isAllChecked = Object.keys(newChecklist).filter(k => newChecklist[parseInt(k)]).length === requiredChecks;
     
@@ -245,32 +247,49 @@ const Calculators: React.FC = () => {
   const calculateExC = () => {
       const min = parseFloat(excMin);
       const corners = parseFloat(excCorners) || 0;
-      const ap = parseFloat(excAP) || 0;
+      const apDef = parseFloat(excAP_Def) || 0;
+      const apPress = parseFloat(excAP_Press) || 0;
       const sot = parseFloat(excSoT) || 0;
       const sofft = parseFloat(excSoffT) || 0;
 
-      if (!min || min <= 0) return { appm: 0, ppm: 0, proj: 0, signal: 'none' };
+      if (!min || min <= 0) return { appm: 0, fieldTilt: 0, proj: 0, signal: 'none', msg: 'Aguardando dados...' };
 
       const isHT = excScenario.includes('ht');
       const limitMin = isHT ? 45 : 90;
       const remainingTime = Math.max(1, limitMin - min);
 
-      const cga = (sot * 1.5) + (sofft * 1.0) + (ap * 0.15);
-      const ppm = cga / min;
-      const appm = ap / min;
+      // 1. Domínio Territorial (Field Tilt)
+      const totalAP = apPress + apDef;
+      const fieldTilt = totalAP > 0 ? (apPress / totalAP) * 100 : 0;
+
+      // 2. Cálculo de Força
+      const appm = apPress / min;
+      const cga = (sot * 1.5) + (sofft * 1.0) + (apPress * 0.15); // Ações Geradoras de Canto
+      const ppm = cga / min; // Pressão Por Minuto Real
       
-      const excNovos = ppm * remainingTime * 1.2; // 1.2 de multiplicador de urgência (Desespero)
+      // Multiplicador de Urgência baseado no Domínio (Se o time sufocou, a chance de canto dispara)
+      const urgencyFactor = fieldTilt >= 75 ? 1.35 : fieldTilt >= 60 ? 1.15 : 1.0;
+      
+      const excNovos = ppm * remainingTime * urgencyFactor;
       const totalExc = corners + excNovos;
 
+      // 3. Avaliação EV+ (Semáforo Inteligente)
       let signal = 'red';
-      if (appm >= 1.0 && appm < 1.2) signal = 'yellow';
-      if (appm >= 1.2) signal = 'green';
+      let msg = '🔴 ABORTAR: JOGO MORNO / SEM PRESSÃO CLARA';
+      
+      if (appm >= 1.0 && fieldTilt >= 60) {
+          signal = 'yellow';
+          msg = '🟡 PADRÃO FORMANDO: OBSERVE A LINHA';
+      }
+      if (appm >= 1.2 && fieldTilt >= 70) {
+          signal = 'green';
+          msg = '🟢 SINAL VERDE: ENTRADA EV+ (ALTO DOMÍNIO)';
+      }
 
-      return { appm, ppm, proj: totalExc, signal };
+      return { appm, fieldTilt, proj: totalExc, signal, msg };
   };
 
   const excResult = calculateExC();
-
 
   // --- SIDEBAR INFO HELPERS ---
   const getSidebarInfo = () => {
@@ -282,7 +301,7 @@ const Calculators: React.FC = () => {
       case 'stake': return { title: 'Gestão Fixa', text: 'O cálculo de stake fixa percentual ajuda a manter o controle do drawdown em fases de oscilação do mercado.' };
       case 'odds': return { title: 'Leitura Global', text: 'Conversão automática de formatos de cotações utilizados em bolsas esportivas americanas e europeias.' };
       case 'breakeven': return { title: 'Ponto de Equilíbrio', text: 'A taxa de acerto (Hit-Rate) estatística necessária para manter a estabilidade do capital com a odd informada.' };
-      case 'exc': return { title: 'ExC (Expected Corners)', text: 'Algoritmo avançado que converte dados brutos da Bet365 em um índice de pressão ofensiva para prever a saída de escanteios.' };
+      case 'exc': return { title: 'ExC (Expected Corners)', text: 'Algoritmo avançado que cruza o Domínio Territorial (Field Tilt) com Ações Ofensivas para prever matematicamente a geração de novos escanteios.' };
       default: return { title: 'Ferramentas Analíticas', text: 'Utilize os modelos matemáticos para tomar decisões baseadas em dados e não em emoções.' };
     }
   };
@@ -298,7 +317,7 @@ const Calculators: React.FC = () => {
     { id: 'stake', label: 'Stake %', pro: false },
     { id: 'odds', label: 'Odds Conv.', pro: false },
     { id: 'breakeven', label: 'Break Even', pro: true },
-    { id: 'exc', label: 'ExC Cantos', pro: true }, // NOVA ABA
+    { id: 'exc', label: 'ExC Analytics', pro: true },
   ];
 
   return (
@@ -555,14 +574,14 @@ const Calculators: React.FC = () => {
                         onChange={e => setExcScenario(e.target.value)} 
                         className="w-full p-3 bg-slate-50 dark:bg-slate-900 rounded-xl font-bold text-sm outline-none border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white cursor-pointer"
                       >
-                         <option value="ht_asian">Canto Asiático HT (Segurança)</option>
-                         <option value="ht_limit">Canto Limite HT (Abafa)</option>
+                         <option value="ht_asian">Canto Asiático HT (Margem de Segurança)</option>
+                         <option value="ht_limit">Canto Limite HT (Abafa Final)</option>
                          <option value="ft_asian">Canto Asiático FT (Volta do Intervalo)</option>
-                         <option value="ft_limit">Canto Limite FT (Desespero Final)</option>
+                         <option value="ft_limit">Canto Limite FT (Desespero Absoluto)</option>
                       </select>
                    </div>
 
-                   {/* GATEKEEPER: O CHECKLIST */}
+                   {/* GATEKEEPER: O CHECKLIST DE DISCIPLINA */}
                    <div className="mb-8 p-5 bg-slate-50 dark:bg-[#020617] rounded-2xl border border-slate-200 dark:border-slate-800 shadow-inner">
                       <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-4 flex items-center gap-2">
                         <Lock size={12} className={excUnlocked ? 'text-emerald-500' : 'text-slate-400'}/> 
@@ -599,29 +618,40 @@ const Calculators: React.FC = () => {
                          className="border-t border-slate-200 dark:border-slate-800 pt-6"
                        >
                          <h3 className="text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-4 flex items-center gap-2">
-                           <Activity size={14} className="text-emerald-500"/> Input do Radar Bet365
+                           <Activity size={14} className="text-emerald-500"/> Visão Geral do Jogo
                          </h3>
                          
-                         <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-6">
+                         <div className="grid grid-cols-3 gap-4 mb-6">
                             <div>
-                               <label className="text-[9px] font-bold text-slate-500 uppercase block mb-1">Minuto Atual</label>
+                               <label className="text-[9px] font-bold text-slate-500 uppercase block mb-1">Tempo (Min)</label>
                                <input type="number" placeholder="Ex: 38" value={excMin} onChange={e => setExcMin(e.target.value)} className="w-full p-3 bg-slate-50 dark:bg-slate-900 rounded-xl font-mono font-bold outline-none border border-slate-200 dark:border-slate-800" />
                             </div>
                             <div>
-                               <label className="text-[9px] font-bold text-slate-500 uppercase block mb-1">Cantos Atuais</label>
-                               <input type="number" placeholder="Total" value={excCorners} onChange={e => setExcCorners(e.target.value)} className="w-full p-3 bg-slate-50 dark:bg-slate-900 rounded-xl font-mono font-bold outline-none border border-slate-200 dark:border-slate-800" />
+                               <label className="text-[9px] font-bold text-slate-500 uppercase block mb-1">Cantos Totais</label>
+                               <input type="number" placeholder="Ex: 4" value={excCorners} onChange={e => setExcCorners(e.target.value)} className="w-full p-3 bg-slate-50 dark:bg-slate-900 rounded-xl font-mono font-bold outline-none border border-slate-200 dark:border-slate-800" />
                             </div>
                             <div>
-                               <label className="text-[9px] font-bold text-slate-500 uppercase block mb-1 text-emerald-600">Ataques Perigosos</label>
-                               <input type="number" placeholder="(Do atacante)" value={excAP} onChange={e => setExcAP(e.target.value)} className="w-full p-3 bg-emerald-50 dark:bg-emerald-900/10 rounded-xl font-mono font-bold outline-none border border-emerald-200 dark:border-emerald-900 text-emerald-700 dark:text-emerald-400" />
+                               <label className="text-[9px] font-bold text-slate-500 uppercase block mb-1">Ataques P. (Adversário)</label>
+                               <input type="number" placeholder="Ex: 12" value={excAP_Def} onChange={e => setExcAP_Def(e.target.value)} className="w-full p-3 bg-slate-50 dark:bg-slate-900 rounded-xl font-mono font-bold outline-none border border-slate-200 dark:border-slate-800" />
+                            </div>
+                         </div>
+
+                         <h3 className="text-[10px] font-black text-blue-600 dark:text-blue-500 uppercase tracking-widest mb-4 flex items-center gap-2">
+                           <Crosshair size={14} /> Time Pressionando (Buscando o Gol)
+                         </h3>
+                         
+                         <div className="grid grid-cols-3 gap-4 mb-6 bg-blue-50 dark:bg-blue-900/10 p-4 rounded-2xl border border-blue-100 dark:border-blue-900/30">
+                            <div>
+                               <label className="text-[9px] font-bold text-blue-700 dark:text-blue-400 uppercase block mb-1">Ataques P.</label>
+                               <input type="number" placeholder="Ex: 48" value={excAP_Press} onChange={e => setExcAP_Press(e.target.value)} className="w-full p-3 bg-white dark:bg-slate-900 rounded-xl font-mono font-bold outline-none border border-slate-200 dark:border-slate-800" />
                             </div>
                             <div>
-                               <label className="text-[9px] font-bold text-slate-500 uppercase block mb-1">Chutes no Alvo</label>
-                               <input type="number" placeholder="(Do atacante)" value={excSoT} onChange={e => setSoT(e.target.value)} className="w-full p-3 bg-slate-50 dark:bg-slate-900 rounded-xl font-mono font-bold outline-none border border-slate-200 dark:border-slate-800" />
+                               <label className="text-[9px] font-bold text-blue-700 dark:text-blue-400 uppercase block mb-1">No Alvo</label>
+                               <input type="number" placeholder="Chutes" value={excSoT} onChange={e => setExcSoT(e.target.value)} className="w-full p-3 bg-white dark:bg-slate-900 rounded-xl font-mono font-bold outline-none border border-slate-200 dark:border-slate-800" />
                             </div>
                             <div>
-                               <label className="text-[9px] font-bold text-slate-500 uppercase block mb-1">Chutes Fora</label>
-                               <input type="number" placeholder="(Do atacante)" value={excSoffT} onChange={e => setExcSoffT(e.target.value)} className="w-full p-3 bg-slate-50 dark:bg-slate-900 rounded-xl font-mono font-bold outline-none border border-slate-200 dark:border-slate-800" />
+                               <label className="text-[9px] font-bold text-blue-700 dark:text-blue-400 uppercase block mb-1">Para Fora</label>
+                               <input type="number" placeholder="Chutes" value={excSoffT} onChange={e => setExcSoffT(e.target.value)} className="w-full p-3 bg-white dark:bg-slate-900 rounded-xl font-mono font-bold outline-none border border-slate-200 dark:border-slate-800" />
                             </div>
                          </div>
 
@@ -631,7 +661,7 @@ const Calculators: React.FC = () => {
                             excResult.signal === 'yellow' ? 'bg-yellow-50 dark:bg-yellow-900/20 border-yellow-200 dark:border-yellow-500/30' :
                             'bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-800'
                          }`}>
-                             <div className="flex w-full justify-around mb-6">
+                             <div className="flex w-full justify-between items-center mb-6 px-2">
                                 <div>
                                   <p className="text-[9px] uppercase tracking-widest text-slate-500 font-bold mb-1">Pressão (APPM)</p>
                                   <p className={`text-xl font-black font-mono ${excResult.appm >= 1.0 ? 'text-emerald-500' : 'text-slate-400'}`}>
@@ -639,7 +669,13 @@ const Calculators: React.FC = () => {
                                   </p>
                                 </div>
                                 <div className="border-l border-slate-200 dark:border-slate-800 pl-6">
-                                  <p className="text-[9px] uppercase tracking-widest text-slate-500 font-bold mb-1">ExC Total (Projeção)</p>
+                                  <p className="text-[9px] uppercase tracking-widest text-slate-500 font-bold mb-1">Domínio Territorial</p>
+                                  <p className={`text-xl font-black font-mono ${excResult.fieldTilt >= 70 ? 'text-blue-500' : 'text-slate-400'}`}>
+                                    {excResult.fieldTilt.toFixed(0)}%
+                                  </p>
+                                </div>
+                                <div className="border-l border-slate-200 dark:border-slate-800 pl-6">
+                                  <p className="text-[9px] uppercase tracking-widest text-slate-500 font-bold mb-1">ExC (Projeção)</p>
                                   <p className="text-xl font-black font-mono text-slate-900 dark:text-white">
                                     {excResult.proj.toFixed(1)}
                                   </p>
@@ -648,17 +684,17 @@ const Calculators: React.FC = () => {
 
                              {excResult.signal === 'green' && (
                                 <div className="bg-emerald-500 text-white w-full py-3 rounded-xl font-black text-sm tracking-wide uppercase shadow-lg shadow-emerald-500/20">
-                                   🟢 SINAL VERDE: ENTRADA EV+
+                                   {excResult.msg}
                                 </div>
                              )}
                              {excResult.signal === 'yellow' && (
                                 <div className="bg-yellow-500 text-slate-900 w-full py-3 rounded-xl font-black text-sm tracking-wide uppercase shadow-lg shadow-yellow-500/20">
-                                   🟡 PADRÃO FORMANDO: OBSERVE A ODD
+                                   {excResult.msg}
                                 </div>
                              )}
                              {excResult.signal === 'red' && (
                                 <div className="bg-slate-200 dark:bg-slate-800 text-slate-500 dark:text-slate-400 w-full py-3 rounded-xl font-black text-sm tracking-wide uppercase">
-                                   🔴 ABORTAR: JOGO MORNO / SEM PRESSÃO
+                                   {excResult.msg}
                                 </div>
                              )}
                          </div>
