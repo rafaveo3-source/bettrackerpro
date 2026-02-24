@@ -362,6 +362,7 @@ const Calculators: React.FC = () => {
             {/* =========================================
                 RENDERIZAÇÃO DAS CALCULADORAS CLÁSSICAS
             ========================================= */}
+
             {activeTab === 'dutching' && (
                 <div className="bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-800 rounded-[2rem] p-6 shadow-sm w-full overflow-hidden">
                     <h2 className="text-lg font-black text-slate-900 dark:text-white uppercase tracking-tighter italic mb-4">Calculadora Dutching</h2>
@@ -710,6 +711,11 @@ const Calculators: React.FC = () => {
                                   </div>
                                )}
                              </div>
+                             
+                             {/* DISCLAIMER DE RESPONSABILIDADE */}
+                             <p className="text-center text-[8px] sm:text-[9px] text-slate-500/70 font-bold uppercase tracking-[0.2em] mt-6">
+                               ⚠️ Atenção: Esta é uma projeção baseada em probabilidade estatística e não constitui recomendação de aposta ou dica financeira.
+                             </p>
                          </div>
                        </motion.div>
                      )}
@@ -870,6 +876,11 @@ const Calculators: React.FC = () => {
                                   </div>
                                )}
                              </div>
+
+                             {/* DISCLAIMER DE RESPONSABILIDADE */}
+                             <p className="text-center text-[8px] sm:text-[9px] text-slate-500/70 font-bold uppercase tracking-[0.2em] mt-6">
+                               ⚠️ Atenção: Esta é uma projeção baseada em probabilidade estatística e não constitui recomendação de aposta ou dica financeira.
+                             </p>
                          </div>
                        </motion.div>
                      )}
@@ -895,7 +906,7 @@ const Calculators: React.FC = () => {
                     <div className="flex items-start gap-3">
                        <AlertTriangle size={16} className="text-yellow-500 mt-0.5 shrink-0" />
                        <p className="text-[10px] text-slate-500 dark:text-slate-400 leading-relaxed">
-                         Lembre-se: Todas as calculadoras assumem liquidez disponível. Sempre verifique os limites da casa antes de apostar.
+                         Lembre-se: Todas as calculadoras assumem liquidez disponível. Sempre verifique os limites da casa antes de operar. Os resultados matemáticos gerados nesta página não são recomendações de entrada nem aconselhamento financeiro. A responsabilidade é inteiramente sua.
                        </p>
                     </div>
                 </div>
