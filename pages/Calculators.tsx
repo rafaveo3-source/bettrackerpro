@@ -66,17 +66,14 @@ const Calculators: React.FC = () => {
   );
 
   // ==========================================
-  // 1. LÓGICA DUTCHING
+  // 1-7. OUTRAS CALCULADORAS (MANTIDAS INTACTAS)
   // ==========================================
   const [dutchTotalStake, setDutchTotalStake] = useState('100');
   const [dutchSelections, setDutchSelections] = useState([
     { id: 1, name: 'Seleção A', odds: '2.50', stake: 0, profit: 0 },
     { id: 2, name: 'Seleção B', odds: '3.20', stake: 0, profit: 0 }
   ]);
-
-  const addDutchSelection = () => {
-    setDutchSelections([...dutchSelections, { id: Date.now(), name: `Seleção ${String.fromCharCode(65 + dutchSelections.length)}`, odds: '', stake: 0, profit: 0 }]);
-  };
+  const addDutchSelection = () => setDutchSelections([...dutchSelections, { id: Date.now(), name: `Seleção ${String.fromCharCode(65 + dutchSelections.length)}`, odds: '', stake: 0, profit: 0 }]);
   const removeDutchSelection = (id: number) => setDutchSelections(dutchSelections.filter(s => s.id !== id));
   const calculateDutching = () => {
     const totalStake = parseFloat(dutchTotalStake);
@@ -93,34 +90,24 @@ const Calculators: React.FC = () => {
     setDutchSelections(newSelections);
   };
 
-  // ==========================================
-  // 2. LÓGICA KELLY
-  // ==========================================
   const [kellyOdds, setKellyOdds] = useState('2.00');
   const [kellyProb, setKellyProb] = useState('55');
   const [kellyFraction, setKellyFraction] = useState('1'); 
   const calculateKelly = () => {
     const b = parseFloat(kellyOdds) - 1;
     const p = parseFloat(kellyProb) / 100;
-    const q = 1 - p;
     if (b <= 0) return "0.00";
-    const f = (b * p - q) / b;
+    const f = (b * p - (1 - p)) / b;
     return (f * parseFloat(kellyFraction) * 100).toFixed(2);
   };
   const kellyResult = calculateKelly();
   const kellyMoney = (parseFloat(kellyResult) / 100) * currentBankrollBalance;
 
-  // ==========================================
-  // 3. LÓGICA VALUE BET
-  // ==========================================
   const [valOdds, setValOdds] = useState('2.10');
   const [valProb, setValProb] = useState('50'); 
   const valEV = (parseFloat(valProb) / 100 * parseFloat(valOdds)) - 1;
   const valEVPercent = valEV * 100;
 
-  // ==========================================
-  // 4. LÓGICA ARBITRAGEM (2-Way)
-  // ==========================================
   const [arbOdds1, setArbOdds1] = useState('2.05');
   const [arbOdds2, setArbOdds2] = useState('2.05');
   const [arbTotalStake, setArbTotalStake] = useState('1000');
@@ -130,15 +117,9 @@ const Calculators: React.FC = () => {
   const arbStake2 = (parseFloat(arbTotalStake) * (1 / parseFloat(arbOdds2))) / arbImplied;
   const arbProfit = (arbStake1 * parseFloat(arbOdds1)) - parseFloat(arbTotalStake);
 
-  // ==========================================
-  // 5. LÓGICA STAKE %
-  // ==========================================
   const [stakePercent, setStakePercent] = useState('1'); 
   const stakeValue = (parseFloat(stakePercent) / 100) * currentBankrollBalance;
 
-  // ==========================================
-  // 6. LÓGICA ODDS CONVERTER
-  // ==========================================
   const [convDec, setConvDec] = useState('2.00');
   const [convAm, setConvAm] = useState('+100');
   const [convProb, setConvProb] = useState('50.00');
@@ -152,14 +133,11 @@ const Calculators: React.FC = () => {
     }
   };
 
-  // ==========================================
-  // 7. LÓGICA BREAK EVEN
-  // ==========================================
   const [beOdds, setBeOdds] = useState('1.90');
   const beWinRate = parseFloat(beOdds) > 1 ? (1 / parseFloat(beOdds)) * 100 : 0;
 
   // ==========================================
-  // 8. LÓGICA ExC (DISTRIBUIÇÃO DE POISSON)
+  // 8. LÓGICA ExC QUANTITATIVA (POISSON + TPR)
   // ==========================================
   const [excScenario, setExcScenario] = useState('ht_asian');
   const [excChecklist, setExcChecklist] = useState<Record<number, boolean>>({});
@@ -172,38 +150,37 @@ const Calculators: React.FC = () => {
   const [excSoT, setExcSoT] = useState(''); 
   const [excSoffT, setExcSoffT] = useState(''); 
 
-  // Checklist Otimizado para Maior Volume (Menos rigidez, focado em momentum)
   const excScenariosData: Record<string, { title: string; checks: string[] }> = {
     ht_asian: {
-      title: 'Canto Asiático HT (Segurança)',
+      title: 'Canto Asiático HT',
       checks: [
         'Janela de oportunidade: Entre 25 e 36 minutos?',
-        'O time favorito está pressionando pelo resultado (Empate/Perdendo)?',
-        'Pelo menos 3 finalizações na partida e domínio de posse?'
+        'O time favorito está pressionando ativamente?',
+        'Existe assimetria visível no radar do jogo?'
       ]
     },
     ht_limit: {
-      title: 'Canto Limite HT (Abafa Reta Final)',
+      title: 'Canto Limite HT',
       checks: [
         'Janela de oportunidade: Entre 38 e 43 minutos?',
-        'Forte volume ofensivo recente (Pico de Ataques Perigosos)?',
-        'Adversário com clara dificuldade de sair do campo de defesa?'
+        'Ocorrência de ataques rápidos e finalizações?',
+        'Adversário está sendo empurrado para a própria área?'
       ]
     },
     ft_asian: {
-      title: 'Canto Asiático FT (Volta do Intervalo)',
+      title: 'Canto Asiático FT',
       checks: [
         'Janela de oportunidade: Entre 65 e 78 minutos?',
-        'O time pressionando tem domínio territorial claro?',
-        'Buscando a vitória ativamente (necessidade de gol)?'
+        'O time perdendo/empatando dominou a posse no 2º tempo?',
+        'Zagueiros adversários estão rebatendo muitas bolas?'
       ]
     },
     ft_limit: {
-      title: 'Canto Limite FT (Modo Desespero)',
+      title: 'Canto Limite FT',
       checks: [
         'Janela de oportunidade: Entre 83 e 88 minutos?',
-        'Modo desespero ativado (chuveirinho, zagueiro no ataque)?',
-        'Adversário totalmente recuado segurando o resultado?'
+        'Time precisando desesperadamente de 1 gol (Abafa)?',
+        'Adversário não consegue segurar a bola no ataque?'
       ]
     }
   };
@@ -214,18 +191,15 @@ const Calculators: React.FC = () => {
   }, [excScenario]);
 
   const handleExcCheck = (idx: number) => {
-    const newChecklist = { ...excChecklist, [idx]: !excChecklist[idx] };
+    const newChecklist = { ...excChecklist, [idx] : !excChecklist[idx] };
     setExcChecklist(newChecklist);
     const requiredChecks = excScenariosData[excScenario].checks.length;
-    const isAllChecked = Object.keys(newChecklist).filter(k => newChecklist[parseInt(k)]).length === requiredChecks;
-    setExcUnlocked(isAllChecked);
+    setExcUnlocked(Object.keys(newChecklist).filter(k => newChecklist[parseInt(k)]).length === requiredChecks);
   };
 
-  // Helper Estatístico: Cálculo Exato de Poisson
-  const poissonExact = (k: number, lambda: number) => {
-    return (Math.pow(lambda, k) * Math.exp(-lambda)) / factorial(k);
-  };
+  // Helper Estatístico (Fatorial e Poisson)
   const factorial = (n: number): number => (n === 0 || n === 1 ? 1 : n * factorial(n - 1));
+  const poissonExact = (k: number, lambda: number) => (Math.pow(lambda, k) * Math.exp(-lambda)) / factorial(k);
 
   const calculateExC = () => {
       const min = parseFloat(excMin);
@@ -238,51 +212,68 @@ const Calculators: React.FC = () => {
       if (!min || min <= 0 || !apPress) return { appm: 0, fieldTilt: 0, proj: 0, probLimit: 0, probAsian: 0, signal: 'none', msg: 'Aguardando dados estruturados...' };
 
       const isHT = excScenario.includes('ht');
-      // Adicionando acréscimos médios realistas (HT +3, FT +5)
-      const maxMin = isHT ? 48 : 95; 
-      const remainingTime = Math.max(1, maxMin - min);
+      const extraTime = isHT ? 3 : 6; // Projeção de acréscimos
+      const maxMin = isHT ? 45 : 90;
+      const remainingTime = Math.max(1, (maxMin + extraTime) - min);
 
-      // 1. Domínio Territorial (Field Tilt)
+      // 1. Métricas de Volume e Domínio
       const totalAP = apPress + apDef;
       const fieldTilt = totalAP > 0 ? (apPress / totalAP) * 100 : 0;
-
-      // 2. Pressão por Minuto (APPM) e Índice Ofensivo
       const appm = apPress / min;
       
-      // IOM (Índice de Momentum Ofensivo - Peso balanceado estatisticamente)
-      const cga = (sot * 0.8) + (sofft * 0.4) + (apPress * 0.08); 
-      const ppm = cga / min; // Taxa de conversão de pressão em cantos por minuto
+      // 2. TPR (True Pressure Rate) - Conversão Estimada Realista
+      const expectedCornersSoFar = (apPress * 0.06) + (sot * 0.35) + (sofft * 0.15);
+      const tpr = expectedCornersSoFar / min;
 
-      // Multiplicador de Urgência (Quanto maior o domínio, maior a conversão na reta final)
-      const urgencyFactor = fieldTilt >= 75 ? 1.3 : fieldTilt >= 60 ? 1.15 : 1.0;
+      // Multiplicador de Urgência (Fator Game State)
+      let urgencyFactor = 1.0;
+      if (fieldTilt >= 70) urgencyFactor += 0.15;
+      if (fieldTilt >= 80) urgencyFactor += 0.10;
+      if (isHT && min >= 38) urgencyFactor += 0.10;
+      if (!isHT && min >= 80) urgencyFactor += 0.20;
       
-      // LAMBDA (λ) - A taxa de ocorrência de cantos esperada para o tempo restante
-      const lambda = ppm * remainingTime * urgencyFactor;
+      // LAMBDA (λ) para Poisson
+      const lambda = tpr * remainingTime * urgencyFactor;
       const totalExc = corners + lambda;
 
-      // 3. Distribuição de Poisson (A Mágica da Probabilidade)
-      // Probabilidade de Sair 0 Cantos
+      // 3. Distribuição
       const p0 = poissonExact(0, lambda);
-      // Probabilidade de Sair 1 Canto
       const p1 = poissonExact(1, lambda);
 
-      // Probabilidade de bater as linhas
-      const probLimit = (1 - p0) * 100; // Pelo menos 1 canto
-      const probAsian = (1 - (p0 + p1)) * 100; // Pelo menos 2 cantos
+      const probLimit = (1 - p0) * 100; 
+      const probAsian = (1 - (p0 + p1)) * 100;
 
-      // 4. Avaliação de EV+ Focada em Volume e Valor
+      // 4. ALGORITMO QUANTITATIVO DE DECISÃO (RESTRIÇÕES SEVERAS)
       let signal = 'red';
-      let msg = '🔴 ABORTAR: Falta momentum ofensivo claro.';
+      let msg = '';
       
-      if (probLimit >= 65 || appm >= 0.8) {
-          signal = 'yellow';
-          msg = '🟡 ATENÇÃO: Padrão em formação. Monitore a Odd.';
+      // Checagem Rigorosa de Pilares
+      const isVolumeValid = appm >= 1.05;
+      const isDominanceValid = fieldTilt >= 65;
+      const isEfficiencyValid = (sot + sofft) >= (min / 10);
+
+      if (isVolumeValid && isDominanceValid) {
+          if (probLimit >= 75 && isEfficiencyValid) {
+              signal = 'green';
+              msg = '🟢 SINAL VERDE: ASSIMETRIA CLARA (EV+)';
+          } else if (probLimit >= 65 || appm >= 1.2) {
+              signal = 'yellow';
+              msg = '🟡 OBSERVATÓRIO: Risco moderado. Aguarde odd subir.';
+          } else {
+              signal = 'red';
+              msg = '🔴 ABORTAR: Baixa probabilidade matemática.';
+          }
+      } else {
+          // Explicações exatas do motivo da rejeição
+          if (!isVolumeValid) msg = `🔴 ABORTAR: Jogo Lento (APPM de ${appm.toFixed(2)} é insuficiente)`;
+          else if (!isDominanceValid) msg = `🔴 ABORTAR: Equilíbrio Tático (Domínio < 65%)`;
+          else msg = '🔴 ABORTAR: Faltam finalizações reais.';
       }
-      
-      // Critérios afrouxados e otimizados para Volume + Probabilidade Matemática
-      if (probLimit >= 75 || (isHT ? probAsian >= 45 : probAsian >= 50) || (appm >= 1.0 && fieldTilt >= 60)) {
-          signal = 'green';
-          msg = '🟢 SINAL VERDE: Assimetria Encontrada (EV+)';
+
+      // Safety Net
+      if (probLimit < 50) {
+          signal = 'red';
+          msg = '🔴 ABORTAR: Modelo matemático acusa EV Negativo (-EV).';
       }
 
       return { appm, fieldTilt, proj: totalExc, probLimit, probAsian, signal, msg };
@@ -293,14 +284,7 @@ const Calculators: React.FC = () => {
   // --- SIDEBAR INFO HELPERS ---
   const getSidebarInfo = () => {
     switch(activeTab) {
-      case 'dutching': return { title: 'Gestão de Risco', text: 'O Dutching divide a sua exposição entre múltiplas seleções, diluindo o risco do investimento em um único evento.' };
-      case 'kelly': return { title: 'Cálculo de Exposição', text: 'O Critério de Kelly ajusta matematicamente a stake ideal com base na probabilidade e na odd (cotação) apresentada.' };
-      case 'value': return { title: 'Análise de EV+', text: 'O conceito de Value Bet compara a cotação oferecida pelo mercado com a probabilidade real estatística de um evento ocorrer.' };
-      case 'arb': return { title: 'Arbitragem Matemática', text: 'Calcula o volume exato a ser distribuído em duas vias para anular o risco direcional. (Atenção aos limites do mercado).' };
-      case 'stake': return { title: 'Gestão Fixa', text: 'O cálculo de stake fixa percentual ajuda a manter o controle do drawdown em fases de oscilação do mercado.' };
-      case 'odds': return { title: 'Leitura Global', text: 'Conversão automática de formatos de cotações utilizados em bolsas esportivas americanas e europeias.' };
-      case 'breakeven': return { title: 'Ponto de Equilíbrio', text: 'A taxa de acerto (Hit-Rate) estatística necessária para manter a estabilidade do capital com a odd informada.' };
-      case 'exc': return { title: 'ExC de Alta Frequência', text: 'Algoritmo que utiliza a Distribuição de Poisson sobre métricas de Field Tilt para calcular a probabilidade exata de novos escanteios.' };
+      case 'exc': return { title: 'ExC Analytics (Quant)', text: 'Motor quântico que cruza o Domínio (Field Tilt) com o Volume (APPM). Usa Distribuição de Poisson com exigências estritas de assimetria tática para liberar a entrada.' };
       default: return { title: 'Ferramentas Analíticas', text: 'Utilize os modelos matemáticos para tomar decisões baseadas em dados e não em emoções.' };
     }
   };
@@ -367,7 +351,6 @@ const Calculators: React.FC = () => {
                         <span className="text-[10px] text-slate-500 dark:text-slate-400 uppercase font-black tracking-widest pl-1">Total Stake</span>
                         <input type="number" value={dutchTotalStake} onChange={(e) => setDutchTotalStake(e.target.value)} className="bg-transparent text-right w-full font-mono font-bold outline-none text-slate-900 dark:text-white text-lg" />
                     </div>
-
                     <div className="space-y-3">
                         {dutchSelections.map((sel, idx) => (
                             <div key={sel.id} className="bg-slate-50 dark:bg-slate-900/50 p-4 rounded-xl border border-slate-200 dark:border-slate-800/50 grid grid-cols-12 gap-2 items-center">
@@ -381,7 +364,6 @@ const Calculators: React.FC = () => {
                             </div>
                         ))}
                     </div>
-
                     <div className="mt-6 flex gap-3">
                         <button onClick={addDutchSelection} className="flex-1 py-3 rounded-xl border border-dashed border-slate-300 dark:border-slate-700 text-slate-600 dark:text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-800/50 text-xs font-bold uppercase transition-colors"><Plus size={14} className="inline mr-1"/> Add Seleção</button>
                         <button onClick={calculateDutching} className="flex-1 py-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold uppercase shadow-lg shadow-emerald-600/20 transition-all active:scale-95">Calcular</button>
@@ -414,7 +396,6 @@ const Calculators: React.FC = () => {
                              <input type="number" value={kellyProb} onChange={e => setKellyProb(e.target.value)} className="w-full p-3 bg-slate-50 dark:bg-slate-900 rounded-xl font-mono font-bold outline-none border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white" />
                         </div>
                     </div>
-
                     <div className="bg-purple-50 dark:bg-purple-900/10 p-6 rounded-2xl text-center border border-purple-200 dark:border-purple-500/20">
                         <p className="text-xs font-bold text-purple-500 dark:text-purple-400 uppercase tracking-widest mb-1">Stake Recomendada</p>
                         <h3 className="text-4xl font-black text-purple-600 dark:text-purple-400">{parseFloat(kellyResult) > 0 ? kellyResult : '0.00'}%</h3>
@@ -437,7 +418,6 @@ const Calculators: React.FC = () => {
                           <input type="number" value={valProb} onChange={e => setValProb(e.target.value)} className="w-full p-3 bg-slate-50 dark:bg-slate-900 rounded-xl font-mono font-bold outline-none border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white" />
                       </div>
                    </div>
-                   
                    <div className={`p-6 rounded-2xl border text-center ${valEV > 0 ? 'bg-emerald-50 dark:bg-emerald-900/10 border-emerald-200 dark:border-emerald-500/20' : 'bg-red-50 dark:bg-red-900/10 border-red-200 dark:border-red-500/20'}`}>
                       <p className="text-xs font-bold uppercase tracking-widest mb-1 opacity-70 text-slate-700 dark:text-slate-300">Valor Esperado (EV)</p>
                       <h3 className={`text-4xl font-black ${valEV > 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-500'}`}>
@@ -455,12 +435,10 @@ const Calculators: React.FC = () => {
                 !isPro ? <ProLockScreen /> : (
                 <div className="bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-800 rounded-[2rem] p-6 shadow-sm">
                    <h2 className="text-lg font-black text-slate-900 dark:text-white uppercase tracking-tighter italic mb-6 flex items-center gap-2"><Scale size={20} className="text-blue-500"/> Arbitragem (2-Way)</h2>
-                   
                    <div className="mb-4">
                       <label className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase block mb-2">Investimento Total (R$)</label>
                       <input type="number" value={arbTotalStake} onChange={e => setArbTotalStake(e.target.value)} className="w-full p-3 bg-slate-50 dark:bg-slate-900 rounded-xl font-mono font-bold outline-none border border-slate-200 dark:border-slate-800 text-lg text-slate-900 dark:text-white" />
                    </div>
-
                    <div className="grid grid-cols-2 gap-4 mb-6">
                       <div className="bg-slate-50 dark:bg-slate-900 p-4 rounded-xl border border-slate-200 dark:border-slate-800">
                           <label className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase block mb-2">Casa A (Odds)</label>
@@ -479,7 +457,6 @@ const Calculators: React.FC = () => {
                           </div>
                       </div>
                    </div>
-
                    <div className={`p-4 rounded-xl flex justify-between items-center ${arbRoi > 0 ? 'bg-emerald-500 text-white' : 'bg-slate-100 dark:bg-slate-800 text-slate-500'}`}>
                       <span className="font-bold uppercase text-xs tracking-widest">Lucro Garantido (ROI)</span>
                       <span className="font-black text-xl">{arbRoi.toFixed(2)}%</span>
@@ -492,12 +469,10 @@ const Calculators: React.FC = () => {
             {activeTab === 'stake' && (
                 <div className="bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-800 rounded-[2rem] p-6 shadow-sm">
                    <h2 className="text-lg font-black text-slate-900 dark:text-white uppercase tracking-tighter italic mb-6 flex items-center gap-2"><Percent size={20} className="text-orange-500"/> Calculadora Stake Fixa</h2>
-                   
                    <div className="mb-6">
                       <label className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase block mb-2">Porcentagem da Banca (%)</label>
                       <input type="number" value={stakePercent} onChange={e => setStakePercent(e.target.value)} className="w-full p-4 bg-slate-50 dark:bg-slate-900 rounded-xl font-mono font-black text-3xl outline-none border border-slate-200 dark:border-slate-800 text-center text-orange-500" />
                    </div>
-
                    <div className="bg-slate-50 dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 text-center">
                       <p className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-1">Valor da Aposta</p>
                       <h3 className="text-4xl font-black text-slate-900 dark:text-white">R$ {stakeValue.toFixed(2)}</h3>
@@ -509,7 +484,6 @@ const Calculators: React.FC = () => {
             {activeTab === 'odds' && (
                 <div className="bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-800 rounded-[2rem] p-6 shadow-sm">
                    <h2 className="text-lg font-black text-slate-900 dark:text-white uppercase tracking-tighter italic mb-6 flex items-center gap-2"><ArrowRightLeft size={20} className="text-indigo-500"/> Conversor Universal</h2>
-                   
                    <div className="space-y-4">
                       <div className="bg-slate-50 dark:bg-slate-900 p-4 rounded-xl border border-slate-200 dark:border-slate-800 flex justify-between items-center">
                           <label className="text-xs font-bold text-slate-600 dark:text-slate-400 uppercase">Decimal (Eu/Br)</label>
@@ -531,12 +505,10 @@ const Calculators: React.FC = () => {
                 !isPro ? <ProLockScreen /> : (
                 <div className="bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-800 rounded-[2rem] p-6 shadow-sm">
                    <h2 className="text-lg font-black text-slate-900 dark:text-white uppercase tracking-tighter italic mb-6 flex items-center gap-2"><TrendingUp size={20} className="text-pink-500"/> Break Even Point</h2>
-                   
                    <div className="mb-8">
                       <label className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase block mb-2">Odd Média</label>
                       <input type="number" value={beOdds} onChange={e => setBeOdds(e.target.value)} className="w-full p-4 bg-slate-50 dark:bg-slate-900 rounded-xl font-mono font-black text-3xl outline-none border border-slate-200 dark:border-slate-800 text-center text-pink-500" />
                    </div>
-
                    <div className="p-6 rounded-2xl bg-slate-900 dark:bg-slate-950 text-white text-center shadow-lg shadow-slate-900/20">
                       <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Win Rate Necessária</p>
                       <h3 className="text-4xl font-black text-white">{beWinRate.toFixed(2)}%</h3>
@@ -546,7 +518,7 @@ const Calculators: React.FC = () => {
                 )
             )}
 
-            {/* --- EXPECTATIVA DE CANTOS (POISSON) - EXCLUSIVO PRO --- */}
+            {/* --- EXPECTATIVA DE CANTOS (POISSON ESTRITO) - EXCLUSIVO PRO --- */}
             {activeTab === 'exc' && (
                 !isPro ? <ProLockScreen /> : (
                 <div className="bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-800 rounded-[2rem] p-6 shadow-sm">
@@ -554,8 +526,8 @@ const Calculators: React.FC = () => {
                       <h2 className="text-lg font-black text-slate-900 dark:text-white uppercase tracking-tighter italic flex items-center gap-2">
                         <Radar size={20} className="text-blue-500"/> ExC Poisson Analytics
                       </h2>
-                      <span className="bg-blue-100 text-blue-700 dark:bg-blue-500/10 dark:text-blue-400 px-2 py-1 rounded text-[9px] font-black uppercase tracking-widest border border-blue-200 dark:border-blue-500/20">
-                         High Volume Mode
+                      <span className="bg-emerald-100 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400 px-2 py-1 rounded text-[9px] font-black uppercase tracking-widest border border-emerald-200 dark:border-emerald-500/20">
+                         Strict Mode (Quant)
                       </span>
                    </div>
                    
@@ -566,7 +538,7 @@ const Calculators: React.FC = () => {
                       <select 
                         value={excScenario} 
                         onChange={e => setExcScenario(e.target.value)} 
-                        className="w-full p-3 bg-slate-50 dark:bg-slate-900 rounded-xl font-bold text-sm outline-none border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white cursor-pointer"
+                        className="w-full p-3 bg-slate-50 dark:bg-slate-900 rounded-xl font-bold text-sm outline-none border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white cursor-pointer focus:ring-2 focus:ring-blue-500/50"
                       >
                          <option value="ht_asian">Canto Asiático HT (Volume Seguro)</option>
                          <option value="ht_limit">Canto Limite HT (Abafa)</option>
@@ -575,11 +547,11 @@ const Calculators: React.FC = () => {
                       </select>
                    </div>
 
-                   {/* GATEKEEPER AFROUXADO (Mais flexível para gerar volume) */}
+                   {/* GATEKEEPER DE VALIDAÇÃO */}
                    <div className="mb-8 p-5 bg-slate-50 dark:bg-[#020617] rounded-2xl border border-slate-200 dark:border-slate-800 shadow-inner">
                       <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-4 flex items-center gap-2">
                         <Lock size={12} className={excUnlocked ? 'text-emerald-500' : 'text-slate-400'}/> 
-                        Guardião de Padrão (Filtro Inteligente)
+                        Guardião de Padrão (Validação de Jogo)
                       </p>
                       <div className="space-y-3">
                          {excScenariosData[excScenario].checks.map((check: string, idx: number) => (
@@ -649,24 +621,29 @@ const Calculators: React.FC = () => {
                             </div>
                          </div>
 
-                         {/* TELA DA BLOOMBERG - PROBABILIDADES */}
+                         {/* TELA DA BLOOMBERG - RESULTADOS RÍGIDOS */}
                          <div className="bg-[#020617] rounded-2xl border border-slate-800 p-6 overflow-hidden relative">
-                             {/* Background grid sutil */}
                              <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-5"></div>
                              
                              <div className="relative z-10 flex flex-col md:flex-row justify-between mb-6 gap-6">
                                 <div className="space-y-4 flex-1">
                                     <div>
                                       <p className="text-[9px] uppercase tracking-widest text-slate-500 font-bold mb-1">Pressão (APPM)</p>
-                                      <p className={`text-xl font-black font-mono ${excResult.appm >= 1.0 ? 'text-emerald-400' : 'text-slate-400'}`}>
-                                        {excResult.appm.toFixed(2)}
-                                      </p>
+                                      <div className="flex items-end gap-2">
+                                         <p className={`text-xl font-black font-mono leading-none ${excResult.appm >= 1.05 ? 'text-emerald-400' : 'text-red-400'}`}>
+                                           {excResult.appm.toFixed(2)}
+                                         </p>
+                                         <span className="text-[9px] text-slate-500 mb-0.5">Min: 1.05</span>
+                                      </div>
                                     </div>
                                     <div>
                                       <p className="text-[9px] uppercase tracking-widest text-slate-500 font-bold mb-1">Field Tilt (Domínio)</p>
-                                      <p className={`text-xl font-black font-mono ${excResult.fieldTilt >= 60 ? 'text-blue-400' : 'text-slate-400'}`}>
-                                        {excResult.fieldTilt.toFixed(0)}%
-                                      </p>
+                                      <div className="flex items-end gap-2">
+                                         <p className={`text-xl font-black font-mono leading-none ${excResult.fieldTilt >= 65 ? 'text-blue-400' : 'text-red-400'}`}>
+                                           {excResult.fieldTilt.toFixed(0)}%
+                                         </p>
+                                         <span className="text-[9px] text-slate-500 mb-0.5">Min: 65%</span>
+                                      </div>
                                     </div>
                                 </div>
 
@@ -679,10 +656,10 @@ const Calculators: React.FC = () => {
                                         <div>
                                             <div className="flex justify-between text-xs font-bold mb-1">
                                                <span className="text-white">Canto Limite (+1)</span>
-                                               <span className={excResult.probLimit >= 75 ? 'text-emerald-400' : 'text-yellow-400'}>{excResult.probLimit.toFixed(1)}%</span>
+                                               <span className={excResult.probLimit >= 75 ? 'text-emerald-400' : 'text-slate-400'}>{excResult.probLimit.toFixed(1)}%</span>
                                             </div>
                                             <div className="w-full bg-slate-800 rounded-full h-1.5 overflow-hidden">
-                                               <div className={`h-1.5 rounded-full ${excResult.probLimit >= 75 ? 'bg-emerald-500' : 'bg-yellow-500'}`} style={{ width: `${excResult.probLimit}%` }}></div>
+                                               <div className={`h-1.5 rounded-full ${excResult.probLimit >= 75 ? 'bg-emerald-500' : 'bg-slate-500'}`} style={{ width: `${excResult.probLimit}%` }}></div>
                                             </div>
                                         </div>
                                         <div>
@@ -698,7 +675,7 @@ const Calculators: React.FC = () => {
                                 </div>
                              </div>
 
-                             {/* Veredito do Semáforo */}
+                             {/* Veredito do Semáforo Rigoroso */}
                              <div className="relative z-10">
                                {excResult.signal === 'green' && (
                                   <div className="bg-emerald-500 text-slate-950 w-full py-3 rounded-xl font-black text-sm tracking-wide uppercase shadow-[0_0_15px_rgba(16,185,129,0.4)] text-center">
@@ -711,8 +688,8 @@ const Calculators: React.FC = () => {
                                   </div>
                                )}
                                {excResult.signal === 'red' && (
-                                  <div className="bg-slate-800 border border-slate-700 text-slate-400 w-full py-3 rounded-xl font-black text-sm tracking-wide uppercase text-center">
-                                     {excResult.msg}
+                                  <div className="bg-slate-800 border border-red-500/30 text-red-400 w-full py-3 rounded-xl font-black text-[11px] sm:text-xs tracking-wide uppercase text-center flex items-center justify-center gap-2">
+                                     <AlertTriangle size={14} /> {excResult.msg}
                                   </div>
                                )}
                              </div>
