@@ -1,47 +1,59 @@
 import { GoogleGenerativeAI } from '@google/generative-ai';
 
 export default async function handler(req: any, res: any) {
-  // Apenas requisições POST são permitidas
+  // 1. Bloqueia se não for POST
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method Not Allowed' });
 
   try {
-    const { image } = req.body;
+    const { image, mimeType } = req.body;
     
-    // Pega a chave da Vercel Environments
+    // 2. Valida a Chave da API
     const apiKey = process.env.GEMINI_API_KEY;
-    if (!apiKey) throw new Error("API Key não configurada");
+    if (!apiKey) {
+        console.error("ERRO CRÍTICO: GEMINI_API_KEY não foi encontrada nas variáveis de ambiente da Vercel.");
+        return res.status(500).json({ error: 'A Chave da API (GEMINI_API_KEY) não está configurada na Vercel. Faça um Redeploy.' });
+    }
 
     const genAI = new GoogleGenerativeAI(apiKey);
     const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
 
-    // O Prompt Mestre de Extração HFT
+    // 3. O Prompt Mestre HFT
     const prompt = `Você é um leitor de dados de radar de futebol (ex: Bet365). 
-    Analise esta imagem e extraia os valores. Retorne APENAS um objeto JSON limpo e exato. Sem markdown, sem aspas e sem texto adicional. 
-    Se não encontrar um número, retorne 0 no campo dele.
-    Formato esperado:
+    Analise esta imagem e extraia APENAS os valores numéricos. 
+    Retorne ESTRITAMENTE um objeto JSON válido. Sem formatação markdown, sem crases, sem texto adicional.
+    Formato obrigatório:
     {
-      "min": (número inteiro do minuto do jogo),
-      "target": (soma de cantos se for um placar de escanteios, ou soma de gols se for placar de gols),
-      "apDef": (número de ataques perigosos do time que tem a menor quantidade. Ataque perigoso geralmente tem ícone de chamas ou setas duplas),
-      "apPress": (número de ataques perigosos do time que tem a maior quantidade),
-      "sot": (soma dos chutes NO ALVO de ambos os times),
-      "sofft": (soma dos chutes FORA do alvo de ambos os times)
+      "min": (minuto atual do jogo),
+      "target": (cantos totais atuais OU gols totais atuais),
+      "apDef": (ataques perigosos do time que tem menos),
+      "apPress": (ataques perigosos do time que tem mais),
+      "sot": (chutes no alvo totais da partida),
+      "sofft": (chutes fora totais da partida)
     }`;
 
+    // 4. Envia para a IA identificando se é PNG, JPEG, etc.
     const result = await model.generateContent([
       prompt,
-      { inlineData: { data: image, mimeType: 'image/jpeg' } }
+      { inlineData: { data: image, mimeType: mimeType || 'image/png' } }
     ]);
 
-    // Limpa a resposta da IA para garantir que seja um JSON válido
     let responseText = result.response.text();
+    console.log("Resposta Bruta IA:", responseText);
+
+    // 5. Limpeza agressiva para garantir que o JSON não quebre o sistema
     responseText = responseText.replace(/```json/g, '').replace(/```/g, '').trim();
     
-    const json = JSON.parse(responseText);
-    res.status(200).json(json);
+    const startIndex = responseText.indexOf('{');
+    const endIndex = responseText.lastIndexOf('}');
+    if (startIndex !== -1 && endIndex !== -1) {
+        responseText = responseText.substring(startIndex, endIndex + 1);
+    }
 
-  } catch (error) {
-    console.error("Erro no Vision AI:", error);
-    res.status(500).json({ error: 'Erro ao processar imagem na IA' });
+    const json = JSON.parse(responseText);
+    return res.status(200).json(json);
+
+  } catch (error: any) {
+    console.error("Erro no Backend Vision AI:", error.message || error);
+    return res.status(500).json({ error: error.message || 'Erro interno ao processar a imagem na IA.' });
   }
 }

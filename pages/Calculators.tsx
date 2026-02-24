@@ -124,16 +124,25 @@ const Calculators: React.FC = () => {
         const reader = new FileReader();
         reader.readAsDataURL(file);
         reader.onload = async () => {
-            const base64Data = (reader.result as string).split(',')[1];
+            const resultString = reader.result as string;
+            const base64Data = resultString.split(',')[1];
+            const mimeType = file.type || 'image/png'; // Envia se é PNG ou JPEG
             
-            // Chama a API que criamos na Vercel
+            // Chama a API na Vercel
             const response = await fetch('/api/vision', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ image: base64Data })
+                body: JSON.stringify({ image: base64Data, mimeType })
             });
 
-            if (!response.ok) throw new Error('Falha na API Vision');
+            if (!response.ok) {
+                // Tenta ler qual foi o erro exato que o backend enviou
+                const errorData = await response.json().catch(() => ({}));
+                console.error("Erro do Backend:", errorData);
+                setToast({ type: 'error', message: errorData.error || 'Falha na conexão com a IA.' });
+                setIsScanning(false);
+                return;
+            }
             
             const data = await response.json();
             
