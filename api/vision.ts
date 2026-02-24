@@ -10,12 +10,14 @@ export default async function handler(req: any, res: any) {
     // 2. Valida a Chave da API
     const apiKey = process.env.GEMINI_API_KEY;
     if (!apiKey) {
-        console.error("ERRO CRÍTICO: GEMINI_API_KEY não foi encontrada nas variáveis de ambiente da Vercel.");
-        return res.status(500).json({ error: 'A Chave da API (GEMINI_API_KEY) não está configurada na Vercel. Faça um Redeploy.' });
+        console.error("ERRO CRÍTICO: GEMINI_API_KEY não foi encontrada.");
+        return res.status(500).json({ error: 'A Chave da API não está configurada na Vercel.' });
     }
 
     const genAI = new GoogleGenerativeAI(apiKey);
-    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+    
+    // 🔥 CORREÇÃO AQUI: Atualizamos do 1.5 (Descontinuado) para o novíssimo Gemini 2.5 Flash
+    const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
 
     // 3. O Prompt Mestre HFT
     const prompt = `Você é um leitor de dados de radar de futebol (ex: Bet365). 
@@ -31,7 +33,7 @@ export default async function handler(req: any, res: any) {
       "sofft": (chutes fora totais da partida)
     }`;
 
-    // 4. Envia para a IA identificando se é PNG, JPEG, etc.
+    // 4. Envia para a IA
     const result = await model.generateContent([
       prompt,
       { inlineData: { data: image, mimeType: mimeType || 'image/png' } }
