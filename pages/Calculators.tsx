@@ -129,11 +129,56 @@ const Calculators: React.FC = () => {
 
             if (!response.ok) {
                 const errorData = await response.json().catch(() => ({}));
-                console.error("Erro do Backend:", errorData);
                 setToast({ type: 'error', message: errorData.error || 'Falha na conexão com a IA.' });
                 setIsScanning(false);
                 return;
             }
+            
+            const data = await response.json();
+            
+            if (data) {
+               const cleanVal = (val: any) => (val !== null && val !== undefined && val !== "" && String(val).toLowerCase() !== "null") ? String(val) : "";
+
+               const extMin = cleanVal(data.min);
+               const extGoals = cleanVal(data.goals);
+               const extCorners = cleanVal(data.corners);
+               const extApDef = cleanVal(data.apDef);
+               const extApPress = cleanVal(data.apPress);
+               const extSoT = cleanVal(data.sot);
+               const extSoffT = cleanVal(data.sofft);
+
+               setLiveMin(extMin);
+               
+               // Lógica inteligente: Pega o Alvo correto dependendo de qual aba o usuário está
+               if (activeTab === 'exg') {
+                   setLiveCurrentTarget(extGoals);
+               } else {
+                   setLiveCurrentTarget(extCorners);
+               }
+               
+               setLiveAP_Def(extApDef);
+               setLiveAP_Press(extApPress);
+               setLiveSoT(extSoT);
+               setLiveSoffT(extSoffT);
+               
+               if (typeof incrementAiScan === 'function') incrementAiScan();
+
+               // Verifica se os dados vitais chegaram
+               const targetCheck = activeTab === 'exg' ? extGoals : extCorners;
+               if (!extMin || !targetCheck || !extApDef || !extApPress || !extSoT || !extSoffT) {
+                   setToast({ type: 'error', message: '⚠️ Dados parciais extraídos. Preencha os campos vazios manualmente.' });
+               } else {
+                   setToast({ type: 'success', message: 'Radar mapeado com precisão cirúrgica!' });
+               }
+            }
+            setIsScanning(false);
+        };
+    } catch (error) {
+        console.error("Erro na leitura:", error);
+        setToast({ type: 'error', message: 'Erro ao processar imagem. Preencha manualmente.' });
+        setIsScanning(false);
+    }
+  };
             
             const data = await response.json();
             
