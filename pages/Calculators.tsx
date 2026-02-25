@@ -4,13 +4,14 @@ import {
   Info, ChevronDown, Sparkles, Trash2, Plus, Scale, Percent, ArrowRightLeft, 
   Target, TrendingUp, AlertTriangle, Lock, Crown, Radar, CheckSquare, 
   Square, Activity, Crosshair, BarChart4, Zap, DollarSign, Goal, Lightbulb,
-  Clock, Flag, ShieldAlert, Swords, Power, Scan, Image as ImageIcon, CheckCircle2
+  Clock, Flag, ShieldAlert, Swords, Power, Scan, Image as ImageIcon, CheckCircle2,
+  Flame, Thermometer, RectangleHorizontal
 } from 'lucide-react';
 import { useBetStore } from '../store/useBetStore';
 import { motion, AnimatePresence } from 'framer-motion';
 
 // ==========================================
-// UX INPUT COMPONENT
+// UX INPUT COMPONENTS
 // ==========================================
 const PodInput = ({ label, value, onChange, icon: Icon, placeholder, colorClass, highlight }: any) => (
   <div className="relative group">
@@ -26,9 +27,24 @@ const PodInput = ({ label, value, onChange, icon: Icon, placeholder, colorClass,
               value={value} 
               onChange={onChange} 
               placeholder={placeholder}
-              className={`w-full bg-slate-950 border rounded-xl pl-10 pr-3 py-3.5 font-mono font-bold text-sm outline-none transition-all
+              className={`w-full bg-slate-950 border rounded-xl pl-10 pr-3 py-3 font-mono font-bold text-sm outline-none transition-all
               ${highlight ? `border-${colorClass.split('-')[1]}-500/50 focus:border-${colorClass.split('-')[1]}-400 text-${colorClass.split('-')[1]}-400 shadow-[inset_0_0_10px_rgba(0,0,0,0.2)]` : 'border-slate-800 text-white focus:border-slate-600 focus:bg-[#09090b]'}`}
           />
+      </div>
+  </div>
+);
+
+// 🔥 NOVO COMPONENTE: SELECT DO CONTEXTO TÁTICO
+const PodSelect = ({ label, value, onChange, icon: Icon, options, colorClass }: any) => (
+  <div className="relative group">
+      <label className={`text-[9px] font-black uppercase tracking-widest block mb-1.5 transition-colors text-slate-500`}>{label}</label>
+      <div className="relative">
+          <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
+              <Icon size={14} className="text-slate-400 group-hover:text-slate-300 transition-colors" />
+          </div>
+          <select value={value} onChange={onChange} className={`w-full bg-slate-950 border border-slate-800 text-white rounded-xl pl-10 pr-3 py-3 font-mono font-bold text-[11px] sm:text-xs outline-none focus:border-slate-600 focus:bg-[#09090b] appearance-none cursor-pointer`}>
+              {options.map((opt:any) => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
+          </select>
       </div>
   </div>
 );
@@ -67,17 +83,25 @@ const Calculators: React.FC = () => {
   >('dutching');
 
   // ==========================================
-  // ESTADOS COMPARTILHADOS (ExC e ExG) - 🔥 SEPARADOS
+  // ESTADOS COMPARTILHADOS (ExC e ExG) - SEPARADOS
   // ==========================================
   const [liveMin, setLiveMin] = useState('');
-  const [liveCorners, setLiveCorners] = useState(''); // Separado para Cantos
-  const [liveGoals, setLiveGoals] = useState('');     // Separado para Gols
+  const [liveCorners, setLiveCorners] = useState(''); 
+  const [liveGoals, setLiveGoals] = useState('');     
   const [liveAP_Def, setLiveAP_Def] = useState(''); 
   const [liveAP_Press, setLiveAP_Press] = useState(''); 
-  const [liveAP_5m, setLiveAP_5m] = useState(''); 
   const [liveSoT, setLiveSoT] = useState(''); 
   const [liveSoffT, setLiveSoffT] = useState(''); 
   const [liveCurrentOdd, setLiveCurrentOdd] = useState(''); 
+
+  // 🔥 ESTADOS DO MOTOR CONTEXTUAL (TDF & EDM)
+  const [recentShots, setRecentShots] = useState('');
+  const [recentCorners, setRecentCorners] = useState('');
+  const [pressureTrend, setPressureTrend] = useState('stable'); 
+  const [matchTemp, setMatchTemp] = useState('calm'); 
+  const [redCard, setRedCard] = useState('none'); 
+  const [needsGoal, setNeedsGoal] = useState('false'); 
+  const [recentGoal, setRecentGoal] = useState('false'); 
 
   // ==========================================
   // LÓGICA DO SCANNER VISION IA (HUD)
@@ -149,7 +173,6 @@ const Calculators: React.FC = () => {
 
         if (!response.ok) {
             const errorData = await response.json().catch(() => ({}));
-            console.error("Erro do Backend:", errorData);
             setToast({ type: 'error', message: errorData.error || 'Falha na conexão com a IA.' });
             setIsScanning(false);
             return;
@@ -161,31 +184,34 @@ const Calculators: React.FC = () => {
            const cleanVal = (val: any) => (val !== null && val !== undefined && val !== "" && String(val).toLowerCase() !== "null") ? String(val) : "";
 
            const extMin = cleanVal(data.min);
-           const extGoals = cleanVal(data.goals);
-           const extCorners = cleanVal(data.corners);
+           const extTarget = cleanVal(data.target);
            const extApDef = cleanVal(data.apDef);
            const extApPress = cleanVal(data.apPress);
            const extSoT = cleanVal(data.sot);
            const extSoffT = cleanVal(data.sofft);
 
            setLiveMin(extMin);
-           
-           // 🔥 Atribui corretamente cada alvo para sua própria memória
-           setLiveGoals(extGoals);
-           setLiveCorners(extCorners);
-           
+           if (activeTab === 'exg') setLiveGoals(extTarget); else setLiveCorners(extTarget);
            setLiveAP_Def(extApDef);
            setLiveAP_Press(extApPress);
            setLiveSoT(extSoT);
            setLiveSoffT(extSoffT);
+
+           // Extrações Semânticas HFT
+           if(data.recentShots) setRecentShots(cleanVal(data.recentShots));
+           if(data.recentCorners) setRecentCorners(cleanVal(data.recentCorners));
+           if(data.pressureTrend) setPressureTrend(data.pressureTrend);
+           if(data.matchTemperature) setMatchTemp(data.matchTemperature);
+           if(data.redCard) setRedCard(data.redCard);
+           if(data.needsGoal !== undefined) setNeedsGoal(String(data.needsGoal));
+           if(data.recentGoal !== undefined) setRecentGoal(String(data.recentGoal));
            
            if (typeof incrementAiScan === 'function') incrementAiScan();
 
-           const targetCheck = activeTab === 'exg' ? extGoals : extCorners;
-           if (!extMin || !targetCheck || !extApDef || !extApPress || !extSoT || !extSoffT) {
-               setToast({ type: 'error', message: '⚠️ Dados parciais extraídos. Preencha os campos vazios manualmente.' });
+           if (!extMin || !extTarget || !extApDef || !extApPress || !extSoT || !extSoffT) {
+               setToast({ type: 'error', message: '⚠️ Dados parciais extraídos. Preencha os vazios manualmente.' });
            } else {
-               setToast({ type: 'success', message: 'Radar mapeado com precisão cirúrgica!' });
+               setToast({ type: 'success', message: 'Contexto Mapeado com precisão cirúrgica!' });
            }
         }
         setIsScanning(false);
@@ -198,9 +224,175 @@ const Calculators: React.FC = () => {
 
   const resetScanner = () => {
       setScannedImage(null);
-      setLiveMin(''); setLiveCorners(''); setLiveGoals(''); setLiveAP_Def(''); 
-      setLiveAP_Press(''); setLiveAP_5m(''); setLiveSoT(''); setLiveSoffT('');
+      setLiveMin(''); setLiveCorners(''); setLiveGoals(''); 
+      setLiveAP_Def(''); setLiveAP_Press(''); setLiveSoT(''); setLiveSoffT('');
+      setRecentShots(''); setRecentCorners(''); setPressureTrend('stable');
+      setMatchTemp('calm'); setRedCard('none'); setNeedsGoal('false'); setRecentGoal('false');
   };
+
+  // ==========================================
+  // MOTOR QUÂNTICO (HFT CONFIDENCE ENGINE)
+  // ==========================================
+  const [excScenario, setExcScenario] = useState('ht_asian');
+  const [exgScenario, setExgScenario] = useState('ft_over05');
+
+  const excScenariosData: Record<string, { title: string; checks: string[] }> = {
+    ht_asian: { title: 'Canto Asiático HT (Margem Segura)', checks: ['Relógio entre 25 e 36 minutos?', 'Favorito pressionando ativamente?', 'Assimetria visível no radar?'] },
+    ht_limit: { title: 'Canto Limite HT (Abafa Retranca)', checks: ['Relógio entre 37 e 41 minutos?', 'Ataques rápidos e finalizações ocorrendo?', 'Adversário empurrado para a própria área?'] },
+    ht_zoio: { title: 'Canto Zóio HT (Kamikaze 43+)', checks: ['Relógio passando dos 42 minutos?', 'Favorito perdendo/empatando no sufoco?', 'Bolas sendo jogadas direto na área (chuveirinho)?'] },
+    ft_asian: { title: 'Canto Asiático FT (Volta do Intervalo)', checks: ['Relógio entre 65 e 78 minutos?', 'Time dominou a posse no 2º tempo?', 'Zagueiros rebatendo muitas bolas?'] },
+    ft_limit: { title: 'Canto Limite FT (Desespero Final)', checks: ['Relógio entre 82 e 87 minutos?', 'Modo desespero (Abafa Absoluto)?', 'Adversário não consegue segurar a bola no ataque?'] },
+    ft_zoio: { title: 'Canto Zóio FT (Kamikaze 88+)', checks: ['Relógio passando dos 88 minutos?', 'Goleiro do time perdendo indo pro ataque?', 'Defesa adversária cortando bola pra qualquer lado?'] }
+  };
+
+  const exgScenariosData: Record<string, { title: string; checks: string[] }> = {
+    ht_over05: { title: 'Over 0.5 Gols HT', checks: ['Relógio antes dos 30 minutos?', 'Jogo aberto (Lá e cá) ou favorito amassando?', 'Goleiros já fizeram defesas difíceis?'] },
+    ht_over15: { title: 'Over 1.5 Gols HT (Insanidade)', checks: ['Relógio antes dos 20 minutos?', 'Pelo menos 1 gol já saiu rápido?', 'Ambos os times com linhas defensivas altas?'] },
+    ft_over05: { title: 'Over 0.5 Gols FT (Reta Final)', checks: ['Relógio entre 70 e 80 minutos?', 'Pelo menos um time precisa da vitória desesperadamente?', 'Muitos espaços sendo deixados para contra-ataque?'] },
+    ft_over15: { title: 'Over 1.5 Gols FT', checks: ['Segundo tempo recém iniciado (45 a 60 min)?', 'Time perdendo se lançou pro ataque?', 'Alto índice de chutes dentro da área (SoT alto)?'] },
+    ft_over25: { title: 'Over 2.5 Gols FT', checks: ['Relógio entre 50 e 65 minutos?', 'Os dois times demonstram capacidade ofensiva?', 'Jogo muito faltoso perto da área (Bolas paradas)?'] }
+  };
+
+  const [excChecklist, setExcChecklist] = useState<Record<number, boolean>>({});
+  const [excUnlocked, setExcUnlocked] = useState(false);
+  useEffect(() => { setExcChecklist({}); setExcUnlocked(false); }, [excScenario]);
+  const handleExcCheck = (idx: number) => {
+    const n = { ...excChecklist, [idx] : !excChecklist[idx] }; setExcChecklist(n);
+    setExcUnlocked(Object.keys(n).filter(k => n[parseInt(k)]).length === excScenariosData[excScenario].checks.length);
+  };
+
+  const [exgChecklist, setExgChecklist] = useState<Record<number, boolean>>({});
+  const [exgUnlocked, setExgUnlocked] = useState(false);
+  useEffect(() => { setExgChecklist({}); setExgUnlocked(false); }, [exgScenario]);
+  const handleExgCheck = (idx: number) => {
+    const n = { ...exgChecklist, [idx] : !exgChecklist[idx] }; setExgChecklist(n);
+    setExgUnlocked(Object.keys(n).filter(k => n[parseInt(k)]).length === exgScenariosData[exgScenario].checks.length);
+  };
+
+  const runQuantEngine = (type: 'exc' | 'exg', scenario: string) => {
+      const min = parseFloat(liveMin); 
+      const apDef = parseFloat(liveAP_Def) || 0; 
+      const apPress = parseFloat(liveAP_Press) || 0;
+      const sot = parseFloat(liveSoT) || 0; 
+      const sofft = parseFloat(liveSoffT) || 0;
+      const rShots = parseFloat(recentShots) || ((sot+sofft)/min * 10) || 0; 
+      const rCorners = parseFloat(recentCorners) || 0;
+      const odd = parseFloat(liveCurrentOdd) || 0;
+
+      if (!min || min <= 0 || !apPress) return null;
+
+      const isHT = scenario.includes('ht');
+      const remainingTime = Math.max(1, ((isHT ? 45 : 90) + (isHT ? 3 : 6)) - min);
+      
+      const totalAP = apPress + apDef; 
+      const fieldTilt = totalAP > 0 ? (apPress / totalAP) * 100 : 0;
+      const appm = apPress / min;
+
+      // 1. TEMPORAL DECAY FACTOR (TDF)
+      let wOld = 0.55; let wRecent = 0.45;
+      if (pressureTrend === 'increasing') { wOld = 0.35; wRecent = 0.65; }
+      else if (pressureTrend === 'decreasing') { wOld = 0.75; wRecent = 0.25; }
+
+      let baseLambda = 0;
+      if (type === 'exc') {
+          const rateOld = ((apPress * 0.06) + (sot * 0.35) + (sofft * 0.15)) / min;
+          const rateRecent = ((rCorners * 0.8) + (rShots * 0.2)) / 10;
+          baseLambda = ((rateOld * wOld) + (rateRecent * wRecent)) * remainingTime;
+      } else {
+          const xgOld = ((sot * 0.14) + (sofft * 0.04) + (apPress * 0.005)) / min;
+          const xgRecent = (rShots * 0.16) / 10;
+          baseLambda = ((xgOld * wOld) + (xgRecent * wRecent)) * remainingTime;
+          if (apDef > (apPress * 0.5)) baseLambda *= 1.2; // Fator de Jogo Aberto
+      }
+
+      // 2. EVENT DISRUPTION MULTIPLIER (EDM)
+      if (redCard === 'pressing') baseLambda *= 0.72;
+      if (redCard === 'defending') baseLambda *= 1.28;
+      if (recentGoal === 'true') baseLambda *= 0.82;
+      if (needsGoal === 'true') baseLambda *= 1.12;
+      if (scenario.includes('zoio')) baseLambda *= 1.35;
+
+      // 3. TRÊS CENÁRIOS DE PROJEÇÃO
+      const lamCons = baseLambda * 0.82;
+      const lamNeut = baseLambda;
+      const lamAggr = baseLambda * 1.22;
+
+      const calcProbs = (lam: number) => {
+          const p0 = poissonExact(0, lam); const p1 = poissonExact(1, lam); const p2 = poissonExact(2, lam);
+          return { p1: (1 - p0) * 100, p2: (1 - (p0 + p1)) * 100, p3: (1 - (p0 + p1 + p2)) * 100 };
+      };
+
+      const probCons = calcProbs(lamCons);
+      const probNeut = calcProbs(lamNeut);
+      const probAggr = calcProbs(lamAggr);
+
+      // Determina Alvo Principal baseado na Linha
+      let mainProb = probNeut.p1;
+      let targetKey = 'p1';
+      if (scenario.includes('asian') || scenario.includes('15')) { mainProb = probNeut.p2; targetKey = 'p2'; }
+      if (scenario.includes('25')) { mainProb = probNeut.p3; targetKey = 'p3'; }
+
+      const ev = odd > 0 ? ((mainProb / 100) * odd - 1) * 100 : 0;
+      const fairOdd = mainProb > 0 ? 100 / mainProb : 0;
+
+      // 4. CONFIDENCE SCORE (0-100)
+      let mathScore = odd > 0 ? Math.min(40, ev * 2.5) : Math.min(40, Math.max(0, (mainProb - 50) * 1.5));
+      if (mathScore < 0) mathScore = 0;
+
+      let momentumScore = 0;
+      if (pressureTrend === 'increasing') momentumScore += 10;
+      if (rShots >= 3) momentumScore += 8;
+      if (rCorners >= 2 || appm > 1.2) momentumScore += 7;
+      momentumScore = Math.min(25, momentumScore);
+
+      let contextScore = 0;
+      if (needsGoal === 'true') contextScore += 8;
+      if (matchTemp === 'intense') contextScore += 6;
+      if (fieldTilt > 70) contextScore += 6;
+      contextScore = Math.min(20, contextScore);
+
+      let stabilityScore = 15;
+      if (redCard === 'pressing') stabilityScore -= 10;
+      if (recentGoal === 'true') stabilityScore -= 5;
+      
+      let finalScore = Math.min(100, Math.max(0, mathScore + momentumScore + contextScore + stabilityScore));
+
+      // 5. MOTIVOS (CONFLUÊNCIA)
+      let reasons = [];
+      if (fieldTilt >= 70) reasons.push(`Domínio territorial esmagador (${fieldTilt.toFixed(0)}%)`);
+      if (pressureTrend === 'increasing') reasons.push('Time acelerou nos últimos 10 min (TDF Ativo)');
+      if (rShots >= 2) reasons.push('Alta geração de finalizações recentes');
+      if (redCard === 'defending') reasons.push('Vantagem numérica (Adversário com vermelho)');
+      if (ev > 10) reasons.push(`Odd Desajustada (+${ev.toFixed(1)}% EV)`);
+      if (needsGoal === 'true' && min > 75) reasons.push('Fator Desespero ativado (Reta final)');
+
+      let label = '🔴 Evitar Entrada'; let color = 'red';
+      if (finalScore >= 80) { label = '🔒 ALTA CONFLUÊNCIA'; color = 'green'; }
+      else if (finalScore >= 65) { label = '🟢 FORTE'; color = 'green'; }
+      else if (finalScore >= 50) { label = '🟡 MODERADA'; color = 'yellow'; }
+      else if (finalScore >= 35) { label = '⚠️ FRÁGIL'; color = 'yellow'; }
+
+      let crossCheckMsg = '';
+      if (type === 'exc') {
+          if (sot >= 4 && (sot / apPress) > 0.1) crossCheckMsg = '💡 Perfil Letal: Muitos chutes ao gol. Considere ir para aba de GOLS.';
+          else if (appm > 1.2 && sot <= 1) crossCheckMsg = '✅ Perfil Perfeito: Muito volume e pouca precisão. Cenário clássico de Cantos.';
+      } else {
+          if (apPress > 40 && sot === 0) crossCheckMsg = '⚠️ ALERTA: Volume alto sem chutes. Aba de CANTOS é mais segura aqui.';
+          else if (sot >= 4) crossCheckMsg = '🎯 Radar Confirmado: Excelente taxa de chutes no alvo. Cenário ideal.';
+      }
+
+      let paceMsg = "Padrão";
+      if (momentumScore >= 15) paceMsg = "Avalanche Absoluta";
+      else if (momentumScore >= 8) paceMsg = "Ritmo Acelerado";
+      else if (pressureTrend === 'decreasing') paceMsg = "Esfriando";
+
+      return { 
+         appm, fieldTilt, probCons, probNeut, probAggr, mainProb, targetKey, ev, fairOdd, 
+         finalScore, label, color, reasons, crossCheckMsg, paceMsg, baseLambda
+      };
+  };
+
+  const engineRes = activeTab === 'exc' ? runQuantEngine('exc', excScenario) : runQuantEngine('exg', exgScenario);
 
   const ProLockScreen = () => (
       <div className="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-[2rem] p-8 text-center flex flex-col items-center justify-center min-h-[300px] relative overflow-hidden shadow-sm">
@@ -220,7 +412,7 @@ const Calculators: React.FC = () => {
       </div>
   );
 
-  // Lógicas Clássicas
+  // Lógicas Clássicas Omitidas para Focar no Novo Componente
   const [dutchTotalStake, setDutchTotalStake] = useState('100');
   const [dutchSelections, setDutchSelections] = useState([{ id: 1, name: 'Seleção A', odds: '2.50', stake: 0, profit: 0 }, { id: 2, name: 'Seleção B', odds: '3.20', stake: 0, profit: 0 }]);
   const addDutchSelection = () => setDutchSelections([...dutchSelections, { id: Date.now(), name: `Seleção ${String.fromCharCode(65 + dutchSelections.length)}`, odds: '', stake: 0, profit: 0 }]);
@@ -252,177 +444,6 @@ const Calculators: React.FC = () => {
   const handleDecChange = (val: string) => { setConvDec(val); const d = parseFloat(val); if (d > 1) { setConvProb(((1 / d) * 100).toFixed(2)); setConvAm(d >= 2 ? '+' + ((d - 1) * 100).toFixed(0) : (( -100 / (d - 1) )).toFixed(0)); } };
   const [beOdds, setBeOdds] = useState('1.90'); const beWinRate = parseFloat(beOdds) > 1 ? (1 / parseFloat(beOdds)) * 100 : 0;
 
-
-  const factorial = (n: number): number => (n === 0 || n === 1 ? 1 : n * factorial(n - 1));
-  const poissonExact = (k: number, lambda: number) => (Math.pow(lambda, k) * Math.exp(-lambda)) / factorial(k);
-
-  // ==========================================
-  // 8. LÓGICA ExC QUANTITATIVA (CANTOS)
-  // ==========================================
-  const [excScenario, setExcScenario] = useState('ht_asian');
-  const [excChecklist, setExcChecklist] = useState<Record<number, boolean>>({});
-  const [excUnlocked, setExcUnlocked] = useState(false);
-
-  const excScenariosData: Record<string, { title: string; checks: string[] }> = {
-    ht_asian: { title: 'Canto Asiático HT (Margem Segura)', checks: ['Relógio entre 25 e 36 minutos?', 'Favorito pressionando ativamente?', 'Assimetria visível no radar?'] },
-    ht_limit: { title: 'Canto Limite HT (Abafa Retranca)', checks: ['Relógio entre 37 e 41 minutos?', 'Ataques rápidos e finalizações ocorrendo?', 'Adversário empurrado para a própria área?'] },
-    ht_zoio: { title: 'Canto Zóio HT (Kamikaze 43+)', checks: ['Relógio passando dos 42 minutos?', 'Favorito perdendo/empatando no sufoco?', 'Bolas sendo jogadas direto na área (chuveirinho)?'] },
-    ft_asian: { title: 'Canto Asiático FT (Volta do Intervalo)', checks: ['Relógio entre 65 e 78 minutos?', 'Time dominou a posse no 2º tempo?', 'Zagueiros rebatendo muitas bolas?'] },
-    ft_limit: { title: 'Canto Limite FT (Desespero Final)', checks: ['Relógio entre 82 e 87 minutos?', 'Modo desespero (Abafa Absoluto)?', 'Adversário não consegue segurar a bola no ataque?'] },
-    ft_zoio: { title: 'Canto Zóio FT (Kamikaze 88+)', checks: ['Relógio passando dos 88 minutos?', 'Goleiro do time perdendo indo pro ataque?', 'Defesa adversária cortando bola pra qualquer lado?'] }
-  };
-
-  useEffect(() => { setExcChecklist({}); setExcUnlocked(false); }, [excScenario]);
-  const handleExcCheck = (idx: number) => {
-    const n = { ...excChecklist, [idx] : !excChecklist[idx] }; setExcChecklist(n);
-    setExcUnlocked(Object.keys(n).filter(k => n[parseInt(k)]).length === excScenariosData[excScenario].checks.length);
-  };
-
-  const calculateExC = () => {
-      const min = parseFloat(liveMin); const corners = parseFloat(liveCorners) || 0; // Puxa a variável correta
-      const apDef = parseFloat(liveAP_Def) || 0; const apPress = parseFloat(liveAP_Press) || 0;
-      const ap5m = parseFloat(liveAP_5m) || 0; const currentOdd = parseFloat(liveCurrentOdd) || 0;
-      const sot = parseFloat(liveSoT) || 0; const sofft = parseFloat(liveSoffT) || 0;
-
-      if (!min || min <= 0 || !apPress) return { appm: 0, fieldTilt: 0, proj: 0, probLimit: 0, probAsian: 0, signal: 'none', msg: 'Aguardando dados estruturados...', fairOddLimit: 0, fairOddAsian: 0, ev: 0, momentum: 0, paceMsg: '', crossCheckMsg: '' };
-
-      const isHT = excScenario.includes('ht'); 
-      const isAsianTarget = excScenario.includes('asian');
-      const isZoio = excScenario.includes('zoio');
-      
-      const remainingTime = Math.max(1, ((isHT ? 45 : 90) + (isHT ? 3 : 6)) - min);
-      const totalAP = apPress + apDef; const fieldTilt = totalAP > 0 ? (apPress / totalAP) * 100 : 0;
-      const appm = apPress / min;
-      
-      let crossCheckMsg = '';
-      if (sot >= 4 && (sot / apPress) > 0.1) crossCheckMsg = '💡 Perfil Letal: Muitos chutes ao gol. Considere analisar o mercado de GOLS (ExG).';
-      else if (appm > 1.2 && sot <= 1) crossCheckMsg = '✅ Perfil Perfeito: Muito volume e pouca precisão. Cenário clássico de Cantos.';
-
-      let momentum = 0; let paceMsg = "Padrão"; let urgencyFactor = 1.0;
-      if (ap5m > 0 && apPress > ap5m) {
-          momentum = (apPress - ap5m) / 5;
-          if (momentum >= 2.0) { urgencyFactor += 0.35; paceMsg = "Avalanche Absoluta"; } 
-          else if (momentum >= 1.2) { urgencyFactor += 0.15; paceMsg = "Ritmo Acelerado"; } 
-          else if (momentum < 0.8) { urgencyFactor -= 0.10; paceMsg = "Esfriando"; }
-      }
-
-      if (fieldTilt >= 70) urgencyFactor += 0.15; if (fieldTilt >= 80) urgencyFactor += 0.10;
-      if (isHT && min >= 38) urgencyFactor += 0.10; if (!isHT && min >= 80) urgencyFactor += 0.20;
-      if (isZoio) urgencyFactor += 0.30; 
-
-      const lambda = ((apPress * 0.06) + (sot * 0.35) + (sofft * 0.15)) / min * remainingTime * urgencyFactor;
-      
-      const p0 = poissonExact(0, lambda); const p1 = poissonExact(1, lambda);
-      const probLimit = (1 - p0) * 100; const probAsian = (1 - (p0 + p1)) * 100;
-      const ev = currentOdd > 0 ? (((isAsianTarget ? probAsian : probLimit) / 100) * currentOdd - 1) * 100 : 0;
-
-      let signal = 'red'; let msg = '';
-      if (currentOdd > 0) {
-          if (ev < 0) { signal = 'red'; msg = `🔴 ABORTAR: Odd s/ valor (-EV de ${ev.toFixed(1)}%).`; }
-          else if (ev >= 10 && fieldTilt >= 65) { signal = 'green'; msg = `🟢 SINAL VERDE: EV+ GIGANTE (+${ev.toFixed(1)}%). Compre!`; }
-          else if (ev > 0) { signal = 'yellow'; msg = `🟡 OBSERVATÓRIO: Leve EV+ (+${ev.toFixed(1)}%).`; }
-      } else {
-          const targetProbCheck = isZoio ? probLimit : (isAsianTarget ? probAsian : probLimit);
-          const reqVolume = isZoio ? 0.9 : 1.05;
-
-          if ((appm >= reqVolume || momentum >= 1.5) && fieldTilt >= (isZoio ? 60 : 65)) {
-              if (targetProbCheck >= (isZoio ? 60 : 70) && (sot + sofft) >= (min / 10)) { signal = 'green'; msg = '🟢 SINAL VERDE: ASSIMETRIA CLARA (EV+)'; }
-              else if (targetProbCheck >= 50) { signal = 'yellow'; msg = '🟡 OBSERVATÓRIO: Aguarde a odd valorizar.'; }
-              else { signal = 'red'; msg = '🔴 ABORTAR: Baixa probabilidade matemática.'; }
-          } else { signal = 'red'; msg = appm < reqVolume ? '🔴 ABORTAR: Jogo Lento (Sem Pressão)' : '🔴 ABORTAR: Equilíbrio Tático (Sem Domínio)'; }
-      }
-
-      return { appm, fieldTilt, proj: corners + lambda, probLimit, probAsian, signal, msg, fairOddLimit: probLimit > 0 ? 100 / probLimit : 0, fairOddAsian: probAsian > 0 ? 100 / probAsian : 0, ev, momentum, paceMsg, crossCheckMsg };
-  };
-  const excResult = calculateExC();
-
-  // ==========================================
-  // 9. LÓGICA ExG QUANTITATIVA (GOLS)
-  // ==========================================
-  const [exgScenario, setExgScenario] = useState('ft_over05');
-  const [exgChecklist, setExgChecklist] = useState<Record<number, boolean>>({});
-  const [exgUnlocked, setExgUnlocked] = useState(false);
-
-  const exgScenariosData: Record<string, { title: string; checks: string[] }> = {
-    ht_over05: { title: 'Over 0.5 Gols HT', checks: ['Relógio antes dos 30 minutos?', 'Jogo aberto (Lá e cá) ou favorito amassando?', 'Goleiros já fizeram defesas difíceis?'] },
-    ht_over15: { title: 'Over 1.5 Gols HT (Insanidade)', checks: ['Relógio antes dos 20 minutos?', 'Pelo menos 1 gol já saiu rápido?', 'Ambos os times com linhas defensivas altas?'] },
-    ft_over05: { title: 'Over 0.5 Gols FT (Reta Final)', checks: ['Relógio entre 70 e 80 minutos?', 'Pelo menos um time precisa da vitória desesperadamente?', 'Muitos espaços sendo deixados para contra-ataque?'] },
-    ft_over15: { title: 'Over 1.5 Gols FT', checks: ['Segundo tempo recém iniciado (45 a 60 min)?', 'Time perdendo se lançou pro ataque?', 'Alto índice de chutes dentro da área (SoT alto)?'] },
-    ft_over25: { title: 'Over 2.5 Gols FT', checks: ['Relógio entre 50 e 65 minutos?', 'Os dois times demonstram capacidade ofensiva?', 'Jogo muito faltoso perto da área (Bolas paradas)?'] }
-  };
-
-  useEffect(() => { setExgChecklist({}); setExgUnlocked(false); }, [exgScenario]);
-  const handleExgCheck = (idx: number) => {
-    const n = { ...exgChecklist, [idx] : !exgChecklist[idx] }; setExgChecklist(n);
-    setExgUnlocked(Object.keys(n).filter(k => n[parseInt(k)]).length === exgScenariosData[exgScenario].checks.length);
-  };
-
-  const calculateExG = () => {
-      const min = parseFloat(liveMin); const goals = parseFloat(liveGoals) || 0; // Puxa a variável correta
-      const apDef = parseFloat(liveAP_Def) || 0; const apPress = parseFloat(liveAP_Press) || 0;
-      const currentOdd = parseFloat(liveCurrentOdd) || 0;
-      const sot = parseFloat(liveSoT) || 0; const sofft = parseFloat(liveSoffT) || 0;
-
-      if (!min || min <= 0 || !apPress) return { xgTotal: 0, probPlus1: 0, probPlus2: 0, probPlus3: 0, mainProb: 0, signal: 'none', msg: 'Aguardando dados estruturados...', fairOddGoal: 0, ev: 0, crossCheckMsg: '' };
-
-      const isHT = exgScenario.includes('ht');
-      const remainingTime = Math.max(1, ((isHT ? 45 : 90) + (isHT ? 3 : 6)) - min);
-
-      let crossCheckMsg = '';
-      if (apPress > 40 && sot === 0) crossCheckMsg = '⚠️ ALERTA: Volume alto sem chutes no gol. Mercado de CANTOS (ExC) é mais seguro.';
-      else if (sot >= 4) crossCheckMsg = '🎯 Radar Confirmado: Excelente taxa de chutes no alvo. Cenário ideal.';
-
-      const expectedGoalsSoFar = (sot * 0.14) + (sofft * 0.04) + (apPress * 0.005); 
-      const lambdaGoals = (expectedGoalsSoFar / min) * remainingTime * (apDef > (apPress * 0.5) ? 1.2 : 1.0);
-      
-      const p0 = poissonExact(0, lambdaGoals);
-      const p1 = poissonExact(1, lambdaGoals);
-      const p2 = poissonExact(2, lambdaGoals);
-
-      const probPlus1 = (1 - p0) * 100; 
-      const probPlus2 = (1 - (p0 + p1)) * 100; 
-      const probPlus3 = (1 - (p0 + p1 + p2)) * 100; 
-
-      let mainProb = probPlus1;
-      if (exgScenario.includes('15')) mainProb = probPlus2;
-      if (exgScenario.includes('25')) mainProb = probPlus3;
-
-      const fairOddGoal = mainProb > 0 ? 100 / mainProb : 0;
-      const ev = currentOdd > 0 ? ((mainProb / 100) * currentOdd - 1) * 100 : 0;
-
-      let signal = 'red'; let msg = '';
-      if (currentOdd > 0) {
-          if (ev < 0) { signal = 'red'; msg = `🔴 ABORTAR: Odd s/ valor (-EV).`; }
-          else if (ev >= 10 && sot >= 2) { signal = 'green'; msg = `🟢 SINAL VERDE: BATE NA ODD (+${ev.toFixed(1)}% EV).`; }
-          else if (ev > 0) { signal = 'yellow'; msg = `🟡 OBSERVATÓRIO: Leve EV+.`; }
-      } else {
-          if (sot >= (min/15) || (sot+sofft) >= (min/6)) { 
-              if (mainProb >= 65) { signal = 'green'; msg = '🟢 SINAL VERDE: ALTA TENDÊNCIA DE GOL'; }
-              else if (mainProb >= 45) { signal = 'yellow'; msg = '🟡 OBSERVATÓRIO: Jogo com potencial. Aguarde odd.'; }
-              else { signal = 'red'; msg = '🔴 ABORTAR: Probabilidade matemática baixa para esta linha.'; }
-          } else { signal = 'red'; msg = '🔴 ABORTAR: Faltam finalizações reais no alvo.'; }
-      }
-
-      return { xgTotal: expectedGoalsSoFar + lambdaGoals, probPlus1, probPlus2, probPlus3, mainProb, signal, msg, fairOddGoal, ev, crossCheckMsg };
-  };
-  const exgResult = calculateExG();
-
-
-  const sidebarInfo = (() => {
-    switch(activeTab) {
-      case 'dutching': return { title: 'Gestão de Risco', text: 'O Dutching divide a sua exposição entre múltiplas seleções, diluindo o risco do investimento em um único evento.' };
-      case 'kelly': return { title: 'Cálculo de Exposição', text: 'O Critério de Kelly ajusta matematicamente a stake ideal com base na probabilidade e na odd apresentada.' };
-      case 'value': return { title: 'Análise de EV+', text: 'O conceito de Value Bet compara a cotação oferecida pelo mercado com a probabilidade real.' };
-      case 'arb': return { title: 'Arbitragem Matemática', text: 'Calcula o volume exato a ser distribuído em duas vias para anular o risco direcional.' };
-      case 'stake': return { title: 'Gestão Fixa', text: 'O cálculo de stake fixa percentual ajuda a manter o controle do drawdown em fases de oscilação.' };
-      case 'odds': return { title: 'Leitura Global', text: 'Conversão automática de formatos de cotações utilizados em bolsas esportivas.' };
-      case 'breakeven': return { title: 'Ponto de Equilíbrio', text: 'A taxa de acerto (Hit-Rate) necessária para manter a estabilidade do capital com a odd informada.' };
-      case 'exc': return { title: 'ExC Analytics (Cantos)', text: 'Motor HFT que cruza Domínio (Field Tilt), Momentum e Poisson para achar EV+ em escanteios. Suporta leitura via IA.' };
-      case 'exg': return { title: 'ExG Analytics (Gols)', text: 'Calcula a letalidade do time (SoT) e a abertura tática para precificar a Odd Justa de Gols em tempo real.' };
-      default: return { title: 'Ferramentas Analíticas', text: 'Tome decisões baseadas em dados.' };
-    }
-  })();
-
   const tabs = [
     { id: 'dutching', label: 'Dutching', pro: false }, { id: 'kelly', label: 'Kelly', pro: false },
     { id: 'value', label: 'Value Bet', pro: true }, { id: 'arb', label: 'Arbitragem', pro: true },
@@ -443,9 +464,6 @@ const Calculators: React.FC = () => {
           <h1 className="text-3xl font-black text-slate-900 dark:text-white tracking-tighter uppercase italic">
             Calculadoras Pro <span className="text-slate-400 dark:text-slate-700 text-lg">///</span>
           </h1>
-          <p className="text-slate-500 dark:text-slate-400 text-xs font-bold mt-2 uppercase tracking-widest">
-            Ferramentas matemáticas para vantagem competitiva.
-          </p>
         </div>
       </div>
       
@@ -471,9 +489,7 @@ const Calculators: React.FC = () => {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 px-4 md:px-0">
         <div className="lg:col-span-2 space-y-6 min-w-0 w-full">
             
-            {/* =========================================
-                RENDERIZAÇÃO DAS CALCULADORAS CLÁSSICAS
-            ========================================= */}
+            {/* CALCULADORAS SIMPLES */}
             {activeTab === 'dutching' && (
                 <div className="bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-800 rounded-[2rem] p-6 shadow-sm w-full overflow-hidden">
                     <h2 className="text-lg font-black text-slate-900 dark:text-white uppercase tracking-tighter italic mb-4">Calculadora Dutching</h2>
@@ -741,6 +757,17 @@ const Calculators: React.FC = () => {
                      {excUnlocked && (
                        <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} className="relative z-10 overflow-hidden">
                          
+                         {/* GRID DE CONTEXTO TÁTICO HFT */}
+                         <div className="bg-slate-900 border border-slate-800 rounded-[2rem] p-6 mb-6 shadow-inner">
+                            <h3 className="text-[10px] font-black text-indigo-400 uppercase tracking-widest mb-4 border-b border-slate-800 pb-2">🧠 Matrix de Contexto Tático (IA / Manual)</h3>
+                            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                                <PodSelect label="Pressão (TDF)" value={pressureTrend} onChange={(e:any)=>setPressureTrend(e.target.value)} icon={TrendingUp} options={[{value:'increasing',label:'Acelerando'},{value:'stable',label:'Estável'},{value:'decreasing',label:'Caindo'}]} />
+                                <PodSelect label="Temperatura" value={matchTemp} onChange={(e:any)=>setMatchTemp(e.target.value)} icon={Thermometer} options={[{value:'intense',label:'Intenso (Aberto)'},{value:'calm',label:'Morno (Estudado)'}]} />
+                                <PodSelect label="Expulsão" value={redCard} onChange={(e:any)=>setRedCard(e.target.value)} icon={RectangleHorizontal} options={[{value:'none',label:'Nenhum'},{value:'pressing',label:'No Atacante'},{value:'defending',label:'Na Defesa'}]} />
+                                <PodSelect label="Necessidade" value={needsGoal} onChange={(e:any)=>setNeedsGoal(e.target.value)} icon={Target} options={[{value:'true',label:'Desespero'},{value:'false',label:'Confortável'}]} />
+                            </div>
+                         </div>
+
                          {/* INPUTS AVANÇADOS COM ÍCONES */}
                          <div className="bg-slate-900 rounded-[2rem] p-6 mb-6 border border-slate-800 shadow-inner">
                             <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-5 flex items-center gap-2"><Activity size={14} className="text-emerald-500"/> Global Match Data</h3>
@@ -775,71 +802,92 @@ const Calculators: React.FC = () => {
                              </div>
                          </div>
 
-                         {excResult.crossCheckMsg && (
+                         {engineRes && engineRes.crossCheckMsg && (
                             <div className="mb-6 bg-blue-500/10 border border-blue-500/20 text-blue-400 p-4 rounded-2xl text-xs font-bold flex items-start gap-3 shadow-inner">
                                <Lightbulb size={18} className="shrink-0 mt-0.5 text-blue-400" /> 
-                               <span className="leading-relaxed">{excResult.crossCheckMsg}</span>
+                               <span className="leading-relaxed">{engineRes.crossCheckMsg}</span>
                             </div>
                          )}
 
                          {/* BLOOMBERG TERMINAL UI DEFINITIVO */}
+                         {engineRes && (
                          <div className="bg-[#020617] rounded-[2rem] border border-slate-800 p-6 overflow-hidden relative shadow-2xl mt-4">
                              <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-[0.03]"></div>
                              
                              {/* Brilho Dinâmico Radial Baseado no Resultado */}
                              <div className={`absolute top-0 right-0 w-64 h-64 rounded-full blur-[80px] -mr-20 -mt-20 pointer-events-none transition-colors duration-1000 ${
-                                excResult.signal === 'green' ? 'bg-emerald-500/20' : 
-                                excResult.signal === 'yellow' ? 'bg-yellow-500/10' : 'bg-red-500/10'
+                                engineRes.color === 'green' ? 'bg-emerald-500/20' : 
+                                engineRes.color === 'yellow' ? 'bg-yellow-500/10' : 'bg-red-500/10'
                              }`}></div>
+
+                             {/* TOPO: SCORE DE CONFIANÇA */}
+                             <div className="relative z-10 flex flex-col md:flex-row gap-6 mb-6 pb-6 border-b border-slate-800">
+                                 <div className="flex-shrink-0 flex flex-col items-center justify-center p-4 bg-slate-900/80 rounded-2xl border border-slate-700">
+                                    <p className="text-[9px] uppercase tracking-widest text-slate-500 font-bold mb-2">Confidence Score</p>
+                                    <div className="relative w-20 h-20 flex items-center justify-center rounded-full border-4 border-slate-800">
+                                       <svg className="absolute inset-0 w-full h-full -rotate-90">
+                                         <circle cx="36" cy="36" r="36" fill="transparent" stroke="currentColor" strokeWidth="8" strokeDasharray={`${(engineRes.finalScore / 100) * 226} 226`} className={engineRes.color === 'green' ? 'text-emerald-500' : engineRes.color === 'yellow' ? 'text-yellow-500' : 'text-red-500'} />
+                                       </svg>
+                                       <span className="text-2xl font-black text-white z-10">{engineRes.finalScore.toFixed(0)}</span>
+                                    </div>
+                                    <span className={`mt-3 text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded ${engineRes.color === 'green' ? 'bg-emerald-500/20 text-emerald-400' : engineRes.color === 'yellow' ? 'bg-yellow-500/20 text-yellow-400' : 'bg-red-500/20 text-red-400'}`}>
+                                        {engineRes.label}
+                                    </span>
+                                 </div>
+
+                                 <div className="flex-1 flex flex-col justify-center">
+                                     <p className="text-[10px] uppercase tracking-widest text-slate-500 font-bold mb-3 flex items-center gap-2"><CheckCircle2 size={12}/> Índice de Confluência</p>
+                                     <ul className="space-y-2">
+                                         {engineRes.reasons.length > 0 ? engineRes.reasons.map((r, i) => (
+                                             <li key={i} className="text-[11px] sm:text-xs text-slate-300 flex items-start gap-2 bg-slate-900/50 p-2 rounded-lg border border-slate-800/50">
+                                                 <span className="text-indigo-400 shrink-0 mt-0.5">✔</span> {r}
+                                             </li>
+                                         )) : (
+                                             <li className="text-xs text-slate-500 italic">Sem confluências fortes detectadas.</li>
+                                         )}
+                                     </ul>
+                                 </div>
+                             </div>
                              
                              <div className="relative z-10 flex flex-col md:flex-row justify-between mb-8 gap-8">
                                 {/* Cápsulas de Métricas */}
                                 <div className="space-y-4 flex-1">
                                     <div className="bg-slate-900/80 p-4 rounded-2xl border border-slate-800 flex justify-between items-center">
                                        <span className="text-[10px] uppercase tracking-widest text-slate-500 font-bold flex items-center gap-2"><Activity size={14}/> Pressão (APPM)</span>
-                                       <span className={`text-xl font-black font-mono ${excResult.appm >= 1.05 ? 'text-emerald-400 drop-shadow-[0_0_8px_rgba(52,211,153,0.4)]' : 'text-slate-400'}`}>{excResult.appm.toFixed(2)}</span>
+                                       <span className={`text-xl font-black font-mono ${engineRes.appm >= 1.05 ? 'text-emerald-400 drop-shadow-[0_0_8px_rgba(52,211,153,0.4)]' : 'text-slate-400'}`}>{engineRes.appm.toFixed(2)}</span>
                                     </div>
                                     <div className="bg-slate-900/80 p-4 rounded-2xl border border-slate-800 flex justify-between items-center">
                                        <span className="text-[10px] uppercase tracking-widest text-slate-500 font-bold flex items-center gap-2"><MapIcon size={14}/> Field Tilt</span>
-                                       <span className={`text-xl font-black font-mono ${excResult.fieldTilt >= 65 ? 'text-blue-400 drop-shadow-[0_0_8px_rgba(96,165,250,0.4)]' : 'text-slate-400'}`}>{excResult.fieldTilt.toFixed(0)}%</span>
+                                       <span className={`text-xl font-black font-mono ${engineRes.fieldTilt >= 65 ? 'text-blue-400 drop-shadow-[0_0_8px_rgba(96,165,250,0.4)]' : 'text-slate-400'}`}>{engineRes.fieldTilt.toFixed(0)}%</span>
                                     </div>
                                     <div className="bg-slate-900/80 p-4 rounded-2xl border border-slate-800 flex justify-between items-center">
                                        <span className="text-[10px] uppercase tracking-widest text-slate-500 font-bold flex items-center gap-2"><Zap size={14}/> Momentum</span>
-                                       <span className={`text-xs font-black uppercase tracking-widest ${excResult.momentum >= 1.5 ? 'text-indigo-400' : 'text-slate-400'}`}>{excResult.paceMsg}</span>
+                                       <span className={`text-xs font-black uppercase tracking-widest ${engineRes.momentum >= 1.5 ? 'text-indigo-400' : 'text-slate-400'}`}>{engineRes.paceMsg}</span>
                                     </div>
                                 </div>
 
-                                {/* Gráfico Poisson */}
+                                {/* Gráfico Poisson - 3 Cenários TDF */}
                                 <div className="flex-[1.5] bg-slate-900/80 border border-slate-800 p-5 rounded-2xl shadow-inner flex flex-col justify-center">
                                     <h4 className="text-[10px] text-slate-400 uppercase tracking-widest font-black mb-5 flex justify-between items-center">
-                                       <span className="flex items-center gap-1.5"><BarChart4 size={14} className="text-emerald-500"/> Modelo Poisson</span>
-                                       <span className="text-[8px] text-emerald-500 bg-emerald-500/10 px-2 py-1 rounded">FAIR ODD</span>
+                                       <span className="flex items-center gap-1.5"><BarChart4 size={14} className="text-emerald-500"/> Projeção TDF (Poisson)</span>
                                     </h4>
                                     
-                                    <div className="space-y-5">
-                                        <div>
-                                            <div className="flex justify-between items-end mb-2">
-                                               <span className="text-[10px] font-bold text-slate-300 uppercase tracking-wider">Canto Limite (+1)</span>
-                                               <div className="text-right flex items-center gap-3">
-                                                   <span className={`text-sm font-black font-mono ${excResult.probLimit >= 75 ? 'text-emerald-400' : 'text-slate-400'}`}>{excResult.probLimit.toFixed(1)}%</span>
-                                                   <span className="text-[11px] font-mono font-black text-emerald-500 bg-[#020617] border border-emerald-500/30 px-2 py-1 rounded shadow-inner">@{excResult.fairOddLimit.toFixed(2)}</span>
-                                               </div>
-                                            </div>
-                                            <div className="w-full bg-slate-950 rounded-full h-2 overflow-hidden border border-slate-800">
-                                               <motion.div initial={{ width: 0 }} animate={{ width: `${excResult.probLimit}%` }} transition={{ duration: 1, ease: "easeOut" }} className={`h-full rounded-full ${excResult.probLimit >= 75 ? 'bg-gradient-to-r from-emerald-600 to-emerald-400 shadow-[0_0_10px_rgba(52,211,153,0.5)]' : 'bg-slate-600'}`}></motion.div>
-                                            </div>
+                                    <div className="space-y-4">
+                                        {/* Agressivo */}
+                                        <div className="bg-[#09090b] p-3 rounded-xl border border-slate-800 flex justify-between items-center">
+                                            <div className="flex flex-col"><span className="text-[9px] font-black text-slate-500 uppercase tracking-widest flex items-center gap-1"><Flame size={10} className="text-orange-500"/> Agressivo</span><span className="text-[10px] text-slate-400">Variância Alta</span></div>
+                                            <div className="text-right"><span className="text-sm font-black font-mono text-white">{(engineRes.probAggr as any)[engineRes.targetKey].toFixed(1)}%</span></div>
                                         </div>
-                                        <div>
-                                            <div className="flex justify-between items-end mb-2">
-                                               <span className="text-[10px] font-bold text-slate-300 uppercase tracking-wider">Canto Asiático (+2)</span>
-                                               <div className="text-right flex items-center gap-3">
-                                                   <span className={`text-sm font-black font-mono ${excResult.probAsian >= 50 ? 'text-emerald-400' : 'text-slate-400'}`}>{excResult.probAsian.toFixed(1)}%</span>
-                                                   <span className="text-[11px] font-mono font-black text-emerald-500 bg-[#020617] border border-emerald-500/30 px-2 py-1 rounded shadow-inner">@{excResult.fairOddAsian.toFixed(2)}</span>
-                                               </div>
-                                            </div>
-                                            <div className="w-full bg-slate-950 rounded-full h-2 overflow-hidden border border-slate-800">
-                                               <motion.div initial={{ width: 0 }} animate={{ width: `${excResult.probAsian}%` }} transition={{ duration: 1, ease: "easeOut", delay: 0.2 }} className={`h-full rounded-full ${excResult.probAsian >= 50 ? 'bg-gradient-to-r from-emerald-600 to-emerald-400 shadow-[0_0_10px_rgba(52,211,153,0.5)]' : 'bg-slate-600'}`}></motion.div>
-                                            </div>
+                                        {/* Neutro */}
+                                        <div className="bg-slate-950 p-3 rounded-xl border border-slate-700 flex justify-between items-center relative overflow-hidden">
+                                            <div className="absolute left-0 top-0 bottom-0 w-1 bg-emerald-500"></div>
+                                            <div className="flex flex-col pl-3"><span className="text-[9px] font-black text-white uppercase tracking-widest flex items-center gap-1"><Scale size={10}/> Neutro (Base)</span><span className="text-[10px] text-slate-400">Odd Justa: <strong className="text-emerald-400">@{engineRes.fairOdd.toFixed(2)}</strong></span></div>
+                                            <div className="text-right"><span className="text-lg font-black font-mono text-emerald-400">{(engineRes.probNeut as any)[engineRes.targetKey].toFixed(1)}%</span></div>
+                                        </div>
+                                        {/* Conservador */}
+                                        <div className="bg-[#09090b] p-3 rounded-xl border border-slate-800 flex justify-between items-center">
+                                            <div className="flex flex-col"><span className="text-[9px] font-black text-slate-500 uppercase tracking-widest flex items-center gap-1"><ShieldAlert size={10} className="text-blue-500"/> Conservador</span><span className="text-[10px] text-slate-400">Queda de Ritmo</span></div>
+                                            <div className="text-right"><span className="text-sm font-black font-mono text-white">{(engineRes.probCons as any)[engineRes.targetKey].toFixed(1)}%</span></div>
                                         </div>
                                     </div>
                                 </div>
@@ -847,22 +895,22 @@ const Calculators: React.FC = () => {
 
                              {/* SINAL RADIOATIVO (Neon Button) */}
                              <div className="relative z-20 mt-4">
-                               {excResult.signal === 'green' && (
+                               {engineRes.color === 'green' && (
                                   <motion.div initial={{ scale: 0.95 }} animate={{ scale: 1 }} className="relative group">
                                       <div className="absolute -inset-0.5 bg-gradient-to-r from-emerald-600 to-teal-400 rounded-2xl blur opacity-40 group-hover:opacity-60 transition duration-1000 animate-pulse"></div>
                                       <div className="relative bg-gradient-to-r from-emerald-500 to-emerald-400 text-slate-950 w-full py-5 rounded-2xl font-black text-xs sm:text-sm tracking-widest uppercase text-center shadow-xl flex items-center justify-center gap-2">
-                                         <Zap fill="currentColor" size={18} className="animate-bounce"/> {excResult.msg}
+                                         <Zap fill="currentColor" size={18} className="animate-bounce"/> ENTRADA APROVADA {engineRes.ev > 0 ? `(EV +${engineRes.ev.toFixed(1)}%)` : ''}
                                       </div>
                                   </motion.div>
                                )}
-                               {excResult.signal === 'yellow' && (
-                                  <div className="bg-gradient-to-r from-yellow-500 to-yellow-400 text-slate-950 w-full py-5 rounded-2xl font-black text-xs sm:text-sm tracking-widest uppercase text-center shadow-[0_0_20px_rgba(234,179,8,0.3)]">
-                                     {excResult.msg}
+                               {engineRes.color === 'yellow' && (
+                                  <div className="bg-gradient-to-r from-yellow-500 to-yellow-400 text-slate-950 w-full py-5 rounded-2xl font-black text-xs sm:text-sm tracking-widest uppercase text-center shadow-[0_0_20px_rgba(234,179,8,0.3)] flex justify-center items-center gap-2">
+                                     <AlertTriangle size={16}/> Risco Moderado. Aguarde Odd.
                                   </div>
                                )}
-                               {excResult.signal === 'red' && (
+                               {engineRes.color === 'red' && (
                                   <div className="bg-[#09090b] border border-red-500/30 text-red-400 w-full py-5 rounded-2xl font-black text-[10px] sm:text-xs tracking-widest uppercase text-center flex items-center justify-center gap-2 shadow-inner">
-                                     <AlertTriangle size={16} className="shrink-0 text-red-500"/> {excResult.msg}
+                                     <AlertTriangle size={16} className="shrink-0 text-red-500"/> {engineRes.msg || 'MODELO REJEITA A ENTRADA'}
                                   </div>
                                )}
                              </div>
@@ -872,6 +920,7 @@ const Calculators: React.FC = () => {
                                ⚠️ Atenção: Esta é uma projeção baseada em probabilidade estatística e não constitui recomendação de aposta ou dica financeira.
                              </p>
                          </div>
+                         )}
                        </motion.div>
                      )}
                    </AnimatePresence>
@@ -880,7 +929,7 @@ const Calculators: React.FC = () => {
             )}
 
             {/* =========================================
-                EXPECTATIVA DE GOLS (ExG) - PRO 
+                EXPECTATIVA DE GOLS (ExG) - PRO (UI AVANÇADA)
             ========================================= */}
             {activeTab === 'exg' && (
                 !isPro ? <ProLockScreen /> : (
@@ -972,6 +1021,17 @@ const Calculators: React.FC = () => {
                      {exgUnlocked && (
                        <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} className="relative z-10 overflow-hidden">
                          
+                         {/* GRID DE CONTEXTO TÁTICO HFT */}
+                         <div className="bg-slate-900 border border-slate-800 rounded-[2rem] p-6 mb-6 shadow-inner">
+                            <h3 className="text-[10px] font-black text-indigo-400 uppercase tracking-widest mb-4 border-b border-slate-800 pb-2">🧠 Matrix de Contexto Tático (IA / Manual)</h3>
+                            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                                <PodSelect label="Pressão (TDF)" value={pressureTrend} onChange={(e:any)=>setPressureTrend(e.target.value)} icon={TrendingUp} options={[{value:'increasing',label:'Acelerando'},{value:'stable',label:'Estável'},{value:'decreasing',label:'Caindo'}]} />
+                                <PodSelect label="Temperatura" value={matchTemp} onChange={(e:any)=>setMatchTemp(e.target.value)} icon={Thermometer} options={[{value:'intense',label:'Intenso (Aberto)'},{value:'calm',label:'Morno (Estudado)'}]} />
+                                <PodSelect label="Expulsão" value={redCard} onChange={(e:any)=>setRedCard(e.target.value)} icon={RectangleHorizontal} options={[{value:'none',label:'Nenhum'},{value:'pressing',label:'No Atacante'},{value:'defending',label:'Na Defesa'}]} />
+                                <PodSelect label="Necessidade" value={needsGoal} onChange={(e:any)=>setNeedsGoal(e.target.value)} icon={Target} options={[{value:'true',label:'Desespero'},{value:'false',label:'Confortável'}]} />
+                            </div>
+                         </div>
+
                          {/* INPUTS AVANÇADOS COM ÍCONES */}
                          <div className="bg-slate-900 rounded-[2rem] p-6 mb-6 border border-slate-800 shadow-inner">
                             <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-5 flex items-center gap-2"><Activity size={14} className="text-orange-500"/> Global Match Data</h3>
@@ -985,7 +1045,7 @@ const Calculators: React.FC = () => {
                                 <h3 className="text-[10px] font-black text-orange-500 uppercase tracking-widest mb-4 flex items-center gap-2"><Crosshair size={14} /> Lethality Metrics (Ataque)</h3>
                                 <div className="grid grid-cols-2 gap-3">
                                    <PodInput label="Ataques P. Atual" value={liveAP_Press} onChange={(e:any) => setLiveAP_Press(e.target.value)} icon={Swords} placeholder="00" highlight colorClass="text-orange-500" />
-                                   <div className="hidden md:block"></div> {/* Espaçador */}
+                                   <PodInput label="AP (Há 5 min)" value={liveAP_5m} onChange={(e:any) => setLiveAP_5m(e.target.value)} icon={TrendingUp} placeholder="Opcional" highlight colorClass="text-orange-500" />
                                    <PodInput label="Chutes no Alvo" value={liveSoT} onChange={(e:any) => setLiveSoT(e.target.value)} icon={Target} placeholder="0" highlight colorClass="text-orange-500" />
                                    <PodInput label="Chutes Fora" value={liveSoffT} onChange={(e:any) => setLiveSoffT(e.target.value)} icon={Target} placeholder="0" highlight colorClass="text-orange-500" />
                                 </div>
@@ -1000,122 +1060,131 @@ const Calculators: React.FC = () => {
                                     <DollarSign size={24} className="text-orange-400" />
                                  </div>
                                  <div className="flex-1">
-                                    <label className="text-[9px] font-black text-orange-500 uppercase tracking-[0.2em] block mb-1">Odd Oferecida (Scanner de EV%)</label>
+                                    <label className="text-[9px] font-black text-orange-500 uppercase tracking-[0.2em] block mb-1">Odd Oferecida Bet365 (Scanner de EV%)</label>
                                     <input type="number" step="0.01" placeholder="Ex: 1.83" value={liveCurrentOdd} onChange={e => setLiveCurrentOdd(e.target.value)} className="w-full bg-transparent text-2xl font-mono font-black text-white outline-none placeholder:text-slate-700" />
                                  </div>
                              </div>
                          </div>
 
-                         {exgResult.crossCheckMsg && (
+                         {engineRes && engineRes.crossCheckMsg && (
                             <div className="mb-6 bg-blue-500/10 border border-blue-500/20 text-blue-400 p-4 rounded-2xl text-xs font-bold flex items-start gap-3 shadow-inner">
                                <Lightbulb size={18} className="shrink-0 mt-0.5 text-blue-400" /> 
-                               <span className="leading-relaxed">{exgResult.crossCheckMsg}</span>
+                               <span className="leading-relaxed">{engineRes.crossCheckMsg}</span>
                             </div>
                          )}
 
                          {/* BLOOMBERG TERMINAL UI DEFINITIVO - GOLS */}
+                         {engineRes && (
                          <div className="bg-[#020617] rounded-[2rem] border border-slate-800 p-6 overflow-hidden relative shadow-2xl mt-4">
                              <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-[0.03]"></div>
                              
                              {/* Brilho Dinâmico Radial Baseado no Resultado */}
                              <div className={`absolute top-0 right-0 w-64 h-64 rounded-full blur-[80px] -mr-20 -mt-20 pointer-events-none transition-colors duration-1000 ${
-                                exgResult.signal === 'green' ? 'bg-orange-500/20' : 
-                                exgResult.signal === 'yellow' ? 'bg-yellow-500/10' : 'bg-red-500/10'
+                                engineRes.color === 'green' ? 'bg-orange-500/20' : 
+                                engineRes.color === 'yellow' ? 'bg-yellow-500/10' : 'bg-red-500/10'
                              }`}></div>
+
+                             {/* TOPO: SCORE DE CONFIANÇA */}
+                             <div className="relative z-10 flex flex-col md:flex-row gap-6 mb-6 pb-6 border-b border-slate-800">
+                                 <div className="flex-shrink-0 flex flex-col items-center justify-center p-4 bg-slate-900/80 rounded-2xl border border-slate-700">
+                                    <p className="text-[9px] uppercase tracking-widest text-slate-500 font-bold mb-2">Confidence Score</p>
+                                    <div className="relative w-20 h-20 flex items-center justify-center rounded-full border-4 border-slate-800">
+                                       <svg className="absolute inset-0 w-full h-full -rotate-90">
+                                         <circle cx="36" cy="36" r="36" fill="transparent" stroke="currentColor" strokeWidth="8" strokeDasharray={`${(engineRes.finalScore / 100) * 226} 226`} className={engineRes.color === 'green' ? 'text-orange-500' : engineRes.color === 'yellow' ? 'text-yellow-500' : 'text-red-500'} />
+                                       </svg>
+                                       <span className="text-2xl font-black text-white z-10">{engineRes.finalScore.toFixed(0)}</span>
+                                    </div>
+                                    <span className={`mt-3 text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded ${engineRes.color === 'green' ? 'bg-orange-500/20 text-orange-400' : engineRes.color === 'yellow' ? 'bg-yellow-500/20 text-yellow-400' : 'bg-red-500/20 text-red-400'}`}>
+                                        {engineRes.label}
+                                    </span>
+                                 </div>
+
+                                 <div className="flex-1 flex flex-col justify-center">
+                                     <p className="text-[10px] uppercase tracking-widest text-slate-500 font-bold mb-3 flex items-center gap-2"><CheckCircle2 size={12}/> Índice de Confluência</p>
+                                     <ul className="space-y-2">
+                                         {engineRes.reasons.length > 0 ? engineRes.reasons.map((r, i) => (
+                                             <li key={i} className="text-[11px] sm:text-xs text-slate-300 flex items-start gap-2 bg-slate-900/50 p-2 rounded-lg border border-slate-800/50">
+                                                 <span className="text-indigo-400 shrink-0 mt-0.5">✔</span> {r}
+                                             </li>
+                                         )) : (
+                                             <li className="text-xs text-slate-500 italic">Sem confluências fortes detectadas.</li>
+                                         )}
+                                     </ul>
+                                 </div>
+                             </div>
                              
                              <div className="relative z-10 flex flex-col md:flex-row justify-between mb-8 gap-8">
                                 {/* Cápsulas de Métricas */}
-                                <div className="space-y-4 flex-1 flex flex-col justify-center">
-                                    <div className="bg-slate-900/80 p-5 rounded-2xl border border-slate-800 text-center shadow-inner">
-                                       <span className="text-[10px] uppercase tracking-widest text-slate-500 font-bold block mb-2"><Activity size={14} className="inline mr-1"/> xG Criado (Gols Esperados)</span>
-                                       <span className={`text-5xl font-black font-mono tracking-tighter ${exgResult.xgTotal >= 1.0 ? 'text-orange-400 drop-shadow-[0_0_10px_rgba(251,146,60,0.4)]' : 'text-slate-400'}`}>{exgResult.xgTotal.toFixed(2)}</span>
+                                <div className="space-y-4 flex-1">
+                                    <div className="bg-slate-900/80 p-4 rounded-2xl border border-slate-800 flex justify-between items-center">
+                                       <span className="text-[10px] uppercase tracking-widest text-slate-500 font-bold flex items-center gap-2"><Activity size={14}/> xG Criado</span>
+                                       <span className={`text-xl font-black font-mono ${engineRes.appm >= 1.05 ? 'text-orange-400 drop-shadow-[0_0_8px_rgba(251,146,60,0.4)]' : 'text-slate-400'}`}>{((parseFloat(liveSoT||'0')*0.14) + (parseFloat(liveSoffT||'0')*0.04)).toFixed(2)}</span>
+                                    </div>
+                                    <div className="bg-slate-900/80 p-4 rounded-2xl border border-slate-800 flex justify-between items-center">
+                                       <span className="text-[10px] uppercase tracking-widest text-slate-500 font-bold flex items-center gap-2"><MapIcon size={14}/> Field Tilt</span>
+                                       <span className={`text-xl font-black font-mono ${engineRes.fieldTilt >= 65 ? 'text-blue-400 drop-shadow-[0_0_8px_rgba(96,165,250,0.4)]' : 'text-slate-400'}`}>{engineRes.fieldTilt.toFixed(0)}%</span>
+                                    </div>
+                                    <div className="bg-slate-900/80 p-4 rounded-2xl border border-slate-800 flex justify-between items-center">
+                                       <span className="text-[10px] uppercase tracking-widest text-slate-500 font-bold flex items-center gap-2"><Zap size={14}/> Momentum</span>
+                                       <span className={`text-xs font-black uppercase tracking-widest ${engineRes.momentum >= 1.5 ? 'text-indigo-400' : 'text-slate-400'}`}>{engineRes.paceMsg}</span>
                                     </div>
                                 </div>
 
-                                {/* Gráfico Poisson Dinâmico Baseado no Cenário */}
+                                {/* Gráfico Poisson - 3 Cenários TDF */}
                                 <div className="flex-[1.5] bg-slate-900/80 border border-slate-800 p-5 rounded-2xl shadow-inner flex flex-col justify-center">
                                     <h4 className="text-[10px] text-slate-400 uppercase tracking-widest font-black mb-5 flex justify-between items-center">
-                                       <span className="flex items-center gap-1.5"><BarChart4 size={14} className="text-orange-500"/> Modelo Poisson</span>
-                                       <span className="text-[8px] text-orange-500 bg-orange-500/10 px-2 py-1 rounded">FAIR ODD</span>
+                                       <span className="flex items-center gap-1.5"><BarChart4 size={14} className="text-orange-500"/> Projeção TDF (Poisson)</span>
                                     </h4>
                                     
-                                    <div className="space-y-5">
-                                        {/* EXIBE +1 GOL */}
-                                        <div>
-                                            <div className="flex justify-between items-end mb-2">
-                                               <span className="text-[10px] font-bold text-slate-300 uppercase tracking-wider">Lim / Over 0.5 (+1 Gol)</span>
-                                               <div className="text-right flex items-center gap-3">
-                                                   <span className={`text-sm font-black font-mono ${exgResult.probPlus1 >= 70 ? 'text-orange-400' : 'text-slate-400'}`}>{exgResult.probPlus1.toFixed(1)}%</span>
-                                                   <span className="text-[11px] font-mono font-black text-orange-500 bg-[#020617] border border-orange-500/30 px-2 py-1 rounded shadow-inner">@{(exgResult.probPlus1 > 0 ? 100/exgResult.probPlus1 : 0).toFixed(2)}</span>
-                                               </div>
-                                            </div>
-                                            <div className="w-full bg-slate-950 rounded-full h-2 overflow-hidden border border-slate-800">
-                                               <motion.div initial={{ width: 0 }} animate={{ width: `${exgResult.probPlus1}%` }} transition={{ duration: 1, ease: "easeOut" }} className={`h-full rounded-full ${exgResult.probPlus1 >= 70 ? 'bg-gradient-to-r from-orange-600 to-orange-400 shadow-[0_0_10px_rgba(251,146,60,0.5)]' : 'bg-slate-600'}`}></motion.div>
-                                            </div>
+                                    <div className="space-y-4">
+                                        {/* Agressivo */}
+                                        <div className="bg-[#09090b] p-3 rounded-xl border border-slate-800 flex justify-between items-center">
+                                            <div className="flex flex-col"><span className="text-[9px] font-black text-slate-500 uppercase tracking-widest flex items-center gap-1"><Flame size={10} className="text-orange-500"/> Agressivo</span><span className="text-[10px] text-slate-400">Variância Alta</span></div>
+                                            <div className="text-right"><span className="text-sm font-black font-mono text-white">{(engineRes.probAggr as any)[engineRes.targetKey].toFixed(1)}%</span></div>
                                         </div>
-
-                                        {/* EXIBE +2 GOLS SE O MERCADO FOR 1.5 OU MAIOR */}
-                                        {(exgScenario.includes('15') || exgScenario.includes('25')) && (
-                                        <div>
-                                            <div className="flex justify-between items-end mb-2">
-                                               <span className="text-[10px] font-bold text-slate-300 uppercase tracking-wider">Asiático / Over 1.5 (+2 Gols)</span>
-                                               <div className="text-right flex items-center gap-3">
-                                                   <span className={`text-sm font-black font-mono ${exgResult.probPlus2 >= 50 ? 'text-orange-400' : 'text-slate-400'}`}>{exgResult.probPlus2.toFixed(1)}%</span>
-                                                   <span className="text-[11px] font-mono font-black text-orange-500 bg-[#020617] border border-orange-500/30 px-2 py-1 rounded shadow-inner">@{(exgResult.probPlus2 > 0 ? 100/exgResult.probPlus2 : 0).toFixed(2)}</span>
-                                               </div>
-                                            </div>
-                                            <div className="w-full bg-slate-950 rounded-full h-2 overflow-hidden border border-slate-800">
-                                               <motion.div initial={{ width: 0 }} animate={{ width: `${exgResult.probPlus2}%` }} transition={{ duration: 1, ease: "easeOut", delay: 0.2 }} className={`h-full rounded-full ${exgResult.probPlus2 >= 50 ? 'bg-gradient-to-r from-orange-600 to-orange-400 shadow-[0_0_10px_rgba(251,146,60,0.5)]' : 'bg-slate-600'}`}></motion.div>
-                                            </div>
+                                        {/* Neutro */}
+                                        <div className="bg-slate-950 p-3 rounded-xl border border-slate-700 flex justify-between items-center relative overflow-hidden">
+                                            <div className="absolute left-0 top-0 bottom-0 w-1 bg-orange-500"></div>
+                                            <div className="flex flex-col pl-3"><span className="text-[9px] font-black text-white uppercase tracking-widest flex items-center gap-1"><Scale size={10}/> Neutro (Base)</span><span className="text-[10px] text-slate-400">Odd Justa: <strong className="text-orange-400">@{engineRes.fairOdd.toFixed(2)}</strong></span></div>
+                                            <div className="text-right"><span className="text-lg font-black font-mono text-orange-400">{(engineRes.probNeut as any)[engineRes.targetKey].toFixed(1)}%</span></div>
                                         </div>
-                                        )}
-
-                                        {/* EXIBE +3 GOLS SE O MERCADO FOR OVER 2.5 */}
-                                        {exgScenario.includes('25') && (
-                                        <div>
-                                            <div className="flex justify-between items-end mb-2">
-                                               <span className="text-[10px] font-bold text-slate-300 uppercase tracking-wider">Over 2.5 (+3 Gols)</span>
-                                               <div className="text-right flex items-center gap-3">
-                                                   <span className={`text-sm font-black font-mono ${exgResult.probPlus3 >= 40 ? 'text-orange-400' : 'text-slate-400'}`}>{exgResult.probPlus3.toFixed(1)}%</span>
-                                                   <span className="text-[11px] font-mono font-black text-orange-500 bg-[#020617] border border-orange-500/30 px-2 py-1 rounded shadow-inner">@{(exgResult.probPlus3 > 0 ? 100/exgResult.probPlus3 : 0).toFixed(2)}</span>
-                                               </div>
-                                            </div>
-                                            <div className="w-full bg-slate-950 rounded-full h-2 overflow-hidden border border-slate-800">
-                                               <motion.div initial={{ width: 0 }} animate={{ width: `${exgResult.probPlus3}%` }} transition={{ duration: 1, ease: "easeOut", delay: 0.4 }} className={`h-full rounded-full ${exgResult.probPlus3 >= 40 ? 'bg-gradient-to-r from-orange-600 to-orange-400 shadow-[0_0_10px_rgba(251,146,60,0.5)]' : 'bg-slate-600'}`}></motion.div>
-                                            </div>
+                                        {/* Conservador */}
+                                        <div className="bg-[#09090b] p-3 rounded-xl border border-slate-800 flex justify-between items-center">
+                                            <div className="flex flex-col"><span className="text-[9px] font-black text-slate-500 uppercase tracking-widest flex items-center gap-1"><ShieldAlert size={10} className="text-blue-500"/> Conservador</span><span className="text-[10px] text-slate-400">Queda de Ritmo</span></div>
+                                            <div className="text-right"><span className="text-sm font-black font-mono text-white">{(engineRes.probCons as any)[engineRes.targetKey].toFixed(1)}%</span></div>
                                         </div>
-                                        )}
                                     </div>
                                 </div>
                              </div>
 
                              {/* SINAL RADIOATIVO (Neon Button) */}
                              <div className="relative z-20 mt-4">
-                               {exgResult.signal === 'green' && (
-                                  <motion.div initial={{ scale: 0.95 }} animate={{ scale: 1 }} className="relative group">
-                                      <div className="absolute -inset-0.5 bg-gradient-to-r from-orange-600 to-amber-400 rounded-2xl blur opacity-40 group-hover:opacity-60 transition duration-1000 animate-pulse"></div>
-                                      <div className="relative bg-gradient-to-r from-orange-500 to-orange-400 text-slate-950 w-full py-5 rounded-2xl font-black text-xs sm:text-sm tracking-widest uppercase text-center shadow-xl flex items-center justify-center gap-2">
-                                         <Target fill="currentColor" size={18} className="animate-bounce"/> {exgResult.msg}
+                               {engineRes.color === 'green' && (
+                                  <motion.div initial={{ scale: 0.95 }} animate={{ scale: 1 }} className="relative group cursor-pointer">
+                                      <div className={`absolute -inset-0.5 rounded-2xl blur opacity-40 group-hover:opacity-60 transition animate-pulse bg-gradient-to-r from-orange-600 to-amber-400`}></div>
+                                      <div className={`relative w-full py-4 rounded-2xl font-black text-xs sm:text-sm tracking-widest uppercase text-center text-slate-950 flex items-center justify-center gap-2 bg-orange-500`}>
+                                         <Target fill="currentColor" size={18} className="animate-bounce"/> ENTRADA APROVADA {engineRes.ev > 0 ? `(EV +${engineRes.ev.toFixed(1)}%)` : ''}
                                       </div>
                                   </motion.div>
                                )}
-                               {exgResult.signal === 'yellow' && (
-                                  <div className="bg-gradient-to-r from-yellow-500 to-yellow-400 text-slate-950 w-full py-5 rounded-2xl font-black text-xs sm:text-sm tracking-widest uppercase text-center shadow-[0_0_20px_rgba(234,179,8,0.3)]">
-                                     {exgResult.msg}
+                               {engineRes.color === 'yellow' && (
+                                  <div className="bg-yellow-500 text-slate-950 w-full py-4 rounded-2xl font-black text-xs uppercase text-center flex justify-center gap-2">
+                                    <AlertTriangle size={16}/> Risco Moderado. Monitore as Odds.
                                   </div>
                                )}
-                               {exgResult.signal === 'red' && (
-                                  <div className="bg-[#09090b] border border-red-500/30 text-red-400 w-full py-5 rounded-2xl font-black text-[10px] sm:text-xs tracking-widest uppercase text-center flex items-center justify-center gap-2 shadow-inner">
-                                     <AlertTriangle size={16} className="shrink-0 text-red-500"/> {exgResult.msg}
+                               {engineRes.color === 'red' && (
+                                  <div className="bg-[#09090b] border border-red-500/30 text-red-400 w-full py-4 rounded-2xl font-black text-[10px] sm:text-xs tracking-widest uppercase text-center flex items-center justify-center gap-2 shadow-inner">
+                                     <AlertTriangle size={16} className="shrink-0 text-red-500"/> {engineRes.msg || 'MODELO REJEITA A ENTRADA'}
                                   </div>
                                )}
                              </div>
-
+                             
                              {/* DISCLAIMER DE RESPONSABILIDADE */}
                              <p className="text-center text-[8px] sm:text-[9px] text-slate-500/70 font-bold uppercase tracking-[0.2em] mt-6">
                                ⚠️ Atenção: Esta é uma projeção baseada em probabilidade estatística e não constitui recomendação de aposta ou dica financeira.
                              </p>
                          </div>
+                         )}
                        </motion.div>
                      )}
                    </AnimatePresence>
@@ -1128,7 +1197,7 @@ const Calculators: React.FC = () => {
         {/* COLUNA DIREITA (SIDEBAR DINÂMICA) */}
         <div className="lg:col-span-1 space-y-6 w-full min-w-0">
             <div className="bg-white dark:bg-[#0f172a] rounded-[1.5rem] md:rounded-[2rem] border border-slate-200 dark:border-slate-800 p-6 md:p-8 shadow-sm sticky top-6">
-                <h4 className="font-black text-slate-900 dark:text-white mb-6 uppercase tracking-widest text-xs">Ações Rápidas</h4>
+                <h4 className="font-black text-slate-900 dark:text-white mb-6 uppercase tracking-widest text-xs">O Terminal HFT</h4>
                 <div className="p-4 bg-slate-50 dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800">
                     <p className="text-[10px] text-slate-500 dark:text-slate-400 mb-2 uppercase font-bold tracking-wider">{sidebarInfo.title}</p>
                     <p className="text-sm font-medium text-slate-700 dark:text-slate-300 leading-relaxed">

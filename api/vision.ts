@@ -7,35 +7,41 @@ export default async function handler(req: any, res: any) {
     const { image, mimeType } = req.body;
     
     const apiKey = process.env.GEMINI_API_KEY;
-    if (!apiKey) return res.status(500).json({ error: 'A Chave da API não está configurada.' });
+    if (!apiKey) return res.status(500).json({ error: 'Chave de API ausente.' });
 
     const genAI = new GoogleGenerativeAI(apiKey);
     const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
 
-    // 🔥 O SUPER PROMPT DE EXTRAÇÃO DE RADAR BET365
+    // 🔥 O SUPER PROMPT: PARSER SEMÂNTICO HFT MULTI-SOURCE
     const prompt = `Você é um Analista Quantitativo HFT de futebol. 
-    Sua missão é extrair dados EXATOS de uma imagem de radar de apostas esportivas (como a Bet365).
-    
-    REGRAS DE EXTRAÇÃO:
-    1. GOLS (PLACAR): Olhe para o TOPO CENTRO da imagem. Geralmente são dois grandes números amarelos ou brancos (ex: 0 0, 1 2). Sume os dois números. Este é o valor de "goals".
-    2. ESCANTEIOS (CANTOS): Procure pelo ícone de bandeirinha. Se houver, some os números ao lado delas. Se não estiver visível, retorne "".
-    3. TIME PRESSIONANDO: Encontre a métrica "Ataques Perigosos" (frequentemente com ícone de chamas ou setas duplas). O time com o MAIOR número é o "Pressionando" (apPress). O menor é a Defesa (apDef).
-    4. CHUTES: A Bet365 mostra "Finalizações / Chutes ao Gol" no formato "Total/No Alvo" (exemplo: 11/2). 
-       Para o Time Pressionando:
-       - SOT (No Alvo) = o número DEPOIS da barra (ex: 2).
-       - SOFFT (Para Fora) = Total - No Alvo (ex: 11 - 2 = 9).
-    5. MINUTO: Encontre o relógio do jogo.
-    
-    Retorne OBRIGATORIAMENTE um JSON válido. Se a informação não existir na imagem, retorne string vazia "". Não use markdown (\`\`\`json).
-    
+    Analise esta imagem de estatísticas ao vivo (Bet365, SofaScore, Flashscore, etc).
+    Extraia as métricas numéricas e classifique o contexto tático/comportamental do jogo visível nos gráficos de pressão, heatmaps ou timelines.
+
+    REGRAS DE CLASSIFICAÇÃO CONTEXTUAL:
+    - pressureTrend: Se o gráfico de barras/linha do time pressionando estiver subindo no final, retorne "increasing". Se reto, "stable". Se caindo, "decreasing".
+    - matchTemperature: Se houver muitos chutes recentes, cartões ou ataques altos de ambos, retorne "intense". Se parado, "calm".
+    - redCard: Se o time que ataca mais tem vermelho, retorne "pressing". Se a defesa tem, "defending". Senão, "none".
+    - recentGoal: Se o placar mudou nos últimos minutos visíveis na timeline, true. Senão, false.
+    - needsGoal: Assuma true se houver claro domínio territorial no fim do jogo (fase de abafa).
+
+    MÉTRICAS NUMÉRICAS (Sempre identifique quem Pressiona vs quem Defende pelos Ataques Perigosos/Posse):
+    - Se não houver dados de últimos 10 min explícitos, deduza pelo gráfico ou retorne "".
+
+    Retorne ESTRITAMENTE este JSON (se não achar a info, retorne "" ou false/none):
     {
-      "min": "minuto numérico ou \"\"",
-      "goals": "soma dos gols do placar ou \"\"",
-      "corners": "soma dos escanteios totais ou \"\"",
-      "apPress": "ataques perigosos do time pressionando ou \"\"",
-      "apDef": "ataques perigosos do time defendendo ou \"\"",
-      "sot": "chutes NO ALVO numérico do time pressionando ou \"\"",
-      "sofft": "chutes PARA FORA numérico do time pressionando ou \"\""
+      "min": "minuto atual do jogo",
+      "target": "gols somados ou cantos totais",
+      "apPress": "ataques perigosos totais do time atacando",
+      "apDef": "ataques perigosos totais do time defendendo",
+      "sot": "chutes no alvo totais do time atacando",
+      "sofft": "chutes para fora totais do time atacando",
+      "recentShots": "estimativa de chutes nos últimos 10 min",
+      "recentCorners": "estimativa de cantos nos últimos 10 min",
+      "pressureTrend": "increasing | stable | decreasing",
+      "matchTemperature": "intense | calm",
+      "redCard": "none | pressing | defending",
+      "recentGoal": true/false,
+      "needsGoal": true/false
     }`;
 
     const result = await model.generateContent([
@@ -43,20 +49,16 @@ export default async function handler(req: any, res: any) {
       { inlineData: { data: image, mimeType: mimeType || 'image/png' } }
     ]);
 
-    let responseText = result.response.text();
-    responseText = responseText.replace(/```json/g, '').replace(/```/g, '').trim();
-    
-    const startIndex = responseText.indexOf('{');
-    const endIndex = responseText.lastIndexOf('}');
-    if (startIndex !== -1 && endIndex !== -1) {
-        responseText = responseText.substring(startIndex, endIndex + 1);
-    }
+    let responseText = result.response.text().replace(/```json/g, '').replace(/```/g, '').trim();
+    const start = responseText.indexOf('{');
+    const end = responseText.lastIndexOf('}');
+    if (start !== -1 && end !== -1) responseText = responseText.substring(start, end + 1);
 
     const json = JSON.parse(responseText);
     return res.status(200).json(json);
 
   } catch (error: any) {
-    console.error("Erro no Backend Vision AI:", error.message || error);
-    return res.status(500).json({ error: 'Erro ao processar a imagem. Preencha manualmente.' });
+    console.error("Erro Vision AI:", error);
+    return res.status(500).json({ error: 'Erro ao analisar contexto visual.' });
   }
 }
