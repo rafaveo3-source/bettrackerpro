@@ -216,14 +216,41 @@ const Calculators: React.FC = () => {
            setLiveSoT(extSoT);
            setLiveSoffT(extSoffT);
 
-           // Extrações Semânticas HFT
-           if(data.recentShots) setRecentShots(cleanVal(data.recentShots));
-           if(data.recentCorners) setRecentCorners(cleanVal(data.recentCorners));
-           if(data.pressureTrend) setPressureTrend(data.pressureTrend);
-           if(data.matchTemperature) setMatchTemp(data.matchTemperature);
-           if(data.redCard) setRedCard(data.redCard);
-           if(data.needsGoal !== undefined) setNeedsGoal(String(data.needsGoal));
-           if(data.recentGoal !== undefined) setRecentGoal(String(data.recentGoal));
+           // 🔥 Extrações Semânticas HFT (Com Blindagem Front-End)
+if (data.recentShots !== undefined) {
+  setRecentShots(cleanVal(data.recentShots));
+}
+
+if (data.recentCorners !== undefined) {
+  setRecentCorners(cleanVal(data.recentCorners));
+}
+
+// Enums seguros (já validados no backend, mas protegemos aqui também)
+setPressureTrend(
+  ["increasing", "stable", "decreasing"].includes(data.pressureTrend)
+    ? data.pressureTrend
+    : "stable"
+);
+
+setMatchTemp(
+  ["intense", "calm"].includes(data.matchTemperature)
+    ? data.matchTemperature
+    : "calm"
+);
+
+setRedCard(
+  ["none", "pressing", "defending"].includes(data.redCard)
+    ? data.redCard
+    : "none"
+);
+
+if (data.needsGoal !== undefined) {
+  setNeedsGoal(String(data.needsGoal));
+}
+
+if (data.recentGoal !== undefined) {
+  setRecentGoal(String(data.recentGoal));
+}
            
            if (typeof incrementAiScan === 'function') incrementAiScan();
 
@@ -294,11 +321,12 @@ const Calculators: React.FC = () => {
       const apPress = parseFloat(liveAP_Press) || 0;
       const sot = parseFloat(liveSoT) || 0; 
       const sofft = parseFloat(liveSoffT) || 0;
-      const rShots = parseFloat(recentShots) || ((sot+sofft)/min * 10) || 0; 
+      const rShots = parseFloat(recentShots) || ((sot+sofft)/min * 10) || 0;
+      const ap5m = parseFloat(liveAP_5m) || 0; 
       const rCorners = parseFloat(recentCorners) || 0;
       const odd = parseFloat(liveCurrentOdd) || 0;
 
-      if (!min || min <= 0 || !apPress) return null;
+      if (!min || min <= 0) return null;
 
       const isHT = scenario.includes('ht');
       const remainingTime = Math.max(1, ((isHT ? 45 : 90) + (isHT ? 3 : 6)) - min);
@@ -315,11 +343,11 @@ const Calculators: React.FC = () => {
       let baseLambda = 0;
       if (type === 'exc') {
           const rateOld = ((apPress * 0.06) + (sot * 0.35) + (sofft * 0.15)) / min;
-          const rateRecent = ((rCorners * 0.8) + (rShots * 0.2)) / 10;
+          const rateRecent = ((rCorners * 0.6) + (rShots * 0.2) + (ap5m * 0.02)) / 10;
           baseLambda = ((rateOld * wOld) + (rateRecent * wRecent)) * remainingTime;
       } else {
           const xgOld = ((sot * 0.14) + (sofft * 0.04) + (apPress * 0.005)) / min;
-          const xgRecent = (rShots * 0.16) / 10;
+          const xgRecent = ((rShots * 0.14) + (ap5m * 0.01)) / 10;
           baseLambda = ((xgOld * wOld) + (xgRecent * wRecent)) * remainingTime;
           if (apDef > (apPress * 0.5)) baseLambda *= 1.2; // Fator de Jogo Aberto
       }
@@ -406,9 +434,24 @@ const Calculators: React.FC = () => {
       else if (pressureTrend === 'decreasing') paceMsg = "Esfriando";
 
       return { 
-         appm, fieldTilt, probCons, probNeut, probAggr, mainProb, targetKey, ev, fairOdd, 
-         finalScore, label, color, reasons, crossCheckMsg, paceMsg, baseLambda
-      };
+   appm,
+   fieldTilt,
+   probCons,
+   probNeut,
+   probAggr,
+   mainProb,
+   targetKey,
+   ev,
+   fairOdd,
+   finalScore,
+   label,
+   color,
+   reasons,
+   crossCheckMsg,
+   paceMsg,
+   baseLambda,
+   momentumScore // 🔥 ADICIONADO
+};
   };
 
   const engineRes = activeTab === 'exc' ? runQuantEngine('exc', excScenario) : runQuantEngine('exg', exgScenario);
@@ -896,7 +939,7 @@ const Calculators: React.FC = () => {
                                     </div>
                                     <div className="bg-slate-900/80 p-4 rounded-2xl border border-slate-800 flex justify-between items-center">
                                        <span className="text-[10px] uppercase tracking-widest text-slate-500 font-bold flex items-center gap-2"><Zap size={14}/> Momentum</span>
-                                       <span className={`text-xs font-black uppercase tracking-widest ${engineRes.momentum >= 1.5 ? 'text-indigo-400' : 'text-slate-400'}`}>{engineRes.paceMsg}</span>
+                                       <span className={`text-xs font-black uppercase tracking-widest ${engineRes.momentum >= 15 ? 'text-indigo-400' : 'text-slate-400'}`}>{engineRes.paceMsg}</span>
                                     </div>
                                 </div>
 
@@ -1160,7 +1203,7 @@ const Calculators: React.FC = () => {
                                     </div>
                                     <div className="bg-slate-900/80 p-4 rounded-2xl border border-slate-800 flex justify-between items-center">
                                        <span className="text-[10px] uppercase tracking-widest text-slate-500 font-bold flex items-center gap-2"><Zap size={14}/> Momentum</span>
-                                       <span className={`text-xs font-black uppercase tracking-widest ${engineRes.momentum >= 1.5 ? 'text-indigo-400' : 'text-slate-400'}`}>{engineRes.paceMsg}</span>
+                                       <span className={`text-xs font-black uppercase tracking-widest ${engineRes.momentum >= 15 ? 'text-indigo-400' : 'text-slate-400'}`}>{engineRes.paceMsg}</span>
                                     </div>
                                 </div>
 

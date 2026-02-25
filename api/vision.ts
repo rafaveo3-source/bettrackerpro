@@ -12,38 +12,138 @@ export default async function handler(req: any, res: any) {
     const genAI = new GoogleGenerativeAI(apiKey);
     const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
 
-    // 🔥 O SUPER PROMPT: PARSER SEMÂNTICO HFT MULTI-SOURCE
-    const prompt = `Você é um Analista Quantitativo HFT de futebol. 
-    Analise esta imagem de estatísticas ao vivo (Bet365, SofaScore, Flashscore, etc).
-    Extraia as métricas numéricas e classifique o contexto tático/comportamental do jogo visível nos gráficos de pressão, heatmaps ou timelines.
+    // 🔥 UNIVERSAL FOOTBALL VISION PARSER V5
 
-    REGRAS DE CLASSIFICAÇÃO CONTEXTUAL:
-    - pressureTrend: Se o gráfico de barras/linha do time pressionando estiver subindo no final, retorne "increasing". Se reto, "stable". Se caindo, "decreasing".
-    - matchTemperature: Se houver muitos chutes recentes, cartões ou ataques altos de ambos, retorne "intense". Se parado, "calm".
-    - redCard: Se o time que ataca mais tem vermelho, retorne "pressing". Se a defesa tem, "defending". Senão, "none".
-    - recentGoal: Se o placar mudou nos últimos minutos visíveis na timeline, true. Senão, false.
-    - needsGoal: Assuma true se houver claro domínio territorial no fim do jogo (fase de abafa).
+const prompt = `
+Você é um Analista Quantitativo HFT especialista em leitura visual multi-plataforma.
 
-    MÉTRICAS NUMÉRICAS (Sempre identifique quem Pressiona vs quem Defende pelos Ataques Perigosos/Posse):
-    - Se não houver dados de últimos 10 min explícitos, deduza pelo gráfico ou retorne "".
+A imagem pode ser de:
+- Bet365
+- SofaScore
+- Flashscore
+- Betano
+- RoboTip
+- CornerPro
+- PackBall
+- ou outro provedor.
 
-    Retorne ESTRITAMENTE este JSON (se não achar a info, retorne "" ou false/none):
-    {
-      "min": "minuto atual do jogo",
-      "target": "gols somados ou cantos totais",
-      "apPress": "ataques perigosos totais do time atacando",
-      "apDef": "ataques perigosos totais do time defendendo",
-      "sot": "chutes no alvo totais do time atacando",
-      "sofft": "chutes para fora totais do time atacando",
-      "recentShots": "estimativa de chutes nos últimos 10 min",
-      "recentCorners": "estimativa de cantos nos últimos 10 min",
-      "pressureTrend": "increasing | stable | decreasing",
-      "matchTemperature": "intense | calm",
-      "redCard": "none | pressing | defending",
-      "recentGoal": true/false,
-      "needsGoal": true/false
-    }`;
+PASSO 1 — IDENTIFIQUE O TIPO DE LAYOUT:
+Classifique o layout como:
+- "bet365"
+- "sofascore"
+- "flashscore"
+- "betano"
+- "robottip"
+- "cornerpro"
+- "packball"
+- "unknown"
 
+Use:
+- posição do placar
+- formato de gráfico (barras verticais, horizontais, radar, timeline)
+- estilo de ícones
+- cores predominantes
+
+PASSO 2 — EXTRAIA DADOS POR SIGNIFICADO, NÃO POR POSIÇÃO
+
+Nunca confie apenas na ordem dos ícones.
+Identifique pelo CONTEXTO VISUAL:
+
+ESCANTEIOS:
+- palavra "Escanteios", "Cantos", "Corners"
+- ícone de bandeira triangular
+- número ao lado da bandeira
+
+CARTÃO VERMELHO:
+- quadrado vermelho
+- palavra "Cartões vermelhos"
+- número ao lado do quadrado vermelho
+
+CARTÃO AMARELO:
+- quadrado amarelo
+- palavra "Cartões amarelos"
+
+ATAQUES PERIGOSOS:
+- label: "Ataques Perigosos", "Dangerous Attacks"
+- sempre existem dois números (esquerda vs direita)
+
+CHUTES NO ALVO:
+- "Finalizações no alvo"
+- "Chutes no alvo"
+- "Shots on Target"
+
+POSSE:
+- barra verde/vermelha
+- porcentagens 44% vs 56%
+
+PASSO 3 — DEFINIR TIME QUE PRESSIONA
+
+O time que pressiona é:
+- maior Ataque Perigoso
+- OU maior volume de finalizações
+- OU maior domínio visual no gráfico
+
+apPress = maior valor
+apDef = menor valor
+
+PASSO 4 — CARTÃO VERMELHO
+
+Se houver cartão vermelho:
+- se pertence ao time com maior AP → redCard = "pressing"
+- se pertence ao time com menor AP → redCard = "defending"
+- se nenhum → "none"
+
+Nunca confunda bandeira (escanteio) com cartão vermelho.
+
+PASSO 5 — TREND
+
+Se gráfico de barras estiver crescendo nos últimos minutos → "increasing"
+Se lateral → "stable"
+Se diminuindo → "decreasing"
+
+PASSO 6 — TEMPERATURA
+
+intense se:
+- muitos eventos recentes
+- picos de barras
+- cartões
+- volume alto
+
+calm se:
+- gráfico baixo
+- poucas finalizações
+
+PASSO 7 — NECESSIDADE
+
+needsGoal = true se:
+- empate no fim
+- derrota mínima
+- grande domínio territorial
+- pressão visual forte no fim
+
+false se:
+- placar elástico
+- ritmo baixo
+
+RETORNE APENAS JSON:
+
+{
+  "provider": "",
+  "min": "",
+  "target": "",
+  "apPress": "",
+  "apDef": "",
+  "sot": "",
+  "sofft": "",
+  "recentShots": "",
+  "recentCorners": "",
+  "pressureTrend": "",
+  "matchTemperature": "",
+  "redCard": "",
+  "recentGoal": false,
+  "needsGoal": false
+}
+`;
     const result = await model.generateContent([
       prompt,
       { inlineData: { data: image, mimeType: mimeType || 'image/png' } }
@@ -55,6 +155,19 @@ export default async function handler(req: any, res: any) {
     if (start !== -1 && end !== -1) responseText = responseText.substring(start, end + 1);
 
     const json = JSON.parse(responseText);
+
+// 🛡️ BLINDAGEM EXTRA (ANTI-ERRO)
+if (!json.redCard || !["none", "pressing", "defending"].includes(json.redCard)) {
+  json.redCard = "none";
+}
+
+if (!json.pressureTrend || !["increasing", "stable", "decreasing"].includes(json.pressureTrend)) {
+  json.pressureTrend = "stable";
+}
+
+if (!json.matchTemperature || !["intense", "calm"].includes(json.matchTemperature)) {
+  json.matchTemperature = "calm";
+}
     return res.status(200).json(json);
 
   } catch (error: any) {
