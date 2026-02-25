@@ -89,7 +89,7 @@ const Calculators: React.FC = () => {
   const [liveCorners, setLiveCorners] = useState(''); 
   const [liveGoals, setLiveGoals] = useState('');     
   const [liveAP_Def, setLiveAP_Def] = useState(''); 
-  const [liveAP_Press, setLiveAP_Press] = useState(''); 
+  const [liveAP_5m, setLiveAP_5m] = useState(''); 
   const [liveSoT, setLiveSoT] = useState(''); 
   const [liveSoffT, setLiveSoffT] = useState(''); 
   const [liveCurrentOdd, setLiveCurrentOdd] = useState(''); 
@@ -387,10 +387,78 @@ const Calculators: React.FC = () => {
       else if (pressureTrend === 'decreasing') paceMsg = "Esfriando";
 
       return { 
-         appm, fieldTilt, probCons, probNeut, probAggr, mainProb, targetKey, ev, fairOdd, 
-         finalScore, label, color, reasons, crossCheckMsg, paceMsg, baseLambda
-      };
+   appm,
+   fieldTilt,
+   probCons,
+   probNeut,
+   probAggr,
+   mainProb,
+   targetKey,
+   ev,
+   fairOdd,
+   finalScore,
+   label,
+   color,
+   reasons,
+   crossCheckMsg,
+   paceMsg,
+   baseLambda,
+   momentumScore // ✅ ADICIONADO
+};
   };
+
+  // ==========================================
+// SIDEBAR INFO (ESCOPO CORRETO)
+// ==========================================
+const sidebarInfo = (() => {
+  switch (activeTab) {
+    case 'exc':
+      return {
+        title: 'ExC – Corner Intelligence',
+        text: 'Modelo proprietário de expectativa de cantos com ajuste temporal (TDF), multiplicadores contextuais (EDM) e projeção multi-cenário via Poisson.'
+      };
+    case 'exg':
+      return {
+        title: 'ExG – Goal Lethality Engine',
+        text: 'Engine preditiva de gols baseada em pressão ofensiva, taxa de finalizações, ajuste temporal e validação de confluência contextual.'
+      };
+    case 'kelly':
+      return {
+        title: 'Kelly Criterion',
+        text: 'Define o percentual ideal da banca a ser alocado com base na vantagem estatística e na odd oferecida.'
+      };
+    case 'value':
+      return {
+        title: 'Value Bet Scanner',
+        text: 'Identifica distorções entre probabilidade real estimada e odds de mercado, calculando o valor esperado (EV%).'
+      };
+    case 'arb':
+      return {
+        title: 'Arbitragem',
+        text: 'Distribuição matemática de stakes para garantir lucro independente do resultado, considerando duas casas.'
+      };
+    case 'breakeven':
+      return {
+        title: 'Break Even',
+        text: 'Calcula a taxa mínima de acerto necessária para não ter prejuízo baseado na odd média operada.'
+      };
+    case 'stake':
+      return {
+        title: 'Stake Fixa',
+        text: 'Define o valor da aposta como percentual fixo da banca atual para controle disciplinado de risco.'
+      };
+    case 'odds':
+      return {
+        title: 'Conversor de Odds',
+        text: 'Converte odds entre formatos decimal, americana e probabilidade implícita.'
+      };
+    default:
+      return {
+        title: 'Dutching Engine',
+        text: 'Distribui o investimento entre múltiplas seleções para equalizar lucro potencial independente do resultado vencedor.'
+      };
+  }
+})();
 
   const engineRes = activeTab === 'exc' ? runQuantEngine('exc', excScenario) : runQuantEngine('exg', exgScenario);
 
@@ -862,7 +930,7 @@ const Calculators: React.FC = () => {
                                     </div>
                                     <div className="bg-slate-900/80 p-4 rounded-2xl border border-slate-800 flex justify-between items-center">
                                        <span className="text-[10px] uppercase tracking-widest text-slate-500 font-bold flex items-center gap-2"><Zap size={14}/> Momentum</span>
-                                       <span className={`text-xs font-black uppercase tracking-widest ${engineRes.momentum >= 1.5 ? 'text-indigo-400' : 'text-slate-400'}`}>{engineRes.paceMsg}</span>
+                                       <span className={`text-xs font-black uppercase tracking-widest ${engineRes.momentumScore >= 15 ? 'text-indigo-400' : 'text-slate-400'}`}>{engineRes.paceMsg}</span>
                                     </div>
                                 </div>
 
@@ -1126,7 +1194,7 @@ const Calculators: React.FC = () => {
                                     </div>
                                     <div className="bg-slate-900/80 p-4 rounded-2xl border border-slate-800 flex justify-between items-center">
                                        <span className="text-[10px] uppercase tracking-widest text-slate-500 font-bold flex items-center gap-2"><Zap size={14}/> Momentum</span>
-                                       <span className={`text-xs font-black uppercase tracking-widest ${engineRes.momentum >= 1.5 ? 'text-indigo-400' : 'text-slate-400'}`}>{engineRes.paceMsg}</span>
+                                       <span className={`text-xs font-black uppercase tracking-widest ${engineRes.momentumScore >= 15 ? 'text-indigo-400' : 'text-slate-400'}`}>{engineRes.paceMsg}</span>
                                     </div>
                                 </div>
 
