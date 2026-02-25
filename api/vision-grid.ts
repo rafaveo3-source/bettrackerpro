@@ -5,13 +5,13 @@ export default async function handler(req: any, res: any) {
 
   try {
     const { image, mimeType } = req.body;
-    
     const apiKey = process.env.GEMINI_API_KEY;
     if (!apiKey) return res.status(500).json({ error: 'Chave de API ausente.' });
 
     const genAI = new GoogleGenerativeAI(apiKey);
     const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
 
+    // 🔥 TRAVA DE QUANTIDADE REMOVIDA
     const prompt = `Você é um Analista de Scout Pré-Live Esportivo HFT.
     Sua missão é olhar para esta imagem contendo uma lista de jogos e odds 1x2 e extrair oportunidades claras de valor (EV+).
 
@@ -20,7 +20,7 @@ export default async function handler(req: any, res: any) {
     2. CANTOS: Procure jogos extremamente equilibrados (Odds do tipo 2.50 vs 2.70), indicando que os times vão brigar pelo controle do jogo, forçando jogadas de linha de fundo.
     3. Descarte: Jogos com odds parelhas em ligas truncadas ou onde os nomes dos times não indiquem volume de jogo.
 
-    Retorne até 3 melhores jogos mapeados.
+    Mapeie TODOS os jogos visíveis na imagem que apresentem real valor estatístico (seja rigoroso, mostre apenas os muito bons).
     Retorne APENAS um JSON válido neste formato exato (não use markdown \`\`\`json):
     {
       "matches": [
@@ -32,14 +32,10 @@ export default async function handler(req: any, res: any) {
       ]
     }`;
 
-    const result = await model.generateContent([
-      prompt,
-      { inlineData: { data: image, mimeType: mimeType || 'image/png' } }
-    ]);
+    const result = await model.generateContent([ prompt, { inlineData: { data: image, mimeType: mimeType || 'image/png' } } ]);
 
     let responseText = result.response.text().replace(/```json/g, '').replace(/```/g, '').trim();
-    const start = responseText.indexOf('{');
-    const end = responseText.lastIndexOf('}');
+    const start = responseText.indexOf('{'); const end = responseText.lastIndexOf('}');
     if (start !== -1 && end !== -1) responseText = responseText.substring(start, end + 1);
 
     const json = JSON.parse(responseText);

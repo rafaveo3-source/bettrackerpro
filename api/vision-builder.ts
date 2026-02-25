@@ -4,8 +4,7 @@ export default async function handler(req: any, res: any) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method Not Allowed' });
 
   try {
-    const { image, mimeType } = req.body;
-    
+    const { images } = req.body; // Agora recebe um array de imagens
     const apiKey = process.env.GEMINI_API_KEY;
     if (!apiKey) return res.status(500).json({ error: 'Chave de API ausente.' });
 
@@ -13,36 +12,37 @@ export default async function handler(req: any, res: any) {
     const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
 
     const prompt = `Você é um Algoritmo Precificador (Bookmaker) Pré-Live.
-    Analise a imagem contendo estatísticas pré-jogo de uma partida (SofaScore, Flashscore).
-    Baseado no histórico visualizado (médias de gols, histórico de cantos, retrospecto H2H), construa a melhor combinação (Aposta Dupla - Bet Builder) possível.
+    Você receberá uma ou mais imagens contendo estatísticas pré-jogo (SofaScore, Flashscore).
+    
+    ESTRATÉGIA:
+    - Se houver apenas 1 jogo nas imagens: Crie uma aposta combinada (Bet Builder) para aquele mesmo jogo (1 de Gols + 1 de Cantos).
+    - Se houver estatísticas de 2 ou mais jogos DIFERENTES nas imagens: Crie uma APOSTA DUPLA CRUZADA (Múltipla). Pegue a previsão mais forte (a mais provável) do Jogo 1 e cruze com a previsão mais forte do Jogo 2. Exemplo: Jogo A (Mais de 1.5 Gols) + Jogo B (Mais de 7.5 Cantos).
 
-    A combinação DEVE ter:
-    - 1 seleção de Gols (ex: Mais de 1.5 Gols ou Mais de 0.5 Gols HT)
-    - 1 seleção de Escanteios (ex: Mais de 7.5 Escanteios ou Mais de 8.5 Escanteios)
-    - O alvo final é uma probabilidade combinada (prob1 * prob2) realista que resulte em uma Odd Média entre 1.60 e 2.00.
+    O alvo final é uma probabilidade combinada (prob1 * prob2) realista que resulte em uma Odd Média entre 1.50 e 2.00.
 
     Retorne APENAS um JSON válido neste formato exato (sem markdown):
     {
-      "selection1": "Descrição do Mercado 1 (ex: Mais de 1.5 Gols)",
-      "prob1": probabilidade do mercado 1 em numero (ex: 82),
-      "selection2": "Descrição do Mercado 2 (ex: Mais de 7.5 Cantos)",
-      "prob2": probabilidade do mercado 2 em numero (ex: 78),
-      "analysis": "Sua tese quantitativa do porquê esses mercados conversam entre si baseada na foto lida."
+      "selection1": "Descrição da Aposta 1 [Nome do Jogo ou Mercado] (ex: Arsenal vs Milan - Mais de 1.5 Gols)",
+      "prob1": probabilidade do mercado 1 em numero inteiro (ex: 82),
+      "selection2": "Descrição da Aposta 2 [Nome do Jogo ou Mercado] (ex: Chelsea vs Porto - Mais de 7.5 Cantos)",
+      "prob2": probabilidade do mercado 2 em numero inteiro (ex: 78),
+      "analysis": "Sua tese quantitativa cruzada do porquê essa dupla tem altíssimo valor."
     }`;
 
-    const result = await model.generateContent([
-      prompt,
-      { inlineData: { data: image, mimeType: mimeType || 'image/png' } }
-    ]);
+    // Monta o array de dados inline para o Gemini (suporta múltiplas imagens de uma vez)
+    const imageParts = images.map((img: any) => ({
+        inlineData: { data: img.base64, mimeType: img.mimeType }
+    }));
+
+    const result = await model.generateContent([prompt, ...imageParts]);
 
     let responseText = result.response.text().replace(/```json/g, '').replace(/```/g, '').trim();
-    const start = responseText.indexOf('{');
-    const end = responseText.lastIndexOf('}');
+    const start = responseText.indexOf('{'); const end = responseText.lastIndexOf('}');
     if (start !== -1 && end !== -1) responseText = responseText.substring(start, end + 1);
 
     const json = JSON.parse(responseText);
     
-    // Calcula a probabilidade combinada e a Fair Odd no backend para entregar pronto
+    // Cálculo de Odd Justa
     const p1 = (json.prob1 || 70) / 100;
     const p2 = (json.prob2 || 70) / 100;
     json.combinedProb = Math.round(p1 * p2 * 100);
