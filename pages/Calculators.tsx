@@ -89,7 +89,8 @@ const Calculators: React.FC = () => {
   const [liveAP_Press, setLiveAP_Press] = useState(''); 
   const [liveSoT, setLiveSoT] = useState(''); 
   const [liveSoffT, setLiveSoffT] = useState(''); 
-  const [liveCurrentOdd, setLiveCurrentOdd] = useState(''); 
+  const [liveCurrentOdd, setLiveCurrentOdd] = useState('');
+  const [liveAP_5m, setLiveAP_5m] = useState(''); 
 
   // 🔥 ESTADOS DO MOTOR CONTEXTUAL (TDF & EDM)
   const [recentShots, setRecentShots] = useState('');
