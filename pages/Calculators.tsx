@@ -13,7 +13,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 // ==========================================
 // UX INPUT COMPONENTS
 // ==========================================
-const PodInput = ({ label, value, onChange, icon: Icon, placeholder, colorClass, highlight }: any) => (
+const PodInput = ({ label, value, onChange, icon: Icon, placeholder, colorClass, highlight, type = 'number' }: any) => (
   <div className="relative group">
       <label className={`text-[9px] font-black uppercase tracking-widest block mb-1.5 transition-colors ${highlight ? colorClass : 'text-slate-500'}`}>
          {label}
@@ -23,10 +23,7 @@ const PodInput = ({ label, value, onChange, icon: Icon, placeholder, colorClass,
               <Icon size={14} className={highlight ? colorClass : 'text-slate-400 group-hover:text-slate-300 transition-colors'} />
           </div>
           <input 
-              type="number" 
-              value={value} 
-              onChange={onChange} 
-              placeholder={placeholder}
+              type={type} value={value} onChange={onChange} placeholder={placeholder}
               className={`w-full bg-slate-950 border rounded-xl pl-10 pr-3 py-3 font-mono font-bold text-sm outline-none transition-all
               ${highlight ? `border-${colorClass.split('-')[1]}-500/50 focus:border-${colorClass.split('-')[1]}-400 text-${colorClass.split('-')[1]}-400 shadow-[inset_0_0_10px_rgba(0,0,0,0.2)]` : 'border-slate-800 text-white focus:border-slate-600 focus:bg-[#09090b]'}`}
           />
@@ -89,7 +86,7 @@ const Calculators: React.FC = () => {
   const [liveCorners, setLiveCorners] = useState(''); 
   const [liveGoals, setLiveGoals] = useState('');     
   const [liveAP_Def, setLiveAP_Def] = useState(''); 
-  const [liveAP_5m, setLiveAP_5m] = useState(''); 
+  const [liveAP_Press, setLiveAP_Press] = useState(''); 
   const [liveSoT, setLiveSoT] = useState(''); 
   const [liveSoffT, setLiveSoffT] = useState(''); 
   const [liveCurrentOdd, setLiveCurrentOdd] = useState(''); 
@@ -239,18 +236,18 @@ const Calculators: React.FC = () => {
   const excScenariosData: Record<string, { title: string; checks: string[] }> = {
     ht_asian: { title: 'Canto Asiático HT (Margem Segura)', checks: ['Relógio entre 25 e 36 minutos?', 'Favorito pressionando ativamente?', 'Assimetria visível no radar?'] },
     ht_limit: { title: 'Canto Limite HT (Abafa Retranca)', checks: ['Relógio entre 37 e 41 minutos?', 'Ataques rápidos e finalizações ocorrendo?', 'Adversário empurrado para a própria área?'] },
-    ht_zoio: { title: 'Canto Zóio HT (Kamikaze 43+)', checks: ['Relógio passando dos 42 minutos?', 'Favorito perdendo/empatando no sufoco?', 'Bolas sendo jogadas direto na área (chuveirinho)?'] },
+    ht_zoio: { title: 'Canto Zóio HT (Kamikaze 42\'+)', checks: ['Relógio passando dos 42 minutos?', 'Favorito perdendo/empatando no sufoco?', 'Bolas sendo jogadas direto na área?'] },
     ft_asian: { title: 'Canto Asiático FT (Volta do Intervalo)', checks: ['Relógio entre 65 e 78 minutos?', 'Time dominou a posse no 2º tempo?', 'Zagueiros rebatendo muitas bolas?'] },
-    ft_limit: { title: 'Canto Limite FT (Desespero Final)', checks: ['Relógio entre 82 e 87 minutos?', 'Modo desespero (Abafa Absoluto)?', 'Adversário não consegue segurar a bola no ataque?'] },
-    ft_zoio: { title: 'Canto Zóio FT (Kamikaze 88+)', checks: ['Relógio passando dos 88 minutos?', 'Goleiro do time perdendo indo pro ataque?', 'Defesa adversária cortando bola pra qualquer lado?'] }
+    ft_limit: { title: 'Canto Limite FT (Desespero Final)', checks: ['Relógio entre 82 e 87 minutos?', 'Modo desespero (Abafa Absoluto)?', 'Adversário não consegue segurar a bola?'] },
+    ft_zoio: { title: 'Canto Zóio FT (Kamikaze 88\'+)', checks: ['Relógio passando dos 88 minutos?', 'Goleiro indo pro ataque?', 'Defesa cortando bola pra qualquer lado?'] }
   };
 
   const exgScenariosData: Record<string, { title: string; checks: string[] }> = {
-    ht_over05: { title: 'Over 0.5 Gols HT', checks: ['Relógio antes dos 30 minutos?', 'Jogo aberto (Lá e cá) ou favorito amassando?', 'Goleiros já fizeram defesas difíceis?'] },
-    ht_over15: { title: 'Over 1.5 Gols HT (Insanidade)', checks: ['Relógio antes dos 20 minutos?', 'Pelo menos 1 gol já saiu rápido?', 'Ambos os times com linhas defensivas altas?'] },
-    ft_over05: { title: 'Over 0.5 Gols FT (Reta Final)', checks: ['Relógio entre 70 e 80 minutos?', 'Pelo menos um time precisa da vitória desesperadamente?', 'Muitos espaços sendo deixados para contra-ataque?'] },
-    ft_over15: { title: 'Over 1.5 Gols FT', checks: ['Segundo tempo recém iniciado (45 a 60 min)?', 'Time perdendo se lançou pro ataque?', 'Alto índice de chutes dentro da área (SoT alto)?'] },
-    ft_over25: { title: 'Over 2.5 Gols FT', checks: ['Relógio entre 50 e 65 minutos?', 'Os dois times demonstram capacidade ofensiva?', 'Jogo muito faltoso perto da área (Bolas paradas)?'] }
+    ht_over05: { title: 'Over 0.5 Gols HT', checks: ['Relógio antes dos 30 minutos?', 'Jogo aberto ou favorito amassando?', 'Goleiros já fizeram defesas difíceis?'] },
+    ht_over15: { title: 'Over 1.5 Gols HT (Insanidade)', checks: ['Relógio antes dos 20 minutos?', 'Pelo menos 1 gol já saiu rápido?', 'Ambos os times com linhas altas?'] },
+    ft_over05: { title: 'Over 0.5 Gols FT (Reta Final)', checks: ['Relógio entre 70 e 80 minutos?', 'Alguém precisa da vitória desesperadamente?', 'Espaços para contra-ataque?'] },
+    ft_over15: { title: 'Over 1.5 Gols FT', checks: ['Segundo tempo recém iniciado?', 'Time perdendo se lançou pro ataque?', 'Alto índice de chutes dentro da área?'] },
+    ft_over25: { title: 'Over 2.5 Gols FT', checks: ['Relógio entre 50 e 65 minutos?', 'Os dois times demonstram capacidade ofensiva?', 'Jogo muito faltoso perto da área?'] }
   };
 
   const [excChecklist, setExcChecklist] = useState<Record<number, boolean>>({});
@@ -266,7 +263,7 @@ const Calculators: React.FC = () => {
   useEffect(() => { setExgChecklist({}); setExgUnlocked(false); }, [exgScenario]);
   const handleExgCheck = (idx: number) => {
     const n = { ...exgChecklist, [idx] : !exgChecklist[idx] }; setExgChecklist(n);
-    setExgUnlocked(Object.keys(n).filter(k => n[parseInt(k)]).length === exgScenariosData[exgScenario].checks.length);
+    setExcUnlocked(Object.keys(n).filter(k => n[parseInt(k)]).length === exgScenariosData[exgScenario].checks.length);
   };
 
   const runQuantEngine = (type: 'exc' | 'exg', scenario: string) => {
@@ -387,78 +384,10 @@ const Calculators: React.FC = () => {
       else if (pressureTrend === 'decreasing') paceMsg = "Esfriando";
 
       return { 
-   appm,
-   fieldTilt,
-   probCons,
-   probNeut,
-   probAggr,
-   mainProb,
-   targetKey,
-   ev,
-   fairOdd,
-   finalScore,
-   label,
-   color,
-   reasons,
-   crossCheckMsg,
-   paceMsg,
-   baseLambda,
-   momentumScore // ✅ ADICIONADO
-};
+         appm, fieldTilt, probCons, probNeut, probAggr, mainProb, targetKey, ev, fairOdd, 
+         finalScore, label, color, reasons, crossCheckMsg, paceMsg, baseLambda
+      };
   };
-
-  // ==========================================
-// SIDEBAR INFO (ESCOPO CORRETO)
-// ==========================================
-const sidebarInfo = (() => {
-  switch (activeTab) {
-    case 'exc':
-      return {
-        title: 'ExC – Corner Intelligence',
-        text: 'Modelo proprietário de expectativa de cantos com ajuste temporal (TDF), multiplicadores contextuais (EDM) e projeção multi-cenário via Poisson.'
-      };
-    case 'exg':
-      return {
-        title: 'ExG – Goal Lethality Engine',
-        text: 'Engine preditiva de gols baseada em pressão ofensiva, taxa de finalizações, ajuste temporal e validação de confluência contextual.'
-      };
-    case 'kelly':
-      return {
-        title: 'Kelly Criterion',
-        text: 'Define o percentual ideal da banca a ser alocado com base na vantagem estatística e na odd oferecida.'
-      };
-    case 'value':
-      return {
-        title: 'Value Bet Scanner',
-        text: 'Identifica distorções entre probabilidade real estimada e odds de mercado, calculando o valor esperado (EV%).'
-      };
-    case 'arb':
-      return {
-        title: 'Arbitragem',
-        text: 'Distribuição matemática de stakes para garantir lucro independente do resultado, considerando duas casas.'
-      };
-    case 'breakeven':
-      return {
-        title: 'Break Even',
-        text: 'Calcula a taxa mínima de acerto necessária para não ter prejuízo baseado na odd média operada.'
-      };
-    case 'stake':
-      return {
-        title: 'Stake Fixa',
-        text: 'Define o valor da aposta como percentual fixo da banca atual para controle disciplinado de risco.'
-      };
-    case 'odds':
-      return {
-        title: 'Conversor de Odds',
-        text: 'Converte odds entre formatos decimal, americana e probabilidade implícita.'
-      };
-    default:
-      return {
-        title: 'Dutching Engine',
-        text: 'Distribui o investimento entre múltiplas seleções para equalizar lucro potencial independente do resultado vencedor.'
-      };
-  }
-})();
 
   const engineRes = activeTab === 'exc' ? runQuantEngine('exc', excScenario) : runQuantEngine('exg', exgScenario);
 
@@ -480,7 +409,6 @@ const sidebarInfo = (() => {
       </div>
   );
 
-  // Lógicas Clássicas Omitidas para Focar no Novo Componente
   const [dutchTotalStake, setDutchTotalStake] = useState('100');
   const [dutchSelections, setDutchSelections] = useState([{ id: 1, name: 'Seleção A', odds: '2.50', stake: 0, profit: 0 }, { id: 2, name: 'Seleção B', odds: '3.20', stake: 0, profit: 0 }]);
   const addDutchSelection = () => setDutchSelections([...dutchSelections, { id: Date.now(), name: `Seleção ${String.fromCharCode(65 + dutchSelections.length)}`, odds: '', stake: 0, profit: 0 }]);
@@ -511,6 +439,22 @@ const sidebarInfo = (() => {
   const [convDec, setConvDec] = useState('2.00'); const [convAm, setConvAm] = useState('+100'); const [convProb, setConvProb] = useState('50.00');
   const handleDecChange = (val: string) => { setConvDec(val); const d = parseFloat(val); if (d > 1) { setConvProb(((1 / d) * 100).toFixed(2)); setConvAm(d >= 2 ? '+' + ((d - 1) * 100).toFixed(0) : (( -100 / (d - 1) )).toFixed(0)); } };
   const [beOdds, setBeOdds] = useState('1.90'); const beWinRate = parseFloat(beOdds) > 1 ? (1 / parseFloat(beOdds)) * 100 : 0;
+
+  // 🔥 RESTAURAÇÃO DO SIDEBARINFO
+  const sidebarInfo = (() => {
+    switch(activeTab) {
+      case 'dutching': return { title: 'Gestão de Risco', text: 'O Dutching divide a sua exposição entre múltiplas seleções, diluindo o risco do investimento em um único evento.' };
+      case 'kelly': return { title: 'Cálculo de Exposição', text: 'O Critério de Kelly ajusta matematicamente a stake ideal com base na probabilidade e na odd apresentada.' };
+      case 'value': return { title: 'Análise de EV+', text: 'O conceito de Value Bet compara a cotação oferecida pelo mercado com a probabilidade real.' };
+      case 'arb': return { title: 'Arbitragem Matemática', text: 'Calcula o volume exato a ser distribuído em duas vias para anular o risco direcional.' };
+      case 'stake': return { title: 'Gestão Fixa', text: 'O cálculo de stake fixa percentual ajuda a manter o controle do drawdown em fases de oscilação.' };
+      case 'odds': return { title: 'Leitura Global', text: 'Conversão automática de formatos de cotações utilizados em bolsas esportivas.' };
+      case 'breakeven': return { title: 'Ponto de Equilíbrio', text: 'A taxa de acerto (Hit-Rate) necessária para manter a estabilidade do capital com a odd informada.' };
+      case 'exc': return { title: 'ExC Analytics (Cantos)', text: 'Motor HFT que cruza Domínio (Field Tilt), Momentum e Poisson para achar EV+ em escanteios. Suporta leitura via IA.' };
+      case 'exg': return { title: 'ExG Analytics (Gols)', text: 'Calcula a letalidade do time (SoT) e a abertura tática para precificar a Odd Justa de Gols em tempo real.' };
+      default: return { title: 'Ferramentas Analíticas', text: 'Tome decisões baseadas em dados.' };
+    }
+  })();
 
   const tabs = [
     { id: 'dutching', label: 'Dutching', pro: false }, { id: 'kelly', label: 'Kelly', pro: false },
@@ -930,7 +874,7 @@ const sidebarInfo = (() => {
                                     </div>
                                     <div className="bg-slate-900/80 p-4 rounded-2xl border border-slate-800 flex justify-between items-center">
                                        <span className="text-[10px] uppercase tracking-widest text-slate-500 font-bold flex items-center gap-2"><Zap size={14}/> Momentum</span>
-                                       <span className={`text-xs font-black uppercase tracking-widest ${engineRes.momentumScore >= 15 ? 'text-indigo-400' : 'text-slate-400'}`}>{engineRes.paceMsg}</span>
+                                       <span className={`text-xs font-black uppercase tracking-widest ${engineRes.momentum >= 1.5 ? 'text-indigo-400' : 'text-slate-400'}`}>{engineRes.paceMsg}</span>
                                     </div>
                                 </div>
 
@@ -964,20 +908,20 @@ const sidebarInfo = (() => {
                              {/* SINAL RADIOATIVO (Neon Button) */}
                              <div className="relative z-20 mt-4">
                                {engineRes.color === 'green' && (
-                                  <motion.div initial={{ scale: 0.95 }} animate={{ scale: 1 }} className="relative group">
-                                      <div className="absolute -inset-0.5 bg-gradient-to-r from-emerald-600 to-teal-400 rounded-2xl blur opacity-40 group-hover:opacity-60 transition duration-1000 animate-pulse"></div>
-                                      <div className="relative bg-gradient-to-r from-emerald-500 to-emerald-400 text-slate-950 w-full py-5 rounded-2xl font-black text-xs sm:text-sm tracking-widest uppercase text-center shadow-xl flex items-center justify-center gap-2">
+                                  <motion.div initial={{ scale: 0.95 }} animate={{ scale: 1 }} className="relative group cursor-pointer">
+                                      <div className={`absolute -inset-0.5 rounded-2xl blur opacity-40 group-hover:opacity-60 transition animate-pulse bg-gradient-to-r from-emerald-600 to-teal-400`}></div>
+                                      <div className={`relative w-full py-4 rounded-2xl font-black text-xs sm:text-sm tracking-widest uppercase text-center text-slate-950 flex items-center justify-center gap-2 bg-emerald-500`}>
                                          <Zap fill="currentColor" size={18} className="animate-bounce"/> ENTRADA APROVADA {engineRes.ev > 0 ? `(EV +${engineRes.ev.toFixed(1)}%)` : ''}
                                       </div>
                                   </motion.div>
                                )}
                                {engineRes.color === 'yellow' && (
-                                  <div className="bg-gradient-to-r from-yellow-500 to-yellow-400 text-slate-950 w-full py-5 rounded-2xl font-black text-xs sm:text-sm tracking-widest uppercase text-center shadow-[0_0_20px_rgba(234,179,8,0.3)] flex justify-center items-center gap-2">
-                                     <AlertTriangle size={16}/> Risco Moderado. Aguarde Odd.
+                                  <div className="bg-yellow-500 text-slate-950 w-full py-4 rounded-2xl font-black text-xs uppercase text-center flex justify-center items-center gap-2">
+                                    <AlertTriangle size={16}/> Risco Moderado. Monitore as Odds.
                                   </div>
                                )}
                                {engineRes.color === 'red' && (
-                                  <div className="bg-[#09090b] border border-red-500/30 text-red-400 w-full py-5 rounded-2xl font-black text-[10px] sm:text-xs tracking-widest uppercase text-center flex items-center justify-center gap-2 shadow-inner">
+                                  <div className="bg-[#09090b] border border-red-500/30 text-red-400 w-full py-4 rounded-2xl font-black text-[10px] sm:text-xs tracking-widest uppercase text-center flex items-center justify-center gap-2 shadow-inner">
                                      <AlertTriangle size={16} className="shrink-0 text-red-500"/> {engineRes.msg || 'MODELO REJEITA A ENTRADA'}
                                   </div>
                                )}
@@ -1128,7 +1072,7 @@ const sidebarInfo = (() => {
                                     <DollarSign size={24} className="text-orange-400" />
                                  </div>
                                  <div className="flex-1">
-                                    <label className="text-[9px] font-black text-orange-500 uppercase tracking-[0.2em] block mb-1">Odd Oferecida Bet365 (Scanner de EV%)</label>
+                                    <label className="text-[9px] font-black text-orange-500 uppercase tracking-[0.2em] block mb-1">Odd Oferecida (Scanner de EV%)</label>
                                     <input type="number" step="0.01" placeholder="Ex: 1.83" value={liveCurrentOdd} onChange={e => setLiveCurrentOdd(e.target.value)} className="w-full bg-transparent text-2xl font-mono font-black text-white outline-none placeholder:text-slate-700" />
                                  </div>
                              </div>
@@ -1194,7 +1138,7 @@ const sidebarInfo = (() => {
                                     </div>
                                     <div className="bg-slate-900/80 p-4 rounded-2xl border border-slate-800 flex justify-between items-center">
                                        <span className="text-[10px] uppercase tracking-widest text-slate-500 font-bold flex items-center gap-2"><Zap size={14}/> Momentum</span>
-                                       <span className={`text-xs font-black uppercase tracking-widest ${engineRes.momentumScore >= 15 ? 'text-indigo-400' : 'text-slate-400'}`}>{engineRes.paceMsg}</span>
+                                       <span className={`text-xs font-black uppercase tracking-widest ${engineRes.momentum >= 1.5 ? 'text-indigo-400' : 'text-slate-400'}`}>{engineRes.paceMsg}</span>
                                     </div>
                                 </div>
 
@@ -1262,7 +1206,7 @@ const sidebarInfo = (() => {
             
         </div>
 
-        {/* COLUNA DIREITA (SIDEBAR DINÂMICA) */}
+        {/* SIDEBAR */}
         <div className="lg:col-span-1 space-y-6 w-full min-w-0">
             <div className="bg-white dark:bg-[#0f172a] rounded-[1.5rem] md:rounded-[2rem] border border-slate-200 dark:border-slate-800 p-6 md:p-8 shadow-sm sticky top-6">
                 <h4 className="font-black text-slate-900 dark:text-white mb-6 uppercase tracking-widest text-xs">O Terminal HFT</h4>
