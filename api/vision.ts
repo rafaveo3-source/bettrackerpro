@@ -4,7 +4,7 @@ export default async function handler(req: any, res: any) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method Not Allowed' });
 
   try {
-    const { image, mimeType } = req.body;
+    const { image, mimeType, mode, scenario } = req.body;
     
     const apiKey = process.env.GEMINI_API_KEY;
     if (!apiKey) return res.status(500).json({ error: 'Chave de API ausente.' });
@@ -12,10 +12,23 @@ export default async function handler(req: any, res: any) {
     const genAI = new GoogleGenerativeAI(apiKey);
     const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
 
+    // 🎯 Ajuste inteligente por mercado
+const marketFocus =
+  mode === 'exc'
+    ? 'FOCO PRINCIPAL: ESCANTEIOS (CANTOS)'
+    : 'FOCO PRINCIPAL: GOLS';
+
+const scenarioInfo = scenario
+  ? `Cenário selecionado pelo usuário: ${scenario}`
+  : 'Cenário não informado';
+
     // 🔥 UNIVERSAL FOOTBALL VISION PARSER V5
 
 const prompt = `
-Você é um Analista Quantitativo HFT especialista em leitura visual multi-plataforma para mercados de GOLS (EXG) e ESCANTEIOS (EXC).
+Você é um Analista Quantitativo HFT especialista em leitura visual multi-plataforma.
+
+${marketFocus}
+${scenarioInfo}
 
 A imagem pode ser de:
 - Bet365
