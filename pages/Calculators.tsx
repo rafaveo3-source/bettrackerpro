@@ -187,7 +187,12 @@ const Calculators: React.FC = () => {
         const response = await fetch('/api/vision', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ image: base64Data, mimeType })
+            body: JSON.stringify({
+  image: base64Data,
+  mimeType,
+  mode: activeTab, // 🔥 exc ou exg
+  scenario: activeTab === 'exc' ? excScenario : exgScenario
+})
         });
 
         if (!response.ok) {
@@ -311,9 +316,14 @@ if (data.recentGoal !== undefined) {
   const [exgUnlocked, setExgUnlocked] = useState(false);
   useEffect(() => { setExgChecklist({}); setExgUnlocked(false); }, [exgScenario]);
   const handleExgCheck = (idx: number) => {
-    const n = { ...exgChecklist, [idx] : !exgChecklist[idx] }; setExgChecklist(n);
-    setExcUnlocked(Object.keys(n).filter(k => n[parseInt(k)]).length === exgScenariosData[exgScenario].checks.length);
-  };
+  const n = { ...exgChecklist, [idx]: !exgChecklist[idx] };
+  setExgChecklist(n);
+
+  setExgUnlocked(
+    Object.keys(n).filter(k => n[parseInt(k)]).length ===
+    exgScenariosData[exgScenario].checks.length
+  );
+};
 
   const runQuantEngine = (type: 'exc' | 'exg', scenario: string) => {
       const min = parseFloat(liveMin); 

@@ -15,7 +15,7 @@ export default async function handler(req: any, res: any) {
     // 🔥 UNIVERSAL FOOTBALL VISION PARSER V5
 
 const prompt = `
-Você é um Analista Quantitativo HFT especialista em leitura visual multi-plataforma.
+Você é um Analista Quantitativo HFT especialista em leitura visual multi-plataforma para mercados de GOLS (EXG) e ESCANTEIOS (EXC).
 
 A imagem pode ser de:
 - Bet365
@@ -27,119 +27,176 @@ A imagem pode ser de:
 - PackBall
 - ou outro provedor.
 
-PASSO 1 — IDENTIFIQUE O TIPO DE LAYOUT:
+=====================================================
+PASSO 1 — IDENTIFIQUE O TIPO DE LAYOUT
+=====================================================
+
 Classifique o layout como:
-- "bet365"
-- "sofascore"
-- "flashscore"
-- "betano"
-- "robottip"
-- "cornerpro"
-- "packball"
-- "unknown"
+"bet365" | "sofascore" | "flashscore" | "betano" | 
+"robottip" | "cornerpro" | "packball" | "unknown"
 
 Use:
 - posição do placar
-- formato de gráfico (barras verticais, horizontais, radar, timeline)
-- estilo de ícones
-- cores predominantes
+- tipo de gráfico (radar, barras verticais, barras horizontais, timeline)
+- presença de xG
+- estilo visual
+- idioma exibido
 
-PASSO 2 — EXTRAIA DADOS POR SIGNIFICADO, NÃO POR POSIÇÃO
+=====================================================
+PASSO 2 — EXTRAIA DADOS POR SIGNIFICADO (NUNCA POR POSIÇÃO FIXA)
+=====================================================
 
-Nunca confie apenas na ordem dos ícones.
-Identifique pelo CONTEXTO VISUAL:
+Nunca confie apenas na ordem visual dos elementos.
+Use contexto textual e ícones corretos.
 
 ESCANTEIOS:
-- palavra "Escanteios", "Cantos", "Corners"
-- ícone de bandeira triangular
-- número ao lado da bandeira
+- Palavras: "Escanteios", "Cantos", "Corners"
+- Ícone de bandeira triangular
+- Número imediatamente associado à bandeira
 
 CARTÃO VERMELHO:
-- quadrado vermelho
-- palavra "Cartões vermelhos"
-- número ao lado do quadrado vermelho
+- Quadrado vermelho sólido
+- Palavra "Cartões vermelhos"
+- Número associado ao quadrado vermelho
+- NUNCA confundir com bandeira de escanteio
 
 CARTÃO AMARELO:
-- quadrado amarelo
-- palavra "Cartões amarelos"
+- Quadrado amarelo sólido
+- Palavra "Cartões amarelos"
 
 ATAQUES PERIGOSOS:
-- label: "Ataques Perigosos", "Dangerous Attacks"
-- sempre existem dois números (esquerda vs direita)
+- Label: "Ataques Perigosos" ou "Dangerous Attacks"
+- Sempre existem dois números (time esquerda vs direita)
 
 CHUTES NO ALVO:
 - "Finalizações no alvo"
 - "Chutes no alvo"
 - "Shots on Target"
 
+CHUTES PARA FORA:
+- "Finalizações para fora"
+- "Shots off target"
+
 POSSE:
-- barra verde/vermelha
-- porcentagens 44% vs 56%
+- Barra verde/vermelha
+- Percentuais (ex: 44% vs 56%)
 
-PASSO 3 — DEFINIR TIME QUE PRESSIONA
+=====================================================
+PASSO 3 — DEFINIR TIME QUE ESTÁ PRESSIONANDO
+=====================================================
 
-O time que pressiona é:
-- maior Ataque Perigoso
-- OU maior volume de finalizações
-- OU maior domínio visual no gráfico
+O time pressionando é aquele que apresenta:
 
+Prioridade 1:
+- Maior número de Ataques Perigosos
+
+Se empatar:
+- Maior número de finalizações
+
+Se ainda empatar:
+- Maior domínio visual no gráfico recente
+
+Definições:
 apPress = maior valor
 apDef = menor valor
 
+=====================================================
 PASSO 4 — CARTÃO VERMELHO
+=====================================================
 
 Se houver cartão vermelho:
-- se pertence ao time com maior AP → redCard = "pressing"
-- se pertence ao time com menor AP → redCard = "defending"
-- se nenhum → "none"
 
-Nunca confunda bandeira (escanteio) com cartão vermelho.
+- Se pertence ao time com MAIOR AP → redCard = "pressing"
+- Se pertence ao time com MENOR AP → redCard = "defending"
+- Se ambos 0 → redCard = "none"
 
-PASSO 5 — TREND
+Se houver dúvida visual → redCard = "none"
 
-Se gráfico de barras estiver crescendo nos últimos minutos → "increasing"
-Se lateral → "stable"
-Se diminuindo → "decreasing"
+Nunca inferir cartão vermelho sem confirmação visual clara.
 
-PASSO 6 — TEMPERATURA
+=====================================================
+PASSO 5 — PRESSURE TREND
+=====================================================
 
-intense se:
+Observe apenas o gráfico recente (últimos minutos):
+
+"increasing" se:
+- barras crescendo no final
+- sequência de eventos ofensivos
+
+"decreasing" se:
+- queda clara no final
+
+"stable" se:
+- padrão lateral
+
+Se não for possível determinar → "stable"
+
+=====================================================
+PASSO 6 — MATCH TEMPERATURE
+=====================================================
+
+"intense" se:
 - muitos eventos recentes
-- picos de barras
+- picos ofensivos
 - cartões
-- volume alto
+- volume alto de finalizações
 
-calm se:
+"calm" se:
 - gráfico baixo
-- poucas finalizações
+- poucos eventos
+- ritmo lento
 
-PASSO 7 — NECESSIDADE
+=====================================================
+PASSO 7 — NECESSIDADE TÁTICA
+=====================================================
 
 needsGoal = true se:
-- empate no fim
-- derrota mínima
-- grande domínio territorial
-- pressão visual forte no fim
+- empate nos minutos finais
+- derrota mínima com pressão visível
+- domínio territorial forte no fim
 
-false se:
+needsGoal = false se:
 - placar elástico
 - ritmo baixo
+- jogo controlado
 
-RETORNE APENAS JSON:
+=====================================================
+PASSO 8 — RECENT GOAL
+=====================================================
+
+recentGoal = true se:
+- houver marcação de gol nos últimos minutos visíveis na timeline
+
+Caso contrário → false
+
+=====================================================
+REGRAS IMPORTANTES
+=====================================================
+
+- NÃO invente valores.
+- Se não conseguir identificar com segurança → retorne null.
+- NÃO retorne texto explicativo.
+- Retorne APENAS JSON válido.
+- Todos os números devem ser numéricos, não strings.
+
+=====================================================
+RETORNE APENAS ESTE JSON:
+=====================================================
 
 {
   "provider": "",
-  "min": "",
-  "target": "",
-  "apPress": "",
-  "apDef": "",
-  "sot": "",
-  "sofft": "",
-  "recentShots": "",
-  "recentCorners": "",
-  "pressureTrend": "",
-  "matchTemperature": "",
-  "redCard": "",
+  "min": null,
+  "target": null,
+  "apPress": null,
+  "apDef": null,
+  "sot": null,
+  "sofft": null,
+  "recentShots": null,
+  "recentCorners": null,
+  "pressureTrend": "increasing" | "stable" | "decreasing",
+  "matchTemperature": "intense" | "calm",
+  "redCard": "none" | "pressing" | "defending",
   "recentGoal": false,
   "needsGoal": false
 }
