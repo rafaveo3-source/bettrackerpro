@@ -63,6 +63,27 @@ const fileToBase64 = (file: File): Promise<string> => {
   });
 };
 
+// ==========================================
+// FUNÇÕES MATEMÁTICAS DO MOTOR HFT
+// ==========================================
+
+// Fatorial otimizado (evita recursão pesada)
+const factorial = (n: number): number => {
+  if (n < 0) return 0;
+  if (n === 0 || n === 1) return 1;
+  let result = 1;
+  for (let i = 2; i <= n; i++) {
+    result *= i;
+  }
+  return result;
+};
+
+// Distribuição de Poisson exata
+const poissonExact = (k: number, lambda: number): number => {
+  if (lambda <= 0) return k === 0 ? 1 : 0;
+  return (Math.pow(lambda, k) * Math.exp(-lambda)) / factorial(k);
+};
+
 const Calculators: React.FC = () => {
   const { 
     currentBankrollBalance, 
