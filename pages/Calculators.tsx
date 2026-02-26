@@ -86,10 +86,6 @@ const fileToBase64 = (file: File): Promise<string> => {
   });
 };
 
-// ==========================================
-// FUNÇÕES MATEMÁTICAS DO MOTOR HFT
-// ==========================================
-
 const factorial = (n: number): number => {
   if (n < 0) return 0;
   if (n === 0 || n === 1) return 1;
@@ -104,19 +100,14 @@ const poissonExact = (k: number, lambda: number): number => {
 
 const Calculators: React.FC = () => {
   
-  // 🔥 SUA CHAVE MESTRA (Segurança Frontend/Backend)
+  // 🔥 SUA CHAVE MESTRA
   const userEmail = "rafaelancelmo.castro@gmail.com"; 
 
   const { currentBankrollBalance, isPro, aiScansUsedToday, canUseAiScan, incrementAiScan, setToast } = useBetStore();
   const navigate = useNavigate();
 
-  const [activeTab, setActiveTab] = useState<
-    'dutching' | 'kelly' | 'value' | 'arb' | 'stake' | 'odds' | 'breakeven' | 'exc' | 'exg' | 'scout'
-  >('scout');
+  const [activeTab, setActiveTab] = useState<'dutching'|'kelly'|'value'|'arb'|'stake'|'odds'|'breakeven'|'exc'|'exg'|'scout'>('scout');
 
-  // ==========================================
-  // ESTADOS COMPARTILHADOS (ExC e ExG)
-  // ==========================================
   const [liveMin, setLiveMin] = useState('');
   const [liveCorners, setLiveCorners] = useState(''); 
   const [liveGoals, setLiveGoals] = useState('');     
@@ -135,9 +126,6 @@ const Calculators: React.FC = () => {
   const [needsGoal, setNeedsGoal] = useState('false'); 
   const [recentGoal, setRecentGoal] = useState('false'); 
 
-  // ==========================================
-  // ESTADOS DO NOVO PRE-LIVE SCOUT
-  // ==========================================
   const [scoutMode, setScoutMode] = useState<'grid' | 'builder'>('grid');
   
   useEffect(() => {
@@ -154,9 +142,12 @@ const Calculators: React.FC = () => {
   const [scoutBuilderResult, setScoutBuilderResult] = useState<any | null>(null);
   const [selectedMatchesForBuilder, setSelectedMatchesForBuilder] = useState<string[]>([]);
 
-  // 🔥 Filtro de Mercados (Focado em Gols e Cantos por Padrão)
-  const AVAILABLE_MARKETS = ['Gols', 'Escanteios', 'Cartões', 'Mercados de Jogador', 'Resultado da Partida (1x2/Dupla)'];
-  const [builderMarkets, setBuilderMarkets] = useState<string[]>(['Gols', 'Escanteios', 'Resultado da Partida (1x2/Dupla)']);
+  // 🔥 Filtro de Mercados (Agora focado apenas no seu operacional real)
+  const AVAILABLE_MARKETS = [
+      'Gols (Overs, Unders, HT/FT, Equipe)', 
+      'Escanteios (Overs, Race, HT/FT, Equipe)'
+  ];
+  const [builderMarkets, setBuilderMarkets] = useState<string[]>([...AVAILABLE_MARKETS]);
 
   const toggleMarket = (market: string) => {
       setBuilderMarkets(prev => prev.includes(market) ? prev.filter(m => m !== market) : [...prev, market]);
@@ -241,16 +232,7 @@ const Calculators: React.FC = () => {
               body: JSON.stringify({ image: base64Data, mimeType: 'image/jpeg', email: userEmail })
           });
 
-          const text = await response.text();
-
-let data;
-
-try {
-  data = JSON.parse(text);
-} catch {
-  console.error("Resposta inválida:", text);
-  throw new Error("Resposta inválida do servidor.");
-}
+          const data = await response.json();
           if (!response.ok) throw new Error(data.error || 'Falha na IA');
           
           if (data && data.matches) {
@@ -424,7 +406,7 @@ try {
   useEffect(() => { setExgChecklist({}); setExgUnlocked(false); }, [exgScenario]);
   const handleExgCheck = (idx: number) => {
     const n = { ...exgChecklist, [idx]: !exgChecklist[idx] }; setExgChecklist(n);
-    setExcUnlocked(Object.keys(n).filter(k => n[parseInt(k)]).length === exgScenariosData[exgScenario].checks.length);
+    setExgUnlocked(Object.keys(n).filter(k => n[parseInt(k)]).length === exgScenariosData[exgScenario].checks.length);
   };
 
   const runQuantEngine = (type: 'exc' | 'exg', scenario: string) => {
@@ -1220,7 +1202,7 @@ try {
                             </div>
                         )}
 
-                        {/* NOVO: SELETOR DE MERCADOS */}
+                        {/* NOVO: SELETOR DE MERCADOS (SÓ GOLS E CANTOS) */}
                         <div className="bg-slate-900/50 border border-slate-800 p-4 rounded-2xl">
                             <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3 flex items-center gap-2"><Layers size={12}/> 2. Mercados Permitidos (Foco da IA)</h4>
                             <div className="flex flex-wrap gap-2">
@@ -1288,7 +1270,7 @@ try {
                                    </div>
                                    <motion.div initial={{ width: '0%' }} animate={{ width: '100%' }} transition={{ repeat: Infinity, duration: 2 }} className="absolute bottom-0 left-0 h-1 bg-indigo-500 shadow-[0_0_20px_#6366f1]" />
                                    <Sparkles size={32} className="text-indigo-400 mb-2 animate-pulse" />
-                                   <p className="text-indigo-400 font-mono font-bold text-xs uppercase tracking-widest text-center px-4 mt-2">Cruzando dados e precificando múltiplos mercados...</p>
+                                   <p className="text-indigo-400 font-mono font-bold text-xs uppercase tracking-widest text-center px-4 mt-2">Calculando probabilidade e odd justa...</p>
                                </div>
                            )}
                         </div>
