@@ -31,7 +31,6 @@ const PodInput = ({ label, value, onChange, icon: Icon, placeholder, colorClass,
   </div>
 );
 
-// 🔥 NOVO COMPONENTE: SELECT DO CONTEXTO TÁTICO
 const PodSelect = ({ label, value, onChange, icon: Icon, options, colorClass }: any) => (
   <div className="relative group">
       <label className={`text-[9px] font-black uppercase tracking-widest block mb-1.5 transition-colors text-slate-500`}>{label}</label>
@@ -62,7 +61,7 @@ const fileToBase64 = (file: File): Promise<string> => {
       const img = new Image();
       img.onload = () => {
         const canvas = document.createElement('canvas');
-        const MAX_WIDTH = 1200; // Resolução ideal para IA ler sem pesar
+        const MAX_WIDTH = 1200; 
         let width = img.width;
         let height = img.height;
 
@@ -76,7 +75,6 @@ const fileToBase64 = (file: File): Promise<string> => {
         const ctx = canvas.getContext('2d');
         ctx?.drawImage(img, 0, 0, width, height);
         
-        // Comprime para JPEG com 80% de qualidade
         const dataUrl = canvas.toDataURL('image/jpeg', 0.8);
         resolve(dataUrl.split(',')[1]);
       };
@@ -124,7 +122,7 @@ const Calculators: React.FC = () => {
 
   const [activeTab, setActiveTab] = useState<
     'dutching' | 'kelly' | 'value' | 'arb' | 'stake' | 'odds' | 'breakeven' | 'exc' | 'exg' | 'scout'
-  >('dutching');
+  >('scout');
 
   // ==========================================
   // ESTADOS COMPARTILHADOS (ExC e ExG) - SEPARADOS
@@ -215,7 +213,6 @@ const Calculators: React.FC = () => {
     if (file && VALID_IMAGE_TYPES.includes(file.type)) processVisionAI(file);
   };
 
-  // 🔥 PROCESSAMENTO DO SCOUT (GRID VS BUILDER)
   const handleScoutGridUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file && VALID_IMAGE_TYPES.includes(file.type)) handleAddScoutGridImage(file);
@@ -348,11 +345,9 @@ const Calculators: React.FC = () => {
            handleIncrementScan();
            setToast({ type: 'success', message: 'Contexto Extraído com IA!' });
         }
-        setIsScanning(false);
     } catch (e: any) {
         setToast({ type: 'error', message: e.message || 'Erro na leitura visual.' });
-        setIsScanning(false);
-    }
+    } finally { setIsScanning(false); }
   };
 
   const resetScanner = () => {
@@ -618,7 +613,7 @@ const Calculators: React.FC = () => {
       </div>
       
       {/* TABS GRID */}
-      <div className="flex flex-wrap md:grid md:grid-cols-4 xl:grid-cols-10 gap-2 mb-6 px-4 md:px-0">
+      <div className="flex flex-wrap gap-2 mb-6 px-4 md:px-0">
         {tabs.map(tab => (
           <button
             key={tab.id}
@@ -701,7 +696,8 @@ const Calculators: React.FC = () => {
             )}
 
             {activeTab === 'value' && (
-                !isPro ? <ProLockScreen /> : (
+                <>
+                {!isPro ? <ProLockScreen /> : (
                 <div className="bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-800 rounded-[2rem] p-6 shadow-sm">
                    <h2 className="text-lg font-black text-slate-900 dark:text-white uppercase tracking-tighter italic mb-6 flex items-center gap-2"><Target size={20} className="text-emerald-500"/> Value Bet Finder</h2>
                    <div className="grid grid-cols-2 gap-4 mb-6">
@@ -724,11 +720,13 @@ const Calculators: React.FC = () => {
                       </p>
                    </div>
                 </div>
-                )
+                )}
+                </>
             )}
 
             {activeTab === 'arb' && (
-                !isPro ? <ProLockScreen /> : (
+                <>
+                {!isPro ? <ProLockScreen /> : (
                 <div className="bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-800 rounded-[2rem] p-6 shadow-sm">
                    <h2 className="text-lg font-black text-slate-900 dark:text-white uppercase tracking-tighter italic mb-6 flex items-center gap-2"><Scale size={20} className="text-blue-500"/> Arbitragem (2-Way)</h2>
                    <div className="mb-4">
@@ -759,7 +757,8 @@ const Calculators: React.FC = () => {
                    </div>
                    {arbRoi > 0 && <p className="text-center text-xs text-slate-500 dark:text-slate-400 mt-2">Lucro líquido: R$ {arbProfit.toFixed(2)}</p>}
                 </div>
-                )
+                )}
+                </>
             )}
 
             {activeTab === 'stake' && (
@@ -798,7 +797,8 @@ const Calculators: React.FC = () => {
             )}
 
             {activeTab === 'breakeven' && (
-                !isPro ? <ProLockScreen /> : (
+                <>
+                {!isPro ? <ProLockScreen /> : (
                 <div className="bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-800 rounded-[2rem] p-6 shadow-sm">
                    <h2 className="text-lg font-black text-slate-900 dark:text-white uppercase tracking-tighter italic mb-6 flex items-center gap-2"><TrendingUp size={20} className="text-pink-500"/> Break Even Point</h2>
                    <div className="mb-8">
@@ -811,14 +811,16 @@ const Calculators: React.FC = () => {
                       <p className="text-xs text-slate-500 mt-2">Para ficar no zero a zero (sem prejuízo)</p>
                    </div>
                 </div>
-                )
+                )}
+                </>
             )}
 
             {/* =========================================
                 EXPECTATIVA DE CANTOS E GOLS (ExC / ExG)
             ========================================= */}
             {(activeTab === 'exc' || activeTab === 'exg') && (
-                !isPro ? <ProLockScreen /> : (
+                <>
+                {!isPro ? <ProLockScreen /> : (
                 <div className="bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-800 rounded-[2.5rem] p-6 sm:p-8 shadow-sm relative overflow-hidden">
                    <div className="flex justify-between items-start mb-6">
                       <h2 className={`text-2xl font-black uppercase tracking-tighter italic flex items-center gap-2 ${activeTab === 'exc' ? 'text-emerald-500' : 'text-orange-500'}`}>
@@ -1072,13 +1074,16 @@ const Calculators: React.FC = () => {
                      )}
                    </AnimatePresence>
                 </div>
+                )}
+                </>
             )}
 
             {/* =========================================
                 🔥 NOVO: SCOUT PRÉ-LIVE (IA CAÇADORA) 🔥
             ========================================= */}
             {activeTab === 'scout' && (
-                !isPro ? <ProLockScreen /> : (
+                <>
+                {!isPro ? <ProLockScreen /> : (
                 <div className="bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-800 rounded-[2.5rem] p-6 sm:p-8 shadow-sm relative overflow-hidden">
                    <div className="flex justify-between items-start mb-8 relative z-10">
                       <div>
@@ -1225,7 +1230,9 @@ const Calculators: React.FC = () => {
                                    <div className="w-12 h-12 rounded-full bg-slate-200 dark:bg-slate-800 flex items-center justify-center mb-4 text-slate-500 group-hover:text-indigo-500 transition-colors group-hover:scale-110 duration-300">
                                        <Scan size={24} />
                                    </div>
-                                   <h3 className="text-sm font-black text-slate-700 dark:text-slate-300 mb-1 text-center">Upload de Estatísticas (H2H)</h3>
+                                   <h3 className="text-sm font-black text-slate-700 dark:text-slate-300 mb-1 text-center">
+                                       {selectedMatchesForBuilder.length > 0 ? 'Upload das Estatísticas H2H' : 'Upload de Estatísticas (Até 3 jogos)'}
+                                   </h3>
                                    <p className="text-[10px] text-slate-500 uppercase tracking-widest font-bold text-center mb-3">Selecione até 3 imagens</p>
                                    <input type="file" accept="image/jpeg, image/png, image/webp" multiple className="hidden" onChange={handleScoutBuilderUpload} ref={scoutBuilderInputRef} />
                                </label>
@@ -1314,7 +1321,8 @@ const Calculators: React.FC = () => {
                    )}
 
                 </div>
-                )
+                )}
+                </>
             )}
             
         </div>
