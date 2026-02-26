@@ -1,5 +1,8 @@
 import { GoogleGenerativeAI } from '@google/generative-ai';
 
+// 🔥 Aumenta o limite de tempo da Vercel para 60 segundos (Evita o Erro 500 ao ler muitas imagens)
+export const maxDuration = 60;
+
 export default async function handler(req: any, res: any) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method Not Allowed' });
 
@@ -23,21 +26,22 @@ export default async function handler(req: any, res: any) {
 
     const selectedMarketsStr = markets && markets.length > 0 ? markets.join(', ') : 'GOLS, ESCANTEIOS, RESULTADO';
 
-    // 🔥 SUPER PROMPT V3 (MATEMÁTICA AVANÇADA, ANTI-ALUCINAÇÃO E MARGEM DE SEGURANÇA)
+    // 🔥 SUPER PROMPT V4 (ANTI-ERRO 500 E ANTI-ALUCINAÇÃO CORNERPRO)
     const prompt = `Você é um Analista Quantitativo HFT e Algoritmo Precificador Pré-Live Especialista em Apostas Combinadas.
     Você receberá imagens contendo estatísticas pré-jogo (SofaScore, Flashscore, CornerPro).
     
-    ⚠️ REGRA DE OURO - ANTI-ALUCINAÇÃO EM PLACARES AGREGADOS:
-    Leia estritamente o que está na tela. Ao analisar jogos de "1ª Mão" ou "2ª Mão" (mata-mata), verifique QUEM ganhou a primeira partida no histórico de confrontos diretos antes de dizer quem está em desvantagem. Não invente desvantagens.
+    ⚠️ REGRA DE OURO - ANTI-ALUCINAÇÃO DE PLACAR AGREGADO (CORNERPRO):
+    Na plataforma CornerPro, o histórico do primeiro jogo aparece muito pequeno como "1ª Mão (X-Y)". O número "X" (esquerda) pertence ao time MANDANTE de hoje. O "Y" pertence ao VISITANTE de hoje. 
+    PROIBIÇÃO: Se você se sentir minimamente confuso ao ler esse texto minúsculo, NÃO MENCIONE O PLACAR AGREGADO NA SUA ANÁLISE. Em vez de focar no agregado, baseie sua decisão 100% nas "Previsões para o Jogo" (os botões verdes/vermelhos com as porcentagens % claras) e na tabela de Média de Gols/Cantos.
 
     🧠 INTELIGÊNCIA MATEMÁTICA OBRIGATÓRIA:
-    Não se deixe levar apenas pela cor visual do gráfico. Aplique raciocínio quantitativo:
-    1. Calcule a média real de gols e cantos somando os últimos jogos divididos pelo número de partidas.
-    2. Considere o "Desvio Padrão": Se um time fez 5 gols num jogo e 0 nos outros quatro, a média é mentirosa. Busque CONSTÂNCIA (Taxa de Acerto / Hit Rate).
-    3. Analise o "Field Tilt" (áreas de ação): Se um time tem mais de 60% de ação no terço final, priorize mercados ofensivos.
+    Não se deixe levar por achismos. Aplique raciocínio quantitativo:
+    1. Olhe para a Taxa de Acerto (Hit Rate). Se a imagem diz "75% Mais de 1.5 Gols", essa é sua base matemática principal.
+    2. Avalie as Médias (Ex: Média de Cantos a favor = 6.40, contra = 4.20).
+    3. Se o "Field Tilt" (Ação no terço final) do favorito for maior que 60%, priorize mercados ofensivos para ele.
 
     🎯 MERCADOS PERMITIDOS (FOCO DO USUÁRIO):
-    O usuário solicitou que você explore APENAS combinações dentro destes mercados: [ ${selectedMarketsStr} ]. 
+    Explore APENAS combinações dentro destes mercados: [ ${selectedMarketsStr} ]. 
     Formate cada seleção no padrão: "[Escopo] ([Tempo]) - [Mercado]" (Ex: "Partida (FT) - Mais de 1.5 Gols").
 
     Sua saída deve conter:
@@ -45,7 +49,7 @@ export default async function handler(req: any, res: any) {
     2. Uma Combinação Alternativa (Caso a principal não agrade o usuário).
     3. Uma "Margem de Segurança" (A versão mais conservadora da sua aposta principal, para alavancagem segura).
 
-    Retorne APENAS um JSON válido neste formato exato (sem markdown):
+    Retorne ESTRITAMENTE um JSON válido neste formato exato (sem markdown em volta):
     {
       "selections": [
         {
@@ -56,7 +60,7 @@ export default async function handler(req: any, res: any) {
       ],
       "alternativeCombination": "Explique uma entrada alternativa. Ex: Em vez de Cantos, ir em Ambas Marcam devido à fragilidade defensiva.",
       "conservativeCombination": "A versão super segura. Ex: Se recomendou +2.5 Gols, a segurança é +1.5 Gols.",
-      "analysis": "Sua tese matemática detalhando o cálculo das médias, o peso do placar agregado real lido na tela e o motivo da escolha."
+      "analysis": "Sua tese matemática baseada apenas nos números absolutos e % que você tem 100% de certeza que leu na imagem."
     }`;
 
     const imageParts = images.map((img: any) => ({
@@ -64,12 +68,13 @@ export default async function handler(req: any, res: any) {
     }));
 
     const result = await model.generateContent([prompt, ...imageParts]);
+    let responseText = result.response.text();
 
-    let responseText = result.response.text().replace(/```json/g, '').replace(/```/g, '').trim();
-    const start = responseText.indexOf('{'); const end = responseText.lastIndexOf('}');
-    if (start !== -1 && end !== -1) responseText = responseText.substring(start, end + 1);
-
-    const json = JSON.parse(responseText);
+    // 🛡️ Extrator de JSON blindado (Garante que se a IA falar besteira, pegamos só o JSON)
+    const match = responseText.match(/\{[\s\S]*\}/);
+    if (!match) throw new Error('A IA não retornou um formato de dados válido.');
+    
+    const json = JSON.parse(match[0]);
     
     // Cálculo de Odd Justa Multiplicada
     if (json.selections && json.selections.length > 0) {
@@ -86,6 +91,6 @@ export default async function handler(req: any, res: any) {
 
   } catch (error: any) {
     console.error("Erro Vision Builder:", error);
-    return res.status(500).json({ error: 'Erro ao construir a aposta.' });
+    return res.status(500).json({ error: error.message || 'Erro ao construir a aposta.' });
   }
 }

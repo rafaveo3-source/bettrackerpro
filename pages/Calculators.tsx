@@ -62,7 +62,7 @@ const fileToBase64 = (file: File): Promise<string> => {
       const img = new Image();
       img.onload = () => {
         const canvas = document.createElement('canvas');
-        const MAX_WIDTH = 1200; 
+        const MAX_WIDTH = 1000; // Reduzido de 1200 para 1000 (Garante envio ultrarrápido)
         let width = img.width;
         let height = img.height;
 
@@ -76,7 +76,8 @@ const fileToBase64 = (file: File): Promise<string> => {
         const ctx = canvas.getContext('2d');
         ctx?.drawImage(img, 0, 0, width, height);
         
-        const dataUrl = canvas.toDataURL('image/jpeg', 0.8);
+        // Comprime para JPEG com 75% de qualidade (Leveza total, zero Erro 500)
+        const dataUrl = canvas.toDataURL('image/jpeg', 0.75);
         resolve(dataUrl.split(',')[1]);
       };
       img.onerror = (error) => reject(error);
