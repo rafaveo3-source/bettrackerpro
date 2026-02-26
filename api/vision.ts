@@ -4,27 +4,42 @@ export default async function handler(req: any, res: any) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method Not Allowed' });
 
   try {
-    const { image, mimeType, mode, scenario } = req.body;
+    // 🔥 Recebe o e-mail do Frontend para validação de segurança
+    const { image, mimeType, mode, scenario, email } = req.body;
     
     const apiKey = process.env.GEMINI_API_KEY;
+    const adminEmail = process.env.ADMIN_EMAIL; // Cadastre isso na Vercel
+
     if (!apiKey) return res.status(500).json({ error: 'Chave de API ausente.' });
+    if (!email) return res.status(400).json({ error: 'Autenticação inválida. E-mail ausente.' });
+
+    // =====================================================
+    // 🛡️ GATEKEEPER DE SEGURANÇA (VERIFICAÇÃO DE CRÉDITOS)
+    // =====================================================
+    const isAdmin = email === adminEmail;
+
+    if (!isAdmin) {
+        // 🔴 FUTURA INTEGRAÇÃO COM BANCO DE DADOS AQUI
+        // Exemplo:
+        // const { data } = await supabase.from('users').select('scans_today').eq('email', email).single();
+        // if (data && data.scans_today >= 10) return res.status(403).json({ error: 'Limite diário atingido.' });
+    }
 
     const genAI = new GoogleGenerativeAI(apiKey);
     const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
 
     // 🎯 Ajuste inteligente por mercado
-const marketFocus =
-  mode === 'exc'
-    ? 'FOCO PRINCIPAL: ESCANTEIOS (CANTOS)'
-    : 'FOCO PRINCIPAL: GOLS';
+    const marketFocus =
+      mode === 'exc'
+        ? 'FOCO PRINCIPAL: ESCANTEIOS (CANTOS)'
+        : 'FOCO PRINCIPAL: GOLS';
 
-const scenarioInfo = scenario
-  ? `Cenário selecionado pelo usuário: ${scenario}`
-  : 'Cenário não informado';
+    const scenarioInfo = scenario
+      ? `Cenário selecionado pelo usuário: ${scenario}`
+      : 'Cenário não informado';
 
     // 🔥 UNIVERSAL FOOTBALL VISION PARSER V5
-
-const prompt = `
+    const prompt = `
 Você é um Analista Quantitativo HFT especialista em leitura visual multi-plataforma.
 
 ${marketFocus}
@@ -226,18 +241,27 @@ RETORNE APENAS ESTE JSON:
 
     const json = JSON.parse(responseText);
 
-// 🛡️ BLINDAGEM EXTRA (ANTI-ERRO)
-if (!json.redCard || !["none", "pressing", "defending"].includes(json.redCard)) {
-  json.redCard = "none";
-}
+    // 🛡️ BLINDAGEM EXTRA (ANTI-ERRO)
+    if (!json.redCard || !["none", "pressing", "defending"].includes(json.redCard)) {
+      json.redCard = "none";
+    }
 
-if (!json.pressureTrend || !["increasing", "stable", "decreasing"].includes(json.pressureTrend)) {
-  json.pressureTrend = "stable";
-}
+    if (!json.pressureTrend || !["increasing", "stable", "decreasing"].includes(json.pressureTrend)) {
+      json.pressureTrend = "stable";
+    }
 
-if (!json.matchTemperature || !["intense", "calm"].includes(json.matchTemperature)) {
-  json.matchTemperature = "calm";
-}
+    if (!json.matchTemperature || !["intense", "calm"].includes(json.matchTemperature)) {
+      json.matchTemperature = "calm";
+    }
+
+    // =====================================================
+    // 💾 PÓS-PROCESSAMENTO: ATUALIZAR BANCO DE DADOS
+    // =====================================================
+    if (!isAdmin) {
+       // 🔴 AQUI VOCÊ SOMA +1 NO BANCO DE DADOS DO USUÁRIO
+       // await supabase.rpc('increment_scan_count', { user_email: email });
+    }
+
     return res.status(200).json(json);
 
   } catch (error: any) {

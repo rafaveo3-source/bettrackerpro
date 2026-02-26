@@ -4,9 +4,19 @@ export default async function handler(req: any, res: any) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method Not Allowed' });
 
   try {
-    const { images } = req.body; // Agora recebe um array de imagens
+    const { images, email } = req.body; // Agora recebe um array de imagens
+    
     const apiKey = process.env.GEMINI_API_KEY;
+    const adminEmail = process.env.ADMIN_EMAIL;
+
     if (!apiKey) return res.status(500).json({ error: 'Chave de API ausente.' });
+    if (!email) return res.status(400).json({ error: 'Autenticação inválida. E-mail ausente.' });
+
+    const isAdmin = email === adminEmail;
+
+    if (!isAdmin) {
+        // 🔴 FUTURA INTEGRAÇÃO COM BANCO DE DADOS AQUI
+    }
 
     const genAI = new GoogleGenerativeAI(apiKey);
     const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
@@ -47,6 +57,10 @@ export default async function handler(req: any, res: any) {
     const p2 = (json.prob2 || 70) / 100;
     json.combinedProb = Math.round(p1 * p2 * 100);
     json.fairOdd = Number((1 / (p1 * p2)).toFixed(2));
+
+    if (!isAdmin) {
+       // 🔴 AQUI VOCÊ SOMA +1 NO BANCO DE DADOS DO USUÁRIO
+    }
 
     return res.status(200).json(json);
 

@@ -4,14 +4,24 @@ export default async function handler(req: any, res: any) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method Not Allowed' });
 
   try {
-    const { image, mimeType } = req.body;
+    const { image, mimeType, email } = req.body;
+    
     const apiKey = process.env.GEMINI_API_KEY;
+    const adminEmail = process.env.ADMIN_EMAIL;
+
     if (!apiKey) return res.status(500).json({ error: 'Chave de API ausente.' });
+    if (!email) return res.status(400).json({ error: 'Autenticação inválida. E-mail ausente.' });
+
+    const isAdmin = email === adminEmail;
+
+    if (!isAdmin) {
+        // 🔴 FUTURA INTEGRAÇÃO COM BANCO DE DADOS AQUI
+    }
 
     const genAI = new GoogleGenerativeAI(apiKey);
     const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
 
-    // 🔥 TRAVA DE QUANTIDADE REMOVIDA
+    // 🔥 TRAVA DE QUANTIDADE REMOVIDA & TEMPO ADICIONADO
     const prompt = `Você é um Analista de Scout Pré-Live Esportivo HFT.
     Sua missão é olhar para esta imagem contendo uma lista de jogos e odds 1x2 e extrair oportunidades claras de valor (EV+).
 
@@ -25,6 +35,7 @@ export default async function handler(req: any, res: any) {
     {
       "matches": [
         {
+          "time": "Horário do jogo (ex: 19:00 ou 16:30)",
           "teams": "Nome Time A vs Nome Time B",
           "market": "GOLS" ou "CANTOS",
           "reason": "Explicação técnica curta do porquê a odd assinala valor estatístico."
@@ -39,6 +50,11 @@ export default async function handler(req: any, res: any) {
     if (start !== -1 && end !== -1) responseText = responseText.substring(start, end + 1);
 
     const json = JSON.parse(responseText);
+
+    if (!isAdmin) {
+       // 🔴 AQUI VOCÊ SOMA +1 NO BANCO DE DADOS DO USUÁRIO
+    }
+
     return res.status(200).json(json);
 
   } catch (error: any) {
