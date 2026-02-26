@@ -1,6 +1,6 @@
 import { GoogleGenerativeAI } from '@google/generative-ai';
-import { classifyGameProfile } from '../../utils/gameProfileClassifier';
-import { buildDynamicMultiple } from '../../utils/multiBuilderEngine';
+import { classifyGameProfile } from './_utils/gameProfileClassifier';
+import { buildDynamicMultiple } from './_utils/multiBuilderEngine';
 
 export const maxDuration = 60;
 
