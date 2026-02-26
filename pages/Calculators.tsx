@@ -1349,9 +1349,9 @@ const Calculators: React.FC = () => {
                                 </div>
 
                                 <div className="bg-slate-900/30 border border-slate-800 p-4 rounded-xl relative z-10">
-                                    <p className="text-[10px] uppercase tracking-widest text-slate-500 font-bold mb-2">Tese Quantitativa da IA</p>
-                                    <p className="text-[11px] sm:text-xs text-slate-300 leading-relaxed italic border-l-2 border-indigo-500 pl-3">{safeText(scoutBuilderResult.analysis)}</p>
-                                </div>
+    <p className="text-[10px] uppercase tracking-widest text-slate-500 font-bold mb-2">Tese Quantitativa da IA</p>
+    <p className="text-[11px] sm:text-xs text-slate-300 leading-relaxed border-l-2 border-indigo-500 pl-3 whitespace-pre-wrap">{safeText(scoutBuilderResult.analysis)}</p>
+</div>
                             </motion.div>
                         )}
                      </div>
