@@ -53,6 +53,7 @@ const MapIcon = ({ size, className }: any) => (
   </svg>
 );
 
+// 🔥 COMPRESSOR DE IMAGEM HFT (Evita o erro de Payload Too Large da Vercel)
 const fileToBase64 = (file: File): Promise<string> => {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -88,6 +89,7 @@ const fileToBase64 = (file: File): Promise<string> => {
 // ==========================================
 // FUNÇÕES MATEMÁTICAS DO MOTOR HFT
 // ==========================================
+
 const factorial = (n: number): number => {
   if (n < 0) return 0;
   if (n === 0 || n === 1) return 1;
@@ -102,12 +104,15 @@ const poissonExact = (k: number, lambda: number): number => {
 
 const Calculators: React.FC = () => {
   
+  // 🔥 SUA CHAVE MESTRA (Segurança Frontend/Backend)
   const userEmail = "rafaelancelmo.castro@gmail.com"; 
 
   const { currentBankrollBalance, isPro, aiScansUsedToday, canUseAiScan, incrementAiScan, setToast } = useBetStore();
   const navigate = useNavigate();
 
-  const [activeTab, setActiveTab] = useState<'dutching'|'kelly'|'value'|'arb'|'stake'|'odds'|'breakeven'|'exc'|'exg'|'scout'>('scout');
+  const [activeTab, setActiveTab] = useState<
+    'dutching' | 'kelly' | 'value' | 'arb' | 'stake' | 'odds' | 'breakeven' | 'exc' | 'exg' | 'scout'
+  >('scout');
 
   // ==========================================
   // ESTADOS COMPARTILHADOS (ExC e ExG)
@@ -121,6 +126,7 @@ const Calculators: React.FC = () => {
   const [liveSoffT, setLiveSoffT] = useState(''); 
   const [liveCurrentOdd, setLiveCurrentOdd] = useState('');
   const [liveAP_5m, setLiveAP_5m] = useState(''); 
+
   const [recentShots, setRecentShots] = useState('');
   const [recentCorners, setRecentCorners] = useState('');
   const [pressureTrend, setPressureTrend] = useState('stable'); 
@@ -283,7 +289,7 @@ const Calculators: React.FC = () => {
               body: JSON.stringify({ 
                   images: base64Images, 
                   email: userEmail,
-                  markets: builderMarkets // 🔥 Envia os mercados selecionados
+                  markets: builderMarkets
               })
           });
 
@@ -612,7 +618,6 @@ const Calculators: React.FC = () => {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 px-4 md:px-0">
         <div className="lg:col-span-2 space-y-6 min-w-0 w-full">
             
-            {/* CALCULADORAS SIMPLES */}
             {activeTab === 'dutching' && (
                 <div className="bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-800 rounded-[2rem] p-6 shadow-sm w-full overflow-hidden">
                     <h2 className="text-lg font-black text-slate-900 dark:text-white uppercase tracking-tighter italic mb-4">Calculadora Dutching</h2>
@@ -674,8 +679,7 @@ const Calculators: React.FC = () => {
             )}
 
             {activeTab === 'value' && (
-                <>
-                {!isPro ? <ProLockScreen /> : (
+                !isPro ? <ProLockScreen /> : (
                 <div className="bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-800 rounded-[2rem] p-6 shadow-sm">
                    <h2 className="text-lg font-black text-slate-900 dark:text-white uppercase tracking-tighter italic mb-6 flex items-center gap-2"><Target size={20} className="text-emerald-500"/> Value Bet Finder</h2>
                    <div className="grid grid-cols-2 gap-4 mb-6">
@@ -698,13 +702,11 @@ const Calculators: React.FC = () => {
                       </p>
                    </div>
                 </div>
-                )}
-                </>
+                )
             )}
 
             {activeTab === 'arb' && (
-                <>
-                {!isPro ? <ProLockScreen /> : (
+                !isPro ? <ProLockScreen /> : (
                 <div className="bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-800 rounded-[2rem] p-6 shadow-sm">
                    <h2 className="text-lg font-black text-slate-900 dark:text-white uppercase tracking-tighter italic mb-6 flex items-center gap-2"><Scale size={20} className="text-blue-500"/> Arbitragem (2-Way)</h2>
                    <div className="mb-4">
@@ -735,8 +737,7 @@ const Calculators: React.FC = () => {
                    </div>
                    {arbRoi > 0 && <p className="text-center text-xs text-slate-500 dark:text-slate-400 mt-2">Lucro líquido: R$ {arbProfit.toFixed(2)}</p>}
                 </div>
-                )}
-                </>
+                )
             )}
 
             {activeTab === 'stake' && (
@@ -775,8 +776,7 @@ const Calculators: React.FC = () => {
             )}
 
             {activeTab === 'breakeven' && (
-                <>
-                {!isPro ? <ProLockScreen /> : (
+                !isPro ? <ProLockScreen /> : (
                 <div className="bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-800 rounded-[2rem] p-6 shadow-sm">
                    <h2 className="text-lg font-black text-slate-900 dark:text-white uppercase tracking-tighter italic mb-6 flex items-center gap-2"><TrendingUp size={20} className="text-pink-500"/> Break Even Point</h2>
                    <div className="mb-8">
@@ -789,16 +789,14 @@ const Calculators: React.FC = () => {
                       <p className="text-xs text-slate-500 mt-2">Para ficar no zero a zero (sem prejuízo)</p>
                    </div>
                 </div>
-                )}
-                </>
+                )
             )}
 
             {/* =========================================
                 EXPECTATIVA DE CANTOS E GOLS (ExC / ExG)
             ========================================= */}
             {(activeTab === 'exc' || activeTab === 'exg') && (
-                <>
-                {!isPro ? <ProLockScreen /> : (
+                !isPro ? <ProLockScreen /> : (
                 <div className="bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-800 rounded-[2.5rem] p-6 sm:p-8 shadow-sm relative overflow-hidden">
                    <div className="flex justify-between items-start mb-6">
                       <h2 className={`text-2xl font-black uppercase tracking-tighter italic flex items-center gap-2 ${activeTab === 'exc' ? 'text-emerald-500' : 'text-orange-500'}`}>
@@ -1052,16 +1050,14 @@ const Calculators: React.FC = () => {
                      )}
                    </AnimatePresence>
                 </div>
-                )}
-                </>
+                )
             )}
 
             {/* =========================================
                 🔥 NOVO: SCOUT PRÉ-LIVE (IA CAÇADORA) 🔥
             ========================================= */}
             {activeTab === 'scout' && (
-                <>
-                {!isPro ? <ProLockScreen /> : (
+                !isPro ? <ProLockScreen /> : (
                 <div className="bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-800 rounded-[2.5rem] p-4 sm:p-8 shadow-sm relative overflow-hidden">
                    <div className="flex justify-between items-start mb-8 relative z-10">
                       <div>
@@ -1218,7 +1214,7 @@ const Calculators: React.FC = () => {
                                         <button key={m} onClick={() => toggleMarket(m)} className={`text-[10px] font-black uppercase tracking-widest px-3 py-1.5 rounded-lg border transition-all ${isActive ? 'bg-indigo-600 border-indigo-500 text-white' : 'bg-[#020617] border-slate-800 text-slate-500 hover:text-slate-300'}`}>
                                             {m}
                                         </button>
-                                    )
+                                    );
                                 })}
                             </div>
                         </div>
@@ -1233,7 +1229,7 @@ const Calculators: React.FC = () => {
                                    <h3 className="text-sm font-black text-slate-700 dark:text-slate-300 mb-1 text-center">
                                        3. Upload das Estatísticas H2H
                                    </h3>
-                                   <p className="text-[10px] text-slate-500 uppercase tracking-widest font-bold text-center mb-3">Tire um print de cada jogo e cole aqui (até 4 imagens)</p>
+                                   <p className="text-[10px] text-slate-500 uppercase tracking-widest font-bold text-center mb-3">Cole até 4 imagens (uma por jogo)</p>
                                    <input type="file" accept="image/jpeg, image/png, image/webp" multiple className="hidden" onChange={handleScoutBuilderUpload} ref={scoutBuilderInputRef} />
                                </label>
                            )}
@@ -1338,7 +1334,7 @@ const Calculators: React.FC = () => {
                    )}
 
                 </div>
-                </RequirePro>
+                )
             )}
             
         </div>
