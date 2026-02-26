@@ -4,7 +4,7 @@ export default async function handler(req: any, res: any) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method Not Allowed' });
 
   try {
-    const { images, email } = req.body; // Agora recebe um array de imagens
+    const { images, email } = req.body;
     
     const apiKey = process.env.GEMINI_API_KEY;
     const adminEmail = process.env.ADMIN_EMAIL;
@@ -12,34 +12,50 @@ export default async function handler(req: any, res: any) {
     if (!apiKey) return res.status(500).json({ error: 'Chave de API ausente.' });
     if (!email) return res.status(400).json({ error: 'Autenticação inválida. E-mail ausente.' });
 
+    // 🛡️ GATEKEEPER DE SEGURANÇA (BANCO DE DADOS)
     const isAdmin = email === adminEmail;
-
     if (!isAdmin) {
-        // 🔴 FUTURA INTEGRAÇÃO COM BANCO DE DADOS AQUI
+        // Exemplo de trava Supabase:
+        // const { data } = await supabase.from('users').select('scans_today').eq('email', email).single();
+        // if (data && data.scans_today >= 10) return res.status(403).json({ error: 'Limite diário atingido.' });
     }
 
     const genAI = new GoogleGenerativeAI(apiKey);
     const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
 
-    const prompt = `Você é um Algoritmo Precificador (Bookmaker) Pré-Live.
-    Você receberá uma ou mais imagens contendo estatísticas pré-jogo (SofaScore, Flashscore).
+    // 🔥 NOVO PROMPT: EXPLORA TODOS OS MERCADOS E CRIA MÚLTIPLAS
+    const prompt = `Você é um Algoritmo Precificador (Bookmaker) Pré-Live Especialista em 'Criar Aposta' e Múltiplas.
+    Você receberá uma ou mais imagens contendo estatísticas pré-jogo de futebol.
     
     ESTRATÉGIA:
-    - Se houver apenas 1 jogo nas imagens: Crie uma aposta combinada (Bet Builder) para aquele mesmo jogo (1 de Gols + 1 de Cantos).
-    - Se houver estatísticas de 2 ou mais jogos DIFERENTES nas imagens: Crie uma APOSTA DUPLA CRUZADA (Múltipla). Pegue a previsão mais forte (a mais provável) do Jogo 1 e cruze com a previsão mais forte do Jogo 2. Exemplo: Jogo A (Mais de 1.5 Gols) + Jogo B (Mais de 7.5 Cantos).
+    Sua missão é analisar os dados e construir a APOSTA COMBINADA (Múltipla) perfeita, selecionando os mercados matematicamente mais seguros baseados no histórico mostrado.
+    
+    MERCADOS QUE VOCÊ PODE EXPLORAR (Baseado na Bet365):
+    - Gols (Total de Gols, Ambas Marcam, Gols no 1º Tempo)
+    - Escanteios (Total de Escanteios, Escanteios 1º Tempo, Escanteios do Time)
+    - Cartões (Total de Cartões, Cartão Vermelho)
+    - Jogadores (Finalizações, Chutes ao Gol)
+    - Resultado (1x2, Dupla Chance, Empate Anula Aposta)
 
-    O alvo final é uma probabilidade combinada (prob1 * prob2) realista que resulte em uma Odd Média entre 1.50 e 2.00.
+    Você DEVE sugerir quantas seleções forem necessárias (2, 3, 4 ou mais) de forma que a probabilidade matemática combinada gere uma Odd Justa (Fair Line) final entre @1.60 e @2.00.
 
     Retorne APENAS um JSON válido neste formato exato (sem markdown):
     {
-      "selection1": "Descrição da Aposta 1 [Nome do Jogo ou Mercado] (ex: Arsenal vs Milan - Mais de 1.5 Gols)",
-      "prob1": probabilidade do mercado 1 em numero inteiro (ex: 82),
-      "selection2": "Descrição da Aposta 2 [Nome do Jogo ou Mercado] (ex: Chelsea vs Porto - Mais de 7.5 Cantos)",
-      "prob2": probabilidade do mercado 2 em numero inteiro (ex: 78),
-      "analysis": "Sua tese quantitativa cruzada do porquê essa dupla tem altíssimo valor."
+      "selections": [
+        {
+          "match": "Nome do Jogo",
+          "market": "Mercado Escolhido (ex: Norwich Mais de 4.5 Escanteios)",
+          "prob": 85
+        },
+        {
+          "match": "Nome do Jogo",
+          "market": "Mercado Escolhido (ex: Ambas Equipes Marcam - Sim)",
+          "prob": 72
+        }
+      ],
+      "analysis": "Sua tese quantitativa detalhada do porquê essa combinação tem altíssimo valor (EV+)."
     }`;
 
-    // Monta o array de dados inline para o Gemini (suporta múltiplas imagens de uma vez)
     const imageParts = images.map((img: any) => ({
         inlineData: { data: img.base64, mimeType: img.mimeType }
     }));
@@ -52,14 +68,16 @@ export default async function handler(req: any, res: any) {
 
     const json = JSON.parse(responseText);
     
-    // Cálculo de Odd Justa
-    const p1 = (json.prob1 || 70) / 100;
-    const p2 = (json.prob2 || 70) / 100;
-    json.combinedProb = Math.round(p1 * p2 * 100);
-    json.fairOdd = Number((1 / (p1 * p2)).toFixed(2));
+    // Calcula a probabilidade combinada e Odd Justa dinamicamente
+    if (json.selections && json.selections.length > 0) {
+        const combinedProbDecimal = json.selections.reduce((acc: number, curr: any) => acc * (curr.prob / 100), 1);
+        json.combinedProb = Math.round(combinedProbDecimal * 100);
+        json.fairOdd = Number((1 / combinedProbDecimal).toFixed(2));
+    }
 
     if (!isAdmin) {
        // 🔴 AQUI VOCÊ SOMA +1 NO BANCO DE DADOS DO USUÁRIO
+       // await supabase.rpc('increment_scan_count', { user_email: email });
     }
 
     return res.status(200).json(json);

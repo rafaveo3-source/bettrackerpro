@@ -5,7 +5,7 @@ import {
   Target, TrendingUp, AlertTriangle, Lock, Crown, Radar, CheckSquare, 
   Square, Activity, Crosshair, BarChart4, Zap, DollarSign, Goal, Lightbulb,
   Clock, Flag, ShieldAlert, Swords, Power, Scan, Image as ImageIcon, CheckCircle2,
-  Flame, Thermometer, RectangleHorizontal, Layers, Trash
+  Flame, Thermometer, RectangleHorizontal, Layers, Trash, ArrowRight
 } from 'lucide-react';
 import { useBetStore } from '../store/useBetStore';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -25,13 +25,15 @@ const PodInput = ({ label, value, onChange, icon: Icon, placeholder, colorClass,
           <input 
               type={type} value={value} onChange={onChange} placeholder={placeholder}
               className={`w-full bg-slate-950 border rounded-xl pl-10 pr-3 py-3 font-mono font-bold text-sm outline-none transition-all
-              ${highlight ? `border-${colorClass.split('-')[1]}-500/50 focus:border-${colorClass.split('-')[1]}-400 text-${colorClass.split('-')[1]}-400 shadow-[inset_0_0_10px_rgba(0,0,0,0.2)]` : 'border-slate-800 text-white focus:border-slate-600 focus:bg-[#09090b]'}`}
+${highlight 
+    ? `border-slate-600 focus:border-slate-400 ${colorClass} shadow-[inset_0_0_10px_rgba(0,0,0,0.2)]`
+    : 'border-slate-800 text-white focus:border-slate-600 focus:bg-[#09090b]'
+}`}              
           />
       </div>
   </div>
 );
 
-// 🔥 COMPONENTE: SELECT DO CONTEXTO TÁTICO
 const PodSelect = ({ label, value, onChange, icon: Icon, options, colorClass }: any) => (
   <div className="relative group">
       <label className={`text-[9px] font-black uppercase tracking-widest block mb-1.5 transition-colors text-slate-500`}>{label}</label>
@@ -54,7 +56,6 @@ const MapIcon = ({ size, className }: any) => (
   </svg>
 );
 
-// 🔥 COMPRESSOR DE IMAGEM HFT (Evita o erro de Payload Too Large da Vercel)
 const fileToBase64 = (file: File): Promise<string> => {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -63,7 +64,7 @@ const fileToBase64 = (file: File): Promise<string> => {
       const img = new Image();
       img.onload = () => {
         const canvas = document.createElement('canvas');
-        const MAX_WIDTH = 1200; // Resolução ideal para IA ler sem pesar
+        const MAX_WIDTH = 1200; 
         let width = img.width;
         let height = img.height;
 
@@ -77,7 +78,6 @@ const fileToBase64 = (file: File): Promise<string> => {
         const ctx = canvas.getContext('2d');
         ctx?.drawImage(img, 0, 0, width, height);
         
-        // Comprime para JPEG com 80% de qualidade
         const dataUrl = canvas.toDataURL('image/jpeg', 0.8);
         resolve(dataUrl.split(',')[1]);
       };
@@ -91,14 +91,10 @@ const fileToBase64 = (file: File): Promise<string> => {
 // ==========================================
 // FUNÇÕES MATEMÁTICAS DO MOTOR HFT
 // ==========================================
-
 const factorial = (n: number): number => {
   if (n < 0) return 0;
   if (n === 0 || n === 1) return 1;
-  let result = 1;
-  for (let i = 2; i <= n; i++) {
-    result *= i;
-  }
+  let result = 1; for (let i = 2; i <= n; i++) result *= i;
   return result;
 };
 
@@ -109,26 +105,15 @@ const poissonExact = (k: number, lambda: number): number => {
 
 const Calculators: React.FC = () => {
   
-  // 🔥 SUA CHAVE MESTRA (Segurança Frontend/Backend)
   const userEmail = "rafaelancelmo.castro@gmail.com"; 
 
-  const { 
-    currentBankrollBalance, 
-    isPro, 
-    aiScansUsedToday, 
-    canUseAiScan, 
-    incrementAiScan, 
-    setToast 
-  } = useBetStore();
-  
+  const { currentBankrollBalance, isPro, aiScansUsedToday, canUseAiScan, incrementAiScan, setToast } = useBetStore();
   const navigate = useNavigate();
 
-  const [activeTab, setActiveTab] = useState<
-    'dutching' | 'kelly' | 'value' | 'arb' | 'stake' | 'odds' | 'breakeven' | 'exc' | 'exg' | 'scout'
-  >('scout');
+  const [activeTab, setActiveTab] = useState<'dutching'|'kelly'|'value'|'arb'|'stake'|'odds'|'breakeven'|'exc'|'exg'|'scout'>('scout');
 
   // ==========================================
-  // ESTADOS COMPARTILHADOS (ExC e ExG) - SEPARADOS
+  // ESTADOS COMPARTILHADOS (ExC e ExG)
   // ==========================================
   const [liveMin, setLiveMin] = useState('');
   const [liveCorners, setLiveCorners] = useState(''); 
@@ -139,8 +124,6 @@ const Calculators: React.FC = () => {
   const [liveSoffT, setLiveSoffT] = useState(''); 
   const [liveCurrentOdd, setLiveCurrentOdd] = useState('');
   const [liveAP_5m, setLiveAP_5m] = useState(''); 
-
-  // 🔥 ESTADOS DO MOTOR CONTEXTUAL (TDF & EDM)
   const [recentShots, setRecentShots] = useState('');
   const [recentCorners, setRecentCorners] = useState('');
   const [pressureTrend, setPressureTrend] = useState('stable'); 
@@ -153,6 +136,12 @@ const Calculators: React.FC = () => {
   // ESTADOS DO NOVO PRE-LIVE SCOUT
   // ==========================================
   const [scoutMode, setScoutMode] = useState<'grid' | 'builder'>('grid');
+  useEffect(() => {
+    if (scoutMode === 'grid') {
+        setScoutBuilderImages([]);
+        setScoutBuilderResult(null);
+    }
+}, [scoutMode]);
   const [scoutGridImage, setScoutGridImage] = useState<string | null>(null);
   const [scoutBuilderImages, setScoutBuilderImages] = useState<{url: string, file: File}[]>([]);
   const [isScanningScout, setIsScanningScout] = useState(false);
@@ -160,9 +149,6 @@ const Calculators: React.FC = () => {
   const [scoutBuilderResult, setScoutBuilderResult] = useState<any | null>(null);
   const [selectedMatchesForBuilder, setSelectedMatchesForBuilder] = useState<string[]>([]);
 
-  // ==========================================
-  // LÓGICA DO SCANNER VISION IA (HUD)
-  // ==========================================
   const [scannedImage, setScannedImage] = useState<string | null>(null);
   const [isScanning, setIsScanning] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -171,7 +157,6 @@ const Calculators: React.FC = () => {
 
   const VALID_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
 
-  // Verifica crédito (O admin passa direto)
   const checkAiLimit = () => {
      if (userEmail === "rafaelancelmo.castro@gmail.com") return true;
      return canUseAiScan ? canUseAiScan() : false;
@@ -209,14 +194,13 @@ const Calculators: React.FC = () => {
     };
     window.addEventListener('paste', handleGlobalPaste);
     return () => window.removeEventListener('paste', handleGlobalPaste);
-  }, [activeTab, scoutMode, scoutBuilderImages]);
+  }, [activeTab, scoutMode]);
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file && VALID_IMAGE_TYPES.includes(file.type)) processVisionAI(file);
   };
 
-  // 🔥 PROCESSAMENTO DO SCOUT (GRID VS BUILDER)
   const handleScoutGridUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file && VALID_IMAGE_TYPES.includes(file.type)) handleAddScoutGridImage(file);
@@ -258,8 +242,8 @@ const Calculators: React.FC = () => {
   };
 
   const handleAddScoutBuilderImage = (file: File) => {
-      if (scoutBuilderImages.length >= 3) {
-          setToast({ type: 'error', message: 'Máximo de 3 imagens permitidas para análise cruzada.' });
+      if (scoutBuilderImages.length >= 4) {
+          setToast({ type: 'error', message: 'Máximo de 4 imagens permitidas para análise cruzada.' });
           return;
       }
       setScoutBuilderImages(prev => [...prev, { url: URL.createObjectURL(file), file }]);
@@ -267,6 +251,10 @@ const Calculators: React.FC = () => {
 
   const processScoutBuilderEngine = async () => {
       if (scoutBuilderImages.length === 0) return;
+      if (scoutBuilderImages.length < 2) {
+    setToast({ type: 'error', message: 'Envie pelo menos 2 jogos para gerar a múltipla.' });
+    return;
+}
       if (!isPro) { setToast({ type: 'error', message: 'Recurso exclusivo PRO.' }); return; }
       if (!checkAiLimit()) { setToast({ type: 'error', message: 'Limite atingido.' }); return; }
 
@@ -279,18 +267,31 @@ const Calculators: React.FC = () => {
           })));
 
           const response = await fetch('/api/vision-builder', {
-              method: 'POST', headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ images: base64Images, email: userEmail })
-          });
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+        images: base64Images,
+        selectedMatches: selectedMatchesForBuilder,
+        email: userEmail
+    })
+});
 
           const data = await response.json();
           if (!response.ok) throw new Error(data.error || 'Falha na IA');
           
-          if (data && data.selection1) {
-              setScoutBuilderResult(data);
-              handleIncrementScan();
-              setToast({ type: 'success', message: 'Aposta Cruzada Construída!' });
-          }
+          if (
+    data &&
+    Array.isArray(data.selections) &&
+    data.selections.length >= 2 &&
+    typeof data.combinedProb !== 'undefined' &&
+    typeof data.fairOdd !== 'undefined'
+) {
+    setScoutBuilderResult(data);
+    handleIncrementScan();
+    setToast({ type: 'success', message: 'Aposta Construída com Sucesso!' });
+} else {
+    throw new Error('Resposta inválida da IA. Verifique os dados enviados.');
+}
       } catch (e: any) {
           setToast({ type: 'error', message: e.message || 'Erro ao processar as imagens na IA.' });
       } finally { setIsScanningScout(false); }
@@ -299,8 +300,8 @@ const Calculators: React.FC = () => {
   const toggleMatchSelection = (matchName: string) => {
       setSelectedMatchesForBuilder(prev => {
           if (prev.includes(matchName)) return prev.filter(m => m !== matchName);
-          if (prev.length >= 3) {
-             setToast({ type: 'error', message: 'Máximo de 3 jogos por dupla/tripla.'});
+          if (prev.length >= 4) {
+             setToast({ type: 'error', message: 'Máximo de 4 jogos selecionados permitidos.'});
              return prev;
           }
           return [...prev, matchName];
@@ -308,11 +309,8 @@ const Calculators: React.FC = () => {
   };
 
   const clearGrid = () => { setScoutGridImage(null); setScoutGridResult(null); setSelectedMatchesForBuilder([]); };
-  const clearBuilder = () => { setScoutBuilderImages([]); setScoutBuilderResult(null); };
+  const clearBuilder = () => { setScoutBuilderImages([]); setScoutBuilderResult(null); setSelectedMatchesForBuilder([]); };
 
-  // ==========================================
-  // VISION IA (ExC e ExG)
-  // ==========================================
   const processVisionAI = async (file: File) => {
     if (!isPro) { setToast({ type: 'error', message: 'Exclusivo PRO.' }); return; }
     if (!checkAiLimit()) { setToast({ type: 'error', message: 'Limite atingido.' }); return; }
@@ -362,7 +360,7 @@ const Calculators: React.FC = () => {
   };
 
   // ==========================================
-  // MOTOR QUÂNTICO (HFT CONFIDENCE ENGINE)
+  // LÓGICAS CLÁSSICAS OMITIDAS NO FRONTEND AQUI (Mas mantidas funcionais)
   // ==========================================
   const [excScenario, setExcScenario] = useState('ht_asian');
   const [exgScenario, setExgScenario] = useState('ft_over05');
@@ -396,92 +394,63 @@ const Calculators: React.FC = () => {
   const [exgUnlocked, setExgUnlocked] = useState(false);
   useEffect(() => { setExgChecklist({}); setExgUnlocked(false); }, [exgScenario]);
   const handleExgCheck = (idx: number) => {
-    const n = { ...exgChecklist, [idx]: !exgChecklist[idx] };
-    setExgChecklist(n);
+    const n = { ...exgChecklist, [idx]: !exgChecklist[idx] }; setExgChecklist(n);
     setExgUnlocked(Object.keys(n).filter(k => n[parseInt(k)]).length === exgScenariosData[exgScenario].checks.length);
   };
 
   const runQuantEngine = (type: 'exc' | 'exg', scenario: string) => {
-      const min = parseFloat(liveMin); 
-      const apDef = parseFloat(liveAP_Def) || 0; 
-      const apPress = parseFloat(liveAP_Press) || 0;
-      const sot = parseFloat(liveSoT) || 0; 
-      const sofft = parseFloat(liveSoffT) || 0;
-      const rShots = parseFloat(recentShots) || ((sot+sofft)/min * 10) || 0;
-      const ap5m = parseFloat(liveAP_5m) || 0; 
-      const rCorners = parseFloat(recentCorners) || 0;
-      const odd = parseFloat(liveCurrentOdd) || 0;
+      const min = parseFloat(liveMin); const apDef = parseFloat(liveAP_Def) || 0; const apPress = parseFloat(liveAP_Press) || 0;
+      const sot = parseFloat(liveSoT) || 0; const sofft = parseFloat(liveSoffT) || 0; const rShots = parseFloat(recentShots) || ((sot+sofft)/min * 10) || 0;
+      const ap5m = parseFloat(liveAP_5m) || 0; const rCorners = parseFloat(recentCorners) || 0; const odd = parseFloat(liveCurrentOdd) || 0;
 
       if (!min || min <= 0) return null;
 
-      const isHT = scenario.includes('ht');
-      const remainingTime = Math.max(1, ((isHT ? 45 : 90) + (isHT ? 3 : 6)) - min);
-      
-      const totalAP = apPress + apDef; 
-      const fieldTilt = totalAP > 0 ? (apPress / totalAP) * 100 : 0;
-      const appm = apPress / min;
+      const isHT = scenario.includes('ht'); const remainingTime = Math.max(1, ((isHT ? 45 : 90) + (isHT ? 3 : 6)) - min);
+      const totalAP = apPress + apDef; const fieldTilt = totalAP > 0 ? (apPress / totalAP) * 100 : 0; const appm = apPress / min;
 
       let wOld = 0.55; let wRecent = 0.45;
-      if (pressureTrend === 'increasing') { wOld = 0.35; wRecent = 0.65; }
-      else if (pressureTrend === 'decreasing') { wOld = 0.75; wRecent = 0.25; }
+      if (pressureTrend === 'increasing') { wOld = 0.35; wRecent = 0.65; } else if (pressureTrend === 'decreasing') { wOld = 0.75; wRecent = 0.25; }
 
       let baseLambda = 0;
       if (type === 'exc') {
-          const rateOld = ((apPress * 0.06) + (sot * 0.35) + (sofft * 0.15)) / min;
-          const rateRecent = ((rCorners * 0.6) + (rShots * 0.2) + (ap5m * 0.02)) / 10;
+          const rateOld = ((apPress * 0.06) + (sot * 0.35) + (sofft * 0.15)) / min; const rateRecent = ((rCorners * 0.6) + (rShots * 0.2) + (ap5m * 0.02)) / 10;
           baseLambda = ((rateOld * wOld) + (rateRecent * wRecent)) * remainingTime;
       } else {
-          const xgOld = ((sot * 0.14) + (sofft * 0.04) + (apPress * 0.005)) / min;
-          const xgRecent = ((rShots * 0.14) + (ap5m * 0.01)) / 10;
+          const xgOld = ((sot * 0.14) + (sofft * 0.04) + (apPress * 0.005)) / min; const xgRecent = ((rShots * 0.14) + (ap5m * 0.01)) / 10;
           baseLambda = ((xgOld * wOld) + (xgRecent * wRecent)) * remainingTime;
           if (apDef > (apPress * 0.5)) baseLambda *= 1.2; 
       }
 
-      if (redCard === 'pressing') baseLambda *= 0.72;
-      if (redCard === 'defending') baseLambda *= 1.28;
-      if (recentGoal === 'true') baseLambda *= 0.82;
-      if (needsGoal === 'true') baseLambda *= 1.12;
-      if (scenario.includes('zoio')) baseLambda *= 1.35;
+      if (redCard === 'pressing') baseLambda *= 0.72; if (redCard === 'defending') baseLambda *= 1.28;
+      if (recentGoal === 'true') baseLambda *= 0.82; if (needsGoal === 'true') baseLambda *= 1.12; if (scenario.includes('zoio')) baseLambda *= 1.35;
 
-      const lamCons = baseLambda * 0.82;
-      const lamNeut = baseLambda;
-      const lamAggr = baseLambda * 1.22;
+      const lamCons = baseLambda * 0.82; const lamNeut = baseLambda; const lamAggr = baseLambda * 1.22;
 
       const calcProbs = (lam: number) => {
           const p0 = poissonExact(0, lam); const p1 = poissonExact(1, lam); const p2 = poissonExact(2, lam);
           return { p1: (1 - p0) * 100, p2: (1 - (p0 + p1)) * 100, p3: (1 - (p0 + p1 + p2)) * 100 };
       };
 
-      const probCons = calcProbs(lamCons);
-      const probNeut = calcProbs(lamNeut);
-      const probAggr = calcProbs(lamAggr);
+      const probCons = calcProbs(lamCons); const probNeut = calcProbs(lamNeut); const probAggr = calcProbs(lamAggr);
 
-      let mainProb = probNeut.p1;
-      let targetKey = 'p1';
+      let mainProb = probNeut.p1; let targetKey = 'p1';
       if (scenario.includes('asian') || scenario.includes('15')) { mainProb = probNeut.p2; targetKey = 'p2'; }
       if (scenario.includes('25')) { mainProb = probNeut.p3; targetKey = 'p3'; }
 
-      const ev = odd > 0 ? ((mainProb / 100) * odd - 1) * 100 : 0;
-      const fairOdd = mainProb > 0 ? 100 / mainProb : 0;
+      const ev = odd > 0 ? ((mainProb / 100) * odd - 1) * 100 : 0; const fairOdd = mainProb > 0 ? 100 / mainProb : 0;
 
-      let mathScore = odd > 0 ? Math.min(40, ev * 2.5) : Math.min(40, Math.max(0, (mainProb - 50) * 1.5));
-      if (mathScore < 0) mathScore = 0;
+      let mathScore = odd > 0 ? Math.min(40, ev * 2.5) : Math.min(40, Math.max(0, (mainProb - 50) * 1.5)); if (mathScore < 0) mathScore = 0;
 
       let momentumScore = 0;
-      if (pressureTrend === 'increasing') momentumScore += 10;
-      if (rShots >= 3) momentumScore += 8;
-      if (rCorners >= 2 || appm > 1.2) momentumScore += 7;
+      if (pressureTrend === 'increasing') momentumScore += 10; if (rShots >= 3) momentumScore += 8; if (rCorners >= 2 || appm > 1.2) momentumScore += 7;
       momentumScore = Math.min(25, momentumScore);
 
       let contextScore = 0;
-      if (needsGoal === 'true') contextScore += 8;
-      if (matchTemp === 'intense') contextScore += 6;
-      if (fieldTilt > 70) contextScore += 6;
+      if (needsGoal === 'true') contextScore += 8; if (matchTemp === 'intense') contextScore += 6; if (fieldTilt > 70) contextScore += 6;
       contextScore = Math.min(20, contextScore);
 
       let stabilityScore = 15;
-      if (redCard === 'pressing') stabilityScore -= 10;
-      if (recentGoal === 'true') stabilityScore -= 5;
+      if (redCard === 'pressing') stabilityScore -= 10; if (recentGoal === 'true') stabilityScore -= 5;
       
       let finalScore = Math.min(100, Math.max(0, mathScore + momentumScore + contextScore + stabilityScore));
 
@@ -588,7 +557,7 @@ const Calculators: React.FC = () => {
       case 'breakeven': return { title: 'Ponto de Equilíbrio', text: 'A taxa de acerto (Hit-Rate) necessária para manter a estabilidade do capital com a odd informada.' };
       case 'exc': return { title: 'ExC Analytics (Cantos)', text: 'Motor HFT que cruza Domínio (Field Tilt), Momentum e Poisson para achar EV+ em escanteios. Suporta leitura via IA.' };
       case 'exg': return { title: 'ExG Analytics (Gols)', text: 'Calcula a letalidade do time (SoT) e a abertura tática para precificar a Odd Justa de Gols em tempo real.' };
-      case 'scout': return { title: 'Scout Pré-Live', text: 'Motor AI para varredura de grade e criação de apostas duplas cruzadas via múltiplas imagens.' };
+      case 'scout': return { title: 'Scout Pré-Live', text: 'Motor AI para varredura de grade e criação de apostas múltiplas explorando todos os mercados da Bet365.' };
       default: return { title: 'Ferramentas Analíticas', text: 'Tome decisões baseadas em dados.' };
     }
   })();
@@ -617,20 +586,11 @@ const Calculators: React.FC = () => {
       </div>
       
       {/* TABS GRID */}
-      <div className="flex flex-wrap md:grid md:grid-cols-4 xl:grid-cols-10 gap-2 mb-6 px-4 md:px-0">
+      <div className="flex flex-wrap gap-2 mb-6 px-4 md:px-0">
         {tabs.map(tab => (
-          <button
-            key={tab.id}
-            onClick={() => setActiveTab(tab.id as any)}
-            className={`relative flex-1 min-w-[90px] flex items-center justify-center px-2 py-3 rounded-xl font-bold text-[10px] uppercase tracking-wider transition-all gap-1 ${
-              activeTab === tab.id
-                ? (tab.id === 'exg' ? 'bg-orange-500 text-white shadow-lg shadow-orange-500/20' : tab.id === 'scout' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/20' : 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/20')
-                : 'bg-white dark:bg-[#0f172a] text-slate-600 dark:text-slate-500 border border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-900'
-            }`}
-          >
+          <button key={tab.id} onClick={() => setActiveTab(tab.id as any)} className={`relative flex-1 min-w-[90px] flex items-center justify-center px-2 py-3 rounded-xl font-bold text-[10px] uppercase tracking-wider transition-all gap-1 ${activeTab === tab.id ? (tab.id === 'exg' ? 'bg-orange-500 text-white shadow-lg shadow-orange-500/20' : tab.id === 'scout' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/20' : 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/20') : 'bg-white dark:bg-[#0f172a] text-slate-600 dark:text-slate-500 border border-slate-200 dark:border-slate-800'}`}>
             {tab.pro && !isPro && <Lock size={10} className="mb-0.5" />}
             {tab.label}
-            {activeTab === tab.id && <span className="absolute bottom-0 left-0 w-full h-[3px] bg-white/40 animate-pulse rounded-b-xl" />}
           </button>
         ))}
       </div>
@@ -638,7 +598,10 @@ const Calculators: React.FC = () => {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 px-4 md:px-0">
         <div className="lg:col-span-2 space-y-6 min-w-0 w-full">
             
-            {/* CALCULADORAS SIMPLES */}
+            {/* =========================================
+                CALCULADORAS SIMPLES E HUD (EXC/EXG) OMITIDOS PARA FOCO NO SCOUT
+                (O código continua o mesmo e funciona normalmente)
+            ========================================= */}
             {activeTab === 'dutching' && (
                 <div className="bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-800 rounded-[2rem] p-6 shadow-sm w-full overflow-hidden">
                     <h2 className="text-lg font-black text-slate-900 dark:text-white uppercase tracking-tighter italic mb-4">Calculadora Dutching</h2>
@@ -1088,13 +1051,13 @@ const Calculators: React.FC = () => {
             {activeTab === 'scout' && (
                 <>
                 {!isPro ? <ProLockScreen /> : (
-                <div className="bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-800 rounded-[2.5rem] p-6 sm:p-8 shadow-sm relative overflow-hidden">
+                <div className="bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-800 rounded-[2.5rem] p-4 sm:p-8 shadow-sm relative overflow-hidden">
                    <div className="flex justify-between items-start mb-8 relative z-10">
                       <div>
                         <h2 className="text-2xl font-black text-slate-900 dark:text-white uppercase tracking-tighter italic flex items-center gap-2">
                           <Sparkles size={24} className="text-indigo-500"/> Scout Pré-Live
                         </h2>
-                        <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest mt-1">Inteligência Artificial de Varredura</p>
+                        <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest mt-1">IA de Varredura e Múltiplas</p>
                       </div>
                       <span className="bg-indigo-500/10 text-indigo-500 border border-indigo-500/20 px-3 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest flex items-center gap-1.5">
                          <Layers size={12} /> Auto-Scout
@@ -1107,12 +1070,15 @@ const Calculators: React.FC = () => {
                           1. Radar de Grade
                       </button>
                       <button onClick={() => setScoutMode('builder')} className={`flex-1 py-2.5 text-[10px] font-black uppercase tracking-widest rounded-lg transition-all ${scoutMode === 'builder' ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-500 hover:text-slate-300'}`}>
-                          2. Construtor de Duplas
+                          2. Construtor
                       </button>
                    </div>
 
-                   {/* SCANNER MULTI-IMAGE SCOUT (GRID) */}
+                   {/* ------------------------------------- */}
+                   {/* MODO 1: RADAR DE GRADE                */}
+                   {/* ------------------------------------- */}
                    {scoutMode === 'grid' && (
+                     <>
                      <div className="mb-6 relative group overflow-hidden rounded-[1.5rem] border-2 border-dashed border-indigo-500/20 hover:border-indigo-500/50 bg-slate-50 dark:bg-[#09090b] transition-all p-6 min-h-[200px] flex flex-col items-center justify-center">
                          {!scoutGridImage && !isScanningScout && (
                              <label className="flex flex-col items-center justify-center cursor-pointer w-full h-full">
@@ -1131,7 +1097,7 @@ const Calculators: React.FC = () => {
                                  <motion.div initial={{ top: '0%' }} animate={{ top: '100%' }} transition={{ repeat: Infinity, duration: 1.5, ease: "linear" }} className="absolute left-0 right-0 h-1 bg-indigo-500 shadow-[0_0_20px_#6366f1] z-10" />
                                  <div className="absolute inset-0 flex flex-col items-center justify-center z-20">
                                     <Sparkles size={32} className="text-indigo-400 mb-2 animate-pulse" />
-                                    <p className="text-indigo-400 font-mono font-bold text-xs uppercase tracking-widest">Minerando assimetrias...</p>
+                                    <p className="text-indigo-400 font-mono font-bold text-xs uppercase tracking-widest mt-2">Varrendo assimetrias...</p>
                                  </div>
                              </div>
                          )}
@@ -1141,103 +1107,108 @@ const Calculators: React.FC = () => {
                                  <img src={scoutGridImage} className="object-cover opacity-40 w-full h-full" />
                                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent"></div>
                                  <div className="absolute bottom-4 right-4 flex gap-2">
-                                     <button onClick={clearGrid} className="text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-white bg-slate-800 hover:bg-slate-700 border border-slate-600 px-4 py-2 rounded-lg transition-colors shadow-lg">Limpar Grade</button>
+                                     <button onClick={clearGrid} className="text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-white bg-slate-800 hover:bg-slate-700 border border-slate-600 px-4 py-2 rounded-lg transition-colors shadow-lg">Nova Grade</button>
                                  </div>
                              </div>
                          )}
                      </div>
+
+                     {/* RESULTADOS DA GRADE COM CATEGORIZAÇÃO */}
+                     {scoutGridResult && (
+                         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
+                             
+                             {/* CATEGORIA GOLS */}
+                             {scoutGridResult.filter(m => m.market === 'GOLS').length > 0 && (
+                             <div>
+                                 <h3 className="text-[10px] font-black text-orange-500 uppercase tracking-widest mb-3 flex items-center gap-2 border-b border-slate-800 pb-2"><Goal size={14}/> Foco em Gols</h3>
+                                 <div className="space-y-2">
+                                     {scoutGridResult.filter(m => m.market === 'GOLS').map((match: any, index: number) => {
+                                         const isSelected = selectedMatchesForBuilder.includes(match.teams);
+                                         return (
+                                         <div key={`gols-${index}`} onClick={() => toggleMatchSelection(match.teams)} className={`bg-[#09090b] border rounded-2xl p-4 flex flex-col sm:flex-row gap-4 justify-between items-start sm:items-center cursor-pointer transition-all ${isSelected ? 'border-indigo-500 shadow-[0_0_15px_rgba(99,102,241,0.2)]' : 'border-slate-800 hover:border-slate-700'}`}>
+                                             <div className="flex-1">
+                                                 <div className="flex items-center gap-2 mb-1">
+                                                    <span className="bg-slate-800 text-slate-300 px-2 py-0.5 rounded text-[9px] font-mono font-bold flex items-center gap-1"><Clock size={10}/> {match.time}</span>
+                                                    <h4 className="text-sm font-black text-white">{match.teams}</h4>
+                                                 </div>
+                                                 <p className="text-[11px] text-slate-400 mt-1 leading-relaxed">{match.reason}</p>
+                                             </div>
+                                             <div className="shrink-0 self-end sm:self-auto">
+                                                 {isSelected ? <CheckCircle2 size={24} className="text-indigo-500" /> : <Square size={24} className="text-slate-700" />}
+                                             </div>
+                                         </div>
+                                     )})}
+                                 </div>
+                             </div>
+                             )}
+
+                             {/* CATEGORIA CANTOS */}
+                             {scoutGridResult.filter(m => m.market === 'CANTOS').length > 0 && (
+                             <div>
+                                 <h3 className="text-[10px] font-black text-emerald-500 uppercase tracking-widest mb-3 flex items-center gap-2 border-b border-slate-800 pb-2 mt-6"><Flag size={14}/> Foco em Cantos</h3>
+                                 <div className="space-y-2">
+                                     {scoutGridResult.filter(m => m.market === 'CANTOS').map((match: any, index: number) => {
+                                         const isSelected = selectedMatchesForBuilder.includes(match.teams);
+                                         return (
+                                         <div key={`cantos-${index}`} onClick={() => toggleMatchSelection(match.teams)} className={`bg-[#09090b] border rounded-2xl p-4 flex flex-col sm:flex-row gap-4 justify-between items-start sm:items-center cursor-pointer transition-all ${isSelected ? 'border-indigo-500 shadow-[0_0_15px_rgba(99,102,241,0.2)]' : 'border-slate-800 hover:border-slate-700'}`}>
+                                             <div className="flex-1">
+                                                 <div className="flex items-center gap-2 mb-1">
+                                                    <span className="bg-slate-800 text-slate-300 px-2 py-0.5 rounded text-[9px] font-mono font-bold flex items-center gap-1"><Clock size={10}/> {match.time}</span>
+                                                    <h4 className="text-sm font-black text-white">{match.teams}</h4>
+                                                 </div>
+                                                 <p className="text-[11px] text-slate-400 mt-1 leading-relaxed">{match.reason}</p>
+                                             </div>
+                                             <div className="shrink-0 self-end sm:self-auto">
+                                                 {isSelected ? <CheckCircle2 size={24} className="text-indigo-500" /> : <Square size={24} className="text-slate-700" />}
+                                             </div>
+                                         </div>
+                                     )})}
+                                 </div>
+                             </div>
+                             )}
+
+                             {selectedMatchesForBuilder.length > 0 && (
+                                 <motion.div initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} className="sticky bottom-6 mt-8 flex justify-center z-30">
+                                     <button onClick={() => setScoutMode('builder')} className="bg-indigo-600 hover:bg-indigo-500 text-white font-black uppercase tracking-widest text-xs px-8 py-4 rounded-full shadow-[0_10px_30px_rgba(99,102,241,0.3)] flex items-center gap-2 transition-transform active:scale-95">
+                                        Ir para Construtor ({selectedMatchesForBuilder.length}) <ArrowRight size={16} />
+                                     </button>
+                                 </motion.div>
+                             )}
+                         </motion.div>
+                     )}
+                     </>
                    )}
 
-                   {/* RESULTADOS DA GRADE COM CATEGORIZAÇÃO */}
-                   {scoutMode === 'grid' && scoutGridResult && (
-                       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
-                           
-                           {/* CATEGORIA GOLS */}
-                           {scoutGridResult.filter(m => m.market === 'GOLS').length > 0 && (
-                           <div>
-                               <h3 className="text-[10px] font-black text-orange-500 uppercase tracking-widest mb-3 flex items-center gap-2 border-b border-slate-800 pb-2"><Goal size={14}/> Foco em Gols</h3>
-                               <div className="space-y-2">
-                                   {scoutGridResult.filter(m => m.market === 'GOLS').map((match: any, index: number) => {
-                                       const isSelected = selectedMatchesForBuilder.includes(match.teams);
-                                       return (
-                                       <div key={`gols-${index}`} onClick={() => toggleMatchSelection(match.teams)} className={`bg-[#09090b] border rounded-2xl p-4 flex flex-col md:flex-row gap-4 justify-between items-start md:items-center cursor-pointer transition-all ${isSelected ? 'border-indigo-500 shadow-[0_0_15px_rgba(99,102,241,0.2)]' : 'border-slate-800 hover:border-slate-700'}`}>
-                                           <div className="flex-1">
-                                               <div className="flex items-center gap-2 mb-1">
-                                                  <span className="bg-slate-800 text-slate-300 px-2 py-0.5 rounded text-[9px] font-mono font-bold flex items-center gap-1"><Clock size={10}/> {match.time}</span>
-                                                  <h4 className="text-sm font-black text-white">{match.teams}</h4>
-                                               </div>
-                                               <p className="text-xs text-slate-400 mt-1 leading-relaxed">{match.reason}</p>
-                                           </div>
-                                           <div className="shrink-0">
-                                               {isSelected ? <CheckCircle2 size={24} className="text-indigo-500" /> : <Square size={24} className="text-slate-700" />}
-                                           </div>
-                                       </div>
-                                   )})}
-                               </div>
-                           </div>
-                           )}
-
-                           {/* CATEGORIA CANTOS */}
-                           {scoutGridResult.filter(m => m.market === 'CANTOS').length > 0 && (
-                           <div>
-                               <h3 className="text-[10px] font-black text-emerald-500 uppercase tracking-widest mb-3 flex items-center gap-2 border-b border-slate-800 pb-2 mt-6"><Flag size={14}/> Foco em Cantos</h3>
-                               <div className="space-y-2">
-                                   {scoutGridResult.filter(m => m.market === 'CANTOS').map((match: any, index: number) => {
-                                       const isSelected = selectedMatchesForBuilder.includes(match.teams);
-                                       return (
-                                       <div key={`cantos-${index}`} onClick={() => toggleMatchSelection(match.teams)} className={`bg-[#09090b] border rounded-2xl p-4 flex flex-col md:flex-row gap-4 justify-between items-start md:items-center cursor-pointer transition-all ${isSelected ? 'border-indigo-500 shadow-[0_0_15px_rgba(99,102,241,0.2)]' : 'border-slate-800 hover:border-slate-700'}`}>
-                                           <div className="flex-1">
-                                               <div className="flex items-center gap-2 mb-1">
-                                                  <span className="bg-slate-800 text-slate-300 px-2 py-0.5 rounded text-[9px] font-mono font-bold flex items-center gap-1"><Clock size={10}/> {match.time}</span>
-                                                  <h4 className="text-sm font-black text-white">{match.teams}</h4>
-                                               </div>
-                                               <p className="text-xs text-slate-400 mt-1 leading-relaxed">{match.reason}</p>
-                                           </div>
-                                           <div className="shrink-0">
-                                               {isSelected ? <CheckCircle2 size={24} className="text-indigo-500" /> : <Square size={24} className="text-slate-700" />}
-                                           </div>
-                                       </div>
-                                   )})}
-                               </div>
-                           </div>
-                           )}
-
-                           {selectedMatchesForBuilder.length > 0 && (
-                               <motion.div initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} className="sticky bottom-6 mt-8 flex justify-center z-30">
-                                   <button onClick={() => setScoutMode('builder')} className="bg-indigo-600 hover:bg-indigo-500 text-white font-black uppercase tracking-widest text-xs px-8 py-4 rounded-full shadow-[0_10px_30px_rgba(99,102,241,0.3)] flex items-center gap-2 transition-transform active:scale-95">
-                                      Construir Dupla ({selectedMatchesForBuilder.length}) <ArrowRightLeft size={16} />
-                                   </button>
-                               </motion.div>
-                           )}
-                       </motion.div>
-                   )}
-
-                   {/* MÓDULO SCANNER BUILDER (MULTI-IMAGE) */}
+                   {/* ------------------------------------- */}
+                   {/* MODO 2: CONSTRUTOR DE APOSTAS         */}
+                   {/* ------------------------------------- */}
                    {scoutMode === 'builder' && (
                      <div className="space-y-6">
-                        {/* Box de Instrução baseado na Grade */}
-                        {selectedMatchesForBuilder.length > 0 && scoutBuilderImages.length === 0 && (
-                            <div className="bg-indigo-500/10 border border-indigo-500/20 p-5 rounded-2xl mb-6">
-                                <h4 className="text-xs font-black text-indigo-400 uppercase tracking-widest mb-3">Passo 2: Anexar Estatísticas</h4>
-                                <p className="text-xs text-slate-300 mb-4">Você selecionou os seguintes jogos na grade. Envie um print do <strong>SofaScore / Flashscore</strong> de cada um deles para a IA calcular a Fair Odd:</p>
-                                <ul className="space-y-2 mb-4">
+                        
+                        {/* Instrução dos Jogos Selecionados */}
+                        {selectedMatchesForBuilder.length > 0 && (
+                            <div className="bg-indigo-500/5 border border-indigo-500/20 p-4 rounded-2xl">
+                                <h4 className="text-[10px] font-black text-indigo-400 uppercase tracking-widest mb-2 flex items-center gap-2"><Target size={12}/> Jogos Selecionados</h4>
+                                <div className="flex flex-wrap gap-2">
                                     {selectedMatchesForBuilder.map((match, i) => (
-                                        <li key={i} className="text-sm font-bold text-white flex items-center gap-2"><Target size={14} className="text-indigo-500"/> {match}</li>
+                                        <span key={i} className="text-[10px] font-bold text-slate-300 bg-slate-900 px-3 py-1.5 rounded-lg border border-slate-800">{match}</span>
                                     ))}
-                                </ul>
+                                </div>
+                                <p className="text-[10px] text-slate-500 mt-3 italic">Tire um print das estatísticas detalhadas (H2H) de cada um deles e faça o upload abaixo.</p>
                             </div>
                         )}
 
-                        <div className="relative group overflow-hidden rounded-[1.5rem] border-2 border-dashed border-indigo-500/20 hover:border-indigo-500/50 bg-slate-50 dark:bg-[#09090b] transition-all p-6 min-h-[200px] flex flex-col items-center justify-center">
+                        {/* Scanner Multi-Image */}
+                        <div className="relative group overflow-hidden rounded-[1.5rem] border-2 border-dashed border-indigo-500/20 hover:border-indigo-500/50 bg-slate-50 dark:bg-[#09090b] transition-all p-4 sm:p-6 min-h-[200px] flex flex-col items-center justify-center">
                            {scoutBuilderImages.length === 0 && !isScanningScout && (
                                <label className="flex flex-col items-center justify-center cursor-pointer w-full h-full">
                                    <div className="w-12 h-12 rounded-full bg-slate-200 dark:bg-slate-800 flex items-center justify-center mb-4 text-slate-500 group-hover:text-indigo-500 transition-colors group-hover:scale-110 duration-300">
                                        <Scan size={24} />
                                    </div>
                                    <h3 className="text-sm font-black text-slate-700 dark:text-slate-300 mb-1 text-center">
-                                       {selectedMatchesForBuilder.length > 0 ? 'Upload das Estatísticas H2H' : 'Upload de Estatísticas (Até 3 jogos)'}
+                                       Upload das Estatísticas H2H
                                    </h3>
-                                   <p className="text-[10px] text-slate-500 uppercase tracking-widest font-bold text-center mb-3">Selecione até 3 imagens</p>
+                                   <p className="text-[10px] text-slate-500 uppercase tracking-widest font-bold text-center mb-3">Cole até 4 imagens (uma por jogo)</p>
                                    <input type="file" accept="image/jpeg, image/png, image/webp" multiple className="hidden" onChange={handleScoutBuilderUpload} ref={scoutBuilderInputRef} />
                                </label>
                            )}
@@ -1245,24 +1216,24 @@ const Calculators: React.FC = () => {
                            {/* Thumbnails Multi-Image */}
                            {scoutBuilderImages.length > 0 && !isScanningScout && (
                                <div className="w-full">
-                                   <div className="flex flex-wrap gap-4 mb-6 justify-center">
+                                   <div className="flex flex-wrap gap-3 sm:gap-4 mb-6 justify-center">
                                        {scoutBuilderImages.map((img, index) => (
-                                           <div key={index} className="relative w-24 h-24 sm:w-32 sm:h-32 rounded-xl overflow-hidden border-2 border-indigo-500/30 group/thumb">
+                                           <div key={index} className="relative w-20 h-20 sm:w-24 sm:h-24 rounded-xl overflow-hidden border-2 border-indigo-500/30 group/thumb">
                                                <img src={img.url} className="object-cover w-full h-full opacity-80" />
-                                               <button onClick={() => setScoutBuilderImages(prev => prev.filter((_, i) => i !== index))} className="absolute top-1 right-1 bg-red-500 text-white p-1 rounded-md opacity-0 group-hover/thumb:opacity-100 transition-opacity"><Trash size={12}/></button>
+                                               <button onClick={() => setScoutBuilderImages(prev => prev.filter((_, i) => i !== index))} className="absolute top-1 right-1 bg-red-500 text-white p-1.5 rounded-md opacity-0 group-hover/thumb:opacity-100 transition-opacity"><Trash size={12}/></button>
                                            </div>
                                        ))}
                                    </div>
                                    
                                    <div className="flex flex-wrap gap-3 justify-center">
-                                       {scoutBuilderImages.length < 3 && (
+                                       {scoutBuilderImages.length < 4 && (
                                            <label className="text-[10px] font-black uppercase tracking-widest text-indigo-400 bg-indigo-500/10 hover:bg-indigo-500/20 border border-indigo-500/30 px-4 py-2.5 rounded-lg cursor-pointer transition-colors flex items-center gap-1">
-                                               <Plus size={14}/> Jogo
+                                               <Plus size={14}/> Add Imagem
                                                <input type="file" accept="image/jpeg, image/png, image/webp" multiple className="hidden" onChange={handleScoutBuilderUpload} />
                                            </label>
                                        )}
                                        <button onClick={processScoutBuilderEngine} className="text-[10px] font-black uppercase tracking-widest text-white bg-indigo-600 hover:bg-indigo-500 px-6 py-2.5 rounded-lg shadow-lg shadow-indigo-600/20 transition-colors flex items-center gap-2">
-                                           <Sparkles size={14}/> Analisar Combinada
+                                           <Sparkles size={14}/> Gerar Aposta
                                        </button>
                                        <button onClick={clearBuilder} className="text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-red-400 px-4 py-2.5 transition-colors">
                                            Limpar
@@ -1275,49 +1246,54 @@ const Calculators: React.FC = () => {
                                <div className="absolute inset-0 bg-[#09090b] flex flex-col items-center justify-center z-20">
                                    <div className="flex gap-2 mb-6">
                                        {scoutBuilderImages.map((img, index) => (
-                                           <img key={index} src={img.url} className="w-16 h-16 rounded-lg object-cover opacity-30 blur-sm border border-indigo-500/50" />
+                                           <img key={index} src={img.url} className="w-12 h-12 sm:w-16 sm:h-16 rounded-lg object-cover opacity-30 blur-sm border border-indigo-500/50" />
                                        ))}
                                    </div>
                                    <motion.div initial={{ width: '0%' }} animate={{ width: '100%' }} transition={{ repeat: Infinity, duration: 2 }} className="absolute bottom-0 left-0 h-1 bg-indigo-500 shadow-[0_0_20px_#6366f1]" />
                                    <Sparkles size={32} className="text-indigo-400 mb-2 animate-pulse" />
-                                   <p className="text-indigo-400 font-mono font-bold text-xs uppercase tracking-widest text-center px-4">Cruzando dados e precificando...</p>
+                                   <p className="text-indigo-400 font-mono font-bold text-xs uppercase tracking-widest text-center px-4 mt-2">Cruzando dados e precificando múltiplos mercados...</p>
                                </div>
                            )}
                         </div>
 
-                        {/* RESULTADO DO BUILDER */}
-                        {scoutBuilderResult && (
-                            <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="bg-[#020617] border border-indigo-500/20 rounded-[2rem] p-6 shadow-[0_0_30px_rgba(99,102,241,0.1)] relative overflow-hidden">
+                        {/* RESULTADO DO BUILDER (DINÂMICO PARA N SELEÇÕES) */}
+                        {scoutBuilderResult && scoutBuilderResult.selections && (
+                            <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="bg-[#020617] border border-indigo-500/20 rounded-[2rem] p-4 sm:p-6 shadow-[0_0_30px_rgba(99,102,241,0.1)] relative overflow-hidden">
                                 <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-500/10 rounded-full blur-[80px] -mr-20 -mt-20 pointer-events-none"></div>
                                 
-                                <h3 className="text-[10px] font-black text-indigo-400 uppercase tracking-widest mb-6 flex items-center gap-2"><Target size={14}/> {scoutBuilderImages.length > 1 ? 'Aposta Dupla Cruzada' : 'Aposta Combinada (Mesmo Jogo)'}</h3>
+                                <h3 className="text-[10px] font-black text-indigo-400 uppercase tracking-widest mb-6 flex items-center gap-2"><Target size={14}/> Bilhete Pronto (EV+)</h3>
                                 
-                                <div className="space-y-3 mb-6 relative z-10">
-                                    <div className="bg-slate-900/80 border border-slate-800 rounded-xl p-4 flex justify-between items-center">
-                                        <span className="text-xs font-bold text-white flex items-center gap-2"><span className="w-1.5 h-1.5 bg-orange-500 rounded-full"></span> {scoutBuilderResult.selection1}</span>
-                                        <span className="text-xs font-mono font-black text-slate-400">{scoutBuilderResult.prob1}% Prob.</span>
-                                    </div>
-                                    <div className="flex justify-center -my-2 relative z-20"><Plus size={16} className="text-indigo-500 bg-[#020617] rounded-full p-0.5" /></div>
-                                    <div className="bg-slate-900/80 border border-slate-800 rounded-xl p-4 flex justify-between items-center">
-                                        <span className="text-xs font-bold text-white flex items-center gap-2"><span className="w-1.5 h-1.5 bg-emerald-500 rounded-full"></span> {scoutBuilderResult.selection2}</span>
-                                        <span className="text-xs font-mono font-black text-slate-400">{scoutBuilderResult.prob2}% Prob.</span>
-                                    </div>
+                                <div className="space-y-2 mb-6 relative z-10">
+                                    {scoutBuilderResult.selections.map((sel: any, idx: number) => (
+                                        <React.Fragment key={idx}>
+                                            <div className="bg-slate-900/80 border border-slate-800 rounded-xl p-4 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2">
+                                                <div>
+                                                    <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest">{sel.match}</p>
+                                                    <span className="text-sm font-bold text-white flex items-center gap-2 mt-1"><span className="w-1.5 h-1.5 bg-indigo-500 rounded-full"></span> {sel.market}</span>
+                                                </div>
+                                                <span className="text-xs font-mono font-black text-slate-400 self-start sm:self-auto bg-slate-950 px-2 py-1 rounded">{sel.prob}% Prob.</span>
+                                            </div>
+                                            {idx < scoutBuilderResult.selections.length - 1 && (
+                                                <div className="flex justify-center -my-1 relative z-20"><Plus size={14} className="text-indigo-500 bg-[#020617] rounded-full p-0.5" /></div>
+                                            )}
+                                        </React.Fragment>
+                                    ))}
                                 </div>
 
-                                <div className="grid grid-cols-2 gap-4 mb-6 relative z-10">
+                                <div className="grid grid-cols-2 gap-3 sm:gap-4 mb-6 relative z-10">
                                     <div className="bg-slate-900/50 border border-slate-800 rounded-xl p-4 text-center">
-                                        <p className="text-[9px] uppercase tracking-widest text-slate-500 font-bold mb-1">Win Rate Estimada</p>
-                                        <p className="text-2xl font-black text-white">{scoutBuilderResult.combinedProb}%</p>
+                                        <p className="text-[8px] sm:text-[9px] uppercase tracking-widest text-slate-500 font-bold mb-1">Win Rate Matemática</p>
+                                        <p className="text-xl sm:text-2xl font-black text-white">{scoutBuilderResult.combinedProb}%</p>
                                     </div>
                                     <div className="bg-indigo-500/10 border border-indigo-500/20 rounded-xl p-4 text-center shadow-inner">
-                                        <p className="text-[9px] uppercase tracking-widest text-indigo-400 font-bold mb-1">Odd Justa Sugerida</p>
-                                        <p className="text-2xl font-black text-indigo-400 font-mono">@{scoutBuilderResult.fairOdd}</p>
+                                        <p className="text-[8px] sm:text-[9px] uppercase tracking-widest text-indigo-400 font-bold mb-1">Odd Justa Sugerida</p>
+                                        <p className="text-xl sm:text-2xl font-black text-indigo-400 font-mono">@{scoutBuilderResult.fairOdd}</p>
                                     </div>
                                 </div>
 
                                 <div className="bg-slate-900/30 border border-slate-800 p-4 rounded-xl relative z-10">
                                     <p className="text-[10px] uppercase tracking-widest text-slate-500 font-bold mb-2">Tese Quantitativa da IA</p>
-                                    <p className="text-xs text-slate-300 leading-relaxed italic border-l-2 border-indigo-500 pl-3">{scoutBuilderResult.analysis}</p>
+                                    <p className="text-[11px] sm:text-xs text-slate-300 leading-relaxed italic border-l-2 border-indigo-500 pl-3">{scoutBuilderResult.analysis}</p>
                                 </div>
                             </motion.div>
                         )}
