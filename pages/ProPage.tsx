@@ -21,6 +21,9 @@ const ProPage: React.FC = () => {
       ],
       missing: [
         'Modelos Matemáticos Avançados',
+        'ExC Analytics (Motor de Cantos)', // NOVO
+        'ExG Analytics (Motor de Gols)', // NOVO
+        'Scout Pré-Live IA (Construtor EV+)', // NOVO
         'Hub de Estratégias (Playbooks)',
         'Módulo de Inteligência Emocional',
         'Trava de Risco (Circuit Breaker)',
@@ -41,6 +44,8 @@ const ProPage: React.FC = () => {
         'Gestão de Múltiplos Portfólios',
         'Operações Ilimitadas no Mês',
         'Calculadoras EV+, Arb e Kelly',
+        'ExC e ExG Analytics', // NOVO
+        'Scout IA (10 Scans Diários)', // NOVO
         'Hub de Estratégias Liberado',
         'Inteligência Emocional & Lock',
         'Exportação de Relatórios CSV',
@@ -62,6 +67,7 @@ const ProPage: React.FC = () => {
       savings: 'Economize R$ 160 no ano',
       features: [
         'Todas as features do Trimestral',
+        'Motor de Inteligência Artificial HFT', // NOVO
         'Acesso VITALÍCIO a atualizações',
         'Acesso Antecipado a Novas Metas',
         'Grupo de Networking (Bônus)',
@@ -84,6 +90,8 @@ const ProPage: React.FC = () => {
         'Gestão de Múltiplos Portfólios',
         'Operações Ilimitadas no Mês',
         'Calculadoras EV+, Arb e Kelly',
+        'ExC e ExG Analytics', // NOVO
+        'Scout IA (10 Scans Diários)', // NOVO
         'Hub de Estratégias Liberado',
         'Inteligência Emocional & Lock',
         'Exportação de Relatórios CSV',
@@ -114,7 +122,7 @@ const ProPage: React.FC = () => {
             <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-500 to-cyan-500 dark:from-emerald-400 dark:to-cyan-400">BetTracker PRO</span>
         </h1>
         <p className="text-slate-600 dark:text-slate-400 max-w-2xl mx-auto text-lg transition-colors">
-            Desbloqueie ferramentas profissionais, remova todos os limites e tenha a infraestrutura de um investidor de elite.
+            Desbloqueie nossa IA Quantitativa, remova todos os limites e tenha a infraestrutura de um investidor de elite.
         </p>
       </div>
 
@@ -221,7 +229,7 @@ const ProPage: React.FC = () => {
                         </a>
                     ) : (
                         <div className="w-full text-center py-3.5 rounded-xl font-black uppercase tracking-widest text-[10px] bg-slate-100 text-slate-400 dark:bg-slate-800 dark:text-slate-500 cursor-default">
-                           Plano Atual
+                            Plano Atual
                         </div>
                     )}
                 </div>
