@@ -25,7 +25,7 @@ const PodInput = ({ label, value, onChange, icon: Icon, placeholder, colorClass,
           <input 
               type={type} value={value} onChange={onChange} placeholder={placeholder}
               className={`w-full bg-slate-950 border rounded-xl pl-10 pr-3 py-3 font-mono font-bold text-sm outline-none transition-all
-              ${highlight ? `border-${colorClass.split('-')[1]}-500/50 focus:border-${colorClass.split('-')[1]}-400 text-${colorClass.split('-')[1]}-400 shadow-[inset_0_0_10px_rgba(0,0,0,0.2)]` : 'border-slate-800 text-white focus:border-slate-600 focus:bg-[#09090b]'}`}
+              ${highlight ? `border-slate-600 focus:border-slate-400 ${colorClass} shadow-[inset_0_0_10px_rgba(0,0,0,0.2)]` : 'border-slate-800 text-white focus:border-slate-600 focus:bg-[#09090b]'}`}              
           />
       </div>
   </div>
@@ -53,7 +53,6 @@ const MapIcon = ({ size, className }: any) => (
   </svg>
 );
 
-// 🔥 COMPRESSOR DE IMAGEM HFT
 const fileToBase64 = (file: File): Promise<string> => {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -86,6 +85,9 @@ const fileToBase64 = (file: File): Promise<string> => {
   });
 };
 
+// ==========================================
+// FUNÇÕES MATEMÁTICAS DO MOTOR HFT
+// ==========================================
 const factorial = (n: number): number => {
   if (n < 0) return 0;
   if (n === 0 || n === 1) return 1;
@@ -100,7 +102,6 @@ const poissonExact = (k: number, lambda: number): number => {
 
 const Calculators: React.FC = () => {
   
-  // 🔥 CHAVE DE SEGURANÇA
   const userEmail = "rafaelancelmo.castro@gmail.com"; 
 
   const { currentBankrollBalance, isPro, aiScansUsedToday, canUseAiScan, incrementAiScan, setToast } = useBetStore();
@@ -109,7 +110,7 @@ const Calculators: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'dutching'|'kelly'|'value'|'arb'|'stake'|'odds'|'breakeven'|'exc'|'exg'|'scout'>('scout');
 
   // ==========================================
-  // ESTADOS COMPARTILHADOS
+  // ESTADOS COMPARTILHADOS (ExC e ExG)
   // ==========================================
   const [liveMin, setLiveMin] = useState('');
   const [liveCorners, setLiveCorners] = useState(''); 
@@ -129,7 +130,7 @@ const Calculators: React.FC = () => {
   const [recentGoal, setRecentGoal] = useState('false'); 
 
   // ==========================================
-  // ESTADOS DO PRE-LIVE SCOUT
+  // ESTADOS DO NOVO PRE-LIVE SCOUT
   // ==========================================
   const [scoutMode, setScoutMode] = useState<'grid' | 'builder'>('grid');
   
@@ -146,6 +147,14 @@ const Calculators: React.FC = () => {
   const [scoutGridResult, setScoutGridResult] = useState<any[] | null>(null);
   const [scoutBuilderResult, setScoutBuilderResult] = useState<any | null>(null);
   const [selectedMatchesForBuilder, setSelectedMatchesForBuilder] = useState<string[]>([]);
+
+  // 🔥 Novo: Filtro de Mercados da IA
+  const AVAILABLE_MARKETS = ['Gols', 'Escanteios', 'Cartões', 'Mercados de Jogador', 'Resultado da Partida (1x2/Dupla)'];
+  const [builderMarkets, setBuilderMarkets] = useState<string[]>(['Gols', 'Escanteios', 'Resultado da Partida (1x2/Dupla)']);
+
+  const toggleMarket = (market: string) => {
+      setBuilderMarkets(prev => prev.includes(market) ? prev.filter(m => m !== market) : [...prev, market]);
+  };
 
   const [scannedImage, setScannedImage] = useState<string | null>(null);
   const [isScanning, setIsScanning] = useState(false);
@@ -175,7 +184,11 @@ const Calculators: React.FC = () => {
       for (let i = 0; i < items.length; i++) {
         if (items[i].type.indexOf('image') !== -1) {
           const blob = items[i].getAsFile();
-          if (blob && VALID_IMAGE_TYPES.includes(blob.type)) {
+          if (blob) {
+             if (!VALID_IMAGE_TYPES.includes(blob.type)) {
+                 setToast({ type: 'error', message: '⚠️ Formato inválido! Cole apenas imagens PNG, JPG ou WEBP.' });
+                 return;
+             }
              if (activeTab === 'scout') {
                 if (scoutMode === 'grid') handleAddScoutGridImage(blob);
                 else handleAddScoutBuilderImage(blob);
@@ -237,7 +250,7 @@ const Calculators: React.FC = () => {
 
   const handleAddScoutBuilderImage = (file: File) => {
       if (scoutBuilderImages.length >= 4) {
-          setToast({ type: 'error', message: 'Máximo de 4 imagens permitidas.' });
+          setToast({ type: 'error', message: 'Máximo de 4 imagens permitidas para análise cruzada.' });
           return;
       }
       setScoutBuilderImages(prev => [...prev, { url: URL.createObjectURL(file), file }]);
@@ -249,6 +262,11 @@ const Calculators: React.FC = () => {
           setToast({ type: 'error', message: 'Envie pelo menos 2 jogos para gerar a múltipla.' });
           return;
       }
+      if (builderMarkets.length === 0) {
+          setToast({ type: 'error', message: 'Selecione pelo menos um mercado alvo.' });
+          return;
+      }
+
       if (!isPro) { setToast({ type: 'error', message: 'Recurso exclusivo PRO.' }); return; }
       if (!checkAiLimit()) { setToast({ type: 'error', message: 'Limite atingido.' }); return; }
 
@@ -262,13 +280,17 @@ const Calculators: React.FC = () => {
 
           const response = await fetch('/api/vision-builder', {
               method: 'POST', headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ images: base64Images, selectedMatches: selectedMatchesForBuilder, email: userEmail })
+              body: JSON.stringify({ 
+                  images: base64Images, 
+                  email: userEmail,
+                  markets: builderMarkets // 🔥 Envia os mercados selecionados
+              })
           });
 
           const data = await response.json();
           if (!response.ok) throw new Error(data.error || 'Falha na IA');
           
-          if (data && Array.isArray(data.selections) && data.selections.length >= 2) {
+          if (data && Array.isArray(data.selections)) {
               setScoutBuilderResult(data);
               handleIncrementScan();
               setToast({ type: 'success', message: 'Aposta Construída com Sucesso!' });
@@ -284,7 +306,7 @@ const Calculators: React.FC = () => {
       setSelectedMatchesForBuilder(prev => {
           if (prev.includes(matchName)) return prev.filter(m => m !== matchName);
           if (prev.length >= 4) {
-             setToast({ type: 'error', message: 'Máximo de 4 jogos permitidos.'});
+             setToast({ type: 'error', message: 'Máximo de 4 jogos selecionados permitidos.'});
              return prev;
           }
           return [...prev, matchName];
@@ -313,6 +335,7 @@ const Calculators: React.FC = () => {
         
         if (data) {
            const cln = (val: any) => (val !== null && val !== undefined && val !== "") ? String(val) : "";
+
            setLiveMin(cln(data.min));
            if (activeTab === 'exg') setLiveGoals(cln(data.target)); else setLiveCorners(cln(data.target));
            setLiveAP_Def(cln(data.apDef)); setLiveAP_Press(cln(data.apPress));
@@ -341,6 +364,9 @@ const Calculators: React.FC = () => {
       setMatchTemp('calm'); setRedCard('none'); setNeedsGoal('false'); setRecentGoal('false');
   };
 
+  // ==========================================
+  // MOTOR QUÂNTICO (HFT CONFIDENCE ENGINE)
+  // ==========================================
   const [excScenario, setExcScenario] = useState('ht_asian');
   const [exgScenario, setExgScenario] = useState('ft_over05');
 
@@ -476,9 +502,6 @@ const Calculators: React.FC = () => {
 
   const engineRes = activeTab === 'exc' ? runQuantEngine('exc', excScenario) : runQuantEngine('exg', exgScenario);
 
-  // ==========================================
-  // COMPONENTES DE PROTEÇÃO
-  // ==========================================
   const ProLockScreen = () => (
       <div className="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-[2rem] p-8 text-center flex flex-col items-center justify-center min-h-[300px] relative overflow-hidden shadow-sm">
           <div className="absolute inset-0 bg-gradient-to-br from-purple-500/5 to-blue-500/5 dark:from-purple-500/10 dark:to-blue-500/10 opacity-50" />
@@ -497,13 +520,6 @@ const Calculators: React.FC = () => {
       </div>
   );
 
-  const RequirePro = ({ children }: { children: React.ReactNode }) => {
-      return isPro ? <>{children}</> : <ProLockScreen />;
-  };
-
-  // ==========================================
-  // CALCULADORAS CLÁSSICAS
-  // ==========================================
   const [dutchTotalStake, setDutchTotalStake] = useState('100');
   const [dutchSelections, setDutchSelections] = useState([{ id: 1, name: 'Seleção A', odds: '2.50', stake: 0, profit: 0 }, { id: 2, name: 'Seleção B', odds: '3.20', stake: 0, profit: 0 }]);
   const addDutchSelection = () => setDutchSelections([...dutchSelections, { id: Date.now(), name: `Seleção ${String.fromCharCode(65 + dutchSelections.length)}`, odds: '', stake: 0, profit: 0 }]);
@@ -575,7 +591,7 @@ const Calculators: React.FC = () => {
       </div>
       
       {/* TABS GRID */}
-      <div className="flex flex-wrap gap-2 mb-6 px-4 md:px-0">
+      <div className="flex flex-wrap md:grid md:grid-cols-4 xl:grid-cols-10 gap-2 mb-6 px-4 md:px-0">
         {tabs.map(tab => (
           <button
             key={tab.id}
@@ -658,7 +674,8 @@ const Calculators: React.FC = () => {
             )}
 
             {activeTab === 'value' && (
-                <RequirePro>
+                <>
+                {!isPro ? <ProLockScreen /> : (
                 <div className="bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-800 rounded-[2rem] p-6 shadow-sm">
                    <h2 className="text-lg font-black text-slate-900 dark:text-white uppercase tracking-tighter italic mb-6 flex items-center gap-2"><Target size={20} className="text-emerald-500"/> Value Bet Finder</h2>
                    <div className="grid grid-cols-2 gap-4 mb-6">
@@ -681,11 +698,13 @@ const Calculators: React.FC = () => {
                       </p>
                    </div>
                 </div>
-                </RequirePro>
+                )}
+                </>
             )}
 
             {activeTab === 'arb' && (
-                <RequirePro>
+                <>
+                {!isPro ? <ProLockScreen /> : (
                 <div className="bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-800 rounded-[2rem] p-6 shadow-sm">
                    <h2 className="text-lg font-black text-slate-900 dark:text-white uppercase tracking-tighter italic mb-6 flex items-center gap-2"><Scale size={20} className="text-blue-500"/> Arbitragem (2-Way)</h2>
                    <div className="mb-4">
@@ -716,7 +735,8 @@ const Calculators: React.FC = () => {
                    </div>
                    {arbRoi > 0 && <p className="text-center text-xs text-slate-500 dark:text-slate-400 mt-2">Lucro líquido: R$ {arbProfit.toFixed(2)}</p>}
                 </div>
-                </RequirePro>
+                )}
+                </>
             )}
 
             {activeTab === 'stake' && (
@@ -755,7 +775,8 @@ const Calculators: React.FC = () => {
             )}
 
             {activeTab === 'breakeven' && (
-                <RequirePro>
+                <>
+                {!isPro ? <ProLockScreen /> : (
                 <div className="bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-800 rounded-[2rem] p-6 shadow-sm">
                    <h2 className="text-lg font-black text-slate-900 dark:text-white uppercase tracking-tighter italic mb-6 flex items-center gap-2"><TrendingUp size={20} className="text-pink-500"/> Break Even Point</h2>
                    <div className="mb-8">
@@ -768,14 +789,16 @@ const Calculators: React.FC = () => {
                       <p className="text-xs text-slate-500 mt-2">Para ficar no zero a zero (sem prejuízo)</p>
                    </div>
                 </div>
-                </RequirePro>
+                )}
+                </>
             )}
 
             {/* =========================================
                 EXPECTATIVA DE CANTOS E GOLS (ExC / ExG)
             ========================================= */}
             {(activeTab === 'exc' || activeTab === 'exg') && (
-                <RequirePro>
+                <>
+                {!isPro ? <ProLockScreen /> : (
                 <div className="bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-800 rounded-[2.5rem] p-6 sm:p-8 shadow-sm relative overflow-hidden">
                    <div className="flex justify-between items-start mb-6">
                       <h2 className={`text-2xl font-black uppercase tracking-tighter italic flex items-center gap-2 ${activeTab === 'exc' ? 'text-emerald-500' : 'text-orange-500'}`}>
@@ -1029,14 +1052,16 @@ const Calculators: React.FC = () => {
                      )}
                    </AnimatePresence>
                 </div>
-                </RequirePro>
+                )}
+                </>
             )}
 
             {/* =========================================
                 🔥 NOVO: SCOUT PRÉ-LIVE (IA CAÇADORA) 🔥
             ========================================= */}
             {activeTab === 'scout' && (
-                <RequirePro>
+                <>
+                {!isPro ? <ProLockScreen /> : (
                 <div className="bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-800 rounded-[2.5rem] p-4 sm:p-8 shadow-sm relative overflow-hidden">
                    <div className="flex justify-between items-start mb-8 relative z-10">
                       <div>
@@ -1174,15 +1199,29 @@ const Calculators: React.FC = () => {
                         {/* Instrução dos Jogos Selecionados */}
                         {selectedMatchesForBuilder.length > 0 && (
                             <div className="bg-indigo-500/5 border border-indigo-500/20 p-4 rounded-2xl">
-                                <h4 className="text-[10px] font-black text-indigo-400 uppercase tracking-widest mb-2 flex items-center gap-2"><Target size={12}/> Jogos Selecionados</h4>
+                                <h4 className="text-[10px] font-black text-indigo-400 uppercase tracking-widest mb-2 flex items-center gap-2"><Target size={12}/> 1. Jogos Selecionados</h4>
                                 <div className="flex flex-wrap gap-2">
                                     {selectedMatchesForBuilder.map((match, i) => (
                                         <span key={i} className="text-[10px] font-bold text-slate-300 bg-slate-900 px-3 py-1.5 rounded-lg border border-slate-800">{match}</span>
                                     ))}
                                 </div>
-                                <p className="text-[10px] text-slate-500 mt-3 italic">Tire um print das estatísticas detalhadas (H2H) de cada um deles e faça o upload abaixo.</p>
                             </div>
                         )}
+
+                        {/* NOVO: SELETOR DE MERCADOS */}
+                        <div className="bg-slate-900/50 border border-slate-800 p-4 rounded-2xl">
+                            <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3 flex items-center gap-2"><Layers size={12}/> 2. Mercados Permitidos (Foco da IA)</h4>
+                            <div className="flex flex-wrap gap-2">
+                                {AVAILABLE_MARKETS.map(m => {
+                                    const isActive = builderMarkets.includes(m);
+                                    return (
+                                        <button key={m} onClick={() => toggleMarket(m)} className={`text-[10px] font-black uppercase tracking-widest px-3 py-1.5 rounded-lg border transition-all ${isActive ? 'bg-indigo-600 border-indigo-500 text-white' : 'bg-[#020617] border-slate-800 text-slate-500 hover:text-slate-300'}`}>
+                                            {m}
+                                        </button>
+                                    )
+                                })}
+                            </div>
+                        </div>
 
                         {/* Scanner Multi-Image */}
                         <div className="relative group overflow-hidden rounded-[1.5rem] border-2 border-dashed border-indigo-500/20 hover:border-indigo-500/50 bg-slate-50 dark:bg-[#09090b] transition-all p-4 sm:p-6 min-h-[200px] flex flex-col items-center justify-center">
@@ -1192,9 +1231,9 @@ const Calculators: React.FC = () => {
                                        <Scan size={24} />
                                    </div>
                                    <h3 className="text-sm font-black text-slate-700 dark:text-slate-300 mb-1 text-center">
-                                       Upload das Estatísticas H2H
+                                       3. Upload das Estatísticas H2H
                                    </h3>
-                                   <p className="text-[10px] text-slate-500 uppercase tracking-widest font-bold text-center mb-3">Cole até 4 imagens (uma por jogo)</p>
+                                   <p className="text-[10px] text-slate-500 uppercase tracking-widest font-bold text-center mb-3">Tire um print de cada jogo e cole aqui (até 4 imagens)</p>
                                    <input type="file" accept="image/jpeg, image/png, image/webp" multiple className="hidden" onChange={handleScoutBuilderUpload} ref={scoutBuilderInputRef} />
                                </label>
                            )}
@@ -1219,10 +1258,10 @@ const Calculators: React.FC = () => {
                                            </label>
                                        )}
                                        <button onClick={processScoutBuilderEngine} className="text-[10px] font-black uppercase tracking-widest text-white bg-indigo-600 hover:bg-indigo-500 px-6 py-2.5 rounded-lg shadow-lg shadow-indigo-600/20 transition-colors flex items-center gap-2">
-                                           <Sparkles size={14}/> Gerar Aposta
+                                           <Sparkles size={14}/> Gerar Aposta Múltipla
                                        </button>
                                        <button onClick={clearBuilder} className="text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-red-400 px-4 py-2.5 transition-colors">
-                                           Limpar
+                                           Limpar Tudo
                                        </button>
                                    </div>
                                </div>
@@ -1237,17 +1276,17 @@ const Calculators: React.FC = () => {
                                    </div>
                                    <motion.div initial={{ width: '0%' }} animate={{ width: '100%' }} transition={{ repeat: Infinity, duration: 2 }} className="absolute bottom-0 left-0 h-1 bg-indigo-500 shadow-[0_0_20px_#6366f1]" />
                                    <Sparkles size={32} className="text-indigo-400 mb-2 animate-pulse" />
-                                   <p className="text-indigo-400 font-mono font-bold text-xs uppercase tracking-widest text-center px-4 mt-2">Cruzando dados e precificando múltiplos mercados...</p>
+                                   <p className="text-indigo-400 font-mono font-bold text-xs uppercase tracking-widest text-center px-4 mt-2">Calculando probabilidade e odd justa...</p>
                                </div>
                            )}
                         </div>
 
-                        {/* RESULTADO DO BUILDER (DINÂMICO PARA N SELEÇÕES) */}
+                        {/* RESULTADO DO BUILDER */}
                         {scoutBuilderResult && scoutBuilderResult.selections && (
                             <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="bg-[#020617] border border-indigo-500/20 rounded-[2rem] p-4 sm:p-6 shadow-[0_0_30px_rgba(99,102,241,0.1)] relative overflow-hidden">
                                 <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-500/10 rounded-full blur-[80px] -mr-20 -mt-20 pointer-events-none"></div>
                                 
-                                <h3 className="text-[10px] font-black text-indigo-400 uppercase tracking-widest mb-6 flex items-center gap-2"><Target size={14}/> Bilhete Pronto (EV+)</h3>
+                                <h3 className="text-[10px] font-black text-indigo-400 uppercase tracking-widest mb-6 flex items-center gap-2"><Target size={14}/> Bilhete Principal (Alta Confiança)</h3>
                                 
                                 <div className="space-y-2 mb-6 relative z-10">
                                     {scoutBuilderResult.selections.map((sel: any, idx: number) => (
@@ -1274,6 +1313,18 @@ const Calculators: React.FC = () => {
                                     <div className="bg-indigo-500/10 border border-indigo-500/20 rounded-xl p-4 text-center shadow-inner">
                                         <p className="text-[8px] sm:text-[9px] uppercase tracking-widest text-indigo-400 font-bold mb-1">Odd Justa Sugerida</p>
                                         <p className="text-xl sm:text-2xl font-black text-indigo-400 font-mono">@{scoutBuilderResult.fairOdd}</p>
+                                    </div>
+                                </div>
+
+                                {/* NOVOS BLOCOS: ALTERNATIVA E CONSERVADORA */}
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6 relative z-10">
+                                    <div className="bg-slate-900/40 border border-slate-800 p-4 rounded-xl">
+                                        <p className="text-[10px] uppercase tracking-widest text-slate-500 font-bold mb-2 flex items-center gap-1"><ArrowRightLeft size={12}/> Alternativa Tática</p>
+                                        <p className="text-xs text-white leading-relaxed">{scoutBuilderResult.alternativeCombination || "Não especificada."}</p>
+                                    </div>
+                                    <div className="bg-emerald-900/10 border border-emerald-900/30 p-4 rounded-xl">
+                                        <p className="text-[10px] uppercase tracking-widest text-emerald-500 font-bold mb-2 flex items-center gap-1"><ShieldAlert size={12}/> Margem de Segurança</p>
+                                        <p className="text-xs text-emerald-400 leading-relaxed">{scoutBuilderResult.conservativeCombination || "Não especificada."}</p>
                                     </div>
                                 </div>
 
