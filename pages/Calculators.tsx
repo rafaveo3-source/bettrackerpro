@@ -5,7 +5,7 @@ import {
   Target, TrendingUp, AlertTriangle, Lock, Crown, Radar, CheckSquare, 
   Square, Activity, Crosshair, BarChart4, Zap, DollarSign, Goal, Lightbulb,
   Clock, Flag, ShieldAlert, Swords, Power, Scan, Image as ImageIcon, CheckCircle2,
-  Flame, Thermometer, RectangleHorizontal, Layers
+  Flame, Thermometer, RectangleHorizontal, Layers, Trash
 } from 'lucide-react';
 import { useBetStore } from '../store/useBetStore';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -31,6 +31,7 @@ const PodInput = ({ label, value, onChange, icon: Icon, placeholder, colorClass,
   </div>
 );
 
+// 🔥 COMPONENTE: SELECT DO CONTEXTO TÁTICO
 const PodSelect = ({ label, value, onChange, icon: Icon, options, colorClass }: any) => (
   <div className="relative group">
       <label className={`text-[9px] font-black uppercase tracking-widest block mb-1.5 transition-colors text-slate-500`}>{label}</label>
@@ -53,6 +54,7 @@ const MapIcon = ({ size, className }: any) => (
   </svg>
 );
 
+// 🔥 COMPRESSOR DE IMAGEM HFT (Evita o erro de Payload Too Large da Vercel)
 const fileToBase64 = (file: File): Promise<string> => {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -61,7 +63,7 @@ const fileToBase64 = (file: File): Promise<string> => {
       const img = new Image();
       img.onload = () => {
         const canvas = document.createElement('canvas');
-        const MAX_WIDTH = 1200; 
+        const MAX_WIDTH = 1200; // Resolução ideal para IA ler sem pesar
         let width = img.width;
         let height = img.height;
 
@@ -75,6 +77,7 @@ const fileToBase64 = (file: File): Promise<string> => {
         const ctx = canvas.getContext('2d');
         ctx?.drawImage(img, 0, 0, width, height);
         
+        // Comprime para JPEG com 80% de qualidade
         const dataUrl = canvas.toDataURL('image/jpeg', 0.8);
         resolve(dataUrl.split(',')[1]);
       };
@@ -213,6 +216,7 @@ const Calculators: React.FC = () => {
     if (file && VALID_IMAGE_TYPES.includes(file.type)) processVisionAI(file);
   };
 
+  // 🔥 PROCESSAMENTO DO SCOUT (GRID VS BUILDER)
   const handleScoutGridUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file && VALID_IMAGE_TYPES.includes(file.type)) handleAddScoutGridImage(file);
@@ -613,7 +617,7 @@ const Calculators: React.FC = () => {
       </div>
       
       {/* TABS GRID */}
-      <div className="flex flex-wrap gap-2 mb-6 px-4 md:px-0">
+      <div className="flex flex-wrap md:grid md:grid-cols-4 xl:grid-cols-10 gap-2 mb-6 px-4 md:px-0">
         {tabs.map(tab => (
           <button
             key={tab.id}
@@ -1212,7 +1216,7 @@ const Calculators: React.FC = () => {
                    {scoutMode === 'builder' && (
                      <div className="space-y-6">
                         {/* Box de Instrução baseado na Grade */}
-                        {selectedMatchesForBuilder.length > 0 && scoutImages.length === 0 && (
+                        {selectedMatchesForBuilder.length > 0 && scoutBuilderImages.length === 0 && (
                             <div className="bg-indigo-500/10 border border-indigo-500/20 p-5 rounded-2xl mb-6">
                                 <h4 className="text-xs font-black text-indigo-400 uppercase tracking-widest mb-3">Passo 2: Anexar Estatísticas</h4>
                                 <p className="text-xs text-slate-300 mb-4">Você selecionou os seguintes jogos na grade. Envie um print do <strong>SofaScore / Flashscore</strong> de cada um deles para a IA calcular a Fair Odd:</p>
@@ -1225,7 +1229,7 @@ const Calculators: React.FC = () => {
                         )}
 
                         <div className="relative group overflow-hidden rounded-[1.5rem] border-2 border-dashed border-indigo-500/20 hover:border-indigo-500/50 bg-slate-50 dark:bg-[#09090b] transition-all p-6 min-h-[200px] flex flex-col items-center justify-center">
-                           {scoutImages.length === 0 && !isScanningScout && (
+                           {scoutBuilderImages.length === 0 && !isScanningScout && (
                                <label className="flex flex-col items-center justify-center cursor-pointer w-full h-full">
                                    <div className="w-12 h-12 rounded-full bg-slate-200 dark:bg-slate-800 flex items-center justify-center mb-4 text-slate-500 group-hover:text-indigo-500 transition-colors group-hover:scale-110 duration-300">
                                        <Scan size={24} />
@@ -1239,19 +1243,19 @@ const Calculators: React.FC = () => {
                            )}
 
                            {/* Thumbnails Multi-Image */}
-                           {scoutImages.length > 0 && !isScanningScout && (
+                           {scoutBuilderImages.length > 0 && !isScanningScout && (
                                <div className="w-full">
                                    <div className="flex flex-wrap gap-4 mb-6 justify-center">
-                                       {scoutImages.map((img, index) => (
+                                       {scoutBuilderImages.map((img, index) => (
                                            <div key={index} className="relative w-24 h-24 sm:w-32 sm:h-32 rounded-xl overflow-hidden border-2 border-indigo-500/30 group/thumb">
                                                <img src={img.url} className="object-cover w-full h-full opacity-80" />
-                                               <button onClick={() => setScoutImages(prev => prev.filter((_, i) => i !== index))} className="absolute top-1 right-1 bg-red-500 text-white p-1 rounded-md opacity-0 group-hover/thumb:opacity-100 transition-opacity"><Trash size={12}/></button>
+                                               <button onClick={() => setScoutBuilderImages(prev => prev.filter((_, i) => i !== index))} className="absolute top-1 right-1 bg-red-500 text-white p-1 rounded-md opacity-0 group-hover/thumb:opacity-100 transition-opacity"><Trash size={12}/></button>
                                            </div>
                                        ))}
                                    </div>
                                    
                                    <div className="flex flex-wrap gap-3 justify-center">
-                                       {scoutImages.length < 3 && (
+                                       {scoutBuilderImages.length < 3 && (
                                            <label className="text-[10px] font-black uppercase tracking-widest text-indigo-400 bg-indigo-500/10 hover:bg-indigo-500/20 border border-indigo-500/30 px-4 py-2.5 rounded-lg cursor-pointer transition-colors flex items-center gap-1">
                                                <Plus size={14}/> Jogo
                                                <input type="file" accept="image/jpeg, image/png, image/webp" multiple className="hidden" onChange={handleScoutBuilderUpload} />
@@ -1270,7 +1274,7 @@ const Calculators: React.FC = () => {
                            {isScanningScout && (
                                <div className="absolute inset-0 bg-[#09090b] flex flex-col items-center justify-center z-20">
                                    <div className="flex gap-2 mb-6">
-                                       {scoutImages.map((img, index) => (
+                                       {scoutBuilderImages.map((img, index) => (
                                            <img key={index} src={img.url} className="w-16 h-16 rounded-lg object-cover opacity-30 blur-sm border border-indigo-500/50" />
                                        ))}
                                    </div>
@@ -1286,7 +1290,7 @@ const Calculators: React.FC = () => {
                             <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="bg-[#020617] border border-indigo-500/20 rounded-[2rem] p-6 shadow-[0_0_30px_rgba(99,102,241,0.1)] relative overflow-hidden">
                                 <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-500/10 rounded-full blur-[80px] -mr-20 -mt-20 pointer-events-none"></div>
                                 
-                                <h3 className="text-[10px] font-black text-indigo-400 uppercase tracking-widest mb-6 flex items-center gap-2"><Target size={14}/> {scoutImages.length > 1 ? 'Aposta Dupla Cruzada' : 'Aposta Combinada (Mesmo Jogo)'}</h3>
+                                <h3 className="text-[10px] font-black text-indigo-400 uppercase tracking-widest mb-6 flex items-center gap-2"><Target size={14}/> {scoutBuilderImages.length > 1 ? 'Aposta Dupla Cruzada' : 'Aposta Combinada (Mesmo Jogo)'}</h3>
                                 
                                 <div className="space-y-3 mb-6 relative z-10">
                                     <div className="bg-slate-900/80 border border-slate-800 rounded-xl p-4 flex justify-between items-center">
