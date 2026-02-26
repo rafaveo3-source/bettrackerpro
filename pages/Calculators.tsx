@@ -31,7 +31,6 @@ const PodInput = ({ label, value, onChange, icon: Icon, placeholder, colorClass,
   </div>
 );
 
-// 🔥 COMPONENTE: SELECT DO CONTEXTO TÁTICO
 const PodSelect = ({ label, value, onChange, icon: Icon, options, colorClass }: any) => (
   <div className="relative group">
       <label className={`text-[9px] font-black uppercase tracking-widest block mb-1.5 transition-colors text-slate-500`}>{label}</label>
@@ -54,26 +53,45 @@ const MapIcon = ({ size, className }: any) => (
   </svg>
 );
 
+// 🔥 NOVO: COMPRESSOR DE IMAGEM HFT (Evita o erro de Payload Too Large da Vercel)
 const fileToBase64 = (file: File): Promise<string> => {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.readAsDataURL(file);
-    reader.onload = () => resolve((reader.result as string).split(',')[1]);
+    reader.onload = (event) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        const MAX_WIDTH = 1200; // Resolução ideal para IA ler sem pesar
+        let width = img.width;
+        let height = img.height;
+
+        if (width > MAX_WIDTH) {
+          height = Math.round((height * MAX_WIDTH) / width);
+          width = MAX_WIDTH;
+        }
+
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        ctx?.drawImage(img, 0, 0, width, height);
+        
+        // Comprime para JPEG com 80% de qualidade
+        const dataUrl = canvas.toDataURL('image/jpeg', 0.8);
+        resolve(dataUrl.split(',')[1]);
+      };
+      img.onerror = (error) => reject(error);
+      img.src = event.target?.result as string;
+    };
     reader.onerror = (error) => reject(error);
   });
 };
-
-// ==========================================
-// FUNÇÕES MATEMÁTICAS DO MOTOR HFT
-// ==========================================
 
 const factorial = (n: number): number => {
   if (n < 0) return 0;
   if (n === 0 || n === 1) return 1;
   let result = 1;
-  for (let i = 2; i <= n; i++) {
-    result *= i;
-  }
+  for (let i = 2; i <= n; i++) result *= i;
   return result;
 };
 
@@ -83,6 +101,10 @@ const poissonExact = (k: number, lambda: number): number => {
 };
 
 const Calculators: React.FC = () => {
+  
+  // 🔥 SUA CHAVE MESTRA (Segurança Vercel)
+  const userEmail = "rafaelancelmo.castro@gmail.com"; 
+
   const { 
     currentBankrollBalance, 
     isPro, 
@@ -96,7 +118,7 @@ const Calculators: React.FC = () => {
 
   const [activeTab, setActiveTab] = useState<
     'dutching' | 'kelly' | 'value' | 'arb' | 'stake' | 'odds' | 'breakeven' | 'exc' | 'exg' | 'scout'
-  >('dutching');
+  >('scout');
 
   // ==========================================
   // ESTADOS COMPARTILHADOS (ExC e ExG) - SEPARADOS
@@ -111,7 +133,6 @@ const Calculators: React.FC = () => {
   const [liveCurrentOdd, setLiveCurrentOdd] = useState('');
   const [liveAP_5m, setLiveAP_5m] = useState(''); 
 
-  // 🔥 ESTADOS DO MOTOR CONTEXTUAL (TDF & EDM)
   const [recentShots, setRecentShots] = useState('');
   const [recentCorners, setRecentCorners] = useState('');
   const [pressureTrend, setPressureTrend] = useState('stable'); 
@@ -120,22 +141,36 @@ const Calculators: React.FC = () => {
   const [needsGoal, setNeedsGoal] = useState('false'); 
   const [recentGoal, setRecentGoal] = useState('false'); 
 
-  // 🔥 ESTADOS DO NOVO PRE-LIVE SCOUT
+  // ==========================================
+  // ESTADOS DO NOVO PRE-LIVE SCOUT
+  // ==========================================
   const [scoutMode, setScoutMode] = useState<'grid' | 'builder'>('grid');
-  const [scoutImages, setScoutImages] = useState<{url: string, file: File}[]>([]);
+  const [scoutGridImage, setScoutGridImage] = useState<string | null>(null);
+  const [scoutBuilderImages, setScoutBuilderImages] = useState<{url: string, file: File}[]>([]);
   const [isScanningScout, setIsScanningScout] = useState(false);
   const [scoutGridResult, setScoutGridResult] = useState<any[] | null>(null);
   const [scoutBuilderResult, setScoutBuilderResult] = useState<any | null>(null);
+  const [selectedMatchesForBuilder, setSelectedMatchesForBuilder] = useState<string[]>([]);
 
-  // ==========================================
-  // LÓGICA DO SCANNER VISION IA (HUD)
-  // ==========================================
   const [scannedImage, setScannedImage] = useState<string | null>(null);
   const [isScanning, setIsScanning] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const scoutFileInputRef = useRef<HTMLInputElement>(null);
+  const scoutGridInputRef = useRef<HTMLInputElement>(null);
+  const scoutBuilderInputRef = useRef<HTMLInputElement>(null);
 
   const VALID_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
+
+  // Verifica crédito (O admin passa direto)
+  const checkAiLimit = () => {
+     if (userEmail === "rafaelancelmo.castro@gmail.com") return true;
+     return canUseAiScan ? canUseAiScan() : false;
+  };
+
+  const handleIncrementScan = () => {
+      if (userEmail !== "rafaelancelmo.castro@gmail.com" && typeof incrementAiScan === 'function') {
+          incrementAiScan();
+      }
+  };
 
   useEffect(() => {
     const handleGlobalPaste = (e: ClipboardEvent) => {
@@ -148,11 +183,12 @@ const Calculators: React.FC = () => {
           const blob = items[i].getAsFile();
           if (blob) {
              if (!VALID_IMAGE_TYPES.includes(blob.type)) {
-                 setToast({ type: 'error', message: '⚠️ Formato inválido! Cole apenas imagens PNG, JPG ou WEBP.' });
+                 setToast({ type: 'error', message: '⚠️ Formato inválido! Cole apenas PNG, JPG ou WEBP.' });
                  return;
              }
              if (activeTab === 'scout') {
-                handleAddScoutImage(blob);
+                if (scoutMode === 'grid') handleAddScoutGridImage(blob);
+                else handleAddScoutBuilderImage(blob);
              } else {
                 processVisionAI(blob);
              }
@@ -162,87 +198,114 @@ const Calculators: React.FC = () => {
     };
     window.addEventListener('paste', handleGlobalPaste);
     return () => window.removeEventListener('paste', handleGlobalPaste);
-  }, [activeTab, scoutMode, scoutImages]);
+  }, [activeTab, scoutMode, scoutBuilderImages]);
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) {
-        if (!VALID_IMAGE_TYPES.includes(file.type)) {
-            setToast({ type: 'error', message: '⚠️ Formato inválido! Use apenas PNG, JPG ou WEBP.' });
-            return;
-        }
-        processVisionAI(file);
-    }
+    if (file && VALID_IMAGE_TYPES.includes(file.type)) processVisionAI(file);
   };
 
-  const handleScoutFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleScoutGridUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file && VALID_IMAGE_TYPES.includes(file.type)) handleAddScoutGridImage(file);
+  };
+
+  const handleScoutBuilderUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
         Array.from(e.target.files).forEach(file => {
-            if (VALID_IMAGE_TYPES.includes(file.type)) handleAddScoutImage(file);
+            if (VALID_IMAGE_TYPES.includes(file.type)) handleAddScoutBuilderImage(file);
         });
     }
   };
 
-  const handleAddScoutImage = (file: File) => {
-      if (scoutMode === 'grid') {
-          setScoutImages([{ url: URL.createObjectURL(file), file }]);
-      } else {
-          if (scoutImages.length >= 3) {
-              setToast({ type: 'error', message: 'Máximo de 3 imagens permitidas para análise cruzada.' });
-              return;
-          }
-          setScoutImages(prev => [...prev, { url: URL.createObjectURL(file), file }]);
-      }
-  };
-
-  const processScoutEngine = async () => {
-      if (scoutImages.length === 0) return;
+  const handleAddScoutGridImage = async (file: File) => {
       if (!isPro) { setToast({ type: 'error', message: 'Recurso exclusivo para Membros PRO.' }); return; }
-      if (typeof canUseAiScan === 'function' && !canUseAiScan()) { setToast({ type: 'error', message: 'Limite atingido.' }); return; }
+      if (!checkAiLimit()) { setToast({ type: 'error', message: 'Limite atingido.' }); return; }
 
-      setIsScanningScout(true); 
-      setScoutGridResult(null); 
-      setScoutBuilderResult(null);
+      setScoutGridImage(URL.createObjectURL(file));
+      setIsScanningScout(true); setScoutGridResult(null);
 
       try {
-          const base64Images = await Promise.all(scoutImages.map(async (imgObj) => ({
-              base64: await fileToBase64(imgObj.file),
-              mimeType: imgObj.file.type || 'image/png'
-          })));
-
-          const endpoint = scoutMode === 'grid' ? '/api/vision-grid' : '/api/vision-builder';
-          const payload = scoutMode === 'grid' 
-                ? { image: base64Images[0].base64, mimeType: base64Images[0].mimeType } 
-                : { images: base64Images };
-
-          const response = await fetch(endpoint, {
+          const base64Data = await fileToBase64(file);
+          const response = await fetch('/api/vision-grid', {
               method: 'POST', headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify(payload)
+              // 🔥 ENVIO DE EMAIL CORRIGIDO
+              body: JSON.stringify({ image: base64Data, mimeType: 'image/jpeg', email: userEmail })
           });
 
-          if (!response.ok) throw new Error('Falha na IA');
           const data = await response.json();
+          if (!response.ok) throw new Error(data.error || 'Falha na IA');
           
-          if (scoutMode === 'grid' && data && data.matches) {
+          if (data && data.matches) {
               setScoutGridResult(data.matches);
-              setToast({ type: 'success', message: 'Grade Mapeada!' });
-          } else if (scoutMode === 'builder' && data && data.selection1) {
-              setScoutBuilderResult(data);
-              setToast({ type: 'success', message: 'Aposta Cruzada Construída!' });
+              handleIncrementScan();
+              setToast({ type: 'success', message: 'Grade Mapeada com sucesso!' });
           }
-          
-          if (typeof incrementAiScan === 'function') incrementAiScan();
-
-      } catch (e) {
-          setToast({ type: 'error', message: 'Erro ao processar as imagens na IA.' });
-      } finally { 
-          setIsScanningScout(false); 
-      }
+      } catch (e: any) {
+          setToast({ type: 'error', message: e.message || 'Erro ao analisar a grade.' });
+      } finally { setIsScanningScout(false); }
   };
 
+  const handleAddScoutBuilderImage = (file: File) => {
+      if (scoutBuilderImages.length >= 3) {
+          setToast({ type: 'error', message: 'Máximo de 3 imagens permitidas para análise cruzada.' });
+          return;
+      }
+      setScoutBuilderImages(prev => [...prev, { url: URL.createObjectURL(file), file }]);
+  };
+
+  const processScoutBuilderEngine = async () => {
+      if (scoutBuilderImages.length === 0) return;
+      if (!isPro) { setToast({ type: 'error', message: 'Recurso exclusivo PRO.' }); return; }
+      if (!checkAiLimit()) { setToast({ type: 'error', message: 'Limite atingido.' }); return; }
+
+      setIsScanningScout(true); setScoutBuilderResult(null);
+
+      try {
+          const base64Images = await Promise.all(scoutBuilderImages.map(async (imgObj) => ({
+              base64: await fileToBase64(imgObj.file),
+              mimeType: 'image/jpeg'
+          })));
+
+          const response = await fetch('/api/vision-builder', {
+              method: 'POST', headers: { 'Content-Type': 'application/json' },
+              // 🔥 ENVIO DE EMAIL CORRIGIDO E ARRAY DE IMAGENS COMPRIMIDAS
+              body: JSON.stringify({ images: base64Images, email: userEmail })
+          });
+
+          const data = await response.json();
+          if (!response.ok) throw new Error(data.error || 'Falha na IA');
+          
+          if (data && data.selection1) {
+              setScoutBuilderResult(data);
+              handleIncrementScan();
+              setToast({ type: 'success', message: 'Aposta Cruzada Construída!' });
+          }
+      } catch (e: any) {
+          setToast({ type: 'error', message: e.message || 'Erro ao processar as imagens na IA.' });
+      } finally { setIsScanningScout(false); }
+  };
+
+  const toggleMatchSelection = (matchName: string) => {
+      setSelectedMatchesForBuilder(prev => {
+          if (prev.includes(matchName)) return prev.filter(m => m !== matchName);
+          if (prev.length >= 3) {
+             setToast({ type: 'error', message: 'Máximo de 3 jogos por dupla/tripla.'});
+             return prev;
+          }
+          return [...prev, matchName];
+      });
+  };
+
+  const clearGrid = () => { setScoutGridImage(null); setScoutGridResult(null); setSelectedMatchesForBuilder([]); };
+  const clearBuilder = () => { setScoutBuilderImages([]); setScoutBuilderResult(null); };
+
+  // ==========================================
+  // VISION IA (ExC e ExG)
+  // ==========================================
   const processVisionAI = async (file: File) => {
     if (!isPro) { setToast({ type: 'error', message: 'Exclusivo PRO.' }); return; }
-    if (typeof canUseAiScan === 'function' && !canUseAiScan()) { setToast({ type: 'error', message: 'Limite atingido.' }); return; }
+    if (!checkAiLimit()) { setToast({ type: 'error', message: 'Limite atingido.' }); return; }
 
     setScannedImage(URL.createObjectURL(file));
     setIsScanning(true);
@@ -251,15 +314,13 @@ const Calculators: React.FC = () => {
         const base64Data = await fileToBase64(file);
         const response = await fetch('/api/vision', {
             method: 'POST', headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ image: base64Data, mimeType: file.type || 'image/png', mode: activeTab })
+            // 🔥 ENVIO DE EMAIL CORRIGIDO NO ExC/ExG
+            body: JSON.stringify({ image: base64Data, mimeType: 'image/jpeg', mode: activeTab, email: userEmail, scenario: activeTab === 'exc' ? excScenario : exgScenario })
         });
 
-        if (!response.ok) {
-            setToast({ type: 'error', message: 'Falha na conexão com a IA.' });
-            setIsScanning(false); return;
-        }
-        
         const data = await response.json();
+        if (!response.ok) throw new Error(data.error || 'Falha na conexão com a IA.');
+        
         if (data) {
            const cln = (val: any) => (val !== null && val !== undefined && val !== "") ? String(val) : "";
 
@@ -276,14 +337,12 @@ const Calculators: React.FC = () => {
            if (data.needsGoal !== undefined) setNeedsGoal(String(data.needsGoal));
            if (data.recentGoal !== undefined) setRecentGoal(String(data.recentGoal));
            
-           if (typeof incrementAiScan === 'function') incrementAiScan();
-           setToast({ type: 'success', message: 'Contexto Mapeado com precisão cirúrgica!' });
+           handleIncrementScan();
+           setToast({ type: 'success', message: 'Contexto Extraído com IA!' });
         }
-        setIsScanning(false);
-    } catch (error) {
-        setToast({ type: 'error', message: 'Erro ao processar imagem.' });
-        setIsScanning(false);
-    }
+    } catch (e: any) {
+        setToast({ type: 'error', message: e.message || 'Erro na leitura visual.' });
+    } finally { setIsScanning(false); }
   };
 
   const resetScanner = () => {
@@ -293,12 +352,6 @@ const Calculators: React.FC = () => {
       setMatchTemp('calm'); setRedCard('none'); setNeedsGoal('false'); setRecentGoal('false');
   };
 
-  const resetScoutScanner = () => {
-      setScoutImages([]);
-      setScoutGridResult(null);
-      setScoutBuilderResult(null);
-  }
-
   // ==========================================
   // MOTOR QUÂNTICO (HFT CONFIDENCE ENGINE)
   // ==========================================
@@ -306,11 +359,11 @@ const Calculators: React.FC = () => {
   const [exgScenario, setExgScenario] = useState('ft_over05');
 
   const excScenariosData: Record<string, { title: string; checks: string[] }> = {
-    ht_asian: { title: 'Canto Asiático HT (Margem Segura)', checks: ['Relógio entre 25 e 36 minutos?', 'Favorito pressionando ativamente?', 'Assimetria visível no radar?'] },
-    ht_limit: { title: 'Canto Limite HT (Abafa Retranca)', checks: ['Relógio entre 37 e 41 minutos?', 'Ataques rápidos e finalizações ocorrendo?', 'Adversário empurrado para a própria área?'] },
+    ht_asian: { title: 'Canto Asiático HT', checks: ['Relógio entre 25 e 36 minutos?', 'Favorito pressionando ativamente?', 'Assimetria visível no radar?'] },
+    ht_limit: { title: 'Canto Limite HT', checks: ['Relógio entre 37 e 41 minutos?', 'Ataques rápidos e finalizações ocorrendo?', 'Adversário empurrado para a própria área?'] },
     ht_zoio: { title: 'Canto Zóio HT (Kamikaze 42\'+)', checks: ['Relógio passando dos 42 minutos?', 'Favorito perdendo/empatando no sufoco?', 'Bolas sendo jogadas direto na área?'] },
-    ft_asian: { title: 'Canto Asiático FT (Volta do Intervalo)', checks: ['Relógio entre 65 e 78 minutos?', 'Time dominou a posse no 2º tempo?', 'Zagueiros rebatendo muitas bolas?'] },
-    ft_limit: { title: 'Canto Limite FT (Desespero Final)', checks: ['Relógio entre 82 e 87 minutos?', 'Modo desespero (Abafa Absoluto)?', 'Adversário não consegue segurar a bola?'] },
+    ft_asian: { title: 'Canto Asiático FT', checks: ['Relógio entre 65 e 78 minutos?', 'Time dominou a posse no 2º tempo?', 'Zagueiros rebatendo muitas bolas?'] },
+    ft_limit: { title: 'Canto Limite FT', checks: ['Relógio entre 82 e 87 minutos?', 'Modo desespero (Abafa Absoluto)?', 'Adversário não consegue segurar a bola?'] },
     ft_zoio: { title: 'Canto Zóio FT (Kamikaze 88\'+)', checks: ['Relógio passando dos 88 minutos?', 'Goleiro indo pro ataque?', 'Defesa cortando bola pra qualquer lado?'] }
   };
 
@@ -460,7 +513,7 @@ const Calculators: React.FC = () => {
 
       return { 
          appm, fieldTilt, probCons, probNeut, probAggr, mainProb, targetKey, ev, fairOdd, 
-         finalScore, label, color, positiveReasons, negativeReasons, crossCheckMsg, paceMsg, baseLambda 
+         finalScore, label, color, positiveReasons, negativeReasons, crossCheckMsg, paceMsg, baseLambda, momentumScore 
       };
   };
 
@@ -532,6 +585,7 @@ const Calculators: React.FC = () => {
   })();
 
   const tabs = [
+    { id: 'dutching', label: 'Dutching', pro: false }, { id: 'kelly', label: 'Kelly', pro: false },
     { id: 'value', label: 'Value Bet', pro: true }, { id: 'arb', label: 'Arbitragem', pro: true },
     { id: 'stake', label: 'Stake %', pro: false }, { id: 'odds', label: 'Odds Conv.', pro: false },
     { id: 'breakeven', label: 'Break Even', pro: true }, { id: 'exc', label: 'ExC (Cantos)', pro: true },
@@ -554,90 +608,207 @@ const Calculators: React.FC = () => {
       </div>
       
       {/* TABS GRID */}
-      <div className="flex flex-wrap gap-2 mb-6 px-4 md:px-0">
+      <div className="flex flex-wrap md:grid md:grid-cols-4 xl:grid-cols-10 gap-2 mb-6 px-4 md:px-0">
         {tabs.map(tab => (
-          <button key={tab.id} onClick={() => setActiveTab(tab.id as any)} className={`relative flex-1 min-w-[90px] flex items-center justify-center px-2 py-3 rounded-xl font-bold text-[10px] uppercase tracking-wider transition-all gap-1 ${activeTab === tab.id ? (tab.id === 'exg' ? 'bg-orange-500 text-white shadow-lg shadow-orange-500/20' : tab.id === 'scout' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/20' : 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/20') : 'bg-white dark:bg-[#0f172a] text-slate-600 dark:text-slate-500 border border-slate-200 dark:border-slate-800'}`}>
+          <button
+            key={tab.id}
+            onClick={() => setActiveTab(tab.id as any)}
+            className={`relative flex-1 min-w-[90px] flex items-center justify-center px-2 py-3 rounded-xl font-bold text-[10px] uppercase tracking-wider transition-all gap-1 ${
+              activeTab === tab.id
+                ? (tab.id === 'exg' ? 'bg-orange-500 text-white shadow-lg shadow-orange-500/20' : tab.id === 'scout' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/20' : 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/20')
+                : 'bg-white dark:bg-[#0f172a] text-slate-600 dark:text-slate-500 border border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-900'
+            }`}
+          >
             {tab.pro && !isPro && <Lock size={10} className="mb-0.5" />}
             {tab.label}
+            {activeTab === tab.id && <span className="absolute bottom-0 left-0 w-full h-[3px] bg-white/40 animate-pulse rounded-b-xl" />}
           </button>
         ))}
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 px-4 md:px-0">
         <div className="lg:col-span-2 space-y-6 min-w-0 w-full">
+            
+            {/* CALCULADORAS SIMPLES */}
+            {activeTab === 'dutching' && (
+                <div className="bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-800 rounded-[2rem] p-6 shadow-sm w-full overflow-hidden">
+                    <h2 className="text-lg font-black text-slate-900 dark:text-white uppercase tracking-tighter italic mb-4">Calculadora Dutching</h2>
+                    <div className="flex items-center gap-3 bg-slate-50 dark:bg-slate-900 p-3 rounded-xl border border-slate-200 dark:border-slate-800 w-full mb-6">
+                        <span className="text-[10px] text-slate-500 dark:text-slate-400 uppercase font-black tracking-widest pl-1">Total Stake</span>
+                        <input type="number" value={dutchTotalStake} onChange={(e) => setDutchTotalStake(e.target.value)} className="bg-transparent text-right w-full font-mono font-bold outline-none text-slate-900 dark:text-white text-lg" />
+                    </div>
+                    <div className="space-y-3">
+                        {dutchSelections.map((sel, idx) => (
+                            <div key={sel.id} className="bg-slate-50 dark:bg-slate-900/50 p-4 rounded-xl border border-slate-200 dark:border-slate-800/50 grid grid-cols-12 gap-2 items-center">
+                                <div className="col-span-1 text-xs font-bold text-slate-400">{String.fromCharCode(65 + idx)}</div>
+                                <div className="col-span-5"><input type="text" value={sel.name} onChange={e => { const n = [...dutchSelections]; n[idx].name = e.target.value; setDutchSelections(n); }} className="w-full bg-transparent outline-none text-sm font-bold text-slate-700 dark:text-slate-200" /></div>
+                                <div className="col-span-3"><input type="number" value={sel.odds} onChange={e => { const n = [...dutchSelections]; n[idx].odds = e.target.value; setDutchSelections(n); }} className="w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded px-2 py-1 text-sm font-mono text-center text-slate-900 dark:text-white" placeholder="Odds" /></div>
+                                <div className="col-span-3 text-right">
+                                    <p className="text-emerald-600 dark:text-emerald-400 font-bold text-xs">R$ {sel.stake.toFixed(2)}</p>
+                                    <button onClick={() => removeDutchSelection(sel.id)} className="text-[9px] text-red-500 dark:text-red-400 hover:underline">Remover</button>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                    <div className="mt-6 flex gap-3">
+                        <button onClick={addDutchSelection} className="flex-1 py-3 rounded-xl border border-dashed border-slate-300 dark:border-slate-700 text-slate-600 dark:text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-800/50 text-xs font-bold uppercase transition-colors"><Plus size={14} className="inline mr-1"/> Add Seleção</button>
+                        <button onClick={calculateDutching} className="flex-1 py-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold uppercase shadow-lg shadow-emerald-600/20 transition-all active:scale-95">Calcular</button>
+                    </div>
+                </div>
+            )}
 
-            {/* =========================================
-                RENDERIZAÇÃO DAS CALCULADORAS CLÁSSICAS
-            ========================================= */}
+            {activeTab === 'kelly' && (
+                <div className="bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-800 rounded-[2rem] p-6 shadow-sm w-full overflow-hidden">
+                    <h2 className="text-lg font-black text-slate-900 dark:text-white uppercase tracking-tighter italic mb-6">Critério de Kelly</h2>
+                    <div className="grid grid-cols-2 gap-4 mb-6">
+                        <div>
+                             <label className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase block mb-2">Banca</label>
+                             <div className="p-3 bg-slate-50 dark:bg-slate-900 rounded-xl font-mono font-bold text-slate-900 dark:text-white border border-slate-200 dark:border-transparent">R$ {currentBankrollBalance.toFixed(2)}</div>
+                        </div>
+                        <div>
+                             <label className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase block mb-2">Fração</label>
+                             <select value={kellyFraction} onChange={e => setKellyFraction(e.target.value)} className="w-full p-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-transparent text-slate-900 dark:text-white rounded-xl font-bold text-sm outline-none">
+                                <option value="1">100%</option>
+                                <option value="0.5">50%</option>
+                                <option value="0.25">25%</option>
+                               </select>
+                        </div>
+                        <div>
+                             <label className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase block mb-2">Odds</label>
+                             <input type="number" value={kellyOdds} onChange={e => setKellyOdds(e.target.value)} className="w-full p-3 bg-slate-50 dark:bg-slate-900 rounded-xl font-mono font-bold outline-none border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white" />
+                        </div>
+                        <div>
+                             <label className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase block mb-2">Probabilidade %</label>
+                             <input type="number" value={kellyProb} onChange={e => setKellyProb(e.target.value)} className="w-full p-3 bg-slate-50 dark:bg-slate-900 rounded-xl font-mono font-bold outline-none border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white" />
+                        </div>
+                    </div>
+                    <div className="bg-purple-50 dark:bg-purple-900/10 p-6 rounded-2xl text-center border border-purple-200 dark:border-purple-500/20">
+                        <p className="text-xs font-bold text-purple-500 dark:text-purple-400 uppercase tracking-widest mb-1">Stake Recomendada</p>
+                        <h3 className="text-4xl font-black text-purple-600 dark:text-purple-400">{parseFloat(kellyResult) > 0 ? kellyResult : '0.00'}%</h3>
+                        <p className="text-sm font-mono text-purple-800 dark:text-purple-300 mt-2 bg-purple-200 dark:bg-purple-500/20 inline-block px-3 py-1 rounded font-bold">R$ {parseFloat(kellyResult) > 0 ? kellyMoney.toFixed(2) : '0.00'}</p>
+                    </div>
+                </div>
+            )}
+
             {activeTab === 'value' && (
+                !isPro ? <ProLockScreen /> : (
                 <div className="bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-800 rounded-[2rem] p-6 shadow-sm">
                    <h2 className="text-lg font-black text-slate-900 dark:text-white uppercase tracking-tighter italic mb-6 flex items-center gap-2"><Target size={20} className="text-emerald-500"/> Value Bet Finder</h2>
                    <div className="grid grid-cols-2 gap-4 mb-6">
-                      <div><label className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase block mb-2">Sua Odds</label><input type="number" value={valOdds} onChange={e => setValOdds(e.target.value)} className="w-full p-3 bg-slate-50 dark:bg-slate-900 rounded-xl font-mono font-bold outline-none border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white" /></div>
-                      <div><label className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase block mb-2">Probabilidade Real %</label><input type="number" value={valProb} onChange={e => setValProb(e.target.value)} className="w-full p-3 bg-slate-50 dark:bg-slate-900 rounded-xl font-mono font-bold outline-none border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white" /></div>
+                      <div>
+                          <label className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase block mb-2">Sua Odds</label>
+                          <input type="number" value={valOdds} onChange={e => setValOdds(e.target.value)} className="w-full p-3 bg-slate-50 dark:bg-slate-900 rounded-xl font-mono font-bold outline-none border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white" />
+                      </div>
+                      <div>
+                          <label className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase block mb-2">Probabilidade Real %</label>
+                          <input type="number" value={valProb} onChange={e => setValProb(e.target.value)} className="w-full p-3 bg-slate-50 dark:bg-slate-900 rounded-xl font-mono font-bold outline-none border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white" />
+                      </div>
                    </div>
                    <div className={`p-6 rounded-2xl border text-center ${valEV > 0 ? 'bg-emerald-50 dark:bg-emerald-900/10 border-emerald-200 dark:border-emerald-500/20' : 'bg-red-50 dark:bg-red-900/10 border-red-200 dark:border-red-500/20'}`}>
                       <p className="text-xs font-bold uppercase tracking-widest mb-1 opacity-70 text-slate-700 dark:text-slate-300">Valor Esperado (EV)</p>
-                      <h3 className={`text-4xl font-black ${valEV > 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-500'}`}>{valEV > 0 ? '+' : ''}{valEVPercent.toFixed(2)}%</h3>
-                      <p className={`text-xs mt-2 font-bold ${valEV > 0 ? 'text-emerald-700 dark:text-emerald-300' : 'text-red-600 dark:text-red-400'}`}>{valEV > 0 ? '✅ Aposta de Valor Encontrada' : '❌ Odds sem valor estatístico'}</p>
+                      <h3 className={`text-4xl font-black ${valEV > 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-500'}`}>
+                        {valEV > 0 ? '+' : ''}{valEVPercent.toFixed(2)}%
+                      </h3>
+                      <p className={`text-xs mt-2 font-bold ${valEV > 0 ? 'text-emerald-700 dark:text-emerald-300' : 'text-red-600 dark:text-red-400'}`}>
+                          {valEV > 0 ? '✅ Aposta de Valor Encontrada' : '❌ Odds sem valor estatístico'}
+                      </p>
                    </div>
                 </div>
+                )
             )}
-            
+
             {activeTab === 'arb' && (
+                !isPro ? <ProLockScreen /> : (
                 <div className="bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-800 rounded-[2rem] p-6 shadow-sm">
                    <h2 className="text-lg font-black text-slate-900 dark:text-white uppercase tracking-tighter italic mb-6 flex items-center gap-2"><Scale size={20} className="text-blue-500"/> Arbitragem (2-Way)</h2>
-                   <div className="mb-4"><label className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase block mb-2">Investimento Total (R$)</label><input type="number" value={arbTotalStake} onChange={e => setArbTotalStake(e.target.value)} className="w-full p-3 bg-slate-50 dark:bg-slate-900 rounded-xl font-mono font-bold outline-none border border-slate-200 dark:border-slate-800 text-lg text-slate-900 dark:text-white" /></div>
+                   <div className="mb-4">
+                      <label className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase block mb-2">Investimento Total (R$)</label>
+                      <input type="number" value={arbTotalStake} onChange={e => setArbTotalStake(e.target.value)} className="w-full p-3 bg-slate-50 dark:bg-slate-900 rounded-xl font-mono font-bold outline-none border border-slate-200 dark:border-slate-800 text-lg text-slate-900 dark:text-white" />
+                   </div>
                    <div className="grid grid-cols-2 gap-4 mb-6">
                       <div className="bg-slate-50 dark:bg-slate-900 p-4 rounded-xl border border-slate-200 dark:border-slate-800">
-                          <label className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase block mb-2">Casa A (Odds)</label><input type="number" value={arbOdds1} onChange={e => setArbOdds1(e.target.value)} className="w-full bg-transparent font-mono font-black text-xl outline-none text-slate-900 dark:text-white" />
-                          <div className="mt-2 pt-2 border-t border-slate-200 dark:border-slate-700"><p className="text-[10px] uppercase text-slate-500 dark:text-slate-400">Apostar:</p><p className="text-emerald-600 dark:text-emerald-500 font-bold">R$ {isFinite(arbStake1) ? arbStake1.toFixed(2) : '0.00'}</p></div>
+                          <label className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase block mb-2">Casa A (Odds)</label>
+                          <input type="number" value={arbOdds1} onChange={e => setArbOdds1(e.target.value)} className="w-full bg-transparent font-mono font-black text-xl outline-none text-slate-900 dark:text-white" />
+                          <div className="mt-2 pt-2 border-t border-slate-200 dark:border-slate-700">
+                             <p className="text-[10px] uppercase text-slate-500 dark:text-slate-400">Apostar:</p>
+                             <p className="text-emerald-600 dark:text-emerald-500 font-bold">R$ {isFinite(arbStake1) ? arbStake1.toFixed(2) : '0.00'}</p>
+                          </div>
                       </div>
                       <div className="bg-slate-50 dark:bg-slate-900 p-4 rounded-xl border border-slate-200 dark:border-slate-800">
-                          <label className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase block mb-2">Casa B (Odds)</label><input type="number" value={arbOdds2} onChange={e => setArbOdds2(e.target.value)} className="w-full bg-transparent font-mono font-black text-xl outline-none text-slate-900 dark:text-white" />
-                          <div className="mt-2 pt-2 border-t border-slate-200 dark:border-slate-700"><p className="text-[10px] uppercase text-slate-500 dark:text-slate-400">Apostar:</p><p className="text-emerald-600 dark:text-emerald-500 font-bold">R$ {isFinite(arbStake2) ? arbStake2.toFixed(2) : '0.00'}</p></div>
+                          <label className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase block mb-2">Casa B (Odds)</label>
+                          <input type="number" value={arbOdds2} onChange={e => setArbOdds2(e.target.value)} className="w-full bg-transparent font-mono font-black text-xl outline-none text-slate-900 dark:text-white" />
+                          <div className="mt-2 pt-2 border-t border-slate-200 dark:border-slate-700">
+                             <p className="text-[10px] uppercase text-slate-500 dark:text-slate-400">Apostar:</p>
+                             <p className="text-emerald-600 dark:text-emerald-500 font-bold">R$ {isFinite(arbStake2) ? arbStake2.toFixed(2) : '0.00'}</p>
+                          </div>
                       </div>
                    </div>
-                   <div className={`p-4 rounded-xl flex justify-between items-center ${arbRoi > 0 ? 'bg-emerald-500 text-white' : 'bg-slate-100 dark:bg-slate-800 text-slate-500'}`}><span className="font-bold uppercase text-xs tracking-widest">Lucro Garantido (ROI)</span><span className="font-black text-xl">{arbRoi.toFixed(2)}%</span></div>
+                   <div className={`p-4 rounded-xl flex justify-between items-center ${arbRoi > 0 ? 'bg-emerald-500 text-white' : 'bg-slate-100 dark:bg-slate-800 text-slate-500'}`}>
+                      <span className="font-bold uppercase text-xs tracking-widest">Lucro Garantido (ROI)</span>
+                      <span className="font-black text-xl">{arbRoi.toFixed(2)}%</span>
+                   </div>
                    {arbRoi > 0 && <p className="text-center text-xs text-slate-500 dark:text-slate-400 mt-2">Lucro líquido: R$ {arbProfit.toFixed(2)}</p>}
                 </div>
+                )
             )}
-            
+
             {activeTab === 'stake' && (
                 <div className="bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-800 rounded-[2rem] p-6 shadow-sm">
                    <h2 className="text-lg font-black text-slate-900 dark:text-white uppercase tracking-tighter italic mb-6 flex items-center gap-2"><Percent size={20} className="text-orange-500"/> Calculadora Stake Fixa</h2>
-                   <div className="mb-6"><label className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase block mb-2">Porcentagem da Banca (%)</label><input type="number" value={stakePercent} onChange={e => setStakePercent(e.target.value)} className="w-full p-4 bg-slate-50 dark:bg-slate-900 rounded-xl font-mono font-black text-3xl outline-none border border-slate-200 dark:border-slate-800 text-center text-orange-500" /></div>
+                   <div className="mb-6">
+                      <label className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase block mb-2">Porcentagem da Banca (%)</label>
+                      <input type="number" value={stakePercent} onChange={e => setStakePercent(e.target.value)} className="w-full p-4 bg-slate-50 dark:bg-slate-900 rounded-xl font-mono font-black text-3xl outline-none border border-slate-200 dark:border-slate-800 text-center text-orange-500" />
+                   </div>
                    <div className="bg-slate-50 dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 text-center">
-                      <p className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-1">Valor da Aposta</p><h3 className="text-4xl font-black text-slate-900 dark:text-white">R$ {stakeValue.toFixed(2)}</h3><p className="text-xs text-slate-500 dark:text-slate-400 mt-2">Baseado na banca atual de R$ {currentBankrollBalance.toFixed(2)}</p>
+                      <p className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-1">Valor da Aposta</p>
+                      <h3 className="text-4xl font-black text-slate-900 dark:text-white">R$ {stakeValue.toFixed(2)}</h3>
+                      <p className="text-xs text-slate-500 dark:text-slate-400 mt-2">Baseado na banca atual de R$ {currentBankrollBalance.toFixed(2)}</p>
                    </div>
                 </div>
             )}
-            
+
             {activeTab === 'odds' && (
                 <div className="bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-800 rounded-[2rem] p-6 shadow-sm">
                    <h2 className="text-lg font-black text-slate-900 dark:text-white uppercase tracking-tighter italic mb-6 flex items-center gap-2"><ArrowRightLeft size={20} className="text-indigo-500"/> Conversor Universal</h2>
                    <div className="space-y-4">
-                      <div className="bg-slate-50 dark:bg-slate-900 p-4 rounded-xl border border-slate-200 dark:border-slate-800 flex justify-between items-center"><label className="text-xs font-bold text-slate-600 dark:text-slate-400 uppercase">Decimal (Eu/Br)</label><input type="number" value={convDec} onChange={e => handleDecChange(e.target.value)} className="bg-transparent text-right font-mono font-black text-lg outline-none w-24 text-indigo-600 dark:text-indigo-400" /></div>
-                      <div className="bg-slate-50 dark:bg-slate-900 p-4 rounded-xl border border-slate-200 dark:border-slate-800 flex justify-between items-center"><label className="text-xs font-bold text-slate-600 dark:text-slate-400 uppercase">Americana (US)</label><span className="font-mono font-bold text-slate-900 dark:text-white">{convAm}</span></div>
-                      <div className="bg-slate-50 dark:bg-slate-900 p-4 rounded-xl border border-slate-200 dark:border-slate-800 flex justify-between items-center"><label className="text-xs font-bold text-slate-600 dark:text-slate-400 uppercase">Probabilidade Implícita</label><span className="font-mono font-bold text-slate-900 dark:text-white">{convProb}%</span></div>
+                      <div className="bg-slate-50 dark:bg-slate-900 p-4 rounded-xl border border-slate-200 dark:border-slate-800 flex justify-between items-center">
+                          <label className="text-xs font-bold text-slate-600 dark:text-slate-400 uppercase">Decimal (Eu/Br)</label>
+                          <input type="number" value={convDec} onChange={e => handleDecChange(e.target.value)} className="bg-transparent text-right font-mono font-black text-lg outline-none w-24 text-indigo-600 dark:text-indigo-400" />
+                      </div>
+                      <div className="bg-slate-50 dark:bg-slate-900 p-4 rounded-xl border border-slate-200 dark:border-slate-800 flex justify-between items-center">
+                          <label className="text-xs font-bold text-slate-600 dark:text-slate-400 uppercase">Americana (US)</label>
+                          <span className="font-mono font-bold text-slate-900 dark:text-white">{convAm}</span>
+                      </div>
+                      <div className="bg-slate-50 dark:bg-slate-900 p-4 rounded-xl border border-slate-200 dark:border-slate-800 flex justify-between items-center">
+                          <label className="text-xs font-bold text-slate-600 dark:text-slate-400 uppercase">Probabilidade Implícita</label>
+                          <span className="font-mono font-bold text-slate-900 dark:text-white">{convProb}%</span>
+                      </div>
                    </div>
                 </div>
             )}
-            
+
             {activeTab === 'breakeven' && (
+                !isPro ? <ProLockScreen /> : (
                 <div className="bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-800 rounded-[2rem] p-6 shadow-sm">
                    <h2 className="text-lg font-black text-slate-900 dark:text-white uppercase tracking-tighter italic mb-6 flex items-center gap-2"><TrendingUp size={20} className="text-pink-500"/> Break Even Point</h2>
-                   <div className="mb-8"><label className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase block mb-2">Odd Média</label><input type="number" value={beOdds} onChange={e => setBeOdds(e.target.value)} className="w-full p-4 bg-slate-50 dark:bg-slate-900 rounded-xl font-mono font-black text-3xl outline-none border border-slate-200 dark:border-slate-800 text-center text-pink-500" /></div>
+                   <div className="mb-8">
+                      <label className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase block mb-2">Odd Média</label>
+                      <input type="number" value={beOdds} onChange={e => setBeOdds(e.target.value)} className="w-full p-4 bg-slate-50 dark:bg-slate-900 rounded-xl font-mono font-black text-3xl outline-none border border-slate-200 dark:border-slate-800 text-center text-pink-500" />
+                   </div>
                    <div className="p-6 rounded-2xl bg-slate-900 dark:bg-slate-950 text-white text-center shadow-lg shadow-slate-900/20">
-                      <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Win Rate Necessária</p><h3 className="text-4xl font-black text-white">{beWinRate.toFixed(2)}%</h3><p className="text-xs text-slate-500 mt-2">Para ficar no zero a zero (sem prejuízo)</p>
+                      <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Win Rate Necessária</p>
+                      <h3 className="text-4xl font-black text-white">{beWinRate.toFixed(2)}%</h3>
+                      <p className="text-xs text-slate-500 mt-2">Para ficar no zero a zero (sem prejuízo)</p>
                    </div>
                 </div>
+                )
             )}
 
             {/* =========================================
                 EXPECTATIVA DE CANTOS E GOLS (ExC / ExG)
             ========================================= */}
             {(activeTab === 'exc' || activeTab === 'exg') && (
+                !isPro ? <ProLockScreen /> : (
                 <div className="bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-800 rounded-[2.5rem] p-6 sm:p-8 shadow-sm relative overflow-hidden">
                    <div className="flex justify-between items-start mb-6">
                       <h2 className={`text-2xl font-black uppercase tracking-tighter italic flex items-center gap-2 ${activeTab === 'exc' ? 'text-emerald-500' : 'text-orange-500'}`}>
@@ -897,6 +1068,7 @@ const Calculators: React.FC = () => {
                 🔥 NOVO: SCOUT PRÉ-LIVE (IA CAÇADORA) 🔥
             ========================================= */}
             {activeTab === 'scout' && (
+                !isPro ? <ProLockScreen /> : (
                 <div className="bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-800 rounded-[2.5rem] p-6 sm:p-8 shadow-sm relative overflow-hidden">
                    <div className="flex justify-between items-start mb-8 relative z-10">
                       <div>
@@ -912,126 +1084,223 @@ const Calculators: React.FC = () => {
 
                    {/* TOGGLE MODO: GRADE VS BUILDER */}
                    <div className="flex bg-[#09090b] p-1 rounded-xl border border-slate-800 mb-6">
-                      <button onClick={() => { setScoutMode('grid'); resetScoutScanner(); }} className={`flex-1 py-2.5 text-[10px] font-black uppercase tracking-widest rounded-lg transition-all ${scoutMode === 'grid' ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-500 hover:text-slate-300'}`}>
+                      <button onClick={() => setScoutMode('grid')} className={`flex-1 py-2.5 text-[10px] font-black uppercase tracking-widest rounded-lg transition-all ${scoutMode === 'grid' ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-500 hover:text-slate-300'}`}>
                           1. Radar de Grade
                       </button>
-                      <button onClick={() => { setScoutMode('builder'); resetScoutScanner(); }} className={`flex-1 py-2.5 text-[10px] font-black uppercase tracking-widest rounded-lg transition-all ${scoutMode === 'builder' ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-500 hover:text-slate-300'}`}>
+                      <button onClick={() => setScoutMode('builder')} className={`flex-1 py-2.5 text-[10px] font-black uppercase tracking-widest rounded-lg transition-all ${scoutMode === 'builder' ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-500 hover:text-slate-300'}`}>
                           2. Construtor de Duplas
                       </button>
                    </div>
 
-                   {/* SCANNER MULTI-IMAGE SCOUT */}
-                   <div className="mb-6 relative group overflow-hidden rounded-[1.5rem] border-2 border-dashed border-indigo-500/20 hover:border-indigo-500/50 bg-slate-50 dark:bg-[#09090b] transition-all p-6 min-h-[200px] flex flex-col items-center justify-center">
-                       {scoutImages.length === 0 && !isScanningScout && (
-                           <label className="flex flex-col items-center justify-center cursor-pointer w-full h-full">
-                               <div className="w-12 h-12 rounded-full bg-slate-200 dark:bg-slate-800 flex items-center justify-center mb-4 text-slate-500 group-hover:text-indigo-500 transition-colors group-hover:scale-110 duration-300">
-                                   <Scan size={24} />
-                               </div>
-                               <h3 className="text-sm font-black text-slate-700 dark:text-slate-300 mb-1 text-center">
-                                   {scoutMode === 'grid' ? 'Upload da Lista de Jogos (Odds 1x2)' : 'Upload de Estatísticas (Até 3 jogos)'}
-                               </h3>
-                               <p className="text-[10px] text-slate-500 uppercase tracking-widest font-bold text-center mb-3">Ctrl+V para colar imagens</p>
-                               <input type="file" accept="image/jpeg, image/png, image/webp" multiple={scoutMode === 'builder'} className="hidden" onChange={handleScoutFileUpload} ref={scoutFileInputRef} />
-                           </label>
-                       )}
+                   {/* SCANNER MULTI-IMAGE SCOUT (GRID) */}
+                   {scoutMode === 'grid' && (
+                     <div className="mb-6 relative group overflow-hidden rounded-[1.5rem] border-2 border-dashed border-indigo-500/20 hover:border-indigo-500/50 bg-slate-50 dark:bg-[#09090b] transition-all p-6 min-h-[200px] flex flex-col items-center justify-center">
+                         {!scoutGridImage && !isScanningScout && (
+                             <label className="flex flex-col items-center justify-center cursor-pointer w-full h-full">
+                                 <div className="w-12 h-12 rounded-full bg-slate-200 dark:bg-slate-800 flex items-center justify-center mb-4 text-slate-500 group-hover:text-indigo-500 transition-colors group-hover:scale-110 duration-300">
+                                     <Scan size={24} />
+                                 </div>
+                                 <h3 className="text-sm font-black text-slate-700 dark:text-slate-300 mb-1 text-center">Upload da Lista de Jogos</h3>
+                                 <p className="text-[10px] text-slate-500 uppercase tracking-widest font-bold text-center mb-3">Ctrl+V para analisar a grade</p>
+                                 <input type="file" accept="image/jpeg, image/png, image/webp" className="hidden" onChange={handleScoutGridUpload} ref={scoutGridInputRef} />
+                             </label>
+                         )}
 
-                       {/* Exibição dos Thumbnails das Imagens */}
-                       {scoutImages.length > 0 && !isScanningScout && (
-                           <div className="w-full">
-                               <div className="flex flex-wrap gap-4 mb-4 justify-center">
-                                   {scoutImages.map((img, index) => (
-                                       <div key={index} className="relative w-24 h-24 rounded-xl overflow-hidden border-2 border-indigo-500/30">
-                                           <img src={img.url} className="object-cover w-full h-full opacity-80" />
-                                       </div>
-                                   ))}
-                               </div>
-                               
-                               <div className="flex gap-3 justify-center">
-                                   {scoutMode === 'builder' && scoutImages.length < 3 && (
-                                       <label className="text-[10px] font-black uppercase tracking-widest text-indigo-400 bg-indigo-500/10 hover:bg-indigo-500/20 border border-indigo-500/30 px-4 py-2 rounded-lg cursor-pointer transition-colors">
-                                           + Adicionar Jogo
-                                           <input type="file" accept="image/jpeg, image/png, image/webp" className="hidden" onChange={handleScoutFileUpload} />
-                                       </label>
-                                   )}
-                                   <button onClick={processScoutEngine} className="text-[10px] font-black uppercase tracking-widest text-white bg-indigo-600 hover:bg-indigo-500 px-6 py-2 rounded-lg shadow-lg shadow-indigo-600/20 transition-colors flex items-center gap-2">
-                                       <Sparkles size={14}/> Analisar {scoutImages.length > 1 ? 'Múltipla' : 'Imagem'}
-                                   </button>
-                                   <button onClick={resetScoutScanner} className="text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-red-400 px-4 py-2 transition-colors">
-                                       Limpar
-                                   </button>
-                               </div>
-                           </div>
-                       )}
+                         {isScanningScout && scoutGridImage && (
+                             <div className="relative w-full h-48 bg-black flex items-center justify-center overflow-hidden rounded-xl">
+                                 <img src={scoutGridImage} className="object-cover opacity-30 w-full h-full blur-sm" />
+                                 <motion.div initial={{ top: '0%' }} animate={{ top: '100%' }} transition={{ repeat: Infinity, duration: 1.5, ease: "linear" }} className="absolute left-0 right-0 h-1 bg-indigo-500 shadow-[0_0_20px_#6366f1] z-10" />
+                                 <div className="absolute inset-0 flex flex-col items-center justify-center z-20">
+                                    <Sparkles size={32} className="text-indigo-400 mb-2 animate-pulse" />
+                                    <p className="text-indigo-400 font-mono font-bold text-xs uppercase tracking-widest">Minerando assimetrias...</p>
+                                 </div>
+                             </div>
+                         )}
 
-                       {isScanningScout && (
-                           <div className="absolute inset-0 bg-[#09090b] flex flex-col items-center justify-center z-20">
-                               <div className="flex gap-2 mb-6">
-                                   {scoutImages.map((img, index) => (
-                                       <img key={index} src={img.url} className="w-16 h-16 rounded-lg object-cover opacity-30 blur-sm border border-indigo-500/50" />
-                                   ))}
-                               </div>
-                               <motion.div initial={{ width: '0%' }} animate={{ width: '100%' }} transition={{ repeat: Infinity, duration: 2 }} className="absolute bottom-0 left-0 h-1 bg-indigo-500 shadow-[0_0_20px_#6366f1]" />
-                               <Sparkles size={32} className="text-indigo-400 mb-2 animate-pulse" />
-                               <p className="text-indigo-400 font-mono font-bold text-xs uppercase tracking-widest text-center px-4">
-                                   {scoutMode === 'grid' ? 'Minerando assimetrias na grade...' : 'Cruzando dados e precificando dupla...'}
-                               </p>
-                           </div>
-                       )}
-                   </div>
+                         {!isScanningScout && scoutGridImage && (
+                             <div className="relative w-full h-32 bg-black group/preview rounded-xl overflow-hidden">
+                                 <img src={scoutGridImage} className="object-cover opacity-40 w-full h-full" />
+                                 <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent"></div>
+                                 <div className="absolute bottom-4 right-4 flex gap-2">
+                                     <button onClick={clearGrid} className="text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-white bg-slate-800 hover:bg-slate-700 border border-slate-600 px-4 py-2 rounded-lg transition-colors shadow-lg">Limpar Grade</button>
+                                 </div>
+                             </div>
+                         )}
+                     </div>
+                   )}
 
-                   {/* RESULTADOS DA GRADE */}
+                   {/* RESULTADOS DA GRADE COM CATEGORIZAÇÃO */}
                    {scoutMode === 'grid' && scoutGridResult && (
-                       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-4">
-                           <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-4 flex items-center gap-2 border-b border-slate-800 pb-2"><CheckCircle2 size={14} className="text-indigo-500"/> Oportunidades Encontradas</h3>
-                           {scoutGridResult.map((match: any, index: number) => (
-                               <div key={index} className="bg-[#09090b] border border-slate-800 rounded-2xl p-4 flex flex-col md:flex-row gap-4 justify-between items-start md:items-center">
-                                   <div>
-                                       <h4 className="text-sm font-black text-white">{match.teams}</h4>
-                                       <p className="text-xs text-slate-400 mt-1">{match.reason}</p>
-                                   </div>
-                                   <span className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest shrink-0 border ${match.market === 'GOLS' ? 'bg-orange-500/10 text-orange-400 border-orange-500/20' : match.market === 'CANTOS' ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' : 'bg-slate-800 text-slate-400 border-slate-700'}`}>
-                                       Foco: {match.market}
-                                   </span>
+                       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
+                           
+                           {/* CATEGORIA GOLS */}
+                           {scoutGridResult.filter(m => m.market === 'GOLS').length > 0 && (
+                           <div>
+                               <h3 className="text-[10px] font-black text-orange-500 uppercase tracking-widest mb-3 flex items-center gap-2 border-b border-slate-800 pb-2"><Goal size={14}/> Foco em Gols</h3>
+                               <div className="space-y-2">
+                                   {scoutGridResult.filter(m => m.market === 'GOLS').map((match: any, index: number) => {
+                                       const isSelected = selectedMatchesForBuilder.includes(match.teams);
+                                       return (
+                                       <div key={`gols-${index}`} onClick={() => toggleMatchSelection(match.teams)} className={`bg-[#09090b] border rounded-2xl p-4 flex flex-col md:flex-row gap-4 justify-between items-start md:items-center cursor-pointer transition-all ${isSelected ? 'border-indigo-500 shadow-[0_0_15px_rgba(99,102,241,0.2)]' : 'border-slate-800 hover:border-slate-700'}`}>
+                                           <div className="flex-1">
+                                               <div className="flex items-center gap-2 mb-1">
+                                                  <span className="bg-slate-800 text-slate-300 px-2 py-0.5 rounded text-[9px] font-mono font-bold flex items-center gap-1"><Clock size={10}/> {match.time}</span>
+                                                  <h4 className="text-sm font-black text-white">{match.teams}</h4>
+                                               </div>
+                                               <p className="text-xs text-slate-400 mt-1 leading-relaxed">{match.reason}</p>
+                                           </div>
+                                           <div className="shrink-0">
+                                               {isSelected ? <CheckCircle2 size={24} className="text-indigo-500" /> : <Square size={24} className="text-slate-700" />}
+                                           </div>
+                                       </div>
+                                   )})}
                                </div>
-                           ))}
+                           </div>
+                           )}
+
+                           {/* CATEGORIA CANTOS */}
+                           {scoutGridResult.filter(m => m.market === 'CANTOS').length > 0 && (
+                           <div>
+                               <h3 className="text-[10px] font-black text-emerald-500 uppercase tracking-widest mb-3 flex items-center gap-2 border-b border-slate-800 pb-2 mt-6"><Flag size={14}/> Foco em Cantos</h3>
+                               <div className="space-y-2">
+                                   {scoutGridResult.filter(m => m.market === 'CANTOS').map((match: any, index: number) => {
+                                       const isSelected = selectedMatchesForBuilder.includes(match.teams);
+                                       return (
+                                       <div key={`cantos-${index}`} onClick={() => toggleMatchSelection(match.teams)} className={`bg-[#09090b] border rounded-2xl p-4 flex flex-col md:flex-row gap-4 justify-between items-start md:items-center cursor-pointer transition-all ${isSelected ? 'border-indigo-500 shadow-[0_0_15px_rgba(99,102,241,0.2)]' : 'border-slate-800 hover:border-slate-700'}`}>
+                                           <div className="flex-1">
+                                               <div className="flex items-center gap-2 mb-1">
+                                                  <span className="bg-slate-800 text-slate-300 px-2 py-0.5 rounded text-[9px] font-mono font-bold flex items-center gap-1"><Clock size={10}/> {match.time}</span>
+                                                  <h4 className="text-sm font-black text-white">{match.teams}</h4>
+                                               </div>
+                                               <p className="text-xs text-slate-400 mt-1 leading-relaxed">{match.reason}</p>
+                                           </div>
+                                           <div className="shrink-0">
+                                               {isSelected ? <CheckCircle2 size={24} className="text-indigo-500" /> : <Square size={24} className="text-slate-700" />}
+                                           </div>
+                                       </div>
+                                   )})}
+                               </div>
+                           </div>
+                           )}
+
+                           {selectedMatchesForBuilder.length > 0 && (
+                               <motion.div initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} className="sticky bottom-6 mt-8 flex justify-center z-30">
+                                   <button onClick={() => setScoutMode('builder')} className="bg-indigo-600 hover:bg-indigo-500 text-white font-black uppercase tracking-widest text-xs px-8 py-4 rounded-full shadow-[0_10px_30px_rgba(99,102,241,0.3)] flex items-center gap-2 transition-transform active:scale-95">
+                                      Construir Dupla ({selectedMatchesForBuilder.length}) <ArrowRightLeft size={16} />
+                                   </button>
+                               </motion.div>
+                           )}
                        </motion.div>
                    )}
 
-                   {/* RESULTADOS DO CONSTRUTOR DE APOSTAS */}
-                   {scoutMode === 'builder' && scoutBuilderResult && (
-                       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="bg-[#020617] border border-indigo-500/20 rounded-[2rem] p-6 shadow-[0_0_30px_rgba(99,102,241,0.1)] relative overflow-hidden">
-                           <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-500/10 rounded-full blur-[80px] -mr-20 -mt-20 pointer-events-none"></div>
-                           
-                           <h3 className="text-[10px] font-black text-indigo-400 uppercase tracking-widest mb-6 flex items-center gap-2"><Target size={14}/> {scoutImages.length > 1 ? 'Aposta Dupla Cruzada' : 'Aposta Combinada (Mesmo Jogo)'}</h3>
-                           
-                           <div className="space-y-3 mb-6 relative z-10">
-                               <div className="bg-slate-900/80 border border-slate-800 rounded-xl p-4 flex justify-between items-center">
-                                   <span className="text-xs font-bold text-white flex items-center gap-2"><span className="w-1.5 h-1.5 bg-orange-500 rounded-full"></span> {scoutBuilderResult.selection1}</span>
-                                   <span className="text-xs font-mono font-black text-slate-400">{scoutBuilderResult.prob1}% Prob.</span>
-                               </div>
-                               <div className="flex justify-center -my-2 relative z-20"><Plus size={16} className="text-indigo-500 bg-[#020617] rounded-full p-0.5" /></div>
-                               <div className="bg-slate-900/80 border border-slate-800 rounded-xl p-4 flex justify-between items-center">
-                                   <span className="text-xs font-bold text-white flex items-center gap-2"><span className="w-1.5 h-1.5 bg-emerald-500 rounded-full"></span> {scoutBuilderResult.selection2}</span>
-                                   <span className="text-xs font-mono font-black text-slate-400">{scoutBuilderResult.prob2}% Prob.</span>
-                               </div>
-                           </div>
+                   {/* MÓDULO SCANNER BUILDER (MULTI-IMAGE) */}
+                   {scoutMode === 'builder' && (
+                     <div className="space-y-6">
+                        {/* Box de Instrução baseado na Grade */}
+                        {selectedMatchesForBuilder.length > 0 && scoutImages.length === 0 && (
+                            <div className="bg-indigo-500/10 border border-indigo-500/20 p-5 rounded-2xl mb-6">
+                                <h4 className="text-xs font-black text-indigo-400 uppercase tracking-widest mb-3">Passo 2: Anexar Estatísticas</h4>
+                                <p className="text-xs text-slate-300 mb-4">Você selecionou os seguintes jogos na grade. Envie um print do <strong>SofaScore / Flashscore</strong> de cada um deles para a IA calcular a Fair Odd:</p>
+                                <ul className="space-y-2 mb-4">
+                                    {selectedMatchesForBuilder.map((match, i) => (
+                                        <li key={i} className="text-sm font-bold text-white flex items-center gap-2"><Target size={14} className="text-indigo-500"/> {match}</li>
+                                    ))}
+                                </ul>
+                            </div>
+                        )}
 
-                           <div className="grid grid-cols-2 gap-4 mb-6 relative z-10">
-                               <div className="bg-slate-900/50 border border-slate-800 rounded-xl p-4 text-center">
-                                   <p className="text-[9px] uppercase tracking-widest text-slate-500 font-bold mb-1">Win Rate Estimada</p>
-                                   <p className="text-2xl font-black text-white">{scoutBuilderResult.combinedProb}%</p>
-                               </div>
-                               <div className="bg-indigo-500/10 border border-indigo-500/20 rounded-xl p-4 text-center shadow-inner">
-                                   <p className="text-[9px] uppercase tracking-widest text-indigo-400 font-bold mb-1">Odd Justa Sugerida</p>
-                                   <p className="text-2xl font-black text-indigo-400 font-mono">@{scoutBuilderResult.fairOdd}</p>
-                               </div>
-                           </div>
+                        <div className="relative group overflow-hidden rounded-[1.5rem] border-2 border-dashed border-indigo-500/20 hover:border-indigo-500/50 bg-slate-50 dark:bg-[#09090b] transition-all p-6 min-h-[200px] flex flex-col items-center justify-center">
+                           {scoutImages.length === 0 && !isScanningScout && (
+                               <label className="flex flex-col items-center justify-center cursor-pointer w-full h-full">
+                                   <div className="w-12 h-12 rounded-full bg-slate-200 dark:bg-slate-800 flex items-center justify-center mb-4 text-slate-500 group-hover:text-indigo-500 transition-colors group-hover:scale-110 duration-300">
+                                       <Scan size={24} />
+                                   </div>
+                                   <h3 className="text-sm font-black text-slate-700 dark:text-slate-300 mb-1 text-center">Upload de Estatísticas (H2H)</h3>
+                                   <p className="text-[10px] text-slate-500 uppercase tracking-widest font-bold text-center mb-3">Selecione até 3 imagens</p>
+                                   <input type="file" accept="image/jpeg, image/png, image/webp" multiple className="hidden" onChange={handleScoutBuilderUpload} ref={scoutBuilderInputRef} />
+                               </label>
+                           )}
 
-                           <div className="bg-slate-900/30 border border-slate-800 p-4 rounded-xl relative z-10">
-                               <p className="text-[10px] uppercase tracking-widest text-slate-500 font-bold mb-2">Tese Quantitativa da IA</p>
-                               <p className="text-xs text-slate-300 leading-relaxed italic border-l-2 border-indigo-500 pl-3">{scoutBuilderResult.analysis}</p>
-                           </div>
-                       </motion.div>
+                           {/* Thumbnails Multi-Image */}
+                           {scoutImages.length > 0 && !isScanningScout && (
+                               <div className="w-full">
+                                   <div className="flex flex-wrap gap-4 mb-6 justify-center">
+                                       {scoutImages.map((img, index) => (
+                                           <div key={index} className="relative w-24 h-24 sm:w-32 sm:h-32 rounded-xl overflow-hidden border-2 border-indigo-500/30 group/thumb">
+                                               <img src={img.url} className="object-cover w-full h-full opacity-80" />
+                                               <button onClick={() => setScoutImages(prev => prev.filter((_, i) => i !== index))} className="absolute top-1 right-1 bg-red-500 text-white p-1 rounded-md opacity-0 group-hover/thumb:opacity-100 transition-opacity"><Trash size={12}/></button>
+                                           </div>
+                                       ))}
+                                   </div>
+                                   
+                                   <div className="flex flex-wrap gap-3 justify-center">
+                                       {scoutImages.length < 3 && (
+                                           <label className="text-[10px] font-black uppercase tracking-widest text-indigo-400 bg-indigo-500/10 hover:bg-indigo-500/20 border border-indigo-500/30 px-4 py-2.5 rounded-lg cursor-pointer transition-colors flex items-center gap-1">
+                                               <Plus size={14}/> Jogo
+                                               <input type="file" accept="image/jpeg, image/png, image/webp" multiple className="hidden" onChange={handleScoutBuilderUpload} />
+                                           </label>
+                                       )}
+                                       <button onClick={processScoutBuilderEngine} className="text-[10px] font-black uppercase tracking-widest text-white bg-indigo-600 hover:bg-indigo-500 px-6 py-2.5 rounded-lg shadow-lg shadow-indigo-600/20 transition-colors flex items-center gap-2">
+                                           <Sparkles size={14}/> Analisar Combinada
+                                       </button>
+                                       <button onClick={clearBuilder} className="text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-red-400 px-4 py-2.5 transition-colors">
+                                           Limpar
+                                       </button>
+                                   </div>
+                               </div>
+                           )}
+
+                           {isScanningScout && (
+                               <div className="absolute inset-0 bg-[#09090b] flex flex-col items-center justify-center z-20">
+                                   <div className="flex gap-2 mb-6">
+                                       {scoutImages.map((img, index) => (
+                                           <img key={index} src={img.url} className="w-16 h-16 rounded-lg object-cover opacity-30 blur-sm border border-indigo-500/50" />
+                                       ))}
+                                   </div>
+                                   <motion.div initial={{ width: '0%' }} animate={{ width: '100%' }} transition={{ repeat: Infinity, duration: 2 }} className="absolute bottom-0 left-0 h-1 bg-indigo-500 shadow-[0_0_20px_#6366f1]" />
+                                   <Sparkles size={32} className="text-indigo-400 mb-2 animate-pulse" />
+                                   <p className="text-indigo-400 font-mono font-bold text-xs uppercase tracking-widest text-center px-4">Cruzando dados e precificando...</p>
+                               </div>
+                           )}
+                        </div>
+
+                        {/* RESULTADO DO BUILDER */}
+                        {scoutBuilderResult && (
+                            <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="bg-[#020617] border border-indigo-500/20 rounded-[2rem] p-6 shadow-[0_0_30px_rgba(99,102,241,0.1)] relative overflow-hidden">
+                                <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-500/10 rounded-full blur-[80px] -mr-20 -mt-20 pointer-events-none"></div>
+                                
+                                <h3 className="text-[10px] font-black text-indigo-400 uppercase tracking-widest mb-6 flex items-center gap-2"><Target size={14}/> {scoutImages.length > 1 ? 'Aposta Dupla Cruzada' : 'Aposta Combinada (Mesmo Jogo)'}</h3>
+                                
+                                <div className="space-y-3 mb-6 relative z-10">
+                                    <div className="bg-slate-900/80 border border-slate-800 rounded-xl p-4 flex justify-between items-center">
+                                        <span className="text-xs font-bold text-white flex items-center gap-2"><span className="w-1.5 h-1.5 bg-orange-500 rounded-full"></span> {scoutBuilderResult.selection1}</span>
+                                        <span className="text-xs font-mono font-black text-slate-400">{scoutBuilderResult.prob1}% Prob.</span>
+                                    </div>
+                                    <div className="flex justify-center -my-2 relative z-20"><Plus size={16} className="text-indigo-500 bg-[#020617] rounded-full p-0.5" /></div>
+                                    <div className="bg-slate-900/80 border border-slate-800 rounded-xl p-4 flex justify-between items-center">
+                                        <span className="text-xs font-bold text-white flex items-center gap-2"><span className="w-1.5 h-1.5 bg-emerald-500 rounded-full"></span> {scoutBuilderResult.selection2}</span>
+                                        <span className="text-xs font-mono font-black text-slate-400">{scoutBuilderResult.prob2}% Prob.</span>
+                                    </div>
+                                </div>
+
+                                <div className="grid grid-cols-2 gap-4 mb-6 relative z-10">
+                                    <div className="bg-slate-900/50 border border-slate-800 rounded-xl p-4 text-center">
+                                        <p className="text-[9px] uppercase tracking-widest text-slate-500 font-bold mb-1">Win Rate Estimada</p>
+                                        <p className="text-2xl font-black text-white">{scoutBuilderResult.combinedProb}%</p>
+                                    </div>
+                                    <div className="bg-indigo-500/10 border border-indigo-500/20 rounded-xl p-4 text-center shadow-inner">
+                                        <p className="text-[9px] uppercase tracking-widest text-indigo-400 font-bold mb-1">Odd Justa Sugerida</p>
+                                        <p className="text-2xl font-black text-indigo-400 font-mono">@{scoutBuilderResult.fairOdd}</p>
+                                    </div>
+                                </div>
+
+                                <div className="bg-slate-900/30 border border-slate-800 p-4 rounded-xl relative z-10">
+                                    <p className="text-[10px] uppercase tracking-widest text-slate-500 font-bold mb-2">Tese Quantitativa da IA</p>
+                                    <p className="text-xs text-slate-300 leading-relaxed italic border-l-2 border-indigo-500 pl-3">{scoutBuilderResult.analysis}</p>
+                                </div>
+                            </motion.div>
+                        )}
+                     </div>
                    )}
 
                 </div>
