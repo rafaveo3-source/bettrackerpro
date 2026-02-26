@@ -53,7 +53,6 @@ const MapIcon = ({ size, className }: any) => (
   </svg>
 );
 
-// 🔥 COMPRESSOR DE IMAGEM HFT (Evita o erro de Payload Too Large da Vercel)
 const fileToBase64 = (file: File): Promise<string> => {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -86,10 +85,6 @@ const fileToBase64 = (file: File): Promise<string> => {
   });
 };
 
-// ==========================================
-// FUNÇÕES MATEMÁTICAS DO MOTOR HFT
-// ==========================================
-
 const factorial = (n: number): number => {
   if (n < 0) return 0;
   if (n === 0 || n === 1) return 1;
@@ -104,15 +99,12 @@ const poissonExact = (k: number, lambda: number): number => {
 
 const Calculators: React.FC = () => {
   
-  // 🔥 SUA CHAVE MESTRA (Segurança Frontend/Backend)
   const userEmail = "rafaelancelmo.castro@gmail.com"; 
 
   const { currentBankrollBalance, isPro, aiScansUsedToday, canUseAiScan, incrementAiScan, setToast } = useBetStore();
   const navigate = useNavigate();
 
-  const [activeTab, setActiveTab] = useState<
-    'dutching' | 'kelly' | 'value' | 'arb' | 'stake' | 'odds' | 'breakeven' | 'exc' | 'exg' | 'scout'
-  >('scout');
+  const [activeTab, setActiveTab] = useState<'dutching'|'kelly'|'value'|'arb'|'stake'|'odds'|'breakeven'|'exc'|'exg'|'scout'>('scout');
 
   // ==========================================
   // ESTADOS COMPARTILHADOS (ExC e ExG)
@@ -154,9 +146,9 @@ const Calculators: React.FC = () => {
   const [scoutBuilderResult, setScoutBuilderResult] = useState<any | null>(null);
   const [selectedMatchesForBuilder, setSelectedMatchesForBuilder] = useState<string[]>([]);
 
-  // 🔥 Novo: Filtro de Mercados da IA
-  const AVAILABLE_MARKETS = ['Gols', 'Escanteios', 'Cartões', 'Mercados de Jogador', 'Resultado da Partida (1x2/Dupla)'];
-  const [builderMarkets, setBuilderMarkets] = useState<string[]>(['Gols', 'Escanteios', 'Resultado da Partida (1x2/Dupla)']);
+  // 🔥 Filtro de Mercados (Focado em Gols e Cantos por Padrão)
+  const AVAILABLE_MARKETS = ['Gols', 'Escanteios', 'Cartões', 'Chutes/Finalizações', 'Resultado (1x2/Dupla)'];
+  const [builderMarkets, setBuilderMarkets] = useState<string[]>(['Gols', 'Escanteios']);
 
   const toggleMarket = (market: string) => {
       setBuilderMarkets(prev => prev.includes(market) ? prev.filter(m => m !== market) : [...prev, market]);
@@ -382,9 +374,6 @@ const Calculators: React.FC = () => {
       setMatchTemp('calm'); setRedCard('none'); setNeedsGoal('false'); setRecentGoal('false');
   };
 
-  // ==========================================
-  // MOTOR QUÂNTICO (HFT CONFIDENCE ENGINE)
-  // ==========================================
   const [excScenario, setExcScenario] = useState('ht_asian');
   const [exgScenario, setExgScenario] = useState('ft_over05');
 
@@ -609,7 +598,7 @@ const Calculators: React.FC = () => {
       </div>
       
       {/* TABS GRID */}
-      <div className="flex flex-wrap md:grid md:grid-cols-4 xl:grid-cols-10 gap-2 mb-6 px-4 md:px-0">
+      <div className="flex flex-wrap gap-2 mb-6 px-4 md:px-0">
         {tabs.map(tab => (
           <button
             key={tab.id}
@@ -630,7 +619,6 @@ const Calculators: React.FC = () => {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 px-4 md:px-0">
         <div className="lg:col-span-2 space-y-6 min-w-0 w-full">
             
-            {/* CALCULADORAS SIMPLES E HUD (EXC/EXG) */}
             {activeTab === 'dutching' && (
                 <div className="bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-800 rounded-[2rem] p-6 shadow-sm w-full overflow-hidden">
                     <h2 className="text-lg font-black text-slate-900 dark:text-white uppercase tracking-tighter italic mb-4">Calculadora Dutching</h2>
@@ -668,7 +656,7 @@ const Calculators: React.FC = () => {
                         </div>
                         <div>
                              <label className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase block mb-2">Fração</label>
-                             <select value={kellyFraction} onChange={e => setKellyFraction(e.target.value)} className="w-full p-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-transparent text-slate-900 dark:text-white rounded-xl font-bold text-sm outline-none">
+                             <select value={kellyFraction} onChange={e => setKellyFraction(e.target.value)} className="w-full p-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white rounded-xl font-bold text-sm outline-none">
                                 <option value="1">100%</option>
                                 <option value="0.5">50%</option>
                                 <option value="0.25">25%</option>
@@ -692,7 +680,7 @@ const Calculators: React.FC = () => {
             )}
 
             {activeTab === 'value' && (
-                !isPro ? <ProLockScreen /> : 
+                !isPro ? <ProLockScreen /> : (
                 <div className="bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-800 rounded-[2rem] p-6 shadow-sm">
                    <h2 className="text-lg font-black text-slate-900 dark:text-white uppercase tracking-tighter italic mb-6 flex items-center gap-2"><Target size={20} className="text-emerald-500"/> Value Bet Finder</h2>
                    <div className="grid grid-cols-2 gap-4 mb-6">
@@ -715,10 +703,11 @@ const Calculators: React.FC = () => {
                       </p>
                    </div>
                 </div>
+                )
             )}
 
             {activeTab === 'arb' && (
-                !isPro ? <ProLockScreen /> : 
+                !isPro ? <ProLockScreen /> : (
                 <div className="bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-800 rounded-[2rem] p-6 shadow-sm">
                    <h2 className="text-lg font-black text-slate-900 dark:text-white uppercase tracking-tighter italic mb-6 flex items-center gap-2"><Scale size={20} className="text-blue-500"/> Arbitragem (2-Way)</h2>
                    <div className="mb-4">
@@ -749,6 +738,7 @@ const Calculators: React.FC = () => {
                    </div>
                    {arbRoi > 0 && <p className="text-center text-xs text-slate-500 dark:text-slate-400 mt-2">Lucro líquido: R$ {arbProfit.toFixed(2)}</p>}
                 </div>
+                )
             )}
 
             {activeTab === 'stake' && (
@@ -787,7 +777,7 @@ const Calculators: React.FC = () => {
             )}
 
             {activeTab === 'breakeven' && (
-                !isPro ? <ProLockScreen /> : 
+                !isPro ? <ProLockScreen /> : (
                 <div className="bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-800 rounded-[2rem] p-6 shadow-sm">
                    <h2 className="text-lg font-black text-slate-900 dark:text-white uppercase tracking-tighter italic mb-6 flex items-center gap-2"><TrendingUp size={20} className="text-pink-500"/> Break Even Point</h2>
                    <div className="mb-8">
@@ -800,13 +790,14 @@ const Calculators: React.FC = () => {
                       <p className="text-xs text-slate-500 mt-2">Para ficar no zero a zero (sem prejuízo)</p>
                    </div>
                 </div>
+                )
             )}
 
             {/* =========================================
                 EXPECTATIVA DE CANTOS E GOLS (ExC / ExG)
             ========================================= */}
             {(activeTab === 'exc' || activeTab === 'exg') && (
-                !isPro ? <ProLockScreen /> : 
+                !isPro ? <ProLockScreen /> : (
                 <div className="bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-800 rounded-[2.5rem] p-6 sm:p-8 shadow-sm relative overflow-hidden">
                    <div className="flex justify-between items-start mb-6">
                       <h2 className={`text-2xl font-black uppercase tracking-tighter italic flex items-center gap-2 ${activeTab === 'exc' ? 'text-emerald-500' : 'text-orange-500'}`}>
@@ -1060,13 +1051,16 @@ const Calculators: React.FC = () => {
                      )}
                    </AnimatePresence>
                 </div>
+                )}
+                </>
             )}
 
             {/* =========================================
                 🔥 NOVO: SCOUT PRÉ-LIVE (IA CAÇADORA) 🔥
             ========================================= */}
             {activeTab === 'scout' && (
-                !isPro ? <ProLockScreen /> : 
+                <>
+                {!isPro ? <ProLockScreen /> : (
                 <div className="bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-800 rounded-[2.5rem] p-4 sm:p-8 shadow-sm relative overflow-hidden">
                    <div className="flex justify-between items-start mb-8 relative z-10">
                       <div>
@@ -1281,7 +1275,7 @@ const Calculators: React.FC = () => {
                                    </div>
                                    <motion.div initial={{ width: '0%' }} animate={{ width: '100%' }} transition={{ repeat: Infinity, duration: 2 }} className="absolute bottom-0 left-0 h-1 bg-indigo-500 shadow-[0_0_20px_#6366f1]" />
                                    <Sparkles size={32} className="text-indigo-400 mb-2 animate-pulse" />
-                                   <p className="text-indigo-400 font-mono font-bold text-xs uppercase tracking-widest text-center px-4 mt-2">Cruzando dados e precificando múltiplos mercados...</p>
+                                   <p className="text-indigo-400 font-mono font-bold text-xs uppercase tracking-widest text-center px-4 mt-2">Calculando probabilidade e odd justa...</p>
                                </div>
                            )}
                         </div>
@@ -1343,6 +1337,8 @@ const Calculators: React.FC = () => {
                    )}
 
                 </div>
+                )}
+                </>
             )}
             
         </div>
