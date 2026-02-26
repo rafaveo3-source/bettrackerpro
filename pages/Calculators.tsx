@@ -251,9 +251,12 @@ const Calculators: React.FC = () => {
               setToast({ type: 'success', message: 'Grade Mapeada com sucesso!' });
           }
       } catch (e: any) {
-          setToast({ type: 'error', message: e.message || 'Erro ao analisar a grade.' });
+          if (e.message?.includes('429') || e.message?.includes('quota')) {
+              setToast({ type: 'error', message: '⚠️ Servidor da IA sobrecarregado (Limite de Cota). Aguarde um instante.' });
+          } else {
+              setToast({ type: 'error', message: e.message || 'Erro ao analisar a grade.' });
+          }
       } finally { setIsScanningScout(false); }
-  };
 
   const handleAddScoutBuilderImage = (file: File) => {
       if (scoutBuilderImages.length >= 4) {
@@ -305,9 +308,12 @@ const Calculators: React.FC = () => {
               throw new Error('Resposta inválida da IA.');
           }
       } catch (e: any) {
-          setToast({ type: 'error', message: e.message || 'Erro ao processar as imagens na IA.' });
+          if (e.message?.includes('429') || e.message?.includes('quota')) {
+              setToast({ type: 'error', message: '⚠️ Servidor da IA sobrecarregado (Limite de Cota). Aguarde um instante.' });
+          } else {
+              setToast({ type: 'error', message: e.message || 'Erro ao processar as imagens na IA.' });
+          }
       } finally { setIsScanningScout(false); }
-  };
 
   const toggleMatchSelection = (matchName: string) => {
       setSelectedMatchesForBuilder(prev => {
@@ -360,9 +366,12 @@ const Calculators: React.FC = () => {
            setToast({ type: 'success', message: 'Contexto Extraído com IA!' });
         }
     } catch (e: any) {
-        setToast({ type: 'error', message: e.message || 'Erro na leitura visual.' });
+        if (e.message?.includes('429') || e.message?.includes('quota')) {
+            setToast({ type: 'error', message: '⚠️ Servidor da IA sobrecarregado (Limite de Cota). Aguarde um instante.' });
+        } else {
+            setToast({ type: 'error', message: e.message || 'Erro na leitura visual.' });
+        }
     } finally { setIsScanning(false); }
-  };
 
   const resetScanner = () => {
       setScannedImage(null); setLiveMin(''); setLiveCorners(''); setLiveGoals(''); 
