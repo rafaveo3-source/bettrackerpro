@@ -62,7 +62,7 @@ const fileToBase64 = (file: File): Promise<string> => {
       const img = new Image();
       img.onload = () => {
         const canvas = document.createElement('canvas');
-        const MAX_WIDTH = 1000; // Reduzido de 1200 para 1000 (Garante envio ultrarrápido)
+        const MAX_WIDTH = 1200; 
         let width = img.width;
         let height = img.height;
 
@@ -76,8 +76,7 @@ const fileToBase64 = (file: File): Promise<string> => {
         const ctx = canvas.getContext('2d');
         ctx?.drawImage(img, 0, 0, width, height);
         
-        // Comprime para JPEG com 75% de qualidade (Leveza total, zero Erro 500)
-        const dataUrl = canvas.toDataURL('image/jpeg', 0.75);
+        const dataUrl = canvas.toDataURL('image/jpeg', 0.8);
         resolve(dataUrl.split(',')[1]);
       };
       img.onerror = (error) => reject(error);
@@ -257,6 +256,7 @@ const Calculators: React.FC = () => {
               setToast({ type: 'error', message: e.message || 'Erro ao analisar a grade.' });
           }
       } finally { setIsScanningScout(false); }
+  };
 
   const handleAddScoutBuilderImage = (file: File) => {
       if (scoutBuilderImages.length >= 4) {
@@ -293,7 +293,7 @@ const Calculators: React.FC = () => {
               body: JSON.stringify({ 
                   images: base64Images, 
                   email: userEmail,
-                  markets: builderMarkets
+                  markets: builderMarkets 
               })
           });
 
@@ -314,6 +314,7 @@ const Calculators: React.FC = () => {
               setToast({ type: 'error', message: e.message || 'Erro ao processar as imagens na IA.' });
           }
       } finally { setIsScanningScout(false); }
+  };
 
   const toggleMatchSelection = (matchName: string) => {
       setSelectedMatchesForBuilder(prev => {
@@ -372,6 +373,7 @@ const Calculators: React.FC = () => {
             setToast({ type: 'error', message: e.message || 'Erro na leitura visual.' });
         }
     } finally { setIsScanning(false); }
+  };
 
   const resetScanner = () => {
       setScannedImage(null); setLiveMin(''); setLiveCorners(''); setLiveGoals(''); 
@@ -628,6 +630,7 @@ const Calculators: React.FC = () => {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 px-4 md:px-0">
         <div className="lg:col-span-2 space-y-6 min-w-0 w-full">
             
+            {/* CALCULADORAS SIMPLES E HUD (EXC/EXG) */}
             {activeTab === 'dutching' && (
                 <div className="bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-800 rounded-[2rem] p-6 shadow-sm w-full overflow-hidden">
                     <h2 className="text-lg font-black text-slate-900 dark:text-white uppercase tracking-tighter italic mb-4">Calculadora Dutching</h2>
@@ -689,7 +692,7 @@ const Calculators: React.FC = () => {
             )}
 
             {activeTab === 'value' && (
-                !isPro ? <ProLockScreen /> : (
+                !isPro ? <ProLockScreen /> : 
                 <div className="bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-800 rounded-[2rem] p-6 shadow-sm">
                    <h2 className="text-lg font-black text-slate-900 dark:text-white uppercase tracking-tighter italic mb-6 flex items-center gap-2"><Target size={20} className="text-emerald-500"/> Value Bet Finder</h2>
                    <div className="grid grid-cols-2 gap-4 mb-6">
@@ -712,11 +715,10 @@ const Calculators: React.FC = () => {
                       </p>
                    </div>
                 </div>
-                )
             )}
 
             {activeTab === 'arb' && (
-                !isPro ? <ProLockScreen /> : (
+                !isPro ? <ProLockScreen /> : 
                 <div className="bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-800 rounded-[2rem] p-6 shadow-sm">
                    <h2 className="text-lg font-black text-slate-900 dark:text-white uppercase tracking-tighter italic mb-6 flex items-center gap-2"><Scale size={20} className="text-blue-500"/> Arbitragem (2-Way)</h2>
                    <div className="mb-4">
@@ -747,7 +749,6 @@ const Calculators: React.FC = () => {
                    </div>
                    {arbRoi > 0 && <p className="text-center text-xs text-slate-500 dark:text-slate-400 mt-2">Lucro líquido: R$ {arbProfit.toFixed(2)}</p>}
                 </div>
-                )
             )}
 
             {activeTab === 'stake' && (
@@ -786,7 +787,7 @@ const Calculators: React.FC = () => {
             )}
 
             {activeTab === 'breakeven' && (
-                !isPro ? <ProLockScreen /> : (
+                !isPro ? <ProLockScreen /> : 
                 <div className="bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-800 rounded-[2rem] p-6 shadow-sm">
                    <h2 className="text-lg font-black text-slate-900 dark:text-white uppercase tracking-tighter italic mb-6 flex items-center gap-2"><TrendingUp size={20} className="text-pink-500"/> Break Even Point</h2>
                    <div className="mb-8">
@@ -799,14 +800,13 @@ const Calculators: React.FC = () => {
                       <p className="text-xs text-slate-500 mt-2">Para ficar no zero a zero (sem prejuízo)</p>
                    </div>
                 </div>
-                )
             )}
 
             {/* =========================================
                 EXPECTATIVA DE CANTOS E GOLS (ExC / ExG)
             ========================================= */}
             {(activeTab === 'exc' || activeTab === 'exg') && (
-                !isPro ? <ProLockScreen /> : (
+                !isPro ? <ProLockScreen /> : 
                 <div className="bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-800 rounded-[2.5rem] p-6 sm:p-8 shadow-sm relative overflow-hidden">
                    <div className="flex justify-between items-start mb-6">
                       <h2 className={`text-2xl font-black uppercase tracking-tighter italic flex items-center gap-2 ${activeTab === 'exc' ? 'text-emerald-500' : 'text-orange-500'}`}>
@@ -1060,14 +1060,13 @@ const Calculators: React.FC = () => {
                      )}
                    </AnimatePresence>
                 </div>
-                )
             )}
 
             {/* =========================================
                 🔥 NOVO: SCOUT PRÉ-LIVE (IA CAÇADORA) 🔥
             ========================================= */}
             {activeTab === 'scout' && (
-                !isPro ? <ProLockScreen /> : (
+                !isPro ? <ProLockScreen /> : 
                 <div className="bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-800 rounded-[2.5rem] p-4 sm:p-8 shadow-sm relative overflow-hidden">
                    <div className="flex justify-between items-start mb-8 relative z-10">
                       <div>
@@ -1282,7 +1281,7 @@ const Calculators: React.FC = () => {
                                    </div>
                                    <motion.div initial={{ width: '0%' }} animate={{ width: '100%' }} transition={{ repeat: Infinity, duration: 2 }} className="absolute bottom-0 left-0 h-1 bg-indigo-500 shadow-[0_0_20px_#6366f1]" />
                                    <Sparkles size={32} className="text-indigo-400 mb-2 animate-pulse" />
-                                   <p className="text-indigo-400 font-mono font-bold text-xs uppercase tracking-widest text-center px-4 mt-2">Calculando probabilidade e odd justa...</p>
+                                   <p className="text-indigo-400 font-mono font-bold text-xs uppercase tracking-widest text-center px-4 mt-2">Cruzando dados e precificando múltiplos mercados...</p>
                                </div>
                            )}
                         </div>
@@ -1344,7 +1343,6 @@ const Calculators: React.FC = () => {
                    )}
 
                 </div>
-                )
             )}
             
         </div>
