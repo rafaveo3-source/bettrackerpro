@@ -103,7 +103,7 @@ const LandingPage = () => {
             transition={{ duration: 0.6, delay: 0.2 }}
             className="text-lg md:text-xl text-slate-400 max-w-2xl mx-auto mb-10 leading-relaxed font-medium"
           >
-            A plataforma definitiva para controle de portfólio, leitura matemática de gráficos (IA) e proteção de capital. Saia do amadorismo e tenha a infraestrutura de um gestor quantitativo.
+            A plataforma definitiva para controle de portfólio, leitura preditiva de gráficos (Motores ExC, ExG e Scout IA) e proteção de capital. Saia do amadorismo e tenha a infraestrutura de um gestor quantitativo.
           </motion.p>
 
           <motion.div
@@ -167,7 +167,7 @@ const LandingPage = () => {
           <div className="text-center mb-16">
             <h2 className="text-3xl md:text-5xl font-black mb-6 tracking-tight">O FIM DAS PLANILHAS.</h2>
             <p className="text-slate-400 text-lg max-w-2xl mx-auto">
-              Centralize toda sua operação em um sistema profissional, auditável, seguro e com Inteligência Artificial.
+              Centralize toda sua operação em um sistema profissional, auditável, seguro e guiado por Inteligência Artificial.
             </p>
           </div>
 
@@ -197,19 +197,18 @@ const LandingPage = () => {
               </div>
             </div>
 
-            {/* 2. CALCULADORAS (AGORA IA SCOUT) */}
+            {/* 2. CALCULADORAS (AGORA IA SCOUT E EXG/EXC) */}
             <div className="md:col-span-3 lg:col-span-4 bg-[#0b101e] border border-white/5 rounded-[2rem] relative overflow-hidden group hover:border-indigo-500/30 transition-all duration-500 flex flex-col justify-between">
                <div className="p-8 z-20 relative bg-gradient-to-b from-[#0b101e] via-[#0b101e]/80 to-transparent">
                   <div className="w-10 h-10 bg-indigo-500/10 rounded-lg flex items-center justify-center mb-4 text-indigo-500 border border-indigo-500/20">
                     <Sparkles size={20} />
                   </div>
-                  <h3 className="text-2xl font-bold text-white mb-2">Scout Pré-Live IA</h3>
+                  <h3 className="text-2xl font-bold text-white mb-2">Scout IA, ExC & ExG</h3>
                   <p className="text-slate-400 text-sm">
-                    Varra a grade de jogos automaticamente e deixe nossa Inteligência Artificial construir a múltipla perfeita (EV+).
+                    Motores preditivos de Gols e Cantos para varrer a grade e construir a múltipla perfeita (EV+) automaticamente.
                   </p>
                </div>
                <div className="w-full h-[50%] mt-auto relative z-10 overflow-hidden border-t border-white/10 bg-indigo-950/20 flex items-center justify-center">
-                 {/* Ícone abstrato para representar IA */}
                  <BrainCircuit size={80} className="text-indigo-500/20 group-hover:text-indigo-500/40 transition-colors duration-500 group-hover:scale-110" />
                  <div className="absolute inset-0 bg-gradient-to-b from-[#0b101e] to-transparent z-20 pointer-events-none" />
                </div>

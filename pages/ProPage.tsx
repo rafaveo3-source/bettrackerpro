@@ -17,17 +17,17 @@ const ProPage: React.FC = () => {
         'Apenas 1 Portfólio Ativo',
         'Máximo de 50 operações/mês',
         'Dashboard Analítico Básico',
-        'Calculadoras Simples'
+        'Calculadoras Simples',
+        'Exportação de Dados em CSV' // MOVIDO PARA O FREE
       ],
       missing: [
         'Modelos Matemáticos Avançados',
-        'ExC Analytics (Motor de Cantos)', // NOVO
-        'ExG Analytics (Motor de Gols)', // NOVO
-        'Scout Pré-Live IA (Construtor EV+)', // NOVO
+        'ExC Analytics (Motor de Cantos)',
+        'ExG Analytics (Motor de Gols)',
+        'Scout Pré-Live IA (Construtor EV+)',
         'Hub de Estratégias (Playbooks)',
         'Módulo de Inteligência Emocional',
-        'Trava de Risco (Circuit Breaker)',
-        'Exportação de Dados em CSV'
+        'Trava de Risco (Circuit Breaker)'
       ],
       link: '#', 
       recommended: false,
@@ -44,8 +44,8 @@ const ProPage: React.FC = () => {
         'Gestão de Múltiplos Portfólios',
         'Operações Ilimitadas no Mês',
         'Calculadoras EV+, Arb e Kelly',
-        'ExC e ExG Analytics', // NOVO
-        'Scout IA (10 Scans Diários)', // NOVO
+        'ExC e ExG Analytics',
+        'Scout IA (10 Scans Diários)',
         'Hub de Estratégias Liberado',
         'Inteligência Emocional & Lock',
         'Exportação de Relatórios CSV',
@@ -66,8 +66,8 @@ const ProPage: React.FC = () => {
       monthlyEquivalent: 'R$ 16,49/mês',
       savings: 'Economize R$ 160 no ano',
       features: [
-        'Todas as features do Trimestral',
-        'Motor de Inteligência Artificial HFT', // NOVO
+        'Todas as features do Semestral e Trimestral', // ATUALIZADO
+        'Motor de Inteligência Artificial HFT',
         'Acesso VITALÍCIO a atualizações',
         'Acesso Antecipado a Novas Metas',
         'Grupo de Networking (Bônus)',
@@ -90,8 +90,8 @@ const ProPage: React.FC = () => {
         'Gestão de Múltiplos Portfólios',
         'Operações Ilimitadas no Mês',
         'Calculadoras EV+, Arb e Kelly',
-        'ExC e ExG Analytics', // NOVO
-        'Scout IA (10 Scans Diários)', // NOVO
+        'ExC e ExG Analytics',
+        'Scout IA (10 Scans Diários)',
         'Hub de Estratégias Liberado',
         'Inteligência Emocional & Lock',
         'Exportação de Relatórios CSV',
