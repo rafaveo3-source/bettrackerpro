@@ -22,10 +22,8 @@ export default async function handler(req: any, res: any) {
     const genAI = new GoogleGenerativeAI(apiKey);
     const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
 
-    // Se o usuário não enviou nada, força o padrão HFT (Gols e Cantos)
     const selectedMarketsStr = markets && markets.length > 0 ? markets.join(', ') : 'Gols, Escanteios';
 
-    // 🔥 SUPER PROMPT V5 (HARD FIREWALL + ANTI-ALUCINAÇÃO)
     const prompt = `Você ESTRITAMENTE um Extrator de Dados Visuais e Algoritmo Precificador. 
     Você receberá imagens de estatísticas de futebol.
     
@@ -34,19 +32,19 @@ export default async function handler(req: any, res: any) {
 
     ⚠️ REGRA DE OURO 2: FIREWALL DE MERCADOS
     O usuário ordenou que você busque oportunidades APENAS nestes mercados: [ ${selectedMarketsStr} ].
-    Você NÃO PODE sugerir apostas fora desta lista. Por exemplo, se "Resultado da Partida" não estiver na lista acima, VOCÊ NÃO PODE SUGERIR VITÓRIA OU EMPATE DE NENHUM TIME. Foque 100% na lista permitida.
+    Você NÃO PODE sugerir apostas fora desta lista. Se "Resultado da Partida" não estiver na lista acima, VOCÊ NÃO PODE SUGERIR VITÓRIA OU EMPATE. Foque 100% na lista permitida.
 
     🧠 INTELIGÊNCIA MATEMÁTICA:
-    - Olhe para a Taxa de Acerto (Hit Rate). Se a imagem diz "75% Mais de 1.5 Gols", use isso.
+    - Olhe para a Taxa de Acerto (Hit Rate).
     - Avalie as Médias Matemáticas (Média de Cantos a favor/contra).
     - Em jogos de "1ª Mão" ou "2ª Mão", LEIA QUEM VENCEU O PRIMEIRO JOGO antes de falar em desvantagem. Se não tiver certeza absoluta, não cite o agregado.
 
     Sua saída deve conter:
     1. A Múltipla Principal (Odd combinada ideal entre 1.50 e 2.00) DENTRO dos mercados permitidos.
     2. Uma Combinação Alternativa da mesma partida.
-    3. Uma "Margem de Segurança" (A versão mais conservadora da sua aposta principal).
+    3. Uma "Margem de Segurança".
 
-    Retorne ESTRITAMENTE um JSON válido neste formato exato (sem markdown em volta):
+    Retorne ESTRITAMENTE um JSON válido neste formato exato:
     {
       "selections": [
         {
@@ -56,8 +54,8 @@ export default async function handler(req: any, res: any) {
         }
       ],
       "alternativeCombination": "Explique uma entrada alternativa dentro dos mercados permitidos.",
-      "conservativeCombination": "A versão super segura (ex: reduzir a linha de cantos/gols).",
-      "analysis": "Sua tese baseada APENAS nos números e porcentagens que você LEU NA IMAGEM. NUNCA cite informações externas."
+      "conservativeCombination": "A versão super segura.",
+      "analysis": "Baseado APENAS nos números visíveis na imagem."
     }`;
 
     const imageParts = images.map((img: any) => ({

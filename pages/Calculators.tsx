@@ -53,6 +53,7 @@ const MapIcon = ({ size, className }: any) => (
   </svg>
 );
 
+// 🔥 COMPRESSOR DE IMAGEM HFT
 const fileToBase64 = (file: File): Promise<string> => {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -85,6 +86,10 @@ const fileToBase64 = (file: File): Promise<string> => {
   });
 };
 
+// ==========================================
+// FUNÇÕES MATEMÁTICAS DO MOTOR HFT
+// ==========================================
+
 const factorial = (n: number): number => {
   if (n < 0) return 0;
   if (n === 0 || n === 1) return 1;
@@ -99,12 +104,15 @@ const poissonExact = (k: number, lambda: number): number => {
 
 const Calculators: React.FC = () => {
   
+  // 🔥 SUA CHAVE MESTRA (Segurança Frontend/Backend)
   const userEmail = "rafaelancelmo.castro@gmail.com"; 
 
   const { currentBankrollBalance, isPro, aiScansUsedToday, canUseAiScan, incrementAiScan, setToast } = useBetStore();
   const navigate = useNavigate();
 
-  const [activeTab, setActiveTab] = useState<'dutching'|'kelly'|'value'|'arb'|'stake'|'odds'|'breakeven'|'exc'|'exg'|'scout'>('scout');
+  const [activeTab, setActiveTab] = useState<
+    'dutching' | 'kelly' | 'value' | 'arb' | 'stake' | 'odds' | 'breakeven' | 'exc' | 'exg' | 'scout'
+  >('scout');
 
   // ==========================================
   // ESTADOS COMPARTILHADOS (ExC e ExG)
@@ -147,8 +155,8 @@ const Calculators: React.FC = () => {
   const [selectedMatchesForBuilder, setSelectedMatchesForBuilder] = useState<string[]>([]);
 
   // 🔥 Filtro de Mercados (Focado em Gols e Cantos por Padrão)
-  const AVAILABLE_MARKETS = ['Gols', 'Escanteios', 'Cartões', 'Chutes/Finalizações', 'Resultado (1x2/Dupla)'];
-  const [builderMarkets, setBuilderMarkets] = useState<string[]>(['Gols', 'Escanteios']);
+  const AVAILABLE_MARKETS = ['Gols', 'Escanteios', 'Cartões', 'Mercados de Jogador', 'Resultado da Partida (1x2/Dupla)'];
+  const [builderMarkets, setBuilderMarkets] = useState<string[]>(['Gols', 'Escanteios', 'Resultado da Partida (1x2/Dupla)']);
 
   const toggleMarket = (market: string) => {
       setBuilderMarkets(prev => prev.includes(market) ? prev.filter(m => m !== market) : [...prev, market]);
@@ -407,7 +415,7 @@ const Calculators: React.FC = () => {
   useEffect(() => { setExgChecklist({}); setExgUnlocked(false); }, [exgScenario]);
   const handleExgCheck = (idx: number) => {
     const n = { ...exgChecklist, [idx]: !exgChecklist[idx] }; setExgChecklist(n);
-    setExgUnlocked(Object.keys(n).filter(k => n[parseInt(k)]).length === exgScenariosData[exgScenario].checks.length);
+    setExcUnlocked(Object.keys(n).filter(k => n[parseInt(k)]).length === exgScenariosData[exgScenario].checks.length);
   };
 
   const runQuantEngine = (type: 'exc' | 'exg', scenario: string) => {
@@ -598,7 +606,7 @@ const Calculators: React.FC = () => {
       </div>
       
       {/* TABS GRID */}
-      <div className="flex flex-wrap gap-2 mb-6 px-4 md:px-0">
+      <div className="flex flex-wrap md:grid md:grid-cols-4 xl:grid-cols-10 gap-2 mb-6 px-4 md:px-0">
         {tabs.map(tab => (
           <button
             key={tab.id}
@@ -656,7 +664,7 @@ const Calculators: React.FC = () => {
                         </div>
                         <div>
                              <label className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase block mb-2">Fração</label>
-                             <select value={kellyFraction} onChange={e => setKellyFraction(e.target.value)} className="w-full p-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white rounded-xl font-bold text-sm outline-none">
+                             <select value={kellyFraction} onChange={e => setKellyFraction(e.target.value)} className="w-full p-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-transparent text-slate-900 dark:text-white rounded-xl font-bold text-sm outline-none">
                                 <option value="1">100%</option>
                                 <option value="0.5">50%</option>
                                 <option value="0.25">25%</option>
@@ -679,8 +687,8 @@ const Calculators: React.FC = () => {
                 </div>
             )}
 
-            {activeTab === 'value' && (
-                !isPro ? <ProLockScreen /> : (
+            {activeTab === 'value' && !isPro && <ProLockScreen />}
+            {activeTab === 'value' && isPro && (
                 <div className="bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-800 rounded-[2rem] p-6 shadow-sm">
                    <h2 className="text-lg font-black text-slate-900 dark:text-white uppercase tracking-tighter italic mb-6 flex items-center gap-2"><Target size={20} className="text-emerald-500"/> Value Bet Finder</h2>
                    <div className="grid grid-cols-2 gap-4 mb-6">
@@ -703,11 +711,10 @@ const Calculators: React.FC = () => {
                       </p>
                    </div>
                 </div>
-                )
             )}
 
-            {activeTab === 'arb' && (
-                !isPro ? <ProLockScreen /> : (
+            {activeTab === 'arb' && !isPro && <ProLockScreen />}
+            {activeTab === 'arb' && isPro && (
                 <div className="bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-800 rounded-[2rem] p-6 shadow-sm">
                    <h2 className="text-lg font-black text-slate-900 dark:text-white uppercase tracking-tighter italic mb-6 flex items-center gap-2"><Scale size={20} className="text-blue-500"/> Arbitragem (2-Way)</h2>
                    <div className="mb-4">
@@ -738,7 +745,6 @@ const Calculators: React.FC = () => {
                    </div>
                    {arbRoi > 0 && <p className="text-center text-xs text-slate-500 dark:text-slate-400 mt-2">Lucro líquido: R$ {arbProfit.toFixed(2)}</p>}
                 </div>
-                )
             )}
 
             {activeTab === 'stake' && (
@@ -776,8 +782,8 @@ const Calculators: React.FC = () => {
                 </div>
             )}
 
-            {activeTab === 'breakeven' && (
-                !isPro ? <ProLockScreen /> : (
+            {activeTab === 'breakeven' && !isPro && <ProLockScreen />}
+            {activeTab === 'breakeven' && isPro && (
                 <div className="bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-800 rounded-[2rem] p-6 shadow-sm">
                    <h2 className="text-lg font-black text-slate-900 dark:text-white uppercase tracking-tighter italic mb-6 flex items-center gap-2"><TrendingUp size={20} className="text-pink-500"/> Break Even Point</h2>
                    <div className="mb-8">
@@ -790,14 +796,13 @@ const Calculators: React.FC = () => {
                       <p className="text-xs text-slate-500 mt-2">Para ficar no zero a zero (sem prejuízo)</p>
                    </div>
                 </div>
-                )
             )}
 
             {/* =========================================
                 EXPECTATIVA DE CANTOS E GOLS (ExC / ExG)
             ========================================= */}
-            {(activeTab === 'exc' || activeTab === 'exg') && (
-                !isPro ? <ProLockScreen /> : (
+            {(activeTab === 'exc' || activeTab === 'exg') && !isPro && <ProLockScreen />}
+            {(activeTab === 'exc' || activeTab === 'exg') && isPro && (
                 <div className="bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-800 rounded-[2.5rem] p-6 sm:p-8 shadow-sm relative overflow-hidden">
                    <div className="flex justify-between items-start mb-6">
                       <h2 className={`text-2xl font-black uppercase tracking-tighter italic flex items-center gap-2 ${activeTab === 'exc' ? 'text-emerald-500' : 'text-orange-500'}`}>
@@ -1051,16 +1056,13 @@ const Calculators: React.FC = () => {
                      )}
                    </AnimatePresence>
                 </div>
-                )}
-                </>
             )}
 
             {/* =========================================
                 🔥 NOVO: SCOUT PRÉ-LIVE (IA CAÇADORA) 🔥
             ========================================= */}
-            {activeTab === 'scout' && (
-                <>
-                {!isPro ? <ProLockScreen /> : (
+            {activeTab === 'scout' && !isPro && <ProLockScreen />}
+            {activeTab === 'scout' && isPro && (
                 <div className="bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-800 rounded-[2.5rem] p-4 sm:p-8 shadow-sm relative overflow-hidden">
                    <div className="flex justify-between items-start mb-8 relative z-10">
                       <div>
@@ -1132,22 +1134,23 @@ const Calculators: React.FC = () => {
                              <div>
                                  <h3 className="text-[10px] font-black text-orange-500 uppercase tracking-widest mb-3 flex items-center gap-2 border-b border-slate-800 pb-2"><Goal size={14}/> Foco em Gols</h3>
                                  <div className="space-y-2">
-                                     {scoutGridResult.filter(m => m.market === 'GOLS').map((match: any, index: number) => {
+                                     {scoutGridResult.filter((m: any) => m.market === 'GOLS').map((match: any, index: number) => {
                                          const isSelected = selectedMatchesForBuilder.includes(match.teams);
                                          return (
-                                         <div key={`gols-${index}`} onClick={() => toggleMatchSelection(match.teams)} className={`bg-[#09090b] border rounded-2xl p-4 flex flex-col sm:flex-row gap-4 justify-between items-start sm:items-center cursor-pointer transition-all ${isSelected ? 'border-indigo-500 shadow-[0_0_15px_rgba(99,102,241,0.2)]' : 'border-slate-800 hover:border-slate-700'}`}>
-                                             <div className="flex-1">
-                                                 <div className="flex items-center gap-2 mb-1">
-                                                    <span className="bg-slate-800 text-slate-300 px-2 py-0.5 rounded text-[9px] font-mono font-bold flex items-center gap-1"><Clock size={10}/> {match.time}</span>
-                                                    <h4 className="text-sm font-black text-white">{match.teams}</h4>
+                                             <div key={`gols-${index}`} onClick={() => toggleMatchSelection(match.teams)} className={`bg-[#09090b] border rounded-2xl p-4 flex flex-col sm:flex-row gap-4 justify-between items-start sm:items-center cursor-pointer transition-all ${isSelected ? 'border-indigo-500 shadow-[0_0_15px_rgba(99,102,241,0.2)]' : 'border-slate-800 hover:border-slate-700'}`}>
+                                                 <div className="flex-1">
+                                                     <div className="flex items-center gap-2 mb-1">
+                                                        <span className="bg-slate-800 text-slate-300 px-2 py-0.5 rounded text-[9px] font-mono font-bold flex items-center gap-1"><Clock size={10}/> {match.time}</span>
+                                                        <h4 className="text-sm font-black text-white">{match.teams}</h4>
+                                                     </div>
+                                                     <p className="text-[11px] text-slate-400 mt-1 leading-relaxed">{match.reason}</p>
                                                  </div>
-                                                 <p className="text-[11px] text-slate-400 mt-1 leading-relaxed">{match.reason}</p>
+                                                 <div className="shrink-0 self-end sm:self-auto">
+                                                     {isSelected ? <CheckCircle2 size={24} className="text-indigo-500" /> : <Square size={24} className="text-slate-700" />}
+                                                 </div>
                                              </div>
-                                             <div className="shrink-0 self-end sm:self-auto">
-                                                 {isSelected ? <CheckCircle2 size={24} className="text-indigo-500" /> : <Square size={24} className="text-slate-700" />}
-                                             </div>
-                                         </div>
-                                     )})}
+                                         );
+                                     })}
                                  </div>
                              </div>
                              )}
@@ -1157,22 +1160,23 @@ const Calculators: React.FC = () => {
                              <div>
                                  <h3 className="text-[10px] font-black text-emerald-500 uppercase tracking-widest mb-3 flex items-center gap-2 border-b border-slate-800 pb-2 mt-6"><Flag size={14}/> Foco em Cantos</h3>
                                  <div className="space-y-2">
-                                     {scoutGridResult.filter(m => m.market === 'CANTOS').map((match: any, index: number) => {
+                                     {scoutGridResult.filter((m: any) => m.market === 'CANTOS').map((match: any, index: number) => {
                                          const isSelected = selectedMatchesForBuilder.includes(match.teams);
                                          return (
-                                         <div key={`cantos-${index}`} onClick={() => toggleMatchSelection(match.teams)} className={`bg-[#09090b] border rounded-2xl p-4 flex flex-col sm:flex-row gap-4 justify-between items-start sm:items-center cursor-pointer transition-all ${isSelected ? 'border-indigo-500 shadow-[0_0_15px_rgba(99,102,241,0.2)]' : 'border-slate-800 hover:border-slate-700'}`}>
-                                             <div className="flex-1">
-                                                 <div className="flex items-center gap-2 mb-1">
-                                                    <span className="bg-slate-800 text-slate-300 px-2 py-0.5 rounded text-[9px] font-mono font-bold flex items-center gap-1"><Clock size={10}/> {match.time}</span>
-                                                    <h4 className="text-sm font-black text-white">{match.teams}</h4>
+                                             <div key={`cantos-${index}`} onClick={() => toggleMatchSelection(match.teams)} className={`bg-[#09090b] border rounded-2xl p-4 flex flex-col sm:flex-row gap-4 justify-between items-start sm:items-center cursor-pointer transition-all ${isSelected ? 'border-indigo-500 shadow-[0_0_15px_rgba(99,102,241,0.2)]' : 'border-slate-800 hover:border-slate-700'}`}>
+                                                 <div className="flex-1">
+                                                     <div className="flex items-center gap-2 mb-1">
+                                                        <span className="bg-slate-800 text-slate-300 px-2 py-0.5 rounded text-[9px] font-mono font-bold flex items-center gap-1"><Clock size={10}/> {match.time}</span>
+                                                        <h4 className="text-sm font-black text-white">{match.teams}</h4>
+                                                     </div>
+                                                     <p className="text-[11px] text-slate-400 mt-1 leading-relaxed">{match.reason}</p>
                                                  </div>
-                                                 <p className="text-[11px] text-slate-400 mt-1 leading-relaxed">{match.reason}</p>
+                                                 <div className="shrink-0 self-end sm:self-auto">
+                                                     {isSelected ? <CheckCircle2 size={24} className="text-indigo-500" /> : <Square size={24} className="text-slate-700" />}
+                                                 </div>
                                              </div>
-                                             <div className="shrink-0 self-end sm:self-auto">
-                                                 {isSelected ? <CheckCircle2 size={24} className="text-indigo-500" /> : <Square size={24} className="text-slate-700" />}
-                                             </div>
-                                         </div>
-                                     )})}
+                                         );
+                                     })}
                                  </div>
                              </div>
                              )}
@@ -1275,7 +1279,7 @@ const Calculators: React.FC = () => {
                                    </div>
                                    <motion.div initial={{ width: '0%' }} animate={{ width: '100%' }} transition={{ repeat: Infinity, duration: 2 }} className="absolute bottom-0 left-0 h-1 bg-indigo-500 shadow-[0_0_20px_#6366f1]" />
                                    <Sparkles size={32} className="text-indigo-400 mb-2 animate-pulse" />
-                                   <p className="text-indigo-400 font-mono font-bold text-xs uppercase tracking-widest text-center px-4 mt-2">Calculando probabilidade e odd justa...</p>
+                                   <p className="text-indigo-400 font-mono font-bold text-xs uppercase tracking-widest text-center px-4 mt-2">Cruzando dados e precificando múltiplos mercados...</p>
                                </div>
                            )}
                         </div>
@@ -1337,8 +1341,6 @@ const Calculators: React.FC = () => {
                    )}
 
                 </div>
-                )}
-                </>
             )}
             
         </div>
