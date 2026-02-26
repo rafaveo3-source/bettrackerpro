@@ -25,10 +25,7 @@ const PodInput = ({ label, value, onChange, icon: Icon, placeholder, colorClass,
           <input 
               type={type} value={value} onChange={onChange} placeholder={placeholder}
               className={`w-full bg-slate-950 border rounded-xl pl-10 pr-3 py-3 font-mono font-bold text-sm outline-none transition-all
-${highlight 
-    ? `border-slate-600 focus:border-slate-400 ${colorClass} shadow-[inset_0_0_10px_rgba(0,0,0,0.2)]`
-    : 'border-slate-800 text-white focus:border-slate-600 focus:bg-[#09090b]'
-}`}              
+              ${highlight ? `border-${colorClass.split('-')[1]}-500/50 focus:border-${colorClass.split('-')[1]}-400 text-${colorClass.split('-')[1]}-400 shadow-[inset_0_0_10px_rgba(0,0,0,0.2)]` : 'border-slate-800 text-white focus:border-slate-600 focus:bg-[#09090b]'}`}
           />
       </div>
   </div>
@@ -56,6 +53,7 @@ const MapIcon = ({ size, className }: any) => (
   </svg>
 );
 
+// 🔥 COMPRESSOR DE IMAGEM HFT
 const fileToBase64 = (file: File): Promise<string> => {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -88,9 +86,6 @@ const fileToBase64 = (file: File): Promise<string> => {
   });
 };
 
-// ==========================================
-// FUNÇÕES MATEMÁTICAS DO MOTOR HFT
-// ==========================================
 const factorial = (n: number): number => {
   if (n < 0) return 0;
   if (n === 0 || n === 1) return 1;
@@ -105,6 +100,7 @@ const poissonExact = (k: number, lambda: number): number => {
 
 const Calculators: React.FC = () => {
   
+  // 🔥 CHAVE DE SEGURANÇA
   const userEmail = "rafaelancelmo.castro@gmail.com"; 
 
   const { currentBankrollBalance, isPro, aiScansUsedToday, canUseAiScan, incrementAiScan, setToast } = useBetStore();
@@ -113,7 +109,7 @@ const Calculators: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'dutching'|'kelly'|'value'|'arb'|'stake'|'odds'|'breakeven'|'exc'|'exg'|'scout'>('scout');
 
   // ==========================================
-  // ESTADOS COMPARTILHADOS (ExC e ExG)
+  // ESTADOS COMPARTILHADOS
   // ==========================================
   const [liveMin, setLiveMin] = useState('');
   const [liveCorners, setLiveCorners] = useState(''); 
@@ -133,15 +129,17 @@ const Calculators: React.FC = () => {
   const [recentGoal, setRecentGoal] = useState('false'); 
 
   // ==========================================
-  // ESTADOS DO NOVO PRE-LIVE SCOUT
+  // ESTADOS DO PRE-LIVE SCOUT
   // ==========================================
   const [scoutMode, setScoutMode] = useState<'grid' | 'builder'>('grid');
+  
   useEffect(() => {
     if (scoutMode === 'grid') {
         setScoutBuilderImages([]);
         setScoutBuilderResult(null);
     }
-}, [scoutMode]);
+  }, [scoutMode]);
+
   const [scoutGridImage, setScoutGridImage] = useState<string | null>(null);
   const [scoutBuilderImages, setScoutBuilderImages] = useState<{url: string, file: File}[]>([]);
   const [isScanningScout, setIsScanningScout] = useState(false);
@@ -177,11 +175,7 @@ const Calculators: React.FC = () => {
       for (let i = 0; i < items.length; i++) {
         if (items[i].type.indexOf('image') !== -1) {
           const blob = items[i].getAsFile();
-          if (blob) {
-             if (!VALID_IMAGE_TYPES.includes(blob.type)) {
-                 setToast({ type: 'error', message: '⚠️ Formato inválido! Cole apenas imagens PNG, JPG ou WEBP.' });
-                 return;
-             }
+          if (blob && VALID_IMAGE_TYPES.includes(blob.type)) {
              if (activeTab === 'scout') {
                 if (scoutMode === 'grid') handleAddScoutGridImage(blob);
                 else handleAddScoutBuilderImage(blob);
@@ -194,7 +188,7 @@ const Calculators: React.FC = () => {
     };
     window.addEventListener('paste', handleGlobalPaste);
     return () => window.removeEventListener('paste', handleGlobalPaste);
-  }, [activeTab, scoutMode]);
+  }, [activeTab, scoutMode, scoutBuilderImages]);
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -243,7 +237,7 @@ const Calculators: React.FC = () => {
 
   const handleAddScoutBuilderImage = (file: File) => {
       if (scoutBuilderImages.length >= 4) {
-          setToast({ type: 'error', message: 'Máximo de 4 imagens permitidas para análise cruzada.' });
+          setToast({ type: 'error', message: 'Máximo de 4 imagens permitidas.' });
           return;
       }
       setScoutBuilderImages(prev => [...prev, { url: URL.createObjectURL(file), file }]);
@@ -252,9 +246,9 @@ const Calculators: React.FC = () => {
   const processScoutBuilderEngine = async () => {
       if (scoutBuilderImages.length === 0) return;
       if (scoutBuilderImages.length < 2) {
-    setToast({ type: 'error', message: 'Envie pelo menos 2 jogos para gerar a múltipla.' });
-    return;
-}
+          setToast({ type: 'error', message: 'Envie pelo menos 2 jogos para gerar a múltipla.' });
+          return;
+      }
       if (!isPro) { setToast({ type: 'error', message: 'Recurso exclusivo PRO.' }); return; }
       if (!checkAiLimit()) { setToast({ type: 'error', message: 'Limite atingido.' }); return; }
 
@@ -267,31 +261,20 @@ const Calculators: React.FC = () => {
           })));
 
           const response = await fetch('/api/vision-builder', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-        images: base64Images,
-        selectedMatches: selectedMatchesForBuilder,
-        email: userEmail
-    })
-});
+              method: 'POST', headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ images: base64Images, selectedMatches: selectedMatchesForBuilder, email: userEmail })
+          });
 
           const data = await response.json();
           if (!response.ok) throw new Error(data.error || 'Falha na IA');
           
-          if (
-    data &&
-    Array.isArray(data.selections) &&
-    data.selections.length >= 2 &&
-    typeof data.combinedProb !== 'undefined' &&
-    typeof data.fairOdd !== 'undefined'
-) {
-    setScoutBuilderResult(data);
-    handleIncrementScan();
-    setToast({ type: 'success', message: 'Aposta Construída com Sucesso!' });
-} else {
-    throw new Error('Resposta inválida da IA. Verifique os dados enviados.');
-}
+          if (data && Array.isArray(data.selections) && data.selections.length >= 2) {
+              setScoutBuilderResult(data);
+              handleIncrementScan();
+              setToast({ type: 'success', message: 'Aposta Construída com Sucesso!' });
+          } else {
+              throw new Error('Resposta inválida da IA.');
+          }
       } catch (e: any) {
           setToast({ type: 'error', message: e.message || 'Erro ao processar as imagens na IA.' });
       } finally { setIsScanningScout(false); }
@@ -301,7 +284,7 @@ const Calculators: React.FC = () => {
       setSelectedMatchesForBuilder(prev => {
           if (prev.includes(matchName)) return prev.filter(m => m !== matchName);
           if (prev.length >= 4) {
-             setToast({ type: 'error', message: 'Máximo de 4 jogos selecionados permitidos.'});
+             setToast({ type: 'error', message: 'Máximo de 4 jogos permitidos.'});
              return prev;
           }
           return [...prev, matchName];
@@ -330,7 +313,6 @@ const Calculators: React.FC = () => {
         
         if (data) {
            const cln = (val: any) => (val !== null && val !== undefined && val !== "") ? String(val) : "";
-
            setLiveMin(cln(data.min));
            if (activeTab === 'exg') setLiveGoals(cln(data.target)); else setLiveCorners(cln(data.target));
            setLiveAP_Def(cln(data.apDef)); setLiveAP_Press(cln(data.apPress));
@@ -359,9 +341,6 @@ const Calculators: React.FC = () => {
       setMatchTemp('calm'); setRedCard('none'); setNeedsGoal('false'); setRecentGoal('false');
   };
 
-  // ==========================================
-  // LÓGICAS CLÁSSICAS OMITIDAS NO FRONTEND AQUI (Mas mantidas funcionais)
-  // ==========================================
   const [excScenario, setExcScenario] = useState('ht_asian');
   const [exgScenario, setExgScenario] = useState('ft_over05');
 
@@ -497,6 +476,9 @@ const Calculators: React.FC = () => {
 
   const engineRes = activeTab === 'exc' ? runQuantEngine('exc', excScenario) : runQuantEngine('exg', exgScenario);
 
+  // ==========================================
+  // COMPONENTES DE PROTEÇÃO
+  // ==========================================
   const ProLockScreen = () => (
       <div className="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-[2rem] p-8 text-center flex flex-col items-center justify-center min-h-[300px] relative overflow-hidden shadow-sm">
           <div className="absolute inset-0 bg-gradient-to-br from-purple-500/5 to-blue-500/5 dark:from-purple-500/10 dark:to-blue-500/10 opacity-50" />
@@ -515,6 +497,13 @@ const Calculators: React.FC = () => {
       </div>
   );
 
+  const RequirePro = ({ children }: { children: React.ReactNode }) => {
+      return isPro ? <>{children}</> : <ProLockScreen />;
+  };
+
+  // ==========================================
+  // CALCULADORAS CLÁSSICAS
+  // ==========================================
   const [dutchTotalStake, setDutchTotalStake] = useState('100');
   const [dutchSelections, setDutchSelections] = useState([{ id: 1, name: 'Seleção A', odds: '2.50', stake: 0, profit: 0 }, { id: 2, name: 'Seleção B', odds: '3.20', stake: 0, profit: 0 }]);
   const addDutchSelection = () => setDutchSelections([...dutchSelections, { id: Date.now(), name: `Seleção ${String.fromCharCode(65 + dutchSelections.length)}`, odds: '', stake: 0, profit: 0 }]);
@@ -588,9 +577,18 @@ const Calculators: React.FC = () => {
       {/* TABS GRID */}
       <div className="flex flex-wrap gap-2 mb-6 px-4 md:px-0">
         {tabs.map(tab => (
-          <button key={tab.id} onClick={() => setActiveTab(tab.id as any)} className={`relative flex-1 min-w-[90px] flex items-center justify-center px-2 py-3 rounded-xl font-bold text-[10px] uppercase tracking-wider transition-all gap-1 ${activeTab === tab.id ? (tab.id === 'exg' ? 'bg-orange-500 text-white shadow-lg shadow-orange-500/20' : tab.id === 'scout' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/20' : 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/20') : 'bg-white dark:bg-[#0f172a] text-slate-600 dark:text-slate-500 border border-slate-200 dark:border-slate-800'}`}>
+          <button
+            key={tab.id}
+            onClick={() => setActiveTab(tab.id as any)}
+            className={`relative flex-1 min-w-[90px] flex items-center justify-center px-2 py-3 rounded-xl font-bold text-[10px] uppercase tracking-wider transition-all gap-1 ${
+              activeTab === tab.id
+                ? (tab.id === 'exg' ? 'bg-orange-500 text-white shadow-lg shadow-orange-500/20' : tab.id === 'scout' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/20' : 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/20')
+                : 'bg-white dark:bg-[#0f172a] text-slate-600 dark:text-slate-500 border border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-900'
+            }`}
+          >
             {tab.pro && !isPro && <Lock size={10} className="mb-0.5" />}
             {tab.label}
+            {activeTab === tab.id && <span className="absolute bottom-0 left-0 w-full h-[3px] bg-white/40 animate-pulse rounded-b-xl" />}
           </button>
         ))}
       </div>
@@ -598,10 +596,7 @@ const Calculators: React.FC = () => {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 px-4 md:px-0">
         <div className="lg:col-span-2 space-y-6 min-w-0 w-full">
             
-            {/* =========================================
-                CALCULADORAS SIMPLES E HUD (EXC/EXG) OMITIDOS PARA FOCO NO SCOUT
-                (O código continua o mesmo e funciona normalmente)
-            ========================================= */}
+            {/* CALCULADORAS SIMPLES */}
             {activeTab === 'dutching' && (
                 <div className="bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-800 rounded-[2rem] p-6 shadow-sm w-full overflow-hidden">
                     <h2 className="text-lg font-black text-slate-900 dark:text-white uppercase tracking-tighter italic mb-4">Calculadora Dutching</h2>
@@ -663,8 +658,7 @@ const Calculators: React.FC = () => {
             )}
 
             {activeTab === 'value' && (
-                <>
-                {!isPro ? <ProLockScreen /> : (
+                <RequirePro>
                 <div className="bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-800 rounded-[2rem] p-6 shadow-sm">
                    <h2 className="text-lg font-black text-slate-900 dark:text-white uppercase tracking-tighter italic mb-6 flex items-center gap-2"><Target size={20} className="text-emerald-500"/> Value Bet Finder</h2>
                    <div className="grid grid-cols-2 gap-4 mb-6">
@@ -687,13 +681,11 @@ const Calculators: React.FC = () => {
                       </p>
                    </div>
                 </div>
-                )}
-                </>
+                </RequirePro>
             )}
 
             {activeTab === 'arb' && (
-                <>
-                {!isPro ? <ProLockScreen /> : (
+                <RequirePro>
                 <div className="bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-800 rounded-[2rem] p-6 shadow-sm">
                    <h2 className="text-lg font-black text-slate-900 dark:text-white uppercase tracking-tighter italic mb-6 flex items-center gap-2"><Scale size={20} className="text-blue-500"/> Arbitragem (2-Way)</h2>
                    <div className="mb-4">
@@ -724,8 +716,7 @@ const Calculators: React.FC = () => {
                    </div>
                    {arbRoi > 0 && <p className="text-center text-xs text-slate-500 dark:text-slate-400 mt-2">Lucro líquido: R$ {arbProfit.toFixed(2)}</p>}
                 </div>
-                )}
-                </>
+                </RequirePro>
             )}
 
             {activeTab === 'stake' && (
@@ -764,8 +755,7 @@ const Calculators: React.FC = () => {
             )}
 
             {activeTab === 'breakeven' && (
-                <>
-                {!isPro ? <ProLockScreen /> : (
+                <RequirePro>
                 <div className="bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-800 rounded-[2rem] p-6 shadow-sm">
                    <h2 className="text-lg font-black text-slate-900 dark:text-white uppercase tracking-tighter italic mb-6 flex items-center gap-2"><TrendingUp size={20} className="text-pink-500"/> Break Even Point</h2>
                    <div className="mb-8">
@@ -778,16 +768,14 @@ const Calculators: React.FC = () => {
                       <p className="text-xs text-slate-500 mt-2">Para ficar no zero a zero (sem prejuízo)</p>
                    </div>
                 </div>
-                )}
-                </>
+                </RequirePro>
             )}
 
             {/* =========================================
                 EXPECTATIVA DE CANTOS E GOLS (ExC / ExG)
             ========================================= */}
             {(activeTab === 'exc' || activeTab === 'exg') && (
-                <>
-                {!isPro ? <ProLockScreen /> : (
+                <RequirePro>
                 <div className="bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-800 rounded-[2.5rem] p-6 sm:p-8 shadow-sm relative overflow-hidden">
                    <div className="flex justify-between items-start mb-6">
                       <h2 className={`text-2xl font-black uppercase tracking-tighter italic flex items-center gap-2 ${activeTab === 'exc' ? 'text-emerald-500' : 'text-orange-500'}`}>
@@ -1041,16 +1029,14 @@ const Calculators: React.FC = () => {
                      )}
                    </AnimatePresence>
                 </div>
-                )}
-                </>
+                </RequirePro>
             )}
 
             {/* =========================================
                 🔥 NOVO: SCOUT PRÉ-LIVE (IA CAÇADORA) 🔥
             ========================================= */}
             {activeTab === 'scout' && (
-                <>
-                {!isPro ? <ProLockScreen /> : (
+                <RequirePro>
                 <div className="bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-800 rounded-[2.5rem] p-4 sm:p-8 shadow-sm relative overflow-hidden">
                    <div className="flex justify-between items-start mb-8 relative z-10">
                       <div>
@@ -1301,8 +1287,7 @@ const Calculators: React.FC = () => {
                    )}
 
                 </div>
-                )}
-                </>
+                </RequirePro>
             )}
             
         </div>
