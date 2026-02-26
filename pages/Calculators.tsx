@@ -241,7 +241,16 @@ const Calculators: React.FC = () => {
               body: JSON.stringify({ image: base64Data, mimeType: 'image/jpeg', email: userEmail })
           });
 
-          const data = await response.json();
+          const text = await response.text();
+
+let data;
+
+try {
+  data = JSON.parse(text);
+} catch {
+  console.error("Resposta inválida:", text);
+  throw new Error("Resposta inválida do servidor.");
+}
           if (!response.ok) throw new Error(data.error || 'Falha na IA');
           
           if (data && data.matches) {
