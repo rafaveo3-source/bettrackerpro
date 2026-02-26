@@ -2,8 +2,6 @@ import { GoogleGenerativeAI } from '@google/generative-ai';
 import { classifyGameProfile } from './_utils/gameProfileClassifier';
 import { buildDynamicMultiple } from './_utils/multiBuilderEngine';
 
-export const maxDuration = 60;
-
 export default async function handler(req: any, res: any) {
 
   if (req.method !== 'POST')
@@ -11,7 +9,9 @@ export default async function handler(req: any, res: any) {
 
   try {
 
-    const { images, email, markets } = req.body;
+    console.log("BODY RECEBIDO:", req.body);
+
+    const { images, markets } = req.body;
 
     if (!images || !Array.isArray(images) || images.length === 0) {
       return res.status(400).json({ error: "Images inválidas." });
@@ -30,14 +30,23 @@ export default async function handler(req: any, res: any) {
         temperature: 0,
         topP: 0.1,
         topK: 1,
-        candidateCount: 1,
         maxOutputTokens: 2048
       }
     });
 
     const prompt = `
-Você é um extrator estatístico visual.
-Retorne apenas JSON válido no formato solicitado.
+Leia a imagem e retorne EXATAMENTE:
+
+{
+  "stats": {
+    "home_goals_avg": null,
+    "away_goals_avg": null,
+    "home_corners_avg": null,
+    "away_corners_avg": null,
+    "over15_hit_rate": null,
+    "over25_hit_rate": null
+  }
+}
 `;
 
     const imageParts = images.map((img: any) => ({
@@ -49,20 +58,28 @@ Retorne apenas JSON válido no formato solicitado.
 
     const result = await model.generateContent([prompt, ...imageParts]);
 
+    console.log("RAW GEMINI:", result);
+
+    if (!result || !result.response) {
+      return res.status(500).json({ error: "Gemini retornou vazio." });
+    }
+
     let responseText = result.response.text();
+
+    console.log("TEXT:", responseText);
 
     const match = responseText.match(/\{[\s\S]*\}/);
 
     if (!match) {
-      return res.status(500).json({ error: "IA retornou formato inválido." });
+      return res.status(500).json({ error: "Formato inválido da IA.", raw: responseText });
     }
 
     let parsed;
 
     try {
       parsed = JSON.parse(match[0]);
-    } catch {
-      return res.status(500).json({ error: "Erro ao fazer parse da IA." });
+    } catch (err) {
+      return res.status(500).json({ error: "Erro parse JSON.", raw: responseText });
     }
 
     const stats = parsed.stats || {};
@@ -78,10 +95,11 @@ Retorne apenas JSON válido no formato solicitado.
 
   } catch (error: any) {
 
-    console.error("VISION BUILDER ERROR:", error);
+    console.error("VISION BUILDER ERROR COMPLETO:", error);
 
     return res.status(500).json({
-      error: error.message || "Erro interno no Vision Builder."
+      error: error.message || "Erro interno",
+      stack: error.stack
     });
   }
 }
