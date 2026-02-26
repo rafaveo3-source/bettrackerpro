@@ -31,6 +31,7 @@ const PodInput = ({ label, value, onChange, icon: Icon, placeholder, colorClass,
   </div>
 );
 
+// 🔥 NOVO COMPONENTE: SELECT DO CONTEXTO TÁTICO
 const PodSelect = ({ label, value, onChange, icon: Icon, options, colorClass }: any) => (
   <div className="relative group">
       <label className={`text-[9px] font-black uppercase tracking-widest block mb-1.5 transition-colors text-slate-500`}>{label}</label>
@@ -53,7 +54,6 @@ const MapIcon = ({ size, className }: any) => (
   </svg>
 );
 
-// 🔥 NOVO: COMPRESSOR DE IMAGEM HFT (Evita o erro de Payload Too Large da Vercel)
 const fileToBase64 = (file: File): Promise<string> => {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -87,11 +87,17 @@ const fileToBase64 = (file: File): Promise<string> => {
   });
 };
 
+// ==========================================
+// FUNÇÕES MATEMÁTICAS DO MOTOR HFT
+// ==========================================
+
 const factorial = (n: number): number => {
   if (n < 0) return 0;
   if (n === 0 || n === 1) return 1;
   let result = 1;
-  for (let i = 2; i <= n; i++) result *= i;
+  for (let i = 2; i <= n; i++) {
+    result *= i;
+  }
   return result;
 };
 
@@ -102,7 +108,7 @@ const poissonExact = (k: number, lambda: number): number => {
 
 const Calculators: React.FC = () => {
   
-  // 🔥 SUA CHAVE MESTRA (Segurança Vercel)
+  // 🔥 SUA CHAVE MESTRA (Segurança Frontend/Backend)
   const userEmail = "rafaelancelmo.castro@gmail.com"; 
 
   const { 
@@ -118,7 +124,7 @@ const Calculators: React.FC = () => {
 
   const [activeTab, setActiveTab] = useState<
     'dutching' | 'kelly' | 'value' | 'arb' | 'stake' | 'odds' | 'breakeven' | 'exc' | 'exg' | 'scout'
-  >('scout');
+  >('dutching');
 
   // ==========================================
   // ESTADOS COMPARTILHADOS (ExC e ExG) - SEPARADOS
@@ -133,6 +139,7 @@ const Calculators: React.FC = () => {
   const [liveCurrentOdd, setLiveCurrentOdd] = useState('');
   const [liveAP_5m, setLiveAP_5m] = useState(''); 
 
+  // 🔥 ESTADOS DO MOTOR CONTEXTUAL (TDF & EDM)
   const [recentShots, setRecentShots] = useState('');
   const [recentCorners, setRecentCorners] = useState('');
   const [pressureTrend, setPressureTrend] = useState('stable'); 
@@ -152,6 +159,9 @@ const Calculators: React.FC = () => {
   const [scoutBuilderResult, setScoutBuilderResult] = useState<any | null>(null);
   const [selectedMatchesForBuilder, setSelectedMatchesForBuilder] = useState<string[]>([]);
 
+  // ==========================================
+  // LÓGICA DO SCANNER VISION IA (HUD)
+  // ==========================================
   const [scannedImage, setScannedImage] = useState<string | null>(null);
   const [isScanning, setIsScanning] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -183,7 +193,7 @@ const Calculators: React.FC = () => {
           const blob = items[i].getAsFile();
           if (blob) {
              if (!VALID_IMAGE_TYPES.includes(blob.type)) {
-                 setToast({ type: 'error', message: '⚠️ Formato inválido! Cole apenas PNG, JPG ou WEBP.' });
+                 setToast({ type: 'error', message: '⚠️ Formato inválido! Cole apenas imagens PNG, JPG ou WEBP.' });
                  return;
              }
              if (activeTab === 'scout') {
@@ -205,6 +215,7 @@ const Calculators: React.FC = () => {
     if (file && VALID_IMAGE_TYPES.includes(file.type)) processVisionAI(file);
   };
 
+  // 🔥 PROCESSAMENTO DO SCOUT (GRID VS BUILDER)
   const handleScoutGridUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file && VALID_IMAGE_TYPES.includes(file.type)) handleAddScoutGridImage(file);
@@ -229,7 +240,6 @@ const Calculators: React.FC = () => {
           const base64Data = await fileToBase64(file);
           const response = await fetch('/api/vision-grid', {
               method: 'POST', headers: { 'Content-Type': 'application/json' },
-              // 🔥 ENVIO DE EMAIL CORRIGIDO
               body: JSON.stringify({ image: base64Data, mimeType: 'image/jpeg', email: userEmail })
           });
 
@@ -269,7 +279,6 @@ const Calculators: React.FC = () => {
 
           const response = await fetch('/api/vision-builder', {
               method: 'POST', headers: { 'Content-Type': 'application/json' },
-              // 🔥 ENVIO DE EMAIL CORRIGIDO E ARRAY DE IMAGENS COMPRIMIDAS
               body: JSON.stringify({ images: base64Images, email: userEmail })
           });
 
@@ -314,7 +323,6 @@ const Calculators: React.FC = () => {
         const base64Data = await fileToBase64(file);
         const response = await fetch('/api/vision', {
             method: 'POST', headers: { 'Content-Type': 'application/json' },
-            // 🔥 ENVIO DE EMAIL CORRIGIDO NO ExC/ExG
             body: JSON.stringify({ image: base64Data, mimeType: 'image/jpeg', mode: activeTab, email: userEmail, scenario: activeTab === 'exc' ? excScenario : exgScenario })
         });
 
@@ -340,9 +348,11 @@ const Calculators: React.FC = () => {
            handleIncrementScan();
            setToast({ type: 'success', message: 'Contexto Extraído com IA!' });
         }
+        setIsScanning(false);
     } catch (e: any) {
         setToast({ type: 'error', message: e.message || 'Erro na leitura visual.' });
-    } finally { setIsScanning(false); }
+        setIsScanning(false);
+    }
   };
 
   const resetScanner = () => {
@@ -359,11 +369,11 @@ const Calculators: React.FC = () => {
   const [exgScenario, setExgScenario] = useState('ft_over05');
 
   const excScenariosData: Record<string, { title: string; checks: string[] }> = {
-    ht_asian: { title: 'Canto Asiático HT', checks: ['Relógio entre 25 e 36 minutos?', 'Favorito pressionando ativamente?', 'Assimetria visível no radar?'] },
-    ht_limit: { title: 'Canto Limite HT', checks: ['Relógio entre 37 e 41 minutos?', 'Ataques rápidos e finalizações ocorrendo?', 'Adversário empurrado para a própria área?'] },
+    ht_asian: { title: 'Canto Asiático HT (Margem Segura)', checks: ['Relógio entre 25 e 36 minutos?', 'Favorito pressionando ativamente?', 'Assimetria visível no radar?'] },
+    ht_limit: { title: 'Canto Limite HT (Abafa Retranca)', checks: ['Relógio entre 37 e 41 minutos?', 'Ataques rápidos e finalizações ocorrendo?', 'Adversário empurrado para a própria área?'] },
     ht_zoio: { title: 'Canto Zóio HT (Kamikaze 42\'+)', checks: ['Relógio passando dos 42 minutos?', 'Favorito perdendo/empatando no sufoco?', 'Bolas sendo jogadas direto na área?'] },
-    ft_asian: { title: 'Canto Asiático FT', checks: ['Relógio entre 65 e 78 minutos?', 'Time dominou a posse no 2º tempo?', 'Zagueiros rebatendo muitas bolas?'] },
-    ft_limit: { title: 'Canto Limite FT', checks: ['Relógio entre 82 e 87 minutos?', 'Modo desespero (Abafa Absoluto)?', 'Adversário não consegue segurar a bola?'] },
+    ft_asian: { title: 'Canto Asiático FT (Volta do Intervalo)', checks: ['Relógio entre 65 e 78 minutos?', 'Time dominou a posse no 2º tempo?', 'Zagueiros rebatendo muitas bolas?'] },
+    ft_limit: { title: 'Canto Limite FT (Desespero Final)', checks: ['Relógio entre 82 e 87 minutos?', 'Modo desespero (Abafa Absoluto)?', 'Adversário não consegue segurar a bola?'] },
     ft_zoio: { title: 'Canto Zóio FT (Kamikaze 88\'+)', checks: ['Relógio passando dos 88 minutos?', 'Goleiro indo pro ataque?', 'Defesa cortando bola pra qualquer lado?'] }
   };
 
@@ -1304,6 +1314,7 @@ const Calculators: React.FC = () => {
                    )}
 
                 </div>
+                )
             )}
             
         </div>
@@ -1323,7 +1334,7 @@ const Calculators: React.FC = () => {
                     <div className="flex items-start gap-3">
                        <AlertTriangle size={16} className="text-yellow-500 mt-0.5 shrink-0" />
                        <p className="text-[10px] text-slate-500 dark:text-slate-400 leading-relaxed">
-                         Lembre-se: Todas as calculadoras assumem liquidez disponível. Sempre verifique os limites da casa antes de operar. Os resultados gerados nesta página não são recomendações de entrada nem aconselhamento financeiro. A responsabilidade é inteiramente sua.
+                         Lembre-se: Todas as calculadoras assumem liquidez disponível. Sempre verifique os limites da casa antes de operar. Os resultados matemáticos gerados nesta página não são recomendações de entrada nem aconselhamento financeiro. A responsabilidade é inteiramente sua.
                        </p>
                     </div>
                 </div>
