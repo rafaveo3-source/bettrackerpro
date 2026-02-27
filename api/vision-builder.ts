@@ -56,7 +56,12 @@ NUNCA use número fixo ou padrão.
 3. COVARIÂNCIA (GAME SCRIPT):
 Entenda o contexto do jogo e evite correlações perigosas.
 
-4. ARMADILHA DA LETALIDADE:
+4. TAMANHO DA AMOSTRA:
+Analise visualmente nos gráficos a quantidade de jogos utilizados para gerar a estatística (Ex: últimos 5, 10 ou 20 jogos).
+Retorne EXATAMENTE este número inteiro na chave "sampleSize".
+NUNCA utilize valor fixo ou padrão.
+
+5. ARMADILHA DA LETALIDADE:
 Evite overs de escanteios se houver alta eficiência ofensiva.
 
 ⚠️ REGRAS:
@@ -98,66 +103,74 @@ Retorne ESTRITAMENTE um JSON válido:
       throw new Error('Falha na conversão do JSON retornado.');
     }
 
-    // ==============================
-    // 🧠 DETECÇÃO DE CORRELAÇÃO
-    // ==============================
+    // 🧠 DETECÇÃO DE CORRELAÇÃO E SCORE ESTRUTURAL
 
-    let structuralRiskScore = 0;
+let structuralRiskScore = 0;
 
-    if (json.selections && json.selections.length > 1) {
+if (json.selections && json.selections.length > 1) {
 
-      const marketsLower = json.selections.map((s: any) =>
+    // 🔐 Blindagem contra undefined + evita shadowing
+    const marketsLower = json.selections.map((s: any) =>
         (s.market || '').toLowerCase()
-      );
+    );
 
-      const teamMentions: Record<string, number> = {};
+    const teamMentions: Record<string, number> = {};
 
-      json.selections.forEach((sel: any) => {
+    json.selections.forEach((sel: any) => {
 
         const matchStr = (sel.match || '').toLowerCase();
 
-        // Regex robusto para separar times
+        // 🔥 Regex robusto para vs | x | -
         const parts = matchStr.split(/\s+(vs|x|-)\s+/i);
 
+        // Regex com capture group retorna:
+        // [0] = time casa
+        // [1] = separador
+        // [2] = time visitante
         if (parts.length >= 3) {
 
-          const home = parts[0].trim();
-          const away = parts[2].trim();
+            const home = parts[0].trim();
+            const away = parts[2].trim();
 
-          const marketStr = (sel.market || '').toLowerCase();
+            const marketStr = (sel.market || '').toLowerCase();
 
-          if (home && marketStr.includes(home))
-            teamMentions[home] = (teamMentions[home] || 0) + 1;
+            if (home && marketStr.includes(home)) {
+                teamMentions[home] = (teamMentions[home] || 0) + 1;
+            }
 
-          if (away && marketStr.includes(away))
-            teamMentions[away] = (teamMentions[away] || 0) + 1;
+            if (away && marketStr.includes(away)) {
+                teamMentions[away] = (teamMentions[away] || 0) + 1;
+            }
         }
-      });
+    });
 
-      Object.values(teamMentions).forEach((count) => {
+    // 🔥 Regra 1 — Dois mercados do mesmo time
+    Object.values(teamMentions).forEach(count => {
         if (count >= 2) structuralRiskScore += 2;
-      });
+    });
 
-      const hasHT = marketsLower.some((m) =>
+    // 🔥 Regra 2 — Mercado HT presente
+    const hasHT = marketsLower.some(m =>
         m.includes('(ht)') ||
         m.includes('1º tempo') ||
         m.includes('1o tempo')
-      );
+    );
 
-      if (hasHT) structuralRiskScore += 1;
+    if (hasHT) structuralRiskScore += 1;
 
-      const hasTotal = marketsLower.some((m) =>
+    // 🔥 Regra 3 — Total + Mercado específico
+    const hasTotalMarket = marketsLower.some(m =>
         m.includes('total')
-      );
+    );
 
-      const hasTeamSpecific = marketsLower.some((m) =>
+    const hasNonTotalMarket = marketsLower.some(m =>
         !m.includes('total')
-      );
+    );
 
-      if (hasTotal && hasTeamSpecific)
+    if (hasTotalMarket && hasNonTotalMarket) {
         structuralRiskScore += 1;
     }
-
+}
     // ==============================
     // 🧮 CÁLCULO DE ODD JUSTA
     // ==============================
