@@ -80,6 +80,62 @@ export default async function handler(req: any, res: any) {
     } catch (e) {
         throw new Error('Falha na conversão dos dados matemáticos.');
     }
+
+
+    // 🧠 DETECÇÃO DE CORRELAÇÃO E SCORE ESTRUTURAL
+
+let structuralRiskScore = 0;
+
+if (json.selections && json.selections.length > 1) {
+
+    const markets = json.selections.map((s: any) => s.market.toLowerCase());
+
+    const teamMentions: Record<string, number> = {};
+
+    json.selections.forEach((sel: any) => {
+
+        const matchStr = (sel.match || '').toLowerCase();
+        const parts = matchStr.split(' vs ');
+
+        if (parts.length === 2) {
+
+            const home = parts[0].trim();
+            const away = parts[1].trim();
+
+            const marketStr = sel.market.toLowerCase();
+
+            if (home && marketStr.includes(home)) {
+                teamMentions[home] = (teamMentions[home] || 0) + 1;
+            }
+
+            if (away && marketStr.includes(away)) {
+                teamMentions[away] = (teamMentions[away] || 0) + 1;
+            }
+        }
+    });
+
+    // 🔥 Regra 1 — Dois mercados do mesmo time
+    Object.values(teamMentions).forEach(count => {
+        if (count >= 2) structuralRiskScore += 2;
+    });
+
+    // 🔥 Regra 2 — Mercado HT presente
+    const hasHT = markets.some(m => 
+        m.includes('(ht)') || 
+        m.includes('1º tempo') || 
+        m.includes('1o tempo')
+    );
+
+    if (hasHT) structuralRiskScore += 1;
+
+    // 🔥 Regra 3 — Total + Mercado específico do mesmo jogo
+    const hasTotalMarket = markets.some(m => m.includes('total'));
+    const hasNonTotalMarket = markets.some(m => !m.includes('total'));
+
+    if (hasTotalMarket && hasNonTotalMarket) {
+        structuralRiskScore += 1;
+    }
+}
     
     // 🧮 CÁLCULO DE ODD JUSTA REBALANCEADO (Shrink Inteligente + Correlação Leve)
 
@@ -111,7 +167,19 @@ if (json.selections && json.selections.length > 0) {
         1
     );
 
-    const finalProb = combinedProbDecimal * CORRELATION_PENALTY;
+    // 🎯 Penalização dinâmica baseada no risco estrutural
+
+const structuralPenalty =
+    structuralRiskScore >= 4 ? 0.90 :
+    structuralRiskScore === 3 ? 0.93 :
+    structuralRiskScore === 2 ? 0.95 :
+    structuralRiskScore === 1 ? 0.97 :
+    1;
+
+const finalProb =
+    combinedProbDecimal *
+    CORRELATION_PENALTY *
+    structuralPenalty;
 
     json.combinedProb = Math.round(finalProb * 100);
     json.fairOdd = Number((1 / finalProb).toFixed(2));
@@ -122,6 +190,8 @@ if (json.selections && json.selections.length > 0) {
     if (!isAdmin) {
        // Banco de Dados Futuro
     }
+
+    json.structuralRiskScore = structuralRiskScore;
 
     return res.status(200).json(json);
 
