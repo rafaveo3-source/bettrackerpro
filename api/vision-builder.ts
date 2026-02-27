@@ -164,30 +164,25 @@ if (json.selections && json.selections.length > 1) {
 
     if (json.selections && json.selections.length > 0) {
 
+      // 1. Calcula apenas a probabilidade pura primeiro (Sem penalidades)
+      const rawCombinedProb = json.selections.reduce(
+        (acc: number, curr: any) => {
+          const rawProb = (Number(curr.prob) || 75) / 100;
+          return acc * rawProb;
+        }, 1
+      );
+
+      // 2. Extrai a média de amostragem do bilhete para punir uma vez só
+      const avgSample = json.selections.reduce((acc: number, curr: any) => acc + (Number(curr.sampleSize) || 10), 0) / json.selections.length;
+
+      const confidenceAdjustment =
+        avgSample >= 15 ? 1 :
+        avgSample >= 10 ? 0.97 :
+        avgSample >= 7 ? 0.94 :
+        0.90;
+
       const SHRINK_FACTOR = 0.93;
       const CORRELATION_PENALTY = 0.97;
-
-      const combinedProbDecimal = json.selections.reduce(
-        (acc: number, curr: any) => {
-
-          const rawProb = (Number(curr.prob) || 75) / 100;
-          const sampleSize = Number(curr.sampleSize) || 10;
-
-          const confidenceAdjustment =
-            sampleSize >= 15 ? 1 :
-            sampleSize >= 10 ? 0.97 :
-            sampleSize >= 7 ? 0.94 :
-            0.90;
-
-          const adjustedProb =
-            rawProb *
-            SHRINK_FACTOR *
-            confidenceAdjustment;
-
-          return acc * adjustedProb;
-        },
-        1
-      );
 
       const structuralPenalty =
         structuralRiskScore >= 4 ? 0.90 :
@@ -196,8 +191,11 @@ if (json.selections && json.selections.length > 1) {
         structuralRiskScore === 1 ? 0.97 :
         1;
 
+      // 3. Aplica todas as penalidades juntas no final (Juros simples)
       const finalProb =
-        combinedProbDecimal *
+        rawCombinedProb *
+        SHRINK_FACTOR *
+        confidenceAdjustment *
         CORRELATION_PENALTY *
         structuralPenalty;
 
