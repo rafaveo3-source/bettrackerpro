@@ -27,7 +27,7 @@ export default async function handler(req: any, res: any) {
 
     const selectedMarketsStr = markets && markets.length > 0 ? markets.join(', ') : 'Gols, Escanteios';
 
-    // 🔥 SUPER PROMPT V7: POISSON, COVARIÂNCIA, LETALIDADE E LINHAS ASIÁTICAS
+    // 🔥 SUPER PROMPT V8: POISSON, COVARIÂNCIA, E ESCALA DE LINHAS ALTERNATIVAS (SEM ASIÁTICOS)
     const prompt = `Você é um Analista Quantitativo HFT de Elite e Gestor de Risco Esportivo.
     Sua missão é criar uma Aposta Combinada (Múltipla) lendo as imagens estatísticas fornecidas.
 
@@ -36,16 +36,17 @@ export default async function handler(req: any, res: any) {
     Para isso, ajuste as linhas para encontrar eventos individuais com probabilidade de acerto entre 75% e 82%. NUNCA pegue eventos óbvios demais (95%+), pois destroem a precificação.
 
     ⚙️ MOTOR MATEMÁTICO E TÁTICO OBRIGATÓRIO (APLIQUE ESTAS 3 REGRAS):
-    1. DISTRIBUIÇÃO DE POISSON E CONSTÂNCIA: Ignore "Médias" puras (ex: média de 10 cantos por jogo), pois médias são manipuladas por jogos atípicos (outliers). Olhe EXCLUSIVAMENTE para a Constância / Taxa de Acerto (Hit Rate %). Só selecione uma linha se o time a bate de forma consistente (Acima de 75% nos últimos 10 jogos).
+    1. DISTRIBUIÇÃO DE POISSON E CONSTÂNCIA: Ignore "Médias" puras (ex: média de 10 cantos por jogo), pois médias são manipuladas por outliers. Olhe EXCLUSIVAMENTE para a Constância / Taxa de Acerto (Hit Rate %). Só selecione uma linha se o time a bate de forma consistente (Acima de 75% nos últimos 10 jogos).
     
     2. COVARIÂNCIA (CORRELAÇÃO DE EVENTOS): Entenda o "Game Script". Se um time é super favorito ou perdeu a primeira partida, ele terá domínio de campo (Field Tilt > 65%). Nesse caso, apostas de "Gols" e "Cantos a favor do Favorito" têm correlação positiva.
     
-    3. PIOR CENÁRIO DE ESCANTEIOS (ARMADILHA DA LETALIDADE): Muito cuidado ao sugerir "Mais de Cantos". Se as estatísticas mostrarem que um time faz muitos gols (Alta Letalidade) ou converte ataques em gols muito rápido, EVITE apostar no Overs de Escanteios desse jogo. Se o time fizer 2x0 no primeiro tempo, o jogo morre, eles recuam e os escanteios desaparecem. Só sugira "Over Cantos" para times que têm muito volume de ataque (alto Field Tilt), mas sofrem para fazer gol (chutam travado ou cruzam muita bola).
+    3. PIOR CENÁRIO DE ESCANTEIOS (ARMADILHA DA LETALIDADE): Muito cuidado ao sugerir "Mais de Cantos". Se as estatísticas mostrarem que um time faz muitos gols (Alta Letalidade) ou converte ataques em gols muito rápido, EVITE apostar no Overs de Escanteios desse jogo. Se o time fizer 2x0 cedo, o jogo morre e os escanteios desaparecem. Só sugira "Over Cantos" para times com muito volume de ataque, mas que sofrem para finalizar.
 
-    ⚠️ FIREWALL DE MERCADOS E PROTEÇÃO DE CAPITAL:
+    ⚠️ FIREWALL DE MERCADOS E PROTEÇÃO DE MÚLTIPLAS (BET365 COMPLIANCE):
     - É PROIBIDO usar Resultado (1x2), Cartões, Vencedor ou Jogadores.
-    - Use APENAS variações de: [ ${selectedMarketsStr} ] (Ex: HT/FT, Exclusivos de Equipe).
-    - Para a chave "conservativeCombination", você deve OBRIGATORIAMENTE usar Linhas Asiáticas Inteiras (+1.0 Gols, +8.0 Cantos) visando proteção/reembolso.
+    - Use APENAS variações de: [ ${selectedMarketsStr} ].
+    - É ESTRITAMENTE PROIBIDO usar Linhas Asiáticas (como +1.0 Gols ou +8.0 Cantos) porque as casas de apostas bloqueiam isso em Múltiplas. 
+    - Para a chave "conservativeCombination", você deve aplicar o "Fractional Drop". Reduza as linhas decimais ao máximo suportado pelas estatísticas. Exemplo: Se a recomendação principal for "Mais de 1.5 Gols", a conservadora DEVE ser "Mais de 0.5 Gols". Se a principal for "Mais de 8.5 Cantos", a conservadora DEVE ser "Mais de 6.5 Cantos".
 
     Retorne ESTRITAMENTE um JSON válido neste formato exato (sem \`\`\`json ou markdown):
     {
@@ -56,8 +57,8 @@ export default async function handler(req: any, res: any) {
           "prob": 78
         }
       ],
-      "alternativeCombination": "Sugestão alternativa direta focada em Gols ou Cantos.",
-      "conservativeCombination": "Versão super segura usando OBRIGATORIAMENTE LINHAS ASIÁTICAS INTEIRAS (Ex: +1.0 Gol Asiático).",
+      "alternativeCombination": "Sugestão alternativa focada em Gols ou Cantos dentro do padrão permitido.",
+      "conservativeCombination": "Versão super segura aplicando o Fractional Drop (ex: Menos linhas fracionadas, Mais de 0.5 Gols, Mais de 6.5 Cantos). Sem uso de asiáticos.",
       "analysis": "Sua tese em tópicos:\\n• Aplicação de Poisson/Hit Rate: [sua análise da constância]\\n• Correlação e Letalidade: [sua análise do cenário do jogo e por que fugiu do pior cenário]\\n• Enquadramento da Odd: [como isso gera a odd alvo]."
     }`;
 
@@ -79,7 +80,7 @@ export default async function handler(req: any, res: any) {
         throw new Error('Falha na conversão dos dados matemáticos.');
     }
     
-    // 🧮 CÁLCULO DE ODD JUSTA CROSS-MATCH (Matemática pura no Backend)
+    // 🧮 CÁLCULO DE ODD JUSTA CROSS-MATCH (Matemática pura no Backend com Number Fallback)
     if (json.selections && json.selections.length > 0) {
         const combinedProbDecimal = json.selections.reduce((acc: number, curr: any) => acc * ((Number(curr.prob) || 78) / 100), 1);
         json.combinedProb = Math.round(combinedProbDecimal * 100);
