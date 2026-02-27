@@ -52,11 +52,14 @@ export default async function handler(req: any, res: any) {
     {
       "selections": [
         {
-          "match": "Time A vs Time B",
-          "market": "Time da Casa (HT) - Mais de 2.5 Escanteios",
-          "prob": 78
-        }
-      ],
+  "selections": [
+    {
+      "match": "Time A vs Time B",
+      "market": "Time da Casa (HT) - Mais de 2.5 Escanteios",
+      "prob": 78,
+      "sampleSize": 10
+    }
+  ],
       "alternativeCombination": "Sugestão alternativa focada em Gols ou Cantos dentro do padrão permitido.",
       "conservativeCombination": "Versão super segura aplicando o Fractional Drop (ex: Menos linhas fracionadas, Mais de 0.5 Gols, Mais de 6.5 Cantos). Sem uso de asiáticos.",
       "analysis": "Sua tese em tópicos:\\n• Aplicação de Poisson/Hit Rate: [sua análise da constância]\\n• Correlação e Letalidade: [sua análise do cenário do jogo e por que fugiu do pior cenário]\\n• Enquadramento da Odd: [como isso gera a odd alvo]."
@@ -80,15 +83,40 @@ export default async function handler(req: any, res: any) {
         throw new Error('Falha na conversão dos dados matemáticos.');
     }
     
-    // 🧮 CÁLCULO DE ODD JUSTA CROSS-MATCH (Matemática pura no Backend com Number Fallback)
-    if (json.selections && json.selections.length > 0) {
-        const combinedProbDecimal = json.selections.reduce((acc: number, curr: any) => acc * ((Number(curr.prob) || 78) / 100), 1);
-        json.combinedProb = Math.round(combinedProbDecimal * 100);
-        json.fairOdd = Number((1 / combinedProbDecimal).toFixed(2));
-    } else {
-        throw new Error('Não foi possível extrair seleções válidas com as regras informadas.');
-    }
+    // 🧮 CÁLCULO DE ODD JUSTA REFINADO (Shrink + Amostra + Correlação)
 
+if (json.selections && json.selections.length > 0) {
+
+    const SHRINK_FACTOR = 0.85;           // Regressão à média
+    const CORRELATION_PENALTY = 0.92;     // Penalização estrutural de múltiplas
+
+    const combinedProbDecimal = json.selections.reduce(
+        (acc: number, curr: any) => {
+
+            const rawProb = (Number(curr.prob) || 75) / 100;
+            const sampleSize = Number(curr.sampleSize) || 10;
+
+            // 🎯 Peso baseado na robustez da amostra
+            const sampleWeight = Math.min(sampleSize / 20, 1);
+
+            const adjustedProb =
+                rawProb *
+                SHRINK_FACTOR *
+                sampleWeight;
+
+            return acc * adjustedProb;
+        },
+        1
+    );
+
+    const finalProb = combinedProbDecimal * CORRELATION_PENALTY;
+
+    json.combinedProb = Math.round(finalProb * 100);
+    json.fairOdd = Number((1 / finalProb).toFixed(2));
+
+} else {
+    throw new Error('Não foi possível extrair seleções válidas com as regras informadas.');
+}
     if (!isAdmin) {
        // Banco de Dados Futuro
     }
