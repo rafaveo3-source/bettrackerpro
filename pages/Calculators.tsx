@@ -692,9 +692,8 @@ const Calculators: React.FC = () => {
                 </div>
             )}
 
-            {activeTab === 'value' && (
-                <>
-                {!isPro ? <ProLockScreen /> : (
+            {activeTab === 'value' && !isPro && <ProLockScreen />}
+            {activeTab === 'value' && isPro && (
                 <div className="bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-800 rounded-[2rem] p-6 shadow-sm">
                    <h2 className="text-lg font-black text-slate-900 dark:text-white uppercase tracking-tighter italic mb-6 flex items-center gap-2"><Target size={20} className="text-emerald-500"/> Value Bet Finder</h2>
                    <div className="grid grid-cols-2 gap-4 mb-6">
@@ -717,13 +716,10 @@ const Calculators: React.FC = () => {
                       </p>
                    </div>
                 </div>
-                )}
-                </>
             )}
 
-            {activeTab === 'arb' && (
-                <>
-                {!isPro ? <ProLockScreen /> : (
+            {activeTab === 'arb' && !isPro && <ProLockScreen />}
+            {activeTab === 'arb' && isPro && (
                 <div className="bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-800 rounded-[2rem] p-6 shadow-sm">
                    <h2 className="text-lg font-black text-slate-900 dark:text-white uppercase tracking-tighter italic mb-6 flex items-center gap-2"><Scale size={20} className="text-blue-500"/> Arbitragem (2-Way)</h2>
                    <div className="mb-4">
@@ -754,8 +750,6 @@ const Calculators: React.FC = () => {
                    </div>
                    {arbRoi > 0 && <p className="text-center text-xs text-slate-500 dark:text-slate-400 mt-2">Lucro líquido: R$ {arbProfit.toFixed(2)}</p>}
                 </div>
-                )}
-                </>
             )}
 
             {activeTab === 'stake' && (
@@ -793,9 +787,8 @@ const Calculators: React.FC = () => {
                 </div>
             )}
 
-            {activeTab === 'breakeven' && (
-                <>
-                {!isPro ? <ProLockScreen /> : (
+            {activeTab === 'breakeven' && !isPro && <ProLockScreen />}
+            {activeTab === 'breakeven' && isPro && (
                 <div className="bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-800 rounded-[2rem] p-6 shadow-sm">
                    <h2 className="text-lg font-black text-slate-900 dark:text-white uppercase tracking-tighter italic mb-6 flex items-center gap-2"><TrendingUp size={20} className="text-pink-500"/> Break Even Point</h2>
                    <div className="mb-8">
@@ -808,16 +801,13 @@ const Calculators: React.FC = () => {
                       <p className="text-xs text-slate-500 mt-2">Para ficar no zero a zero (sem prejuízo)</p>
                    </div>
                 </div>
-                )}
-                </>
             )}
 
             {/* =========================================
                 EXPECTATIVA DE CANTOS E GOLS (ExC / ExG)
             ========================================= */}
-            {(activeTab === 'exc' || activeTab === 'exg') && (
-                <>
-                {!isPro ? <ProLockScreen /> : (
+            {(activeTab === 'exc' || activeTab === 'exg') && !isPro && <ProLockScreen />}
+            {(activeTab === 'exc' || activeTab === 'exg') && isPro && (
                 <div className="bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-800 rounded-[2.5rem] p-6 sm:p-8 shadow-sm relative overflow-hidden">
                    <div className="flex justify-between items-start mb-6">
                       <h2 className={`text-2xl font-black uppercase tracking-tighter italic flex items-center gap-2 ${activeTab === 'exc' ? 'text-emerald-500' : 'text-orange-500'}`}>
@@ -1071,8 +1061,6 @@ const Calculators: React.FC = () => {
                      )}
                    </AnimatePresence>
                 </div>
-                )}
-                </>
             )}
 
             {/* =========================================
@@ -1142,28 +1130,33 @@ const Calculators: React.FC = () => {
                          )}
                      </div>
 
-                     {/* RESULTADOS DA GRADE COM CATEGORIZAÇÃO */}
+                     {/* RESULTADOS DA GRADE COM CATEGORIZAÇÃO (UX HFT PREMIUM) */}
                      {scoutGridResult && (
-                         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
+                         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-8">
                              
                              {/* CATEGORIA GOLS */}
                              {scoutGridResult.filter((m:any) => m.market === 'GOLS').length > 0 && (
-                             <div>
-                                 <h3 className="text-[10px] font-black text-orange-500 uppercase tracking-widest mb-3 flex items-center gap-2 border-b border-slate-800 pb-2"><Goal size={14}/> Foco em Gols</h3>
-                                 <div className="space-y-2">
+                             <div className="bg-slate-900/40 border border-slate-800/60 rounded-[2rem] p-6 sm:p-8 shadow-inner">
+                                 <h3 className="text-xs font-black text-orange-500 uppercase tracking-widest mb-6 flex items-center gap-2 border-b border-slate-800/80 pb-4">
+                                     <div className="p-1.5 bg-orange-500/10 rounded-md"><Goal size={16} className="text-orange-500" /></div>
+                                     Foco em Gols (Overs / Ambas)
+                                 </h3>
+                                 <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
                                      {scoutGridResult.filter((m: any) => m.market === 'GOLS').map((match: any, index: number) => {
                                          const isSelected = selectedMatchesForBuilder.includes(match.teams);
                                          return (
-                                             <div key={`gols-${index}`} onClick={() => toggleMatchSelection(match.teams)} className={`bg-[#09090b] border rounded-2xl p-4 flex flex-col sm:flex-row gap-4 justify-between items-start sm:items-center cursor-pointer transition-all ${isSelected ? 'border-indigo-500 shadow-[0_0_15px_rgba(99,102,241,0.2)]' : 'border-slate-800 hover:border-slate-700'}`}>
-                                                 <div className="flex-1">
-                                                     <div className="flex items-center gap-2 mb-1">
-                                                        <span className="bg-slate-800 text-slate-300 px-2 py-0.5 rounded text-[9px] font-mono font-bold flex items-center gap-1"><Clock size={10}/> {safeText(match.time)}</span>
-                                                        <h4 className="text-sm font-black text-white">{safeText(match.teams)}</h4>
+                                             <div key={`gols-${index}`} onClick={() => toggleMatchSelection(match.teams)} className={`relative overflow-hidden bg-[#020617] rounded-2xl p-5 flex flex-col sm:flex-row gap-4 justify-between items-start sm:items-center cursor-pointer transition-all duration-300 group ${isSelected ? 'border-2 border-orange-500 shadow-[0_0_20px_rgba(249,115,22,0.15)] scale-[1.01]' : 'border border-slate-800 hover:border-slate-600 hover:bg-[#0b101e]'}`}>
+                                                 {isSelected && <div className="absolute top-0 left-0 w-1 h-full bg-orange-500 shadow-[0_0_10px_#f97316]"></div>}
+                                                 <div className="flex-1 pl-2 w-full">
+                                                     <div className="flex flex-wrap items-center gap-3 mb-3">
+                                                        <span className="bg-slate-900 text-slate-400 border border-slate-700 px-2.5 py-1 rounded-md text-[10px] font-mono font-bold flex items-center gap-1.5 shrink-0"><Clock size={12} className="text-orange-500"/> {safeText(match.time)}</span>
+                                                        <span className="bg-orange-500/10 text-orange-400 border border-orange-500/20 px-2.5 py-1 rounded-md text-[9px] font-black uppercase tracking-widest flex items-center gap-1 shrink-0"><Zap size={10}/> Radar Ativo</span>
                                                      </div>
-                                                     <p className="text-[11px] text-slate-400 mt-1 leading-relaxed">{safeText(match.reason)}</p>
+                                                     <h4 className="text-sm sm:text-base font-black text-white tracking-tight mb-2 truncate">{safeText(match.teams)}</h4>
+                                                     <p className="text-xs text-slate-400 leading-relaxed flex items-start gap-1.5"><Target size={14} className="text-slate-500 shrink-0 mt-0.5"/> <span className="line-clamp-2">{safeText(match.reason)}</span></p>
                                                  </div>
-                                                 <div className="shrink-0 self-end sm:self-auto">
-                                                     {isSelected ? <CheckCircle2 size={24} className="text-indigo-500" /> : <Square size={24} className="text-slate-700" />}
+                                                 <div className="shrink-0 self-end sm:self-auto pl-2 sm:pl-0">
+                                                     {isSelected ? <CheckCircle2 size={28} className="text-orange-500 drop-shadow-[0_0_8px_rgba(249,115,22,0.4)]" /> : <Square size={28} className="text-slate-700 group-hover:text-slate-500 transition-colors" />}
                                                  </div>
                                              </div>
                                          );
@@ -1174,22 +1167,27 @@ const Calculators: React.FC = () => {
 
                              {/* CATEGORIA CANTOS */}
                              {scoutGridResult.filter((m:any) => m.market === 'CANTOS').length > 0 && (
-                             <div>
-                                 <h3 className="text-[10px] font-black text-emerald-500 uppercase tracking-widest mb-3 flex items-center gap-2 border-b border-slate-800 pb-2 mt-6"><Flag size={14}/> Foco em Cantos</h3>
-                                 <div className="space-y-2">
+                             <div className="bg-slate-900/40 border border-slate-800/60 rounded-[2rem] p-6 sm:p-8 shadow-inner">
+                                 <h3 className="text-xs font-black text-emerald-500 uppercase tracking-widest mb-6 flex items-center gap-2 border-b border-slate-800/80 pb-4 mt-2">
+                                     <div className="p-1.5 bg-emerald-500/10 rounded-md"><Flag size={16} className="text-emerald-500" /></div>
+                                     Foco em Escanteios (Volume / Pressão)
+                                 </h3>
+                                 <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
                                      {scoutGridResult.filter((m: any) => m.market === 'CANTOS').map((match: any, index: number) => {
                                          const isSelected = selectedMatchesForBuilder.includes(match.teams);
                                          return (
-                                             <div key={`cantos-${index}`} onClick={() => toggleMatchSelection(match.teams)} className={`bg-[#09090b] border rounded-2xl p-4 flex flex-col sm:flex-row gap-4 justify-between items-start sm:items-center cursor-pointer transition-all ${isSelected ? 'border-indigo-500 shadow-[0_0_15px_rgba(99,102,241,0.2)]' : 'border-slate-800 hover:border-slate-700'}`}>
-                                                 <div className="flex-1">
-                                                     <div className="flex items-center gap-2 mb-1">
-                                                        <span className="bg-slate-800 text-slate-300 px-2 py-0.5 rounded text-[9px] font-mono font-bold flex items-center gap-1"><Clock size={10}/> {safeText(match.time)}</span>
-                                                        <h4 className="text-sm font-black text-white">{safeText(match.teams)}</h4>
+                                             <div key={`cantos-${index}`} onClick={() => toggleMatchSelection(match.teams)} className={`relative overflow-hidden bg-[#020617] rounded-2xl p-5 flex flex-col sm:flex-row gap-4 justify-between items-start sm:items-center cursor-pointer transition-all duration-300 group ${isSelected ? 'border-2 border-emerald-500 shadow-[0_0_20px_rgba(16,185,129,0.15)] scale-[1.01]' : 'border border-slate-800 hover:border-slate-600 hover:bg-[#0b101e]'}`}>
+                                                 {isSelected && <div className="absolute top-0 left-0 w-1 h-full bg-emerald-500 shadow-[0_0_10px_#10b981]"></div>}
+                                                 <div className="flex-1 pl-2 w-full">
+                                                     <div className="flex flex-wrap items-center gap-3 mb-3">
+                                                        <span className="bg-slate-900 text-slate-400 border border-slate-700 px-2.5 py-1 rounded-md text-[10px] font-mono font-bold flex items-center gap-1.5 shrink-0"><Clock size={12} className="text-emerald-500"/> {safeText(match.time)}</span>
+                                                        <span className="bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-2.5 py-1 rounded-md text-[9px] font-black uppercase tracking-widest flex items-center gap-1 shrink-0"><Activity size={10}/> Radar Ativo</span>
                                                      </div>
-                                                     <p className="text-[11px] text-slate-400 mt-1 leading-relaxed">{safeText(match.reason)}</p>
+                                                     <h4 className="text-sm sm:text-base font-black text-white tracking-tight mb-2 truncate">{safeText(match.teams)}</h4>
+                                                     <p className="text-xs text-slate-400 leading-relaxed flex items-start gap-1.5"><MapIcon size={14} className="text-slate-500 shrink-0 mt-0.5"/> <span className="line-clamp-2">{safeText(match.reason)}</span></p>
                                                  </div>
-                                                 <div className="shrink-0 self-end sm:self-auto">
-                                                     {isSelected ? <CheckCircle2 size={24} className="text-indigo-500" /> : <Square size={24} className="text-slate-700" />}
+                                                 <div className="shrink-0 self-end sm:self-auto pl-2 sm:pl-0">
+                                                     {isSelected ? <CheckCircle2 size={28} className="text-emerald-500 drop-shadow-[0_0_8px_rgba(16,185,129,0.4)]" /> : <Square size={28} className="text-slate-700 group-hover:text-slate-500 transition-colors" />}
                                                  </div>
                                              </div>
                                          );
@@ -1198,10 +1196,11 @@ const Calculators: React.FC = () => {
                              </div>
                              )}
 
+                             {/* BOTAO FLUTUANTE (STICKY CTA) */}
                              {selectedMatchesForBuilder.length > 0 && (
-                                 <motion.div initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} className="sticky bottom-6 mt-8 flex justify-center z-30">
-                                     <button onClick={() => setScoutMode('builder')} className="bg-indigo-600 hover:bg-indigo-500 text-white font-black uppercase tracking-widest text-xs px-8 py-4 rounded-full shadow-[0_10px_30px_rgba(99,102,241,0.3)] flex items-center gap-2 transition-transform active:scale-95">
-                                        Ir para Construtor ({selectedMatchesForBuilder.length}) <ArrowRight size={16} />
+                                 <motion.div initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} className="sticky bottom-6 mt-10 flex justify-center z-40 pointer-events-none">
+                                     <button onClick={() => setScoutMode('builder')} className="bg-indigo-600 hover:bg-indigo-500 text-white font-black uppercase tracking-widest text-[11px] sm:text-xs px-8 sm:px-10 py-4 sm:py-5 rounded-full shadow-[0_15px_40px_rgba(99,102,241,0.4)] border border-indigo-400/30 flex items-center gap-3 transition-transform active:scale-95 pointer-events-auto hover:scale-105">
+                                        <Layers size={18} /> Ir para Construtor ({selectedMatchesForBuilder.length}) <ArrowRight size={18} />
                                      </button>
                                  </motion.div>
                              )}
@@ -1349,9 +1348,9 @@ const Calculators: React.FC = () => {
                                 </div>
 
                                 <div className="bg-slate-900/30 border border-slate-800 p-4 rounded-xl relative z-10">
-    <p className="text-[10px] uppercase tracking-widest text-slate-500 font-bold mb-2">Tese Quantitativa da IA</p>
-    <p className="text-[11px] sm:text-xs text-slate-300 leading-relaxed border-l-2 border-indigo-500 pl-3 whitespace-pre-wrap">{safeText(scoutBuilderResult.analysis)}</p>
-</div>
+                                    <p className="text-[10px] uppercase tracking-widest text-slate-500 font-bold mb-2">Tese Quantitativa da IA</p>
+                                    <p className="text-[11px] sm:text-xs text-slate-300 leading-relaxed border-l-2 border-indigo-500 pl-3 whitespace-pre-wrap">{safeText(scoutBuilderResult.analysis)}</p>
+                                </div>
                             </motion.div>
                         )}
                      </div>
