@@ -81,12 +81,12 @@ export default async function handler(req: any, res: any) {
         throw new Error('Falha na conversão dos dados matemáticos.');
     }
     
-    // 🧮 CÁLCULO DE ODD JUSTA REFINADO (Shrink + Amostra + Correlação)
+    // 🧮 CÁLCULO DE ODD JUSTA REBALANCEADO (Shrink Inteligente + Correlação Leve)
 
 if (json.selections && json.selections.length > 0) {
 
-    const SHRINK_FACTOR = 0.85;           // Regressão à média
-    const CORRELATION_PENALTY = 0.92;     // Penalização estrutural de múltiplas
+    const SHRINK_FACTOR = 0.93;          // Penalização leve (antes era agressiva)
+    const CORRELATION_PENALTY = 0.97;    // Penalização leve estrutural
 
     const combinedProbDecimal = json.selections.reduce(
         (acc: number, curr: any) => {
@@ -94,13 +94,17 @@ if (json.selections && json.selections.length > 0) {
             const rawProb = (Number(curr.prob) || 75) / 100;
             const sampleSize = Number(curr.sampleSize) || 10;
 
-            // 🎯 Peso baseado na robustez da amostra
-            const sampleWeight = Math.min(sampleSize / 20, 1);
+            // 🎯 Ajuste inteligente baseado na amostra (não destrutivo)
+            const confidenceAdjustment =
+                sampleSize >= 15 ? 1 :
+                sampleSize >= 10 ? 0.97 :
+                sampleSize >= 7  ? 0.94 :
+                0.90;
 
             const adjustedProb =
                 rawProb *
                 SHRINK_FACTOR *
-                sampleWeight;
+                confidenceAdjustment;
 
             return acc * adjustedProb;
         },
