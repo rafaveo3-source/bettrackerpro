@@ -1136,27 +1136,31 @@ const Calculators: React.FC = () => {
                              
                              {/* CATEGORIA GOLS */}
                              {scoutGridResult.filter((m:any) => m.market === 'GOLS').length > 0 && (
-                             <div className="bg-slate-900/40 border border-slate-800/60 rounded-[2rem] p-6 sm:p-8 shadow-inner">
+                             <div className="bg-slate-900/40 border border-slate-800/60 rounded-[2rem] p-4 sm:p-8 shadow-inner">
                                  <h3 className="text-xs font-black text-orange-500 uppercase tracking-widest mb-6 flex items-center gap-2 border-b border-slate-800/80 pb-4">
                                      <div className="p-1.5 bg-orange-500/10 rounded-md"><Goal size={16} className="text-orange-500" /></div>
                                      Foco em Gols (Overs / Ambas)
                                  </h3>
-                                 <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
+                                 {/* items-stretch garante que os cards fiquem da mesma altura */}
+                                 <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 items-stretch">
                                      {scoutGridResult.filter((m: any) => m.market === 'GOLS').map((match: any, index: number) => {
                                          const isSelected = selectedMatchesForBuilder.includes(match.teams);
                                          return (
-                                             <div key={`gols-${index}`} onClick={() => toggleMatchSelection(match.teams)} className={`relative overflow-hidden bg-[#020617] rounded-2xl p-5 flex flex-col sm:flex-row gap-4 justify-between items-start sm:items-center cursor-pointer transition-all duration-300 group ${isSelected ? 'border-2 border-orange-500 shadow-[0_0_20px_rgba(249,115,22,0.15)] scale-[1.01]' : 'border border-slate-800 hover:border-slate-600 hover:bg-[#0b101e]'}`}>
+                                             <div key={`gols-${index}`} onClick={() => toggleMatchSelection(match.teams)} className={`relative h-full overflow-hidden bg-[#020617] rounded-2xl p-4 sm:p-5 flex items-center gap-3 sm:gap-4 cursor-pointer transition-all duration-300 group ${isSelected ? 'border-2 border-orange-500 shadow-[0_0_20px_rgba(249,115,22,0.15)] scale-[1.01]' : 'border border-slate-800 hover:border-slate-600 hover:bg-[#0b101e]'}`}>
                                                  {isSelected && <div className="absolute top-0 left-0 w-1 h-full bg-orange-500 shadow-[0_0_10px_#f97316]"></div>}
-                                                 <div className="flex-1 pl-2 w-full">
-                                                     <div className="flex flex-wrap items-center gap-3 mb-3">
-                                                        <span className="bg-slate-900 text-slate-400 border border-slate-700 px-2.5 py-1 rounded-md text-[10px] font-mono font-bold flex items-center gap-1.5 shrink-0"><Clock size={12} className="text-orange-500"/> {safeText(match.time)}</span>
-                                                        <span className="bg-orange-500/10 text-orange-400 border border-orange-500/20 px-2.5 py-1 rounded-md text-[9px] font-black uppercase tracking-widest flex items-center gap-1 shrink-0"><Zap size={10}/> Radar Ativo</span>
+                                                 {/* min-w-0 previne quebra de layout por textos gigantes */}
+                                                 <div className="flex-1 min-w-0 pl-1 sm:pl-2">
+                                                     <div className="flex flex-wrap items-center gap-2 sm:gap-3 mb-2.5">
+                                                        <span className="bg-slate-900 text-slate-400 border border-slate-700 px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-md text-[9px] sm:text-[10px] font-mono font-bold flex items-center gap-1.5 shrink-0"><Clock size={12} className="text-orange-500"/> {safeText(match.time)}</span>
+                                                        <span className="bg-orange-500/10 text-orange-400 border border-orange-500/20 px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-md text-[8px] sm:text-[9px] font-black uppercase tracking-widest flex items-center gap-1 shrink-0"><Zap size={10}/> Radar Ativo</span>
                                                      </div>
-                                                     <h4 className="text-sm sm:text-base font-black text-white tracking-tight mb-2 truncate">{safeText(match.teams)}</h4>
-                                                     <p className="text-xs text-slate-400 leading-relaxed flex items-start gap-1.5"><Target size={14} className="text-slate-500 shrink-0 mt-0.5"/> <span className="line-clamp-2">{safeText(match.reason)}</span></p>
+                                                     {/* line-clamp-2 e break-words resolvem os nomes longos */}
+                                                     <h4 className="text-sm sm:text-base font-black text-white tracking-tight mb-1.5 line-clamp-2 break-words leading-snug">{safeText(match.teams)}</h4>
+                                                     <p className="text-[10px] sm:text-xs text-slate-400 leading-relaxed flex items-start gap-1.5"><Target size={14} className="text-slate-500 shrink-0 mt-0.5"/> <span className="line-clamp-2">{safeText(match.reason)}</span></p>
                                                  </div>
-                                                 <div className="shrink-0 self-end sm:self-auto pl-2 sm:pl-0">
-                                                     {isSelected ? <CheckCircle2 size={28} className="text-orange-500 drop-shadow-[0_0_8px_rgba(249,115,22,0.4)]" /> : <Square size={28} className="text-slate-700 group-hover:text-slate-500 transition-colors" />}
+                                                 {/* O checkbox fica fixo na direita sem esmagar o texto */}
+                                                 <div className="shrink-0 pr-1">
+                                                     {isSelected ? <CheckCircle2 size={26} className="text-orange-500 drop-shadow-[0_0_8px_rgba(249,115,22,0.4)]" /> : <Square size={26} className="text-slate-700 group-hover:text-slate-500 transition-colors" />}
                                                  </div>
                                              </div>
                                          );
@@ -1167,27 +1171,27 @@ const Calculators: React.FC = () => {
 
                              {/* CATEGORIA CANTOS */}
                              {scoutGridResult.filter((m:any) => m.market === 'CANTOS').length > 0 && (
-                             <div className="bg-slate-900/40 border border-slate-800/60 rounded-[2rem] p-6 sm:p-8 shadow-inner">
+                             <div className="bg-slate-900/40 border border-slate-800/60 rounded-[2rem] p-4 sm:p-8 shadow-inner">
                                  <h3 className="text-xs font-black text-emerald-500 uppercase tracking-widest mb-6 flex items-center gap-2 border-b border-slate-800/80 pb-4 mt-2">
                                      <div className="p-1.5 bg-emerald-500/10 rounded-md"><Flag size={16} className="text-emerald-500" /></div>
                                      Foco em Escanteios (Volume / Pressão)
                                  </h3>
-                                 <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
+                                 <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 items-stretch">
                                      {scoutGridResult.filter((m: any) => m.market === 'CANTOS').map((match: any, index: number) => {
                                          const isSelected = selectedMatchesForBuilder.includes(match.teams);
                                          return (
-                                             <div key={`cantos-${index}`} onClick={() => toggleMatchSelection(match.teams)} className={`relative overflow-hidden bg-[#020617] rounded-2xl p-5 flex flex-col sm:flex-row gap-4 justify-between items-start sm:items-center cursor-pointer transition-all duration-300 group ${isSelected ? 'border-2 border-emerald-500 shadow-[0_0_20px_rgba(16,185,129,0.15)] scale-[1.01]' : 'border border-slate-800 hover:border-slate-600 hover:bg-[#0b101e]'}`}>
+                                             <div key={`cantos-${index}`} onClick={() => toggleMatchSelection(match.teams)} className={`relative h-full overflow-hidden bg-[#020617] rounded-2xl p-4 sm:p-5 flex items-center gap-3 sm:gap-4 cursor-pointer transition-all duration-300 group ${isSelected ? 'border-2 border-emerald-500 shadow-[0_0_20px_rgba(16,185,129,0.15)] scale-[1.01]' : 'border border-slate-800 hover:border-slate-600 hover:bg-[#0b101e]'}`}>
                                                  {isSelected && <div className="absolute top-0 left-0 w-1 h-full bg-emerald-500 shadow-[0_0_10px_#10b981]"></div>}
-                                                 <div className="flex-1 pl-2 w-full">
-                                                     <div className="flex flex-wrap items-center gap-3 mb-3">
-                                                        <span className="bg-slate-900 text-slate-400 border border-slate-700 px-2.5 py-1 rounded-md text-[10px] font-mono font-bold flex items-center gap-1.5 shrink-0"><Clock size={12} className="text-emerald-500"/> {safeText(match.time)}</span>
-                                                        <span className="bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-2.5 py-1 rounded-md text-[9px] font-black uppercase tracking-widest flex items-center gap-1 shrink-0"><Activity size={10}/> Radar Ativo</span>
+                                                 <div className="flex-1 min-w-0 pl-1 sm:pl-2">
+                                                     <div className="flex flex-wrap items-center gap-2 sm:gap-3 mb-2.5">
+                                                        <span className="bg-slate-900 text-slate-400 border border-slate-700 px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-md text-[9px] sm:text-[10px] font-mono font-bold flex items-center gap-1.5 shrink-0"><Clock size={12} className="text-emerald-500"/> {safeText(match.time)}</span>
+                                                        <span className="bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-md text-[8px] sm:text-[9px] font-black uppercase tracking-widest flex items-center gap-1 shrink-0"><Activity size={10}/> Radar Ativo</span>
                                                      </div>
-                                                     <h4 className="text-sm sm:text-base font-black text-white tracking-tight mb-2 truncate">{safeText(match.teams)}</h4>
-                                                     <p className="text-xs text-slate-400 leading-relaxed flex items-start gap-1.5"><MapIcon size={14} className="text-slate-500 shrink-0 mt-0.5"/> <span className="line-clamp-2">{safeText(match.reason)}</span></p>
+                                                     <h4 className="text-sm sm:text-base font-black text-white tracking-tight mb-1.5 line-clamp-2 break-words leading-snug">{safeText(match.teams)}</h4>
+                                                     <p className="text-[10px] sm:text-xs text-slate-400 leading-relaxed flex items-start gap-1.5"><MapIcon size={14} className="text-slate-500 shrink-0 mt-0.5"/> <span className="line-clamp-2">{safeText(match.reason)}</span></p>
                                                  </div>
-                                                 <div className="shrink-0 self-end sm:self-auto pl-2 sm:pl-0">
-                                                     {isSelected ? <CheckCircle2 size={28} className="text-emerald-500 drop-shadow-[0_0_8px_rgba(16,185,129,0.4)]" /> : <Square size={28} className="text-slate-700 group-hover:text-slate-500 transition-colors" />}
+                                                 <div className="shrink-0 pr-1">
+                                                     {isSelected ? <CheckCircle2 size={26} className="text-emerald-500 drop-shadow-[0_0_8px_rgba(16,185,129,0.4)]" /> : <Square size={26} className="text-slate-700 group-hover:text-slate-500 transition-colors" />}
                                                  </div>
                                              </div>
                                          );
