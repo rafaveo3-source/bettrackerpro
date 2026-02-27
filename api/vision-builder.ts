@@ -39,38 +39,25 @@ Sua missão é criar uma Aposta Combinada (Múltipla) lendo as imagens estatíst
 
 🎯 SUA META DE ODD E PROBABILIDADE (INVIOLÁVEL):
 A Odd Justa Final do seu bilhete deve ficar EXATAMENTE entre @1.60 e @2.00.
-Para isso, ajuste as linhas para encontrar eventos individuais com probabilidade entre 75% e 82%.
+Para atingir isso com segurança matemática, construa OBRIGATORIAMENTE uma DUPLA (Apenas 2 seleções). Evite triplas.
+Ajuste as linhas para encontrar eventos individuais com probabilidade de acerto entre 75% e 82%.
 
 ⚙️ MOTOR MATEMÁTICO E TÁTICO OBRIGATÓRIO:
+1. DISTRIBUIÇÃO DE POISSON: Ignore médias puras. Use exclusivamente Hit Rate real (%). Selecione apenas linhas acima de 75% de constância.
+2. TAMANHO DA AMOSTRA: Analise visualmente nos gráficos a quantidade de jogos utilizados para gerar a estatística. Retorne esse número REAL na chave "sampleSize".
+3. COVARIÂNCIA E LETALIDADE: Entenda o contexto do jogo. Evite overs de escanteios se houver alta eficiência ofensiva (letalidade alta = jogo acaba cedo).
 
-1. DISTRIBUIÇÃO DE POISSON E CONSTÂNCIA:
-Ignore médias puras. Use exclusivamente Hit Rate real.
-Selecione apenas linhas acima de 75% de constância.
-
-2. IDENTIFICAÇÃO DO TAMANHO DA AMOSTRA (OBRIGATÓRIO):
-Analise visualmente nas imagens quantos jogos compõem aquela estatística 
-(ex: últimos 5, 10 ou 20 jogos).
-Retorne esse número REAL na chave "sampleSize".
-NUNCA use número fixo ou padrão.
-
-3. COVARIÂNCIA (GAME SCRIPT):
-Entenda o contexto do jogo e evite correlações perigosas.
-
-4. TAMANHO DA AMOSTRA:
-Analise visualmente nos gráficos a quantidade de jogos utilizados para gerar a estatística (Ex: últimos 5, 10 ou 20 jogos).
-Retorne EXATAMENTE este número inteiro na chave "sampleSize".
-NUNCA utilize valor fixo ou padrão.
-
-5. ARMADILHA DA LETALIDADE:
-Evite overs de escanteios se houver alta eficiência ofensiva.
-
-⚠️ REGRAS:
-- Proibido Resultado, Cartões, Jogadores.
-- Proibido Linhas Asiáticas.
+⚠️ REGRAS DE MERCADOS E PROTEÇÃO:
+- Proibido Resultado Final (1x2), Cartões, Jogadores.
+- Proibido usar Linhas Asiáticas.
 - Use apenas: [ ${selectedMarketsStr} ].
+- Na alternativa conservadora, aplique o "Fractional Drop" reduzindo a linha obrigatoriamente (Ex: De Mais 1.5 Gols para Mais 0.5 Gols).
 
-Retorne ESTRITAMENTE um JSON válido:
+⚠️ REGRAS DE FORMATAÇÃO DE TEXTO (LEIA COM ATENÇÃO):
+Nas chaves "alternativeCombination", "conservativeCombination" e "analysis", VOCÊ DEVE ESCREVER TEXTO COMUM (STRING).
+É absolutamente PROIBIDO colocar Arrays, Colchetes [ ] ou chaves JSON { } dentro dessas 3 chaves.
 
+Retorne ESTRITAMENTE um JSON válido neste formato:
 {
   "selections": [
     {
@@ -80,9 +67,9 @@ Retorne ESTRITAMENTE um JSON válido:
       "sampleSize": 10
     }
   ],
-  "alternativeCombination": "...",
-  "conservativeCombination": "...",
-  "analysis": "..."
+  "alternativeCombination": "Escreva a alternativa como um texto normal. Ex: Para o jogo do Aston Villa, busque Mais de 0.5 Gols.",
+  "conservativeCombination": "Escreva a versão segura como um texto normal. Ex: Aplicando o Fractional Drop, reduza as linhas para Mais de 0.5 Gols.",
+  "analysis": "Tese em tópicos curtos e diretos:\\n\\n• Aplicação de Poisson:\\nEscreva a análise aqui.\\n\\n• Correlação e Letalidade:\\nEscreva a análise aqui.\\n\\n• Enquadramento da Odd:\\nEscreva a análise aqui."
 }`;
 
     const imageParts = images.map((img: any) => ({
