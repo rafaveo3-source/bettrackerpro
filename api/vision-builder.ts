@@ -1,6 +1,6 @@
 import { GoogleGenerativeAI } from '@google/generative-ai';
 
-// 🔥 Aumenta o tempo limite da Vercel para 60 segundos (Evita Erro 500 no Timeout)
+// 🔥 Aumenta o tempo limite da Vercel para 60 segundos
 export const maxDuration = 60;
 
 export default async function handler(req: any, res: any) {
@@ -15,40 +15,39 @@ export default async function handler(req: any, res: any) {
     if (!apiKey) return res.status(500).json({ error: 'Chave de API ausente.' });
     if (!email) return res.status(400).json({ error: 'Autenticação inválida. E-mail ausente.' });
 
-    // 🛡️ GATEKEEPER DE SEGURANÇA
     const isAdmin = email === adminEmail;
-    if (!isAdmin) {
-        // 🔴 FUTURA INTEGRAÇÃO COM BANCO DE DADOS AQUI
-    }
 
     const genAI = new GoogleGenerativeAI(apiKey);
     const model = genAI.getGenerativeModel({ 
         model: 'gemini-2.5-flash',
         generationConfig: {
-            temperature: 0.1, // Zero criatividade, 100% matemática
+            temperature: 0.1, // Zero criatividade, 100% obediência matemática
         }
     });
 
     const selectedMarketsStr = markets && markets.length > 0 ? markets.join(', ') : 'Gols, Escanteios';
 
-    // 🔥 SUPER PROMPT: OTIMIZAÇÃO DE LEITURA E PROIBIÇÃO DE JSON EM TEXTOS
-    const prompt = `Você é um Analista Quantitativo HFT Especialista em criar Apostas Múltiplas.
-    O usuário enviou prints de estatísticas de partidas de futebol.
+    // 🔥 SUPER PROMPT V7: POISSON, COVARIÂNCIA, LETALIDADE E LINHAS ASIÁTICAS
+    const prompt = `Você é um Analista Quantitativo HFT de Elite e Gestor de Risco Esportivo.
+    Sua missão é criar uma Aposta Combinada (Múltipla) lendo as imagens estatísticas fornecidas.
 
-    🎯 O SEU ALVO MATEMÁTICO (OBRIGATÓRIO):
-    A sua missão é montar um Bilhete Combinado cuja ODD JUSTA FINAL fique entre @1.60 e @2.00.
-    Você DEVE ajustar as linhas (Ex: trocar +0.5 gols por +1.5 gols) para encontrar seleções que tenham individualmente entre 72% e 82% de probabilidade de acerto.
+    🎯 SUA META DE ODD E PROBABILIDADE (INVIOLÁVEL):
+    A Odd Justa Final do seu bilhete deve ficar EXATAMENTE entre @1.60 e @2.00. 
+    Para isso, ajuste as linhas para encontrar eventos individuais com probabilidade de acerto entre 75% e 82%. NUNCA pegue eventos óbvios demais (95%+), pois destroem a precificação.
 
-    ⚠️ REGRA DE OURO 1: FIREWALL DE MERCADOS (APENAS GOLS E CANTOS)
-    Você está ESTRITAMENTE PROIBIDO de sugerir apostas de Cartões, Resultado (1x2), Vencedor ou Dupla Chance.
-    Explore APENAS as variações destes mercados solicitados: [ ${selectedMarketsStr} ].
-    Variações: Mais/Menos Gols/Cantos (Partida, HT, 2º Tempo), Exclusivos do Time, Ambas Marcam, Race Cantos.
+    ⚙️ MOTOR MATEMÁTICO E TÁTICO OBRIGATÓRIO (APLIQUE ESTAS 3 REGRAS):
+    1. DISTRIBUIÇÃO DE POISSON E CONSTÂNCIA: Ignore "Médias" puras (ex: média de 10 cantos por jogo), pois médias são manipuladas por jogos atípicos (outliers). Olhe EXCLUSIVAMENTE para a Constância / Taxa de Acerto (Hit Rate %). Só selecione uma linha se o time a bate de forma consistente (Acima de 75% nos últimos 10 jogos).
+    
+    2. COVARIÂNCIA (CORRELAÇÃO DE EVENTOS): Entenda o "Game Script". Se um time é super favorito ou perdeu a primeira partida, ele terá domínio de campo (Field Tilt > 65%). Nesse caso, apostas de "Gols" e "Cantos a favor do Favorito" têm correlação positiva.
+    
+    3. PIOR CENÁRIO DE ESCANTEIOS (ARMADILHA DA LETALIDADE): Muito cuidado ao sugerir "Mais de Cantos". Se as estatísticas mostrarem que um time faz muitos gols (Alta Letalidade) ou converte ataques em gols muito rápido, EVITE apostar no Overs de Escanteios desse jogo. Se o time fizer 2x0 no primeiro tempo, o jogo morre, eles recuam e os escanteios desaparecem. Só sugira "Over Cantos" para times que têm muito volume de ataque (alto Field Tilt), mas sofrem para fazer gol (chutam travado ou cruzam muita bola).
 
-    ⚠️ REGRA DE OURO 2: FORMATAÇÃO DA RESPOSTA (HUMANIZADA)
-    - Nas chaves "alternativeCombination" e "conservativeCombination", é ESTRITAMENTE PROIBIDO retornar arrays ou JSON. Você DEVE escrever um texto limpo, direto e legível. 
-    - Na chave "analysis", NÃO escreva um bloco gigante de texto. Use TÓPICOS CURTOS com quebra de linha (\\n) focando estritamente no Hit Rate e Médias lidas.
+    ⚠️ FIREWALL DE MERCADOS E PROTEÇÃO DE CAPITAL:
+    - É PROIBIDO usar Resultado (1x2), Cartões, Vencedor ou Jogadores.
+    - Use APENAS variações de: [ ${selectedMarketsStr} ] (Ex: HT/FT, Exclusivos de Equipe).
+    - Para a chave "conservativeCombination", você deve OBRIGATORIAMENTE usar Linhas Asiáticas Inteiras (+1.0 Gols, +8.0 Cantos) visando proteção/reembolso.
 
-    Retorne ESTRITAMENTE um JSON válido neste formato exato:
+    Retorne ESTRITAMENTE um JSON válido neste formato exato (sem \`\`\`json ou markdown):
     {
       "selections": [
         {
@@ -57,9 +56,9 @@ export default async function handler(req: any, res: any) {
           "prob": 78
         }
       ],
-      "alternativeCombination": "Escreva a alternativa de forma direta. Ex: 'Bologna vs Brann: Mais de 8.5 Cantos e Menos de 3.5 Gols.'",
-      "conservativeCombination": "Escreva a versão segura. Ex: 'Bologna vs Brann: Mais de 0.5 Gols e Mais de 3.5 Cantos.'",
-      "analysis": "Tese em tópicos curtos e diretos.\\n• Motivo 1 (Estatística)...\\n• Motivo 2 (Hit rate)..."
+      "alternativeCombination": "Sugestão alternativa direta focada em Gols ou Cantos.",
+      "conservativeCombination": "Versão super segura usando OBRIGATORIAMENTE LINHAS ASIÁTICAS INTEIRAS (Ex: +1.0 Gol Asiático).",
+      "analysis": "Sua tese em tópicos:\\n• Aplicação de Poisson/Hit Rate: [sua análise da constância]\\n• Correlação e Letalidade: [sua análise do cenário do jogo e por que fugiu do pior cenário]\\n• Enquadramento da Odd: [como isso gera a odd alvo]."
     }`;
 
     const imageParts = images.map((img: any) => ({
@@ -80,9 +79,9 @@ export default async function handler(req: any, res: any) {
         throw new Error('Falha na conversão dos dados matemáticos.');
     }
     
-    // 🧮 CÁLCULO DE ODD JUSTA CROSS-MATCH (Múltipla Matemática Real)
+    // 🧮 CÁLCULO DE ODD JUSTA CROSS-MATCH (Matemática pura no Backend)
     if (json.selections && json.selections.length > 0) {
-        const combinedProbDecimal = json.selections.reduce((acc: number, curr: any) => acc * ((curr.prob || 70) / 100), 1);
+        const combinedProbDecimal = json.selections.reduce((acc: number, curr: any) => acc * ((Number(curr.prob) || 78) / 100), 1);
         json.combinedProb = Math.round(combinedProbDecimal * 100);
         json.fairOdd = Number((1 / combinedProbDecimal).toFixed(2));
     } else {
@@ -90,7 +89,7 @@ export default async function handler(req: any, res: any) {
     }
 
     if (!isAdmin) {
-       // 🔴 AQUI VOCÊ SOMA +1 NO BANCO DE DADOS DO USUÁRIO
+       // Banco de Dados Futuro
     }
 
     return res.status(200).json(json);
