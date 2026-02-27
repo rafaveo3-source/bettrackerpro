@@ -50,8 +50,6 @@ export default async function handler(req: any, res: any) {
 
     Retorne ESTRITAMENTE um JSON válido neste formato exato (sem \`\`\`json ou markdown):
     {
-      "selections": [
-        {
   "selections": [
     {
       "match": "Time A vs Time B",
