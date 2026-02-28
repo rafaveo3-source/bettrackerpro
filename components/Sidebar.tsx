@@ -16,7 +16,8 @@ import {
   Crown,
   Moon,
   Sun,
-  PlayCircle
+  PlayCircle,
+  Sparkles // 🔥 Ícone para o HFT
 } from 'lucide-react';
 import { useBetStore } from '../store/useBetStore';
 import { useNavigate } from 'react-router-dom';
@@ -46,6 +47,7 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, setView, isOpen, setIsOp
 
   const menuItems = [
     { id: 'dashboard', label: 'Visão Geral', icon: LayoutDashboard },
+    // 🔥 SCOUT SEPARADO DA LISTA PARA RENDER CUSTOMIZADO ABAIXO
     { id: 'analytics', label: 'Análise de Dados', icon: BarChart2 },
     { id: 'metas', label: 'Metas (Take Profit)', icon: Target },
     { id: 'mindset', label: 'Psicologia', icon: BrainCircuit },
@@ -111,12 +113,42 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, setView, isOpen, setIsOp
         </div>
 
         <nav className="flex-1 overflow-y-auto py-6 px-4 space-y-1 custom-scrollbar">
-            {menuItems.map(item => {
+            {/* BOTÃO DASHBOARD FIXO */}
+            <button
+                onClick={() => handleNavigation('dashboard')}
+                className={`tour-sidebar-dashboard w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200 group mb-2
+                ${currentView === 'dashboard' 
+                    ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-500 border border-emerald-500/20' 
+                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800/50'}`}
+            >
+                <LayoutDashboard size={18} className={currentView === 'dashboard' ? 'text-emerald-500' : 'text-slate-400 group-hover:text-slate-600 dark:group-hover:text-white'} />
+                Visão Geral
+            </button>
+
+            {/* 🔥 BOTÃO KILLER: SCOUT HFT IA COM NEON EFFECT 🔥 */}
+            <div className="relative pb-2">
+               <div className="absolute inset-0 bg-indigo-500/10 blur-xl rounded-full"></div>
+               <button
+                   onClick={() => handleNavigation('scout')}
+                   className={`relative w-full flex items-center justify-between px-4 py-3.5 rounded-xl text-sm font-black uppercase tracking-widest transition-all duration-300 border overflow-hidden group shadow-lg
+                   ${currentView === 'scout' 
+                       ? 'bg-indigo-600 text-white border-indigo-500 shadow-[0_0_20px_rgba(99,102,241,0.3)] scale-[1.02]' 
+                       : 'bg-[#020617] text-indigo-400 border-indigo-500/30 hover:bg-indigo-600 hover:text-white hover:border-indigo-500'}`}
+               >
+                   <div className="flex items-center gap-3 relative z-10">
+                       <Sparkles size={18} className={`${currentView === 'scout' ? 'animate-pulse text-white' : 'text-indigo-400 group-hover:text-white'}`} />
+                       Scout IA
+                   </div>
+                   {!isPro && <Lock size={12} className="opacity-50" />}
+                   {isPro && <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse shadow-[0_0_8px_#34d399]"></div>}
+               </button>
+            </div>
+
+            {/* RESTANTE DOS BOTÕES */}
+            {menuItems.filter(i => i.id !== 'dashboard').map(item => {
                 const isActive = currentView === item.id;
                 
-                // 🔥 CLASSES DO TOUR ATUALIZADAS
                 let tourClass = '';
-                if (item.id === 'dashboard') tourClass = 'tour-sidebar-dashboard';
                 if (item.id === 'bancas') tourClass = 'tour-sidebar-bankroll';
                 if (item.id === 'mindset') tourClass = 'tour-sidebar-mindset';
                 if (item.id === 'metas') tourClass = 'tour-sidebar-metas';
@@ -148,7 +180,6 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, setView, isOpen, setIsOp
             <button 
                 onClick={() => {
                     resetTutorial();
-                    // Força a sidebar a ficar aberta no mobile quando reinicia o tour
                     if (window.innerWidth < 768) setIsOpen(true); 
                 }}
                 className="w-full flex items-center justify-center gap-2 text-blue-500 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-500/10 py-3 rounded-xl transition-all text-xs font-bold uppercase tracking-widest mb-2"
@@ -199,7 +230,6 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, setView, isOpen, setIsOp
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
                 onClick={() => setIsOpen(false)}
-                // z-index deve ser um pouco abaixo da sidebar (que é z-50) e do tour
                 className="fixed inset-0 bg-black/80 backdrop-blur-sm z-40 md:hidden"
             />
         )}

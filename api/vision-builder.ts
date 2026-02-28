@@ -65,6 +65,7 @@ export default async function handler(req: any, res: any) {
         ? markets.join(', ')
         : 'Gols, Escanteios';
 
+    // 🔥 PROMPT AJUSTADO PARA FORÇAR ALTERNATIVA TÁTICA DIFERENTE
     const prompt = `Você é um Analista Quantitativo HFT de Elite e Gestor de Risco Esportivo.
 Sua missão é criar uma Aposta Combinada (Múltipla) lendo as imagens estatísticas fornecidas.
 
@@ -83,7 +84,8 @@ Ajuste as linhas decimais para encontrar eventos individuais com probabilidade d
 - Proibido Resultado Final (1x2), Cartões, Jogadores.
 - Proibido usar Linhas Asiáticas ou números inteiros nos mercados de Mais/Menos (Use sempre finais .5, como Mais de 0.5, Mais de 1.5).
 - Use apenas variações de: [ ${selectedMarketsStr} ].
-- Na alternativa conservadora, aplique o "Fractional Drop" reduzindo a linha obrigatoriamente (Ex: De Mais de 1.5 Gols para Mais de 0.5 Gols).
+- Na "alternativeCombination", você DEVE propor uma aposta DIFERENTE do bilhete principal (Mude o mercado ou a abordagem tática).
+- Na "conservativeCombination", aplique o "Fractional Drop" reduzindo a linha obrigatoriamente (Ex: De Mais de 1.5 Gols para Mais de 0.5 Gols).
 
 ⚠️ REGRAS DE FORMATAÇÃO DE TEXTO (LEIA COM ATENÇÃO):
 Nas chaves "alternativeCombination", "conservativeCombination" e "analysis", VOCÊ DEVE ESCREVER TEXTO COMUM (STRING).
@@ -102,7 +104,7 @@ Retorne ESTRITAMENTE um JSON válido neste formato:
       "sampleSize": 10
     }
   ],
-  "alternativeCombination": "Seja ultra direto, sem explicações. Ex: Aston Villa - Mais de 0.5 Gols e Total - Mais de 7.5 Cantos.",
+  "alternativeCombination": "Sugira uma aposta DIFERENTE da principal de forma direta. Ex: Foco no mercado de Gols: Mais de 1.5 Gols FT e Mais de 0.5 HT.",
   "conservativeCombination": "Seja ultra direto aplicando o Fractional Drop. Ex: Aston Villa - Mais de 0.5 Gols e Total - Mais de 6.5 Cantos.",
   "analysis": "Tese em tópicos curtos e diretos:\\n\\n• Aplicação de Poisson:\\nEscreva a análise aqui.\\n\\n• Correlação e Game Script:\\nEscreva a análise aqui.\\n\\n• Enquadramento da Odd:\\nEscreva a análise aqui."
 }`;

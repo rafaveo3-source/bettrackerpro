@@ -592,7 +592,7 @@ const Calculators: React.FC = () => {
     { id: 'value', label: 'Value Bet', pro: true }, { id: 'arb', label: 'Arbitragem', pro: true },
     { id: 'stake', label: 'Stake %', pro: false }, { id: 'odds', label: 'Odds Conv.', pro: false },
     { id: 'breakeven', label: 'Break Even', pro: true }, { id: 'exc', label: 'ExC (Cantos)', pro: true },
-    { id: 'exg', label: 'ExG (Gols)', pro: true }, { id: 'scout', label: 'Pré-Live IA', pro: true }
+    { id: 'exg', label: 'ExG (Gols)', pro: true }
   ];
 
   return (

@@ -15,7 +15,8 @@ import Calculators from './pages/Calculators';
 import Mindset from './pages/Mindset';
 import Goals from './pages/Goals';
 import SystemLibrary from './pages/SystemLibrary';
-import ProPage from './pages/ProPage'; // ✅ Nova Página Importada
+import ProPage from './pages/ProPage'; 
+import ScoutIA from './pages/ScoutIA'; // 🔥 Nova Página do HFT
 
 // Páginas Públicas
 import LandingPage from './pages/LandingPage';
@@ -32,6 +33,7 @@ const SystemRoutes: React.FC = () => {
   const getCurrentViewID = () => {
     const path = location.pathname;
     if (path.includes('/dashboard')) return 'dashboard';
+    if (path.includes('/scout')) return 'scout'; // 🔥 Novo ID
     if (path.includes('/analytics')) return 'analytics';
     if (path.includes('/goals')) return 'metas';
     if (path.includes('/mindset')) return 'mindset';
@@ -41,13 +43,14 @@ const SystemRoutes: React.FC = () => {
     if (path.includes('/calculators')) return 'calculators';
     if (path.includes('/library')) return 'biblioteca';
     if (path.includes('/settings')) return 'settings';
-    if (path.includes('/pro')) return 'pro'; // ✅ Novo ID
+    if (path.includes('/pro')) return 'pro'; 
     return 'dashboard';
   };
 
   const handleSetView = (viewId: string) => {
     switch (viewId) {
       case 'dashboard': navigate('/dashboard'); break;
+      case 'scout': navigate('/scout'); break; // 🔥 Nova Navegação
       case 'analytics': navigate('/analytics'); break;
       case 'metas': navigate('/goals'); break;
       case 'mindset': navigate('/mindset'); break;
@@ -57,7 +60,7 @@ const SystemRoutes: React.FC = () => {
       case 'calculators': navigate('/calculators'); break;
       case 'biblioteca': navigate('/library'); break;
       case 'settings': navigate('/settings'); break;
-      case 'pro': navigate('/pro'); break; // ✅ Nova Navegação
+      case 'pro': navigate('/pro'); break; 
       default: navigate('/dashboard'); break;
     }
   };
@@ -66,6 +69,7 @@ const SystemRoutes: React.FC = () => {
     <Layout currentView={getCurrentViewID()} setView={handleSetView}>
       <Routes>
         <Route path="/dashboard" element={<Dashboard />} />
+        <Route path="/scout" element={<ScoutIA />} /> {/* 🔥 Nova Rota */}
         <Route path="/analytics" element={<Analytics />} />
         <Route path="/goals" element={<Goals />} />
         <Route path="/mindset" element={<Mindset />} />
@@ -75,7 +79,7 @@ const SystemRoutes: React.FC = () => {
         <Route path="/calculators" element={<Calculators />} />
         <Route path="/library" element={<SystemLibrary />} />
         <Route path="/settings" element={<Settings />} />
-        <Route path="/pro" element={<ProPage />} /> {/* ✅ Nova Rota */}
+        <Route path="/pro" element={<ProPage />} /> 
         <Route path="*" element={<Navigate to="/dashboard" replace />} />
       </Routes>
     </Layout>
