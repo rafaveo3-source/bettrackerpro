@@ -17,7 +17,8 @@ import {
   Moon,
   Sun,
   PlayCircle,
-  Sparkles // 🔥 Ícone para o HFT
+  Sparkles, // 🔥 Ícone para o HFT
+  Lock
 } from 'lucide-react';
 import { useBetStore } from '../store/useBetStore';
 import { useNavigate } from 'react-router-dom';
