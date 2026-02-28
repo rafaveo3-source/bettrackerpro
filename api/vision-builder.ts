@@ -2,6 +2,30 @@ import { GoogleGenerativeAI } from '@google/generative-ai';
 
 export const maxDuration = 60;
 
+// 🔥 MOTOR DE VOLATILIDADE DE MERCADO (VOLATILITY MULTIPLIER)
+const getMarketVolatilityPenalty = (market: string) => {
+  const m = market.toLowerCase();
+
+  // Nível 1: Volatilidade Extrema (Punição Forte)
+  if (m.includes('1º tempo') || m.includes('1o tempo') || m.includes('(ht)') || m.includes('primeiro tempo')) {
+      if (m.includes('escanteios') || m.includes('cantos') || m.includes('race')) return 0.92; 
+      return 0.95; 
+  }
+  
+  // Nível 2: Volatilidade Alta (Punição Moderada)
+  if (m.includes('ambos') || m.includes('btts')) return 0.96;
+  if (m.includes('race')) return 0.96;
+  
+  // Nível 3: Volatilidade Média (Punição Leve)
+  if (m.includes('escanteios') || m.includes('cantos')) return 0.97;
+  
+  // Nível 4: Volatilidade Baixa (Quase sem punição)
+  if (m.includes('gols') || m.includes('gol')) return 0.98;
+
+  // Seguro (Padrão)
+  return 1;
+};
+
 export default async function handler(req: any, res: any) {
   if (req.method !== 'POST')
     return res.status(405).json({ error: 'Method Not Allowed' });
@@ -40,18 +64,19 @@ Sua missão é criar uma Aposta Combinada (Múltipla) lendo as imagens estatíst
 🎯 SUA META DE ODD E PROBABILIDADE (INVIOLÁVEL):
 A Odd Justa Final do seu bilhete deve ficar EXATAMENTE entre @1.60 e @2.00.
 Para atingir isso com segurança matemática, construa OBRIGATORIAMENTE uma DUPLA (Apenas 2 seleções). Evite triplas.
-Ajuste as linhas para encontrar eventos individuais com probabilidade de acerto entre 75% e 82%.
+Ajuste as linhas decimais para encontrar eventos individuais com probabilidade de acerto entre 72% e 82%.
 
 ⚙️ MOTOR MATEMÁTICO E TÁTICO OBRIGATÓRIO:
-1. DISTRIBUIÇÃO DE POISSON: Ignore médias puras. Use exclusivamente Hit Rate real (%). Selecione apenas linhas acima de 75% de constância.
-2. TAMANHO DA AMOSTRA: Analise visualmente nos gráficos a quantidade de jogos utilizados para gerar a estatística. Retorne esse número REAL na chave "sampleSize".
-3. COVARIÂNCIA E LETALIDADE: Entenda o contexto do jogo. Evite overs de escanteios se houver alta eficiência ofensiva (letalidade alta = jogo acaba cedo).
+1. DISTRIBUIÇÃO DE POISSON E CONSTÂNCIA: Ignore médias puras. Use exclusivamente Hit Rate real (%). Selecione linhas que possuam consistência na faixa de 72% a 82%.
+2. TAMANHO DA AMOSTRA (OBRIGATÓRIO): Analise visualmente nos gráficos a quantidade de jogos utilizados para gerar a estatística (Ex: últimos 5, 10 ou 20 jogos). Retorne EXATAMENTE este número inteiro na chave "sampleSize". NUNCA utilize valor fixo ou padrão.
+3. COVARIÂNCIA E BOM SENSO (HT vs FT): Evite linhas agressivas de "Mais de Cantos" no 1º Tempo (HT) a favor de um único time (Ex: Mais de 2.5 cantos HT), a menos que o Hit Rate seja de 90%+. Prefira mercados de Partida Inteira (FT) ou Totais do 1º Tempo para diluir o risco.
+4. ARMADILHA DA LETALIDADE: Evite overs de escanteios se houver alta eficiência ofensiva (letalidade alta = jogo acaba cedo).
 
 ⚠️ REGRAS DE MERCADOS E PROTEÇÃO:
 - Proibido Resultado Final (1x2), Cartões, Jogadores.
-- Proibido usar Linhas Asiáticas.
-- Use apenas: [ ${selectedMarketsStr} ].
-- Na alternativa conservadora, aplique o "Fractional Drop" reduzindo a linha obrigatoriamente (Ex: De Mais 1.5 Gols para Mais 0.5 Gols).
+- Proibido usar Linhas Asiáticas ou números inteiros nos mercados de Mais/Menos (Use sempre finais .5, como Mais de 0.5, Mais de 1.5).
+- Use apenas variações de: [ ${selectedMarketsStr} ].
+- Na alternativa conservadora, aplique o "Fractional Drop" reduzindo a linha obrigatoriamente (Ex: De Mais de 1.5 Gols para Mais de 0.5 Gols).
 
 ⚠️ REGRAS DE FORMATAÇÃO DE TEXTO (LEIA COM ATENÇÃO):
 Nas chaves "alternativeCombination", "conservativeCombination" e "analysis", VOCÊ DEVE ESCREVER TEXTO COMUM (STRING).
@@ -62,14 +87,14 @@ Retorne ESTRITAMENTE um JSON válido neste formato:
   "selections": [
     {
       "match": "Time A vs Time B",
-      "market": "Time da Casa (HT) - Mais de 2.5 Escanteios",
+      "market": "Partida (FT) - Mais de 7.5 Escanteios",
       "prob": 78,
       "sampleSize": 10
     }
   ],
   "alternativeCombination": "Seja ultra direto, sem explicações. Ex: Aston Villa - Mais de 0.5 Gols e Total - Mais de 7.5 Cantos.",
   "conservativeCombination": "Seja ultra direto aplicando o Fractional Drop. Ex: Aston Villa - Mais de 0.5 Gols e Total - Mais de 6.5 Cantos.",
-  "analysis": "Tese em tópicos curtos e diretos:\\n\\n• Aplicação de Poisson:\\nEscreva a análise aqui.\\n\\n• Correlação e Letalidade:\\nEscreva a análise aqui.\\n\\n• Enquadramento da Odd:\\nEscreva a análise aqui."
+  "analysis": "Tese em tópicos curtos e diretos:\\n\\n• Aplicação de Poisson:\\nEscreva a análise aqui.\\n\\n• Correlação e Game Script:\\nEscreva a análise aqui.\\n\\n• Enquadramento da Odd:\\nEscreva a análise aqui."
 }`;
 
     const imageParts = images.map((img: any) => ({
@@ -90,89 +115,58 @@ Retorne ESTRITAMENTE um JSON válido neste formato:
       throw new Error('Falha na conversão do JSON retornado.');
     }
 
+    // ==========================================
     // 🧠 DETECÇÃO DE CORRELAÇÃO E SCORE ESTRUTURAL
+    // ==========================================
+    let structuralRiskScore = 0;
 
-let structuralRiskScore = 0;
+    if (json.selections && json.selections.length > 1) {
+      const marketsLower = json.selections.map((s: any) => (s.market || '').toLowerCase());
+      const teamMentions: Record<string, number> = {};
 
-if (json.selections && json.selections.length > 1) {
-
-    // 🔐 Blindagem contra undefined + evita shadowing
-    const marketsLower = json.selections.map((s: any) =>
-        (s.market || '').toLowerCase()
-    );
-
-    const teamMentions: Record<string, number> = {};
-
-    json.selections.forEach((sel: any) => {
-
+      json.selections.forEach((sel: any) => {
         const matchStr = (sel.match || '').toLowerCase();
+        const parts = matchStr.split(/\s*(vs|x|-)\s*/i);
 
-        // 🔥 Regex robusto para vs | x | -
-        const parts = matchStr.split(/\s+(vs|x|-)\s+/i);
-
-        // Regex com capture group retorna:
-        // [0] = time casa
-        // [1] = separador
-        // [2] = time visitante
         if (parts.length >= 3) {
+          const home = parts[0].trim();
+          const away = parts[2].trim();
+          const marketStr = (sel.market || '').toLowerCase();
 
-            const home = parts[0].trim();
-            const away = parts[2].trim();
-
-            const marketStr = (sel.market || '').toLowerCase();
-
-            if (home && marketStr.includes(home)) {
-                teamMentions[home] = (teamMentions[home] || 0) + 1;
-            }
-
-            if (away && marketStr.includes(away)) {
-                teamMentions[away] = (teamMentions[away] || 0) + 1;
-            }
+          if (home && marketStr.includes(home)) teamMentions[home] = (teamMentions[home] || 0) + 1;
+          if (away && marketStr.includes(away)) teamMentions[away] = (teamMentions[away] || 0) + 1;
         }
-    });
+      });
 
-    // 🔥 Regra 1 — Dois mercados do mesmo time
-    Object.values(teamMentions).forEach(count => {
+      Object.values(teamMentions).forEach(count => {
         if (count >= 2) structuralRiskScore += 2;
-    });
+      });
 
-    // 🔥 Regra 2 — Mercado HT presente
-    const hasHT = marketsLower.some(m =>
-        m.includes('(ht)') ||
-        m.includes('1º tempo') ||
-        m.includes('1o tempo')
-    );
+      const hasHT = marketsLower.some((m: string) => m.includes('(ht)') || m.includes('1º tempo') || m.includes('1o tempo'));
+      if (hasHT) structuralRiskScore += 1;
 
-    if (hasHT) structuralRiskScore += 1;
+      const hasTotalMarket = marketsLower.some((m: string) => m.includes('total') || m.includes('partida') || m.includes('jogo'));
+      const hasNonTotalMarket = marketsLower.some((m: string) => !m.includes('total') && !m.includes('partida') && !m.includes('jogo'));
 
-    // 🔥 Regra 3 — Total + Mercado específico
-    const hasTotalMarket = marketsLower.some(m =>
-        m.includes('total')
-    );
-
-    const hasNonTotalMarket = marketsLower.some(m =>
-        !m.includes('total')
-    );
-
-    if (hasTotalMarket && hasNonTotalMarket) {
-        structuralRiskScore += 1;
+      if (hasTotalMarket && hasNonTotalMarket) structuralRiskScore += 1;
     }
-}
-    // ==============================
-    // 🧮 CÁLCULO DE ODD JUSTA
-    // ==============================
 
+    // ==========================================
+    // 🧮 CÁLCULO DE ODD JUSTA (VOLATILITY ENGINE)
+    // ==========================================
     if (json.selections && json.selections.length > 0) {
 
-      // 1. Calcula apenas a probabilidade pura primeiro (Sem penalidades)
+      // 1. Aplica a Volatilidade por Mercado dentro do reduce
       const rawCombinedProb = json.selections.reduce(
         (acc: number, curr: any) => {
           const rawProb = (Number(curr.prob) || 75) / 100;
-          return acc * rawProb;
+          const volatilityPenalty = getMarketVolatilityPenalty(curr.market || '');
+          
+          return acc * (rawProb * volatilityPenalty);
         }, 1
       );
 
-      // 2. Extrai a média de amostragem do bilhete para punir uma vez só
+      // 2. Extrai a média de amostragem
       const avgSample = json.selections.reduce((acc: number, curr: any) => acc + (Number(curr.sampleSize) || 10), 0) / json.selections.length;
 
       const confidenceAdjustment =
@@ -191,7 +185,7 @@ if (json.selections && json.selections.length > 1) {
         structuralRiskScore === 1 ? 0.97 :
         1;
 
-      // 3. Aplica todas as penalidades juntas no final (Juros simples)
+      // 3. Aplica Punições Globais
       const finalProb =
         rawCombinedProb *
         SHRINK_FACTOR *
@@ -201,12 +195,21 @@ if (json.selections && json.selections.length > 1) {
 
       json.combinedProb = Math.round(finalProb * 100);
       json.fairOdd = Number((1 / finalProb).toFixed(2));
+      
+      // 4. Classificação Visual de Risco do Bilhete
+      let riskLabel = "BAIXO";
+      if (structuralRiskScore >= 3 || avgSample < 10 || finalProb < 0.45) {
+         riskLabel = "ALTO";
+      } else if (structuralRiskScore >= 1 || avgSample < 15 || finalProb < 0.55) {
+         riskLabel = "MÉDIO";
+      }
+      
+      json.structuralRiskScore = structuralRiskScore;
+      json.riskLevel = riskLabel;
 
     } else {
       throw new Error('Nenhuma seleção válida encontrada.');
     }
-
-    json.structuralRiskScore = structuralRiskScore;
 
     return res.status(200).json(json);
 
