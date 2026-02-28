@@ -67,8 +67,8 @@ Retorne ESTRITAMENTE um JSON válido neste formato:
       "sampleSize": 10
     }
   ],
-  "alternativeCombination": "Escreva a alternativa como um texto normal. Ex: Para o jogo do Aston Villa, busque Mais de 0.5 Gols.",
-  "conservativeCombination": "Escreva a versão segura como um texto normal. Ex: Aplicando o Fractional Drop, reduza as linhas para Mais de 0.5 Gols.",
+  "alternativeCombination": "Seja ultra direto, sem explicações. Ex: Aston Villa - Mais de 0.5 Gols e Total - Mais de 7.5 Cantos.",
+  "conservativeCombination": "Seja ultra direto aplicando o Fractional Drop. Ex: Aston Villa - Mais de 0.5 Gols e Total - Mais de 6.5 Cantos.",
   "analysis": "Tese em tópicos curtos e diretos:\\n\\n• Aplicação de Poisson:\\nEscreva a análise aqui.\\n\\n• Correlação e Letalidade:\\nEscreva a análise aqui.\\n\\n• Enquadramento da Odd:\\nEscreva a análise aqui."
 }`;
 
