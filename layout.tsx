@@ -156,6 +156,12 @@ const Layout: React.FC<LayoutProps> = ({ children, currentView, setView }) => {
       content: 'Onde o dinheiro é medido. Aqui você acompanha sua Win Rate real, descobre o EV+ das suas operações e mede seu Max Drawdown para evitar quebras.',
     },
     {
+      target: '.tour-sidebar-scout',
+      placement: 'right',
+      title: <><Sparkles className="text-indigo-500" /> Motor Scout IA (PRO)</>,
+      content: 'A joia da coroa. Nossa Inteligência Artificial lê suas estatísticas, calcula covariância em tempo real e monta bilhetes com Odd Justa matemática. Um cheat code legalizado.',
+    },
+    {
       target: '.tour-sidebar-bankroll',
       placement: 'right',
       title: <><Wallet className="text-amber-500" /> Gestão de Caixas</>,

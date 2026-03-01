@@ -131,7 +131,7 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, setView, isOpen, setIsOp
                <div className="absolute inset-0 bg-indigo-500/10 blur-xl rounded-full"></div>
                <button
                    onClick={() => handleNavigation('scout')}
-                   className={`relative w-full flex items-center justify-between px-4 py-3.5 rounded-xl text-sm font-black uppercase tracking-widest transition-all duration-300 border overflow-hidden group shadow-lg
+                   className={`tour-sidebar-scout relative w-full flex items-center justify-between px-4 py-3.5 rounded-xl text-sm font-black uppercase tracking-widest transition-all duration-300 border overflow-hidden group shadow-lg
                    ${currentView === 'scout' 
                        ? 'bg-indigo-600 text-white border-indigo-500 shadow-[0_0_20px_rgba(99,102,241,0.3)] scale-[1.02]' 
                        : 'bg-[#020617] text-indigo-400 border-indigo-500/30 hover:bg-indigo-600 hover:text-white hover:border-indigo-500'}`}
