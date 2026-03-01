@@ -4,8 +4,7 @@ import {
   Info, ChevronDown, Sparkles, Trash2, Plus, Scale, Percent, ArrowRightLeft, 
   Target, TrendingUp, AlertTriangle, Lock, Crown, Radar, CheckSquare, 
   Square, Activity, Crosshair, BarChart4, Zap, DollarSign, Goal, Lightbulb,
-  Clock, Flag, ShieldAlert, Swords, Power, Scan, Image as ImageIcon, CheckCircle2,
-  Flame, Thermometer, RectangleHorizontal, Layers, Trash, ArrowRight
+  Clock, Flag, ShieldAlert, Swords, Thermometer, RectangleHorizontal, Scan
 } from 'lucide-react';
 import { useBetStore } from '../store/useBetStore';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -53,7 +52,6 @@ const MapIcon = ({ size, className }: any) => (
   </svg>
 );
 
-// 🔥 COMPRESSOR DE IMAGEM HFT
 const fileToBase64 = (file: File): Promise<string> => {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -65,19 +63,11 @@ const fileToBase64 = (file: File): Promise<string> => {
         const MAX_WIDTH = 1200; 
         let width = img.width;
         let height = img.height;
-
-        if (width > MAX_WIDTH) {
-          height = Math.round((height * MAX_WIDTH) / width);
-          width = MAX_WIDTH;
-        }
-
-        canvas.width = width;
-        canvas.height = height;
+        if (width > MAX_WIDTH) { height = Math.round((height * MAX_WIDTH) / width); width = MAX_WIDTH; }
+        canvas.width = width; canvas.height = height;
         const ctx = canvas.getContext('2d');
         ctx?.drawImage(img, 0, 0, width, height);
-        
-        const dataUrl = canvas.toDataURL('image/jpeg', 0.8);
-        resolve(dataUrl.split(',')[1]);
+        resolve(canvas.toDataURL('image/jpeg', 0.8).split(',')[1]);
       };
       img.onerror = (error) => reject(error);
       img.src = event.target?.result as string;
@@ -99,17 +89,16 @@ const poissonExact = (k: number, lambda: number): number => {
 };
 
 const Calculators: React.FC = () => {
-  
-  // 🔥 SUA CHAVE MESTRA
   const userEmail = "rafaelancelmo.castro@gmail.com"; 
 
   const { currentBankrollBalance, isPro, aiScansUsedToday, canUseAiScan, incrementAiScan, setToast } = useBetStore();
   const navigate = useNavigate();
 
-  const [activeTab, setActiveTab] = useState<'dutching'|'kelly'|'value'|'arb'|'stake'|'odds'|'breakeven'|'exc'|'exg'|'scout'>('scout');
+  // 🔥 ESTADO INICIAL CORRIGIDO PARA 'dutching'
+  const [activeTab, setActiveTab] = useState<'dutching'|'kelly'|'value'|'arb'|'stake'|'odds'|'breakeven'|'exc'|'exg'>('dutching');
 
   // ==========================================
-  // ESTADOS COMPARTILHADOS
+  // ESTADOS COMPARTILHADOS (ExC / ExG)
   // ==========================================
   const [liveMin, setLiveMin] = useState('');
   const [liveCorners, setLiveCorners] = useState(''); 
@@ -129,37 +118,9 @@ const Calculators: React.FC = () => {
   const [needsGoal, setNeedsGoal] = useState('false'); 
   const [recentGoal, setRecentGoal] = useState('false'); 
 
-  // ==========================================
-  // ESTADOS DO PRE-LIVE SCOUT
-  // ==========================================
-  const [scoutMode, setScoutMode] = useState<'grid' | 'builder'>('grid');
-  
-  useEffect(() => {
-    if (scoutMode === 'grid') {
-        setScoutBuilderImages([]);
-        setScoutBuilderResult(null);
-    }
-  }, [scoutMode]);
-
-  const [scoutGridImage, setScoutGridImage] = useState<string | null>(null);
-  const [scoutBuilderImages, setScoutBuilderImages] = useState<{url: string, file: File}[]>([]);
-  const [isScanningScout, setIsScanningScout] = useState(false);
-  const [scoutGridResult, setScoutGridResult] = useState<any[] | null>(null);
-  const [scoutBuilderResult, setScoutBuilderResult] = useState<any | null>(null);
-  const [selectedMatchesForBuilder, setSelectedMatchesForBuilder] = useState<string[]>([]);
-
-  const AVAILABLE_MARKETS = ['Gols (Overs, Unders, HT/FT, Equipe)', 'Escanteios (Overs, Race, HT/FT, Equipe)'];
-  const [builderMarkets, setBuilderMarkets] = useState<string[]>([...AVAILABLE_MARKETS]);
-
-  const toggleMarket = (market: string) => {
-      setBuilderMarkets(prev => prev.includes(market) ? prev.filter(m => m !== market) : [...prev, market]);
-  };
-
   const [scannedImage, setScannedImage] = useState<string | null>(null);
   const [isScanning, setIsScanning] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const scoutGridInputRef = useRef<HTMLInputElement>(null);
-  const scoutBuilderInputRef = useRef<HTMLInputElement>(null);
 
   const VALID_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
 
@@ -176,7 +137,7 @@ const Calculators: React.FC = () => {
 
   useEffect(() => {
     const handleGlobalPaste = (e: ClipboardEvent) => {
-      if (activeTab !== 'exc' && activeTab !== 'exg' && activeTab !== 'scout') return;
+      if (activeTab !== 'exc' && activeTab !== 'exg') return;
       const items = e.clipboardData?.items;
       if (!items) return;
 
@@ -188,140 +149,19 @@ const Calculators: React.FC = () => {
                  setToast({ type: 'error', message: '⚠️ Formato inválido! Cole apenas imagens PNG, JPG ou WEBP.' });
                  return;
              }
-             if (activeTab === 'scout') {
-                if (scoutMode === 'grid') handleAddScoutGridImage(blob);
-                else handleAddScoutBuilderImage(blob);
-             } else {
-                processVisionAI(blob);
-             }
+             processVisionAI(blob);
           }
         }
       }
     };
     window.addEventListener('paste', handleGlobalPaste);
     return () => window.removeEventListener('paste', handleGlobalPaste);
-  }, [activeTab, scoutMode, scoutBuilderImages]);
+  }, [activeTab]);
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file && VALID_IMAGE_TYPES.includes(file.type)) processVisionAI(file);
   };
-
-  const handleScoutGridUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file && VALID_IMAGE_TYPES.includes(file.type)) handleAddScoutGridImage(file);
-  };
-
-  const handleScoutBuilderUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files) {
-        Array.from(e.target.files).forEach(file => {
-            if (VALID_IMAGE_TYPES.includes(file.type)) handleAddScoutBuilderImage(file);
-        });
-    }
-  };
-
-  const handleAddScoutGridImage = async (file: File) => {
-      if (!isPro) { setToast({ type: 'error', message: 'Recurso exclusivo para Membros PRO.' }); return; }
-      if (!checkAiLimit()) { setToast({ type: 'error', message: 'Limite atingido.' }); return; }
-
-      setScoutGridImage(URL.createObjectURL(file));
-      setIsScanningScout(true); setScoutGridResult(null);
-
-      try {
-          const base64Data = await fileToBase64(file);
-          const response = await fetch('/api/vision-grid', {
-              method: 'POST', headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ image: base64Data, mimeType: 'image/jpeg', email: userEmail })
-          });
-
-          const data = await response.json();
-          if (!response.ok) throw new Error(data.error || 'Falha na IA');
-          
-          if (data && data.matches) {
-              setScoutGridResult(data.matches);
-              handleIncrementScan();
-              setToast({ type: 'success', message: 'Grade Mapeada com sucesso!' });
-          }
-      } catch (e: any) {
-          if (e.message?.includes('429') || e.message?.includes('quota')) {
-              setToast({ type: 'error', message: '⚠️ Servidor da IA sobrecarregado (Limite de Cota). Aguarde um instante.' });
-          } else {
-              setToast({ type: 'error', message: e.message || 'Erro ao analisar a grade.' });
-          }
-      } finally { setIsScanningScout(false); }
-  };
-
-  const handleAddScoutBuilderImage = (file: File) => {
-      if (scoutBuilderImages.length >= 4) {
-          setToast({ type: 'error', message: 'Máximo de 4 imagens permitidas para análise cruzada.' });
-          return;
-      }
-      setScoutBuilderImages(prev => [...prev, { url: URL.createObjectURL(file), file }]);
-  };
-
-  const processScoutBuilderEngine = async () => {
-      if (scoutBuilderImages.length === 0) return;
-      if (scoutBuilderImages.length < 2) {
-          setToast({ type: 'error', message: 'Envie pelo menos 2 jogos para gerar a múltipla.' });
-          return;
-      }
-      if (builderMarkets.length === 0) {
-          setToast({ type: 'error', message: 'Selecione pelo menos um mercado alvo.' });
-          return;
-      }
-
-      if (!isPro) { setToast({ type: 'error', message: 'Recurso exclusivo PRO.' }); return; }
-      if (!checkAiLimit()) { setToast({ type: 'error', message: 'Limite atingido.' }); return; }
-
-      setIsScanningScout(true); setScoutBuilderResult(null);
-
-      try {
-          const base64Images = await Promise.all(scoutBuilderImages.map(async (imgObj) => ({
-              base64: await fileToBase64(imgObj.file),
-              mimeType: 'image/jpeg'
-          })));
-
-          const response = await fetch('/api/vision-builder', {
-              method: 'POST', headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ 
-                  images: base64Images, 
-                  email: userEmail,
-                  markets: builderMarkets 
-              })
-          });
-
-          const data = await response.json();
-          if (!response.ok) throw new Error(data.error || 'Falha na IA');
-          
-          if (data && Array.isArray(data.selections)) {
-              setScoutBuilderResult(data);
-              handleIncrementScan();
-              setToast({ type: 'success', message: 'Aposta Construída com Sucesso!' });
-          } else {
-              throw new Error('Resposta inválida da IA.');
-          }
-      } catch (e: any) {
-          if (e.message?.includes('429') || e.message?.includes('quota')) {
-              setToast({ type: 'error', message: '⚠️ Servidor da IA sobrecarregado (Limite de Cota). Aguarde um instante.' });
-          } else {
-              setToast({ type: 'error', message: e.message || 'Erro ao processar as imagens na IA.' });
-          }
-      } finally { setIsScanningScout(false); }
-  };
-
-  const toggleMatchSelection = (matchName: string) => {
-      setSelectedMatchesForBuilder(prev => {
-          if (prev.includes(matchName)) return prev.filter(m => m !== matchName);
-          if (prev.length >= 4) {
-             setToast({ type: 'error', message: 'Máximo de 4 jogos selecionados permitidos.'});
-             return prev;
-          }
-          return [...prev, matchName];
-      });
-  };
-
-  const clearGrid = () => { setScoutGridImage(null); setScoutGridResult(null); setSelectedMatchesForBuilder([]); };
-  const clearBuilder = () => { setScoutBuilderImages([]); setScoutBuilderResult(null); setSelectedMatchesForBuilder([]); };
 
   const processVisionAI = async (file: File) => {
     if (!isPro) { setToast({ type: 'error', message: 'Exclusivo PRO.' }); return; }
@@ -528,18 +368,6 @@ const Calculators: React.FC = () => {
       </div>
   );
 
-  // 🔥 FUNÇÃO DE RENDERIZAÇÃO BLINDADA ANTI-ERRO REACT #31
-  const safeText = (val: any): string => {
-      if (!val) return "Não especificada.";
-      if (typeof val === 'string' || typeof val === 'number') return String(val);
-      if (typeof val === 'object') {
-          if (val.market && val.match) return `${val.match} - ${val.market} (${val.prob}%)`;
-          if (val.market) return val.market;
-          return JSON.stringify(val);
-      }
-      return String(val);
-  };
-
   const [dutchTotalStake, setDutchTotalStake] = useState('100');
   const [dutchSelections, setDutchSelections] = useState([{ id: 1, name: 'Seleção A', odds: '2.50', stake: 0, profit: 0 }, { id: 2, name: 'Seleção B', odds: '3.20', stake: 0, profit: 0 }]);
   const addDutchSelection = () => setDutchSelections([...dutchSelections, { id: Date.now(), name: `Seleção ${String.fromCharCode(65 + dutchSelections.length)}`, odds: '', stake: 0, profit: 0 }]);
@@ -582,7 +410,6 @@ const Calculators: React.FC = () => {
       case 'breakeven': return { title: 'Ponto de Equilíbrio', text: 'A taxa de acerto (Hit-Rate) necessária para manter a estabilidade do capital com a odd informada.' };
       case 'exc': return { title: 'ExC Analytics (Cantos)', text: 'Motor HFT que cruza Domínio (Field Tilt), Momentum e Poisson para achar EV+ em escanteios. Suporta leitura via IA.' };
       case 'exg': return { title: 'ExG Analytics (Gols)', text: 'Calcula a letalidade do time (SoT) e a abertura tática para precificar a Odd Justa de Gols em tempo real.' };
-      case 'scout': return { title: 'Scout Pré-Live', text: 'Motor AI para varredura de grade e criação de apostas múltiplas explorando todos os mercados da Bet365.' };
       default: return { title: 'Ferramentas Analíticas', text: 'Tome decisões baseadas em dados.' };
     }
   })();
@@ -611,14 +438,14 @@ const Calculators: React.FC = () => {
       </div>
       
       {/* TABS GRID */}
-      <div className="flex flex-wrap md:grid md:grid-cols-4 xl:grid-cols-10 gap-2 mb-6 px-4 md:px-0">
+      <div className="flex flex-wrap md:grid md:grid-cols-4 xl:grid-cols-9 gap-2 mb-6 px-4 md:px-0">
         {tabs.map(tab => (
           <button
             key={tab.id}
             onClick={() => setActiveTab(tab.id as any)}
             className={`relative flex-1 min-w-[90px] flex items-center justify-center px-2 py-3 rounded-xl font-bold text-[10px] uppercase tracking-wider transition-all gap-1 ${
               activeTab === tab.id
-                ? (tab.id === 'exg' ? 'bg-orange-500 text-white shadow-lg shadow-orange-500/20' : tab.id === 'scout' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/20' : 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/20')
+                ? (tab.id === 'exg' ? 'bg-orange-500 text-white shadow-lg shadow-orange-500/20' : 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/20')
                 : 'bg-white dark:bg-[#0f172a] text-slate-600 dark:text-slate-500 border border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-900'
             }`}
           >
@@ -1060,306 +887,6 @@ const Calculators: React.FC = () => {
                        </motion.div>
                      )}
                    </AnimatePresence>
-                </div>
-            )}
-
-            {/* =========================================
-                🔥 NOVO: SCOUT PRÉ-LIVE (IA CAÇADORA) 🔥
-            ========================================= */}
-            {activeTab === 'scout' && !isPro && <ProLockScreen />}
-            {activeTab === 'scout' && isPro && (
-                <div className="bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-800 rounded-[2.5rem] p-4 sm:p-8 shadow-sm relative overflow-hidden">
-                   <div className="flex justify-between items-start mb-8 relative z-10">
-                      <div>
-                        <h2 className="text-2xl font-black text-slate-900 dark:text-white uppercase tracking-tighter italic flex items-center gap-2">
-                          <Sparkles size={24} className="text-indigo-500"/> Scout Pré-Live
-                        </h2>
-                        <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest mt-1">IA de Varredura e Múltiplas</p>
-                      </div>
-                      <span className="bg-indigo-500/10 text-indigo-500 border border-indigo-500/20 px-3 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest flex items-center gap-1.5">
-                         <Layers size={12} /> Auto-Scout
-                      </span>
-                   </div>
-
-                   {/* TOGGLE MODO: GRADE VS BUILDER */}
-                   <div className="flex bg-[#09090b] p-1 rounded-xl border border-slate-800 mb-6">
-                      <button onClick={() => setScoutMode('grid')} className={`flex-1 py-2.5 text-[10px] font-black uppercase tracking-widest rounded-lg transition-all ${scoutMode === 'grid' ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-500 hover:text-slate-300'}`}>
-                          1. Radar de Grade
-                      </button>
-                      <button onClick={() => setScoutMode('builder')} className={`flex-1 py-2.5 text-[10px] font-black uppercase tracking-widest rounded-lg transition-all ${scoutMode === 'builder' ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-500 hover:text-slate-300'}`}>
-                          2. Construtor
-                      </button>
-                   </div>
-
-                   {/* ------------------------------------- */}
-                   {/* MODO 1: RADAR DE GRADE                */}
-                   {/* ------------------------------------- */}
-                   {scoutMode === 'grid' && (
-                     <>
-                     <div className="mb-6 relative group overflow-hidden rounded-[1.5rem] border-2 border-dashed border-indigo-500/20 hover:border-indigo-500/50 bg-slate-50 dark:bg-[#09090b] transition-all p-6 min-h-[200px] flex flex-col items-center justify-center">
-                         {!scoutGridImage && !isScanningScout && (
-                             <label className="flex flex-col items-center justify-center cursor-pointer w-full h-full">
-                                 <div className="w-12 h-12 rounded-full bg-slate-200 dark:bg-slate-800 flex items-center justify-center mb-4 text-slate-500 group-hover:text-indigo-500 transition-colors group-hover:scale-110 duration-300">
-                                     <Scan size={24} />
-                                 </div>
-                                 <h3 className="text-sm font-black text-slate-700 dark:text-slate-300 mb-1 text-center">Upload da Lista de Jogos</h3>
-                                 <p className="text-[10px] text-slate-500 uppercase tracking-widest font-bold text-center mb-3">Ctrl+V para analisar a grade</p>
-                                 <input type="file" accept="image/jpeg, image/png, image/webp" className="hidden" onChange={handleScoutGridUpload} ref={scoutGridInputRef} />
-                             </label>
-                         )}
-
-                         {isScanningScout && scoutGridImage && (
-                             <div className="relative w-full h-48 bg-black flex items-center justify-center overflow-hidden rounded-xl">
-                                 <img src={scoutGridImage} className="object-cover opacity-30 w-full h-full blur-sm" />
-                                 <motion.div initial={{ top: '0%' }} animate={{ top: '100%' }} transition={{ repeat: Infinity, duration: 1.5, ease: "linear" }} className="absolute left-0 right-0 h-1 bg-indigo-500 shadow-[0_0_20px_#6366f1] z-10" />
-                                 <div className="absolute inset-0 flex flex-col items-center justify-center z-20">
-                                    <Sparkles size={32} className="text-indigo-400 mb-2 animate-pulse" />
-                                    <p className="text-indigo-400 font-mono font-bold text-xs uppercase tracking-widest mt-2">Varrendo assimetrias...</p>
-                                 </div>
-                             </div>
-                         )}
-
-                         {!isScanningScout && scoutGridImage && (
-                             <div className="relative w-full h-32 bg-black group/preview rounded-xl overflow-hidden">
-                                 <img src={scoutGridImage} className="object-cover opacity-40 w-full h-full" />
-                                 <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent"></div>
-                                 <div className="absolute bottom-4 right-4 flex gap-2">
-                                     <button onClick={clearGrid} className="text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-white bg-slate-800 hover:bg-slate-700 border border-slate-600 px-4 py-2 rounded-lg transition-colors shadow-lg">Nova Grade</button>
-                                 </div>
-                             </div>
-                         )}
-                     </div>
-
-                     {/* RESULTADOS DA GRADE COM CATEGORIZAÇÃO (UX HFT PREMIUM) */}
-                     {scoutGridResult && (
-                         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-8">
-                             
-                             {/* CATEGORIA GOLS */}
-                             {scoutGridResult.filter((m:any) => m.market === 'GOLS').length > 0 && (
-                             <div className="bg-slate-900/40 border border-slate-800/60 rounded-[2rem] p-4 sm:p-8 shadow-inner">
-                                 <h3 className="text-xs font-black text-orange-500 uppercase tracking-widest mb-6 flex items-center gap-2 border-b border-slate-800/80 pb-4">
-                                     <div className="p-1.5 bg-orange-500/10 rounded-md"><Goal size={16} className="text-orange-500" /></div>
-                                     Foco em Gols (Overs / Ambas)
-                                 </h3>
-                                 {/* items-stretch garante que os cards fiquem da mesma altura */}
-                                 <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 items-stretch">
-                                     {scoutGridResult.filter((m: any) => m.market === 'GOLS').map((match: any, index: number) => {
-                                         const isSelected = selectedMatchesForBuilder.includes(match.teams);
-                                         return (
-                                             <div key={`gols-${index}`} onClick={() => toggleMatchSelection(match.teams)} className={`relative h-full overflow-hidden bg-[#020617] rounded-2xl p-4 sm:p-5 flex items-center gap-3 sm:gap-4 cursor-pointer transition-all duration-300 group ${isSelected ? 'border-2 border-orange-500 shadow-[0_0_20px_rgba(249,115,22,0.15)] scale-[1.01]' : 'border border-slate-800 hover:border-slate-600 hover:bg-[#0b101e]'}`}>
-                                                 {isSelected && <div className="absolute top-0 left-0 w-1 h-full bg-orange-500 shadow-[0_0_10px_#f97316]"></div>}
-                                                 {/* min-w-0 previne quebra de layout por textos gigantes */}
-                                                 <div className="flex-1 min-w-0 pl-1 sm:pl-2">
-                                                     <div className="flex flex-wrap items-center gap-2 sm:gap-3 mb-2.5">
-                                                        <span className="bg-slate-900 text-slate-400 border border-slate-700 px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-md text-[9px] sm:text-[10px] font-mono font-bold flex items-center gap-1.5 shrink-0"><Clock size={12} className="text-orange-500"/> {safeText(match.time)}</span>
-                                                        <span className="bg-orange-500/10 text-orange-400 border border-orange-500/20 px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-md text-[8px] sm:text-[9px] font-black uppercase tracking-widest flex items-center gap-1 shrink-0"><Zap size={10}/> Radar Ativo</span>
-                                                     </div>
-                                                     {/* line-clamp-2 e break-words resolvem os nomes longos */}
-                                                     <h4 className="text-sm sm:text-base font-black text-white tracking-tight mb-1.5 line-clamp-2 break-words leading-snug">{safeText(match.teams)}</h4>
-                                                     <p className="text-[10px] sm:text-xs text-slate-400 leading-relaxed flex items-start gap-1.5"><Target size={14} className="text-slate-500 shrink-0 mt-0.5"/> <span className="line-clamp-2">{safeText(match.reason)}</span></p>
-                                                 </div>
-                                                 {/* O checkbox fica fixo na direita sem esmagar o texto */}
-                                                 <div className="shrink-0 pr-1">
-                                                     {isSelected ? <CheckCircle2 size={26} className="text-orange-500 drop-shadow-[0_0_8px_rgba(249,115,22,0.4)]" /> : <Square size={26} className="text-slate-700 group-hover:text-slate-500 transition-colors" />}
-                                                 </div>
-                                             </div>
-                                         );
-                                     })}
-                                 </div>
-                             </div>
-                             )}
-
-                             {/* CATEGORIA CANTOS */}
-                             {scoutGridResult.filter((m:any) => m.market === 'CANTOS').length > 0 && (
-                             <div className="bg-slate-900/40 border border-slate-800/60 rounded-[2rem] p-4 sm:p-8 shadow-inner">
-                                 <h3 className="text-xs font-black text-emerald-500 uppercase tracking-widest mb-6 flex items-center gap-2 border-b border-slate-800/80 pb-4 mt-2">
-                                     <div className="p-1.5 bg-emerald-500/10 rounded-md"><Flag size={16} className="text-emerald-500" /></div>
-                                     Foco em Escanteios (Volume / Pressão)
-                                 </h3>
-                                 <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 items-stretch">
-                                     {scoutGridResult.filter((m: any) => m.market === 'CANTOS').map((match: any, index: number) => {
-                                         const isSelected = selectedMatchesForBuilder.includes(match.teams);
-                                         return (
-                                             <div key={`cantos-${index}`} onClick={() => toggleMatchSelection(match.teams)} className={`relative h-full overflow-hidden bg-[#020617] rounded-2xl p-4 sm:p-5 flex items-center gap-3 sm:gap-4 cursor-pointer transition-all duration-300 group ${isSelected ? 'border-2 border-emerald-500 shadow-[0_0_20px_rgba(16,185,129,0.15)] scale-[1.01]' : 'border border-slate-800 hover:border-slate-600 hover:bg-[#0b101e]'}`}>
-                                                 {isSelected && <div className="absolute top-0 left-0 w-1 h-full bg-emerald-500 shadow-[0_0_10px_#10b981]"></div>}
-                                                 <div className="flex-1 min-w-0 pl-1 sm:pl-2">
-                                                     <div className="flex flex-wrap items-center gap-2 sm:gap-3 mb-2.5">
-                                                        <span className="bg-slate-900 text-slate-400 border border-slate-700 px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-md text-[9px] sm:text-[10px] font-mono font-bold flex items-center gap-1.5 shrink-0"><Clock size={12} className="text-emerald-500"/> {safeText(match.time)}</span>
-                                                        <span className="bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-md text-[8px] sm:text-[9px] font-black uppercase tracking-widest flex items-center gap-1 shrink-0"><Activity size={10}/> Radar Ativo</span>
-                                                     </div>
-                                                     <h4 className="text-sm sm:text-base font-black text-white tracking-tight mb-1.5 line-clamp-2 break-words leading-snug">{safeText(match.teams)}</h4>
-                                                     <p className="text-[10px] sm:text-xs text-slate-400 leading-relaxed flex items-start gap-1.5"><MapIcon size={14} className="text-slate-500 shrink-0 mt-0.5"/> <span className="line-clamp-2">{safeText(match.reason)}</span></p>
-                                                 </div>
-                                                 <div className="shrink-0 pr-1">
-                                                     {isSelected ? <CheckCircle2 size={26} className="text-emerald-500 drop-shadow-[0_0_8px_rgba(16,185,129,0.4)]" /> : <Square size={26} className="text-slate-700 group-hover:text-slate-500 transition-colors" />}
-                                                 </div>
-                                             </div>
-                                         );
-                                     })}
-                                 </div>
-                             </div>
-                             )}
-
-                             {/* BOTAO FLUTUANTE (STICKY CTA) */}
-                             {selectedMatchesForBuilder.length > 0 && (
-                                 <motion.div initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} className="sticky bottom-6 mt-10 flex justify-center z-40 pointer-events-none">
-                                     <button onClick={() => setScoutMode('builder')} className="bg-indigo-600 hover:bg-indigo-500 text-white font-black uppercase tracking-widest text-[11px] sm:text-xs px-8 sm:px-10 py-4 sm:py-5 rounded-full shadow-[0_15px_40px_rgba(99,102,241,0.4)] border border-indigo-400/30 flex items-center gap-3 transition-transform active:scale-95 pointer-events-auto hover:scale-105">
-                                        <Layers size={18} /> Ir para Construtor ({selectedMatchesForBuilder.length}) <ArrowRight size={18} />
-                                     </button>
-                                 </motion.div>
-                             )}
-                         </motion.div>
-                     )}
-                     </>
-                   )}
-
-                   {/* ------------------------------------- */}
-                   {/* MODO 2: CONSTRUTOR DE APOSTAS         */}
-                   {/* ------------------------------------- */}
-                   {scoutMode === 'builder' && (
-                     <div className="space-y-6">
-                        
-                        {/* Instrução dos Jogos Selecionados */}
-                        {selectedMatchesForBuilder.length > 0 && (
-                            <div className="bg-indigo-500/5 border border-indigo-500/20 p-4 rounded-2xl">
-                                <h4 className="text-[10px] font-black text-indigo-400 uppercase tracking-widest mb-2 flex items-center gap-2"><Target size={12}/> 1. Jogos Selecionados</h4>
-                                <div className="flex flex-wrap gap-2">
-                                    {selectedMatchesForBuilder.map((match, i) => (
-                                        <span key={i} className="text-[10px] font-bold text-slate-300 bg-slate-900 px-3 py-1.5 rounded-lg border border-slate-800">{match}</span>
-                                    ))}
-                                </div>
-                            </div>
-                        )}
-
-                        {/* NOVO: SELETOR DE MERCADOS (SÓ GOLS E CANTOS) */}
-                        <div className="bg-slate-900/50 border border-slate-800 p-4 rounded-2xl">
-                            <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3 flex items-center gap-2"><Layers size={12}/> 2. Mercados Permitidos (Foco da IA)</h4>
-                            <div className="flex flex-wrap gap-2">
-                                {AVAILABLE_MARKETS.map(m => {
-                                    const isActive = builderMarkets.includes(m);
-                                    return (
-                                        <button key={m} onClick={() => toggleMarket(m)} className={`text-[10px] font-black uppercase tracking-widest px-3 py-1.5 rounded-lg border transition-all ${isActive ? 'bg-indigo-600 border-indigo-500 text-white' : 'bg-[#020617] border-slate-800 text-slate-500 hover:text-slate-300'}`}>
-                                            {m}
-                                        </button>
-                                    );
-                                })}
-                            </div>
-                        </div>
-
-                        {/* Scanner Multi-Image */}
-                        <div className="relative group overflow-hidden rounded-[1.5rem] border-2 border-dashed border-indigo-500/20 hover:border-indigo-500/50 bg-slate-50 dark:bg-[#09090b] transition-all p-4 sm:p-6 min-h-[200px] flex flex-col items-center justify-center">
-                           {scoutBuilderImages.length === 0 && !isScanningScout && (
-                               <label className="flex flex-col items-center justify-center cursor-pointer w-full h-full">
-                                   <div className="w-12 h-12 rounded-full bg-slate-200 dark:bg-slate-800 flex items-center justify-center mb-4 text-slate-500 group-hover:text-indigo-500 transition-colors group-hover:scale-110 duration-300">
-                                       <Scan size={24} />
-                                   </div>
-                                   <h3 className="text-sm font-black text-slate-700 dark:text-slate-300 mb-1 text-center">
-                                       3. Upload das Estatísticas H2H
-                                   </h3>
-                                   <p className="text-[10px] text-slate-500 uppercase tracking-widest font-bold text-center mb-3">Cole até 4 imagens (uma por jogo)</p>
-                                   <input type="file" accept="image/jpeg, image/png, image/webp" multiple className="hidden" onChange={handleScoutBuilderUpload} ref={scoutBuilderInputRef} />
-                               </label>
-                           )}
-
-                           {/* Thumbnails Multi-Image */}
-                           {scoutBuilderImages.length > 0 && !isScanningScout && (
-                               <div className="w-full">
-                                   <div className="flex flex-wrap gap-3 sm:gap-4 mb-6 justify-center">
-                                       {scoutBuilderImages.map((img, index) => (
-                                           <div key={index} className="relative w-20 h-20 sm:w-24 sm:h-24 rounded-xl overflow-hidden border-2 border-indigo-500/30 group/thumb">
-                                               <img src={img.url} className="object-cover w-full h-full opacity-80" />
-                                               <button onClick={() => setScoutBuilderImages(prev => prev.filter((_, i) => i !== index))} className="absolute top-1 right-1 bg-red-500 text-white p-1.5 rounded-md opacity-0 group-hover/thumb:opacity-100 transition-opacity"><Trash size={12}/></button>
-                                           </div>
-                                       ))}
-                                   </div>
-                                   
-                                   <div className="flex flex-wrap gap-3 justify-center">
-                                       {scoutBuilderImages.length < 4 && (
-                                           <label className="text-[10px] font-black uppercase tracking-widest text-indigo-400 bg-indigo-500/10 hover:bg-indigo-500/20 border border-indigo-500/30 px-4 py-2.5 rounded-lg cursor-pointer transition-colors flex items-center gap-1">
-                                               <Plus size={14}/> Add Imagem
-                                               <input type="file" accept="image/jpeg, image/png, image/webp" multiple className="hidden" onChange={handleScoutBuilderUpload} />
-                                           </label>
-                                       )}
-                                       <button onClick={processScoutBuilderEngine} className="text-[10px] font-black uppercase tracking-widest text-white bg-indigo-600 hover:bg-indigo-500 px-6 py-2.5 rounded-lg shadow-lg shadow-indigo-600/20 transition-colors flex items-center gap-2">
-                                           <Sparkles size={14}/> Gerar Aposta Múltipla
-                                       </button>
-                                       <button onClick={clearBuilder} className="text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-red-400 px-4 py-2.5 transition-colors">
-                                           Limpar Tudo
-                                       </button>
-                                   </div>
-                               </div>
-                           )}
-
-                           {isScanningScout && (
-                               <div className="absolute inset-0 bg-[#09090b] flex flex-col items-center justify-center z-20">
-                                   <div className="flex gap-2 mb-6">
-                                       {scoutBuilderImages.map((img, index) => (
-                                           <img key={index} src={img.url} className="w-12 h-12 sm:w-16 sm:h-16 rounded-lg object-cover opacity-30 blur-sm border border-indigo-500/50" />
-                                       ))}
-                                   </div>
-                                   <motion.div initial={{ width: '0%' }} animate={{ width: '100%' }} transition={{ repeat: Infinity, duration: 2 }} className="absolute bottom-0 left-0 h-1 bg-indigo-500 shadow-[0_0_20px_#6366f1]" />
-                                   <Sparkles size={32} className="text-indigo-400 mb-2 animate-pulse" />
-                                   <p className="text-indigo-400 font-mono font-bold text-xs uppercase tracking-widest text-center px-4 mt-2">Calculando probabilidade e odd justa...</p>
-                               </div>
-                           )}
-                        </div>
-
-                        {/* RESULTADO DO BUILDER */}
-                        {scoutBuilderResult && scoutBuilderResult.selections && (
-                            <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="bg-[#020617] border border-indigo-500/20 rounded-[2rem] p-4 sm:p-6 shadow-[0_0_30px_rgba(99,102,241,0.1)] relative overflow-hidden">
-                                <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-500/10 rounded-full blur-[80px] -mr-20 -mt-20 pointer-events-none"></div>
-                                
-                                <h3 className="text-[10px] font-black text-indigo-400 uppercase tracking-widest mb-6 flex items-center gap-2"><Target size={14}/> Bilhete Principal (Alta Confiança)</h3>
-                                
-                                <div className="space-y-2 mb-6 relative z-10">
-                                    {scoutBuilderResult.selections.map((sel: any, idx: number) => (
-                                        <React.Fragment key={idx}>
-                                            <div className="bg-slate-900/80 border border-slate-800 rounded-xl p-4 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2">
-                                                <div>
-                                                    <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest">{safeText(sel.match)}</p>
-                                                    <span className="text-sm font-bold text-white flex items-center gap-2 mt-1"><span className="w-1.5 h-1.5 bg-indigo-500 rounded-full"></span> {safeText(sel.market)}</span>
-                                                </div>
-                                                <span className="text-xs font-mono font-black text-slate-400 self-start sm:self-auto bg-slate-950 px-2 py-1 rounded">{safeText(sel.prob)}% Prob.</span>
-                                            </div>
-                                            {idx < scoutBuilderResult.selections.length - 1 && (
-                                                <div className="flex justify-center -my-1 relative z-20"><Plus size={14} className="text-indigo-500 bg-[#020617] rounded-full p-0.5" /></div>
-                                            )}
-                                        </React.Fragment>
-                                    ))}
-                                </div>
-
-                                <div className="grid grid-cols-2 gap-3 sm:gap-4 mb-6 relative z-10">
-                                    <div className="bg-slate-900/50 border border-slate-800 rounded-xl p-4 text-center">
-                                        <p className="text-[8px] sm:text-[9px] uppercase tracking-widest text-slate-500 font-bold mb-1">Win Rate Matemática</p>
-                                        <p className="text-xl sm:text-2xl font-black text-white">{safeText(scoutBuilderResult.combinedProb)}%</p>
-                                    </div>
-                                    <div className="bg-indigo-500/10 border border-indigo-500/20 rounded-xl p-4 text-center shadow-inner">
-                                        <p className="text-[8px] sm:text-[9px] uppercase tracking-widest text-indigo-400 font-bold mb-1">Odd Justa Sugerida</p>
-                                        <p className="text-xl sm:text-2xl font-black text-indigo-400 font-mono">@{safeText(scoutBuilderResult.fairOdd)}</p>
-                                    </div>
-                                </div>
-
-                                {/* NOVOS BLOCOS: ALTERNATIVA E CONSERVADORA */}
-                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6 relative z-10">
-                                    <div className="bg-slate-900/40 border border-slate-800 p-4 rounded-xl">
-                                        <p className="text-[10px] uppercase tracking-widest text-slate-500 font-bold mb-2 flex items-center gap-1"><ArrowRightLeft size={12}/> Alternativa Tática</p>
-                                        <p className="text-xs text-white leading-relaxed">{safeText(scoutBuilderResult.alternativeCombination)}</p>
-                                    </div>
-                                    <div className="bg-emerald-900/10 border border-emerald-900/30 p-4 rounded-xl">
-                                        <p className="text-[10px] uppercase tracking-widest text-emerald-500 font-bold mb-2 flex items-center gap-1"><ShieldAlert size={12}/> Margem de Segurança</p>
-                                        <p className="text-xs text-emerald-400 leading-relaxed">{safeText(scoutBuilderResult.conservativeCombination)}</p>
-                                    </div>
-                                </div>
-
-                                <div className="bg-slate-900/30 border border-slate-800 p-4 rounded-xl relative z-10">
-                                    <p className="text-[10px] uppercase tracking-widest text-slate-500 font-bold mb-2">Tese Quantitativa da IA</p>
-                                    <p className="text-[11px] sm:text-xs text-slate-300 leading-relaxed border-l-2 border-indigo-500 pl-3 whitespace-pre-wrap">{safeText(scoutBuilderResult.analysis)}</p>
-                                </div>
-                            </motion.div>
-                        )}
-                     </div>
-                   )}
-
                 </div>
             )}
             
