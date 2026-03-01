@@ -304,7 +304,7 @@ const ScoutIA: React.FC = () => {
                </div>
                <div>
                    <h4 className="text-xs font-black uppercase tracking-widest text-indigo-700 dark:text-indigo-400 mb-3">
-                       {scoutMode === 'grid' ? 'Como usar o Radar de Grade?' : 'Como usar o Construtor HFT?'}
+                       {scoutMode === 'grid' ? 'Como usar o Radar de Grade?' : 'Como extrair o máximo do Construtor HFT?'}
                    </h4>
                    <ul className="text-[11px] sm:text-xs text-slate-700 dark:text-slate-300 space-y-2.5 font-medium">
                        {scoutMode === 'grid' ? (
@@ -315,9 +315,9 @@ const ScoutIA: React.FC = () => {
                            </>
                        ) : (
                            <>
-                               <li><strong className="text-indigo-600 dark:text-indigo-300">Passo 1:</strong> Selecione seus mercados alvo nos botões abaixo.</li>
-                               <li><strong className="text-indigo-600 dark:text-indigo-300">Passo 2:</strong> Tire Prints das estatísticas de Confronto Direto (H2H) ou Tabela Geral de até 4 jogos.</li>
-                               <li><strong className="text-indigo-600 dark:text-indigo-300">Passo 3:</strong> Cole as imagens (Ctrl+V) e clique em Processar. A IA vai cruzar os dados, calcular a Odd Justa e montar sua múltipla.</li>
+                               <li><strong className="text-indigo-600 dark:text-indigo-300">Passo 1:</strong> Abra a partida na sua plataforma de análise (CornerPro, Flashscore, Sofascore, etc).</li>
+                               <li><strong className="text-indigo-600 dark:text-indigo-300">Passo 2 (O Segredo):</strong> Tire prints das abas de <strong>Gols</strong> e <strong>Escanteios</strong> que mostrem <strong>explicitamente as porcentagens (%) de acerto</strong> das linhas (Ex: % do Over 1.5 Gols, % do Over 8.5 Cantos).</li>
+                               <li><strong className="text-indigo-600 dark:text-indigo-300">Passo 3:</strong> Cole as imagens aqui (Ctrl+V) e clique em Processar. <span className="text-indigo-500 font-bold italic">Nossa IA não inventa dados! Ela precisa ler os números exatos nas suas imagens para calcular o valor real.</span></li>
                            </>
                        )}
                    </ul>
