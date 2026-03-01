@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import Sidebar from './components/Sidebar';
 import NewBetModal from './components/NewBetModal';
-import { Plus, Lock, Rocket, Target, ShieldAlert, BarChart3, Wallet, BrainCircuit, X, CalendarDays, Calculator, BookOpen } from 'lucide-react';
+import { Plus, Lock, Rocket, Target, ShieldAlert, BarChart3, Wallet, BrainCircuit, X, CalendarDays, Calculator, BookOpen, Sparkles } from 'lucide-react';
 import { useBetStore, Bet } from './store/useBetStore';
 import Auth from './pages/Auth';
 import Joyride, { Step, CallBackProps, STATUS, TooltipRenderProps } from 'react-joyride';
