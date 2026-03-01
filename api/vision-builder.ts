@@ -6,13 +6,22 @@ export const maxDuration = 60;
 const getMarketVolatilityPenalty = (market: string) => {
   const m = market.toLowerCase();
 
+  // Nível 1: Volatilidade Extrema (Punição Forte)
   if (m.includes('1º tempo') || m.includes('1o tempo') || m.includes('(ht)') || m.includes('primeiro tempo')) {
       if (m.includes('escanteios') || m.includes('cantos') || m.includes('race')) return 0.92; 
       return 0.95; 
   }
+  
+  // Nível 2: Volatilidade Alta (Punição Moderada)
   if (m.includes('ambos') || m.includes('btts') || m.includes('race')) return 0.96;
+  
+  // Nível 3: Volatilidade Média (Punição Leve)
   if (m.includes('escanteios') || m.includes('cantos')) return 0.97;
+  
+  // Nível 4: Volatilidade Baixa (Quase sem punição)
   if (m.includes('gols') || m.includes('gol')) return 0.98;
+
+  // Seguro (Padrão)
   return 1;
 };
 
@@ -47,7 +56,7 @@ export default async function handler(req: any, res: any) {
 
     const selectedMarketsStr = markets && markets.length > 0 ? markets.join(', ') : 'Gols, Escanteios';
 
-    // 🔥 PROMPT HEDGE FUND 9.5: BLINDAGEM VISUAL, EXCERPT E DIVERGÊNCIA
+    // 🔥 PROMPT HEDGE FUND 9.8: BLINDAGEM MÁXIMA
     const prompt = `Você é um Analista Quantitativo HFT Institucional e Gestor de Risco.
 Sua missão é criar uma Aposta Combinada (Múltipla) lendo as imagens estatísticas fornecidas.
 
@@ -59,19 +68,19 @@ Priorize linhas com probabilidade de acerto entre 72% e 80%, mas é PERMITIDO fl
 ⚙️ MOTOR MATEMÁTICO E REGRAS VISUAIS INVIOLÁVEIS:
 1. LEITURA RESTRITA (ANTI-ALUCINAÇÃO): É EXPRESSAMENTE PROIBIDO inventar números. Use apenas o Hit Rate real (%) visível.
 2. 🛑 ANTI-AMBIGUIDADE VISUAL: Se o número exato de jogos da amostra (ex: 5, 10) NÃO estiver explicitamente visível, o mercado DEVE SER DESCARTADO.
-3. 🛑 VALIDAÇÃO CRUZADA INTERNA: Na chave "sourceExcerpt", você deve COPIAR EXATAMENTE O TEXTO que você leu na imagem que justifica aquela entrada (Ex: "Mais de 1.5 - 80% (10 jogos)").
-4. 🛑 DIVERGÊNCIA CASA/FORA: Na chave "divergenceRisk", retorne "true" se a porcentagem alta pertencer quase inteiramente a apenas um dos times (ex: Mandante tem 90% de Overs, Visitante tem 40%). Retorne "false" se ambos contribuírem para a estatística.
+3. 🛑 VALIDAÇÃO CRUZADA INTERNA: Na chave "sourceExcerpt", você deve COPIAR EXATAMENTE O TEXTO E OS NÚMEROS que você leu na imagem que justifica aquela entrada (Ex: "Mais de 1.5 - 80% (10 jogos)").
+4. 🛑 DIVERGÊNCIA CASA/FORA: Na chave "divergenceRisk", retorne "true" se a porcentagem alta pertencer quase inteiramente a apenas um dos times.
 
 ⚠️ ESTRUTURAÇÃO DO BILHETE:
 - Proibido Resultado Final (1x2), Cartões, Jogadores e Linhas Asiáticas. Use apenas: [ ${selectedMarketsStr} ].
-- 🛑 REGRA CROSS-MARKET: Priorize cruzar mercados diferentes (Gols + Escanteios). Só repita o mercado se forem linhas cronológicas distintas (ex: HT + FT). NUNCA combine "Mercado do Time" com "Mercado da Partida" da mesma categoria.
+- 🛑 REGRA CROSS-MARKET: Priorize cruzar mercados diferentes. Só repita a categoria se forem de naturezas cronológicas distintas (ex: Over 0.5 HT + Over 2.5 FT). NUNCA combine mercado de time com mercado de partida.
 - Na "alternativeCombination", proponha uma abordagem tática TOTALMENTE DIFERENTE da principal.
-- Na "conservativeCombination", aplique o "Fractional Drop" reduzindo a linha obrigatoriamente.
+- Na "conservativeCombination", aplique o "Fractional Drop" reduzindo as linhas.
 
 ⚠️ REGRAS DE FORMATAÇÃO E UX:
-Nas chaves de texto, aja como um Analista Sênior. Focado em fatos, sem exageros ou promessas. Use 3 parágrafos curtos:
-"📊 A Lógica dos Números: [Fatos do Hit rate e amostra]"
-"⚽ Leitura de Jogo (Game Script): [Dinâmica tática e divergência se houver]"
+Nas chaves de texto, aja como um Analista Sênior. Focado em fatos objetivos e técnicos. Evite adjetivos qualificadores desnecessários e exageros.
+"📊 A Lógica dos Números: [Fatos objetivos do Hit rate e amostra]"
+"⚽ Leitura de Jogo (Game Script): [Dinâmica tática e divergência]"
 "🎯 Risco e Retorno: [Proteção de capital]"
 
 Retorne ESTRITAMENTE um JSON válido neste formato:
@@ -82,7 +91,7 @@ Retorne ESTRITAMENTE um JSON válido neste formato:
       "market": "Partida (FT) - Mais de 8.5 Escanteios",
       "prob": 78,
       "sampleSize": 10,
-      "sourceExcerpt": "Transcreva literalmente a linha da imagem lida",
+      "sourceExcerpt": "Transcreva literalmente o texto e números lidos",
       "divergenceRisk": false
     }
   ],
@@ -104,20 +113,26 @@ Retorne ESTRITAMENTE um JSON válido neste formato:
     try { json = JSON.parse(matchJson[0]); } catch { throw new Error('Falha na conversão do JSON retornado.'); }
 
     // ==========================================
-    // 🧠 DETECÇÃO DE CORRELAÇÃO DINÂMICA (V 9.5)
+    // 🧠 DETECÇÃO DE CORRELAÇÃO DINÂMICA (V 9.8)
     // ==========================================
     let structuralRiskScore = 0;
-    let dynamicCorrelationPenalty = 0.98; // Padrão Institucional Premium
+    let dynamicCorrelationPenalty = 0.98; 
     let implicitCorrelationFlag = false;
 
     if (json.selections && json.selections.length > 1) {
       const marketsLower = json.selections.map((s: any) => (s.market || '').toLowerCase());
       
       const hasHT = marketsLower.some((m: string) => m.includes('(ht)') || m.includes('1º tempo') || m.includes('1o tempo'));
-      const hasFT = marketsLower.some((m: string) => m.includes('(ft)') || m.includes('partida') || !m.includes('tempo'));
+      // CORREÇÃO: Lógica FT mais restrita e segura
+      const hasFT = marketsLower.some((m: string) => m.includes('(ft)') || m.includes('partida') || m.includes('jogo') || m.includes('final') || m.includes('total'));
       const isMixedHalves = hasHT && hasFT;
 
-      const bothOvers = marketsLower.every((m: string) => m.includes('mais') || m.includes('over'));
+      // CORREÇÃO: BothOvers abrange BTTS/Ambos
+      const bothOvers = marketsLower.every((m: string) => m.includes('mais') || m.includes('over') || m.includes('ambos') || m.includes('btts') || m.includes('marcam'));
+      
+      // CORREÇÃO: Correlação Semântica (Gols + BTTS)
+      const hasBTTS = marketsLower.some((m: string) => m.includes('ambos') || m.includes('btts') || m.includes('marcam'));
+      const hasOverGols = marketsLower.some((m: string) => (m.includes('mais') || m.includes('over')) && (m.includes('gol') || m.includes('gols')));
       
       const teamMentions: Record<string, number> = {};
       json.selections.forEach((sel: any) => {
@@ -134,7 +149,10 @@ Retorne ESTRITAMENTE um JSON válido neste formato:
       const shareSameTeam = Object.values(teamMentions).some(count => count >= 2);
 
       // Algoritmo de Correlação Institucional Dinâmica
-      if (shareSameTeam && bothOvers) {
+      if (hasBTTS && hasOverGols) {
+          dynamicCorrelationPenalty = 0.92; // Correlação semântica pesada
+          structuralRiskScore += 3;
+      } else if (shareSameTeam && bothOvers) {
           dynamicCorrelationPenalty = 0.94; // Forte correlação direcional na mesma equipe
           structuralRiskScore += 2;
       } else if (isMixedHalves) {
@@ -155,24 +173,32 @@ Retorne ESTRITAMENTE um JSON válido neste formato:
         (acc: number, curr: any) => {
           let rawProb = (Number(curr.prob) || 75) / 100;
           
-          // Filtro Quantitativo de Consistência Estatística (V 9.5)
-          let probConstraintPenalty = 1;
-          if (curr.prob > 85) probConstraintPenalty = 0.95; // Punição por possível forçação de linha segura
-          else if (curr.prob < 65) probConstraintPenalty = 0.93; // Punição por alta variância isolada
+          // BLINDAGEM 1: Validação Regex de sourceExcerpt (Anti-Alucinação Visual)
+          const excerpt = curr.sourceExcerpt || '';
+          const hasNumbers = /\d/.test(excerpt);
+          let excerptPenalty = 1;
+          if (!hasNumbers) excerptPenalty = 0.85; // Punção massiva se a IA não citar os números
+          
+          // BLINDAGEM 2: Backend Autônomo de Divergência
+          const marketLow = (curr.market || '').toLowerCase();
+          const isTeamMarket = !marketLow.includes('partida') && !marketLow.includes('jogo') && !marketLow.includes('total') && !marketLow.includes('ambos');
+          const isBackendDivergent = isTeamMarket && rawProb > 0.75;
+          const divergencePenalty = (curr.divergenceRisk || isBackendDivergent) ? 0.95 : 1;
 
-          // Filtro de Divergência Casa/Fora (V 9.5)
-          const divergencePenalty = curr.divergenceRisk ? 0.95 : 1;
+          // Filtro Quantitativo de Consistência Estatística
+          let probConstraintPenalty = 1;
+          if (curr.prob > 85) probConstraintPenalty = 0.95; 
+          else if (curr.prob < 65) probConstraintPenalty = 0.93; 
 
           const volatilityPenalty = getMarketVolatilityPenalty(curr.market || '');
           
-          return acc * (rawProb * volatilityPenalty * probConstraintPenalty * divergencePenalty);
+          return acc * (rawProb * volatilityPenalty * probConstraintPenalty * divergencePenalty * excerptPenalty);
         }, 1
       );
 
-      // Verificação Matemática de Coerência Externa
-      // Se a multiplicação pura das % (antes das punições) passar de 70%, é suspeito no mundo real.
+      // Verificação Matemática de Coerência Externa (> 75% para reduzir Falsos Positivos)
       const rawPureMath = json.selections.reduce((acc: number, curr: any) => acc * ((Number(curr.prob) || 75) / 100), 1);
-      if (rawPureMath > 0.70) implicitCorrelationFlag = true;
+      if (rawPureMath > 0.75) implicitCorrelationFlag = true;
 
       const avgSample = json.selections.reduce((acc: number, curr: any) => acc + (Number(curr.sampleSize) || 10), 0) / json.selections.length;
 
@@ -182,7 +208,7 @@ Retorne ESTRITAMENTE um JSON válido neste formato:
         avgSample >= 7 ? 0.94 :
         0.90;
 
-      const SHRINK_FACTOR = 0.93; // Haircut estrutural de mercado
+      const SHRINK_FACTOR = 0.93; 
       
       const structuralPenalty =
         structuralRiskScore >= 4 ? 0.90 :
@@ -192,21 +218,25 @@ Retorne ESTRITAMENTE um JSON válido neste formato:
         1;
 
       // Consolidação final
-      const finalProb =
+      let finalProb =
         rawCombinedProb *
         SHRINK_FACTOR *
         confidenceAdjustment *
         dynamicCorrelationPenalty *
         structuralPenalty;
 
+      // BLINDAGEM 3: Hard Cap contra Overconfidence (Máximo 60% de probabilidade combinada)
+      // Isso garante que a Odd Justa gerada NUNCA seja menor que @1.66
+      finalProb = Math.min(finalProb, 0.60);
+
       json.combinedProb = Math.round(finalProb * 100);
       json.fairOdd = Number((1 / finalProb).toFixed(2));
       
-      // Ajuste Fino Visual (Se sinalizado correlação implícita alta, nunca é risco Baixo)
+      // Ajuste Fino Visual
       let riskLabel = "BAIXO";
-      if (structuralRiskScore >= 3 || avgSample < 10 || finalProb < 0.45) {
+      if (structuralRiskScore >= 3 || avgSample < 10 || finalProb < 0.40) {
          riskLabel = "ALTO";
-      } else if (structuralRiskScore >= 1 || avgSample < 15 || finalProb < 0.55 || implicitCorrelationFlag) {
+      } else if (structuralRiskScore >= 1 || avgSample < 15 || finalProb < 0.50 || implicitCorrelationFlag) {
          riskLabel = "MÉDIO";
       }
       
