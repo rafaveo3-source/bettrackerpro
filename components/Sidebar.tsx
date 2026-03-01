@@ -127,17 +127,17 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, setView, isOpen, setIsOp
             </button>
 
             {/* 🔥 BOTÃO KILLER: SCOUT HFT IA COM NEON EFFECT 🔥 */}
-            <div className="relative pb-2">
-               <div className="absolute inset-0 bg-indigo-500/10 blur-xl rounded-full"></div>
+            <div className="tour-sidebar-scout relative mb-2">
+               <div className="absolute inset-0 bg-indigo-500/20 dark:bg-indigo-500/10 blur-xl rounded-full"></div>
                <button
                    onClick={() => handleNavigation('scout')}
-                   className={`tour-sidebar-scout relative w-full flex items-center justify-between px-4 py-3.5 rounded-xl text-sm font-black uppercase tracking-widest transition-all duration-300 border overflow-hidden group shadow-lg
+                   className={`relative w-full flex items-center justify-between px-4 py-3.5 rounded-xl text-sm font-black uppercase tracking-widest transition-all duration-300 border overflow-hidden group shadow-lg
                    ${currentView === 'scout' 
-                       ? 'bg-indigo-600 text-white border-indigo-500 shadow-[0_0_20px_rgba(99,102,241,0.3)] scale-[1.02]' 
-                       : 'bg-[#020617] text-indigo-400 border-indigo-500/30 hover:bg-indigo-600 hover:text-white hover:border-indigo-500'}`}
+                       ? 'bg-indigo-600 text-white border-indigo-500 shadow-[0_0_20px_rgba(99,102,241,0.4)] scale-[1.02]' 
+                       : 'bg-indigo-50 dark:bg-[#0f172a] text-indigo-600 dark:text-indigo-400 border-indigo-300 dark:border-indigo-500/40 hover:bg-indigo-600 hover:text-white hover:border-indigo-500 shadow-[0_0_15px_rgba(99,102,241,0.2)]'}`}
                >
                    <div className="flex items-center gap-3 relative z-10">
-                       <Sparkles size={18} className={`${currentView === 'scout' ? 'animate-pulse text-white' : 'text-indigo-400 group-hover:text-white'}`} />
+                       <Sparkles size={18} className={`${currentView === 'scout' ? 'animate-pulse text-white' : 'text-indigo-500 dark:text-indigo-400 group-hover:text-white'}`} />
                        Scout IA
                    </div>
                    {!isPro && <Lock size={12} className="opacity-50" />}
