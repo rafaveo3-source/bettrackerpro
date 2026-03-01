@@ -61,8 +61,9 @@ const safeText = (val: any): string => {
 };
 
 const ScoutIA: React.FC = () => {
-  const userEmail = "rafaelancelmo.castro@gmail.com"; 
-  const { isPro, aiScansUsedToday, canUseAiScan, incrementAiScan, setToast } = useBetStore();
+  // 🔥 Puxamos o user dinamicamente. O e-mail blindado fica apenas na Vercel (.env)
+  const { user, isPro, aiScansUsedToday, canUseAiScan, incrementAiScan, setToast } = useBetStore();
+  const userEmail = user?.email || "usuario@desconhecido.com"; 
   const navigate = useNavigate();
 
   const [scoutMode, setScoutMode] = useState<'grid' | 'builder'>('grid');
