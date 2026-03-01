@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Sparkles, Scan, Layers, Clock, Zap, Target, CheckCircle2, 
   Square, Goal, Flag, ArrowRight, Plus, ArrowRightLeft, 
-  ShieldAlert, Activity, Lock, Crown, Trash
+  ShieldAlert, Activity, Lock, Crown, Trash, Info
 } from 'lucide-react';
 import { useBetStore } from '../store/useBetStore';
 
@@ -283,7 +283,7 @@ const ScoutIA: React.FC = () => {
 
         <div className="bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-800 rounded-[2.5rem] p-4 sm:p-8 shadow-sm relative overflow-hidden">
            
-           <div className="flex bg-[#09090b] p-1.5 rounded-2xl border border-slate-800 mb-8 shadow-inner">
+           <div className="flex bg-[#09090b] p-1.5 rounded-2xl border border-slate-800 mb-6 shadow-inner">
               <button onClick={() => setScoutMode('grid')} className={`flex-1 py-3 text-[10px] sm:text-xs font-black uppercase tracking-widest rounded-xl transition-all ${scoutMode === 'grid' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/20 scale-[1.02]' : 'text-slate-500 hover:text-slate-300 hover:bg-slate-800/50'}`}>
                   1. Radar de Grade
               </button>
@@ -291,6 +291,38 @@ const ScoutIA: React.FC = () => {
                   2. Construtor HFT
               </button>
            </div>
+
+           {/* 🔥 PAINEL DE INSTRUÇÕES (GUIA PASSO A PASSO) */}
+           <motion.div
+               key={scoutMode} // Anima quando troca de aba
+               initial={{ opacity: 0, y: -5 }}
+               animate={{ opacity: 1, y: 0 }}
+               className="mb-8 bg-indigo-50 dark:bg-indigo-500/5 border border-indigo-100 dark:border-indigo-500/10 p-5 rounded-2xl flex gap-4 items-start shadow-sm"
+           >
+               <div className="mt-0.5 text-indigo-500 bg-indigo-100 dark:bg-indigo-500/20 p-2 rounded-lg shrink-0">
+                   <Info size={20} />
+               </div>
+               <div>
+                   <h4 className="text-xs font-black uppercase tracking-widest text-indigo-700 dark:text-indigo-400 mb-3">
+                       {scoutMode === 'grid' ? 'Como usar o Radar de Grade?' : 'Como usar o Construtor HFT?'}
+                   </h4>
+                   <ul className="text-[11px] sm:text-xs text-slate-700 dark:text-slate-300 space-y-2.5 font-medium">
+                       {scoutMode === 'grid' ? (
+                           <>
+                               <li><strong className="text-indigo-600 dark:text-indigo-300">Passo 1:</strong> Acesse uma lista de jogos do dia (Ex: Flashscore, Sofascore ou a própria Bet365).</li>
+                               <li><strong className="text-indigo-600 dark:text-indigo-300">Passo 2:</strong> Tire um Print (captura de tela) que mostre os times que vão jogar.</li>
+                               <li><strong className="text-indigo-600 dark:text-indigo-300">Passo 3:</strong> Cole a imagem aqui (Ctrl+V) ou faça upload. A IA vai varrer a grade e encontrar os jogos com maior potencial.</li>
+                           </>
+                       ) : (
+                           <>
+                               <li><strong className="text-indigo-600 dark:text-indigo-300">Passo 1:</strong> Selecione seus mercados alvo nos botões abaixo.</li>
+                               <li><strong className="text-indigo-600 dark:text-indigo-300">Passo 2:</strong> Tire Prints das estatísticas de Confronto Direto (H2H) ou Tabela Geral de até 4 jogos.</li>
+                               <li><strong className="text-indigo-600 dark:text-indigo-300">Passo 3:</strong> Cole as imagens (Ctrl+V) e clique em Processar. A IA vai cruzar os dados, calcular a Odd Justa e montar sua múltipla.</li>
+                           </>
+                       )}
+                   </ul>
+               </div>
+           </motion.div>
 
            {/* ================================= */}
            {/* MODO 1: RADAR DE GRADE              */}
