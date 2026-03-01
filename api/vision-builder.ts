@@ -34,6 +34,7 @@ export default async function handler(req: any, res: any) {
     const origin = req.headers.origin || req.headers.referer || '';
     if (process.env.NODE_ENV === 'production') {
       if (origin && !origin.includes('bettrackerpro.com.br')) {
+        console.warn(`Tentativa de acesso bloqueada (Origem externa não autorizada): ${origin}`);
         return res.status(403).json({ error: 'Acesso negado. Endpoint protegido.' });
       }
     } else {
@@ -54,9 +55,15 @@ export default async function handler(req: any, res: any) {
       generationConfig: { temperature: 0.2 }, 
     });
 
+    // 🔥 NOVA LÓGICA DINÂMICA DE FILTRO DE MERCADOS
+    const isSingleMarket = markets && markets.length === 1;
     const selectedMarketsStr = markets && markets.length > 0 ? markets.join(', ') : 'Gols, Escanteios';
 
-    // 🔥 PROMPT HEDGE FUND 9.8: BLINDAGEM MÁXIMA
+    const crossMarketInstruction = isSingleMarket
+      ? `- 🛑 REGRA DE ESTRUTURAÇÃO (MERCADO ÚNICO EXCLUSIVO): O usuário restringiu a análise para APENAS a categoria [ ${selectedMarketsStr} ]. É ESTRITAMENTE PROIBIDO sugerir qualquer outro mercado em todas as chaves da resposta (Ex: se escolheu apenas Escanteios, não cite Gols em lugar nenhum). Para evitar bloqueios de redundância da casa de apostas usando apenas essa categoria, você OBRIGATORIAMENTE deve cruzar linhas de naturezas cronológicas diferentes (Ex: HT + FT) ou mercados de Equipe + Partida.`
+      : `- 🛑 REGRA DE ESTRUTURAÇÃO (CROSS-MARKET): Como múltiplos mercados foram selecionados, PRIORIZE cruzar mercados diferentes (Ex: 1 de Gols + 1 de Escanteios) para evitar bloqueios. Exceção: É permitido usar duas linhas do mesmo mercado APENAS se forem de naturezas cronológicas diferentes (Ex: Over 0.5 HT + Over 2.5 FT). NUNCA combine mercado de time com mercado de partida da mesma categoria.`;
+
+    // 🔥 PROMPT HEDGE FUND 9.9: RESPEITO ABSOLUTO AO FILTRO DO USUÁRIO
     const prompt = `Você é um Analista Quantitativo HFT Institucional e Gestor de Risco.
 Sua missão é criar uma Aposta Combinada (Múltipla) lendo as imagens estatísticas fornecidas.
 
@@ -68,14 +75,14 @@ Priorize linhas com probabilidade de acerto entre 72% e 80%, mas é PERMITIDO fl
 ⚙️ MOTOR MATEMÁTICO E REGRAS VISUAIS INVIOLÁVEIS:
 1. LEITURA RESTRITA (ANTI-ALUCINAÇÃO): É EXPRESSAMENTE PROIBIDO inventar números. Use apenas o Hit Rate real (%) visível.
 2. 🛑 ANTI-AMBIGUIDADE VISUAL: Se o número exato de jogos da amostra (ex: 5, 10) NÃO estiver explicitamente visível, o mercado DEVE SER DESCARTADO.
-3. 🛑 VALIDAÇÃO CRUZADA INTERNA: Na chave "sourceExcerpt", você deve COPIAR EXATAMENTE O TEXTO E OS NÚMEROS que você leu na imagem que justifica aquela entrada (Ex: "Mais de 1.5 - 80% (10 jogos)").
+3. 🛑 VALIDAÇÃO CRUZADA INTERNA: Na chave "sourceExcerpt", você deve COPIAR EXATAMENTE O TEXTO E OS NÚMEROS que você leu na imagem que justifica aquela entrada.
 4. 🛑 DIVERGÊNCIA CASA/FORA: Na chave "divergenceRisk", retorne "true" se a porcentagem alta pertencer quase inteiramente a apenas um dos times.
 
-⚠️ ESTRUTURAÇÃO DO BILHETE:
+⚠️ ESTRUTURAÇÃO DO BILHETE (RESPEITE OS FILTROS):
 - Proibido Resultado Final (1x2), Cartões, Jogadores e Linhas Asiáticas. Use apenas: [ ${selectedMarketsStr} ].
-- 🛑 REGRA CROSS-MARKET: Priorize cruzar mercados diferentes. Só repita a categoria se forem de naturezas cronológicas distintas (ex: Over 0.5 HT + Over 2.5 FT). NUNCA combine mercado de time com mercado de partida.
-- Na "alternativeCombination", proponha uma abordagem tática TOTALMENTE DIFERENTE da principal.
-- Na "conservativeCombination", aplique o "Fractional Drop" reduzindo as linhas.
+${crossMarketInstruction}
+- Na "alternativeCombination", proponha uma abordagem tática TOTALMENTE DIFERENTE da principal, mas obrigatoriamente RESTRITA aos mercados permitidos ([ ${selectedMarketsStr} ]).
+- Na "conservativeCombination", aplique o "Fractional Drop" reduzindo as linhas, também obrigatoriamente RESTRITO aos mercados permitidos ([ ${selectedMarketsStr} ]).
 
 ⚠️ REGRAS DE FORMATAÇÃO E UX:
 Nas chaves de texto, aja como um Analista Sênior. Focado em fatos objetivos e técnicos. Evite adjetivos qualificadores desnecessários e exageros.
@@ -95,8 +102,8 @@ Retorne ESTRITAMENTE um JSON válido neste formato:
       "divergenceRisk": false
     }
   ],
-  "alternativeCombination": "Foco em Gols: Mais de 0.5 Gols HT e Mais de 1.5 Gols FT.",
-  "conservativeCombination": "Extrema Segurança: Mais de 0.5 Gols FT e Total - Mais de 6.5 Cantos.",
+  "alternativeCombination": "Foco na mesma categoria com linhas diferentes. (Ex: Mais de 0.5 HT e Mais de 1.5 FT).",
+  "conservativeCombination": "Extrema Segurança aplicando Fractional Drop na categoria permitida.",
   "analysis": "📊 A Lógica dos Números: ...\\n\\n⚽ Leitura de Jogo (Game Script): ...\\n\\n🎯 Risco e Retorno: ..."
 }`;
 
@@ -113,7 +120,7 @@ Retorne ESTRITAMENTE um JSON válido neste formato:
     try { json = JSON.parse(matchJson[0]); } catch { throw new Error('Falha na conversão do JSON retornado.'); }
 
     // ==========================================
-    // 🧠 DETECÇÃO DE CORRELAÇÃO DINÂMICA (V 9.8)
+    // 🧠 DETECÇÃO DE CORRELAÇÃO DINÂMICA (V 9.9)
     // ==========================================
     let structuralRiskScore = 0;
     let dynamicCorrelationPenalty = 0.98; 
@@ -123,14 +130,11 @@ Retorne ESTRITAMENTE um JSON válido neste formato:
       const marketsLower = json.selections.map((s: any) => (s.market || '').toLowerCase());
       
       const hasHT = marketsLower.some((m: string) => m.includes('(ht)') || m.includes('1º tempo') || m.includes('1o tempo'));
-      // CORREÇÃO: Lógica FT mais restrita e segura
       const hasFT = marketsLower.some((m: string) => m.includes('(ft)') || m.includes('partida') || m.includes('jogo') || m.includes('final') || m.includes('total'));
       const isMixedHalves = hasHT && hasFT;
 
-      // CORREÇÃO: BothOvers abrange BTTS/Ambos
       const bothOvers = marketsLower.every((m: string) => m.includes('mais') || m.includes('over') || m.includes('ambos') || m.includes('btts') || m.includes('marcam'));
       
-      // CORREÇÃO: Correlação Semântica (Gols + BTTS)
       const hasBTTS = marketsLower.some((m: string) => m.includes('ambos') || m.includes('btts') || m.includes('marcam'));
       const hasOverGols = marketsLower.some((m: string) => (m.includes('mais') || m.includes('over')) && (m.includes('gol') || m.includes('gols')));
       
@@ -173,11 +177,11 @@ Retorne ESTRITAMENTE um JSON válido neste formato:
         (acc: number, curr: any) => {
           let rawProb = (Number(curr.prob) || 75) / 100;
           
-          // BLINDAGEM 1: Validação Regex de sourceExcerpt (Anti-Alucinação Visual)
+          // BLINDAGEM 1: Validação Regex de sourceExcerpt
           const excerpt = curr.sourceExcerpt || '';
           const hasNumbers = /\d/.test(excerpt);
           let excerptPenalty = 1;
-          if (!hasNumbers) excerptPenalty = 0.85; // Punção massiva se a IA não citar os números
+          if (!hasNumbers) excerptPenalty = 0.85; 
           
           // BLINDAGEM 2: Backend Autônomo de Divergência
           const marketLow = (curr.market || '').toLowerCase();
@@ -196,7 +200,7 @@ Retorne ESTRITAMENTE um JSON válido neste formato:
         }, 1
       );
 
-      // Verificação Matemática de Coerência Externa (> 75% para reduzir Falsos Positivos)
+      // Verificação Matemática de Coerência Externa (> 75%)
       const rawPureMath = json.selections.reduce((acc: number, curr: any) => acc * ((Number(curr.prob) || 75) / 100), 1);
       if (rawPureMath > 0.75) implicitCorrelationFlag = true;
 
@@ -225,8 +229,7 @@ Retorne ESTRITAMENTE um JSON válido neste formato:
         dynamicCorrelationPenalty *
         structuralPenalty;
 
-      // BLINDAGEM 3: Hard Cap contra Overconfidence (Máximo 60% de probabilidade combinada)
-      // Isso garante que a Odd Justa gerada NUNCA seja menor que @1.66
+      // BLINDAGEM 3: Hard Cap contra Overconfidence
       finalProb = Math.min(finalProb, 0.60);
 
       json.combinedProb = Math.round(finalProb * 100);
