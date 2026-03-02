@@ -79,7 +79,7 @@ export default async function handler(req: any, res: any) {
 
     const crossMarketInstruction = isSingleMarket
       ? `- 🛑 REGRA DE ESTRUTURAÇÃO (MERCADO ÚNICO): Usuário restringiu a [ ${selectedMarketsStr} ]. É PROIBIDO sugerir outro mercado. OBRIGATORIAMENTE cruze linhas cronológicas diferentes (Ex: HT + FT).`
-      : `- 🛑 REGRA DE ESTRUTURAÇÃO (CROSS-MARKET): Priorize cruzar mercados diferentes (Ex: Gols + Escanteios). Exceção: Permitido repetir o mercado APENAS se forem cronologias diferentes (Ex: HT + FT). NUNCA combine mercado de time com mercado de partida.`;
+      : `- 🛑 REGRA DE ESTRUTURAÇÃO (CROSS-MARKET): Priorize cruzar mercados diferentes (Ex: Gols + Escanteios). Exceção: Permitido repetir o mercado APENAS se forem cronologias diferentes (Ex: HT + FT). NUNCA combine mercado de time com mercado da partida.`;
 
     const imageParts = images.map((img: any) => ({ inlineData: { data: img.base64, mimeType: img.mimeType } }));
 
@@ -188,21 +188,19 @@ Retorne ESTRITAMENTE um JSON válido:
         }
       }
 
-      if (hasLiquidityError) continue; // Volta para o while e tenta gerar de novo
+      if (hasLiquidityError) continue; 
       
-      finalValidJson = json; // Passou nos testes
+      finalValidJson = json; 
     }
 
+    // 🛡️ FALLBACK DETERMINÍSTICO (O nível 3 de orquestração)
     if (!finalValidJson) {
-      // 🛡️ FALLBACK DETERMINÍSTICO (O nível 3 de orquestração)
-      // Se a IA for teimosa por 2 vezes seguidas e insistir em mercados sem liquidez,
-      // nós NÃO quebramos o app. Devolvemos um JSON de fallback educando o usuário.
       finalValidJson = {
         selections: [
           {
             match: "Análise Interrompida (Proteção de Capital)",
             league: "Sistema de Risco",
-            market: "Mercados lidos não possuem liquidez comercial aceitável",
+            market: "Mercados lidos não possuem liquidez aceitável",
             prob: 0,
             sampleSize: 0,
             sourceExcerpt: "Fallback de Segurança Ativado pelo Motor Quant",
@@ -218,6 +216,9 @@ Retorne ESTRITAMENTE um JSON válido:
         analysis: "📊 A Lógica dos Números: Os Hit Rates mais altos extraídos destas imagens pertencem a linhas muito curtas (ex: Cantos baixos para uma única equipe), que as casas de apostas precificam com odds muito ruins (muito 'juice').\n\n⚽ Leitura de Jogo (Game Script): Para proteger seu capital, o motor backend abortou a sugestão da IA.\n\n🎯 Risco e Retorno: Sugerimos tirar prints de mercados mais amplos ou de jogos com maior liquidez."
       };
     }
+
+    // 🔥 AQUI ESTÁ A VARIÁVEL QUE FALTAVA!
+    const json = finalValidJson;
 
     // ==========================================
     // 🧠 DETECÇÃO DE CORRELAÇÃO DINÂMICA
@@ -292,10 +293,10 @@ Retorne ESTRITAMENTE um JSON válido:
           if (lineMatch) {
              const line = parseFloat(lineMatch[1]);
              if (mkt.includes('escanteio') || mkt.includes('canto')) {
-                if (isTeamMarket && line < 4.5) marketThicknessPenalty = 0.92; // Linha de time magra
-                if (!isTeamMarket && line < 8.5) marketThicknessPenalty = 0.95; // Linha de jogo magra
+                if (isTeamMarket && line < 4.5) marketThicknessPenalty = 0.92; 
+                if (!isTeamMarket && line < 8.5) marketThicknessPenalty = 0.95; 
              } else if (mkt.includes('gol')) {
-                if (line < 1.0 && !mkt.includes('ht') && !mkt.includes('1º')) marketThicknessPenalty = 0.88; // Over 0.5 FT tem muito juice
+                if (line < 1.0 && !mkt.includes('ht') && !mkt.includes('1º')) marketThicknessPenalty = 0.88; 
              }
           }
 
@@ -327,8 +328,14 @@ Retorne ESTRITAMENTE um JSON válido:
       json.fairOdd = Number((1 / finalProb).toFixed(2));
       
       let riskLabel = "BAIXO";
-      if (structuralRiskScore >= 3 || avgSample < 10 || finalProb < 0.40) riskLabel = "ALTO";
-      else if (structuralRiskScore >= 1 || avgSample < 15 || finalProb < 0.50 || implicitCorrelationFlag) riskLabel = "MÉDIO";
+      // Fallback Visual para o Modo de Proteção
+      if (json.fairOdd === Infinity || finalProb === 0) {
+         riskLabel = "ALTO";
+      } else if (structuralRiskScore >= 3 || avgSample < 10 || finalProb < 0.40) {
+         riskLabel = "ALTO";
+      } else if (structuralRiskScore >= 1 || avgSample < 15 || finalProb < 0.50 || implicitCorrelationFlag) {
+         riskLabel = "MÉDIO";
+      }
       
       json.structuralRiskScore = structuralRiskScore;
       json.riskLevel = riskLabel;
