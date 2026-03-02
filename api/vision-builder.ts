@@ -60,32 +60,33 @@ export default async function handler(req: any, res: any) {
     const selectedMarketsStr = markets && markets.length > 0 ? markets.join(', ') : 'Gols, Escanteios';
 
     const crossMarketInstruction = isSingleMarket
-      ? `- 🛑 REGRA DE ESTRUTURAÇÃO (MERCADO ÚNICO EXCLUSIVO): O usuário restringiu a análise para APENAS a categoria [ ${selectedMarketsStr} ]. É ESTRITAMENTE PROIBIDO sugerir qualquer outro mercado em todas as chaves da resposta (Ex: se escolheu apenas Escanteios, não cite Gols em lugar nenhum). Para evitar bloqueios de redundância da casa de apostas usando apenas essa categoria, você OBRIGATORIAMENTE deve cruzar linhas de naturezas cronológicas diferentes (Ex: HT + FT) ou mercados de Equipe + Partida.`
-      : `- 🛑 REGRA DE ESTRUTURAÇÃO (CROSS-MARKET): Como múltiplos mercados foram selecionados, PRIORIZE cruzar mercados diferentes (Ex: 1 de Gols + 1 de Escanteios) para evitar bloqueios. Exceção: É permitido usar duas linhas do mesmo mercado APENAS se forem de naturezas cronológicas diferentes (Ex: Over 0.5 HT + Over 2.5 FT). NUNCA combine mercado de time com mercado de partida da mesma categoria.`;
+      ? `- 🛑 REGRA DE ESTRUTURAÇÃO (MERCADO ÚNICO EXCLUSIVO): O usuário restringiu a análise para APENAS a categoria [ ${selectedMarketsStr} ]. É ESTRITAMENTE PROIBIDO sugerir qualquer outro mercado em todas as chaves da resposta. Para evitar bloqueios de redundância usando apenas essa categoria, você OBRIGATORIAMENTE deve cruzar linhas de naturezas cronológicas diferentes (Ex: HT + FT) ou mercados de Equipe + Partida.`
+      : `- 🛑 REGRA DE ESTRUTURAÇÃO (CROSS-MARKET): Priorize cruzar mercados diferentes (Ex: 1 de Gols + 1 de Escanteios). Exceção: É permitido usar duas linhas do mesmo mercado APENAS se forem de naturezas cronológicas diferentes (Ex: Over 0.5 HT + Over 2.5 FT). NUNCA combine mercado de time com mercado de partida da mesma categoria.`;
 
-    // 🔥 PROMPT HEDGE FUND 9.9: RESPEITO ABSOLUTO AO FILTRO DO USUÁRIO
+    // 🔥 PROMPT HEDGE FUND 10/10: HIERARQUIA DE DADOS E ANTI-OPTIMIZATION DRIFT
     const prompt = `Você é um Analista Quantitativo HFT Institucional e Gestor de Risco.
 Sua missão é criar uma Aposta Combinada (Múltipla) lendo as imagens estatísticas fornecidas.
 
 🎯 SUA META DE ODD E PROBABILIDADE:
 A Odd Justa Final do seu bilhete deve ficar IDEALMENTE entre @1.60 e @2.00 (limite @2.20).
 Construa OBRIGATORIAMENTE uma DUPLA (Apenas 2 seleções). Evite triplas.
-Priorize linhas com probabilidade de acerto entre 72% e 80%, mas é PERMITIDO flexibilizar entre 65% e 85% para um melhor enquadramento.
+Priorize linhas com probabilidade de acerto (Hit Rate) entre 65% e 85%. No entanto, é TOTALMENTE PERMITIDO E ENCORAJADO usar valores fora desta faixa (ex: 90%+) se estes forem estatisticamente os mais representativos reais do confronto. Nunca degrade o contexto ou ignore dados primários apenas para forçar o encaixe na faixa padrão.
 
 ⚙️ MOTOR MATEMÁTICO E REGRAS VISUAIS INVIOLÁVEIS:
 1. LEITURA RESTRITA (ANTI-ALUCINAÇÃO): É EXPRESSAMENTE PROIBIDO inventar números. Use apenas o Hit Rate real (%) visível.
 2. 🛑 ANTI-AMBIGUIDADE VISUAL: Se o número exato de jogos da amostra (ex: 5, 10) NÃO estiver explicitamente visível, o mercado DEVE SER DESCARTADO.
 3. 🛑 VALIDAÇÃO CRUZADA INTERNA: Na chave "sourceExcerpt", você deve COPIAR EXATAMENTE O TEXTO E OS NÚMEROS que você leu na imagem que justifica aquela entrada.
 4. 🛑 DIVERGÊNCIA CASA/FORA: Na chave "divergenceRisk", retorne "true" se a porcentagem alta pertencer quase inteiramente a apenas um dos times.
+5. 🛑 HIERARQUIA DE DADOS (PRIORIDADE ABSOLUTA): Se houver estatísticas específicas do confronto direto (H2H) ou das equipes em campo, elas têm PRIORIDADE ABSOLUTA. É ESTRITAMENTE PROIBIDO substituir ou ignorar dados específicos do confronto para utilizar dados agregados da liga/campeonato caso os dados das equipes estejam disponíveis.
 
 ⚠️ ESTRUTURAÇÃO DO BILHETE (RESPEITE OS FILTROS):
 - Proibido Resultado Final (1x2), Cartões, Jogadores e Linhas Asiáticas. Use apenas: [ ${selectedMarketsStr} ].
 ${crossMarketInstruction}
-- Na "alternativeCombination", proponha uma abordagem tática TOTALMENTE DIFERENTE da principal, mas obrigatoriamente RESTRITA aos mercados permitidos ([ ${selectedMarketsStr} ]).
-- Na "conservativeCombination", aplique o "Fractional Drop" reduzindo as linhas, também obrigatoriamente RESTRITO aos mercados permitidos ([ ${selectedMarketsStr} ]).
+- Na "alternativeCombination", proponha uma abordagem tática TOTALMENTE DIFERENTE da principal, mas obrigatoriamente RESTRITA aos mercados permitidos.
+- Na "conservativeCombination", aplique o "Fractional Drop" reduzindo as linhas, também obrigatoriamente RESTRITO aos mercados permitidos.
 
 ⚠️ REGRAS DE FORMATAÇÃO E UX:
-Nas chaves de texto, aja como um Analista Sênior. Focado em fatos objetivos e técnicos. Evite adjetivos qualificadores desnecessários e exageros.
+Nas chaves de texto, aja como um Analista Sênior. O texto deve ser 100% objetivo e técnico. Evite adjetivos qualificadores desnecessários e exageros.
 "📊 A Lógica dos Números: [Fatos objetivos do Hit rate e amostra]"
 "⚽ Leitura de Jogo (Game Script): [Dinâmica tática e divergência]"
 "🎯 Risco e Retorno: [Proteção de capital]"
@@ -120,7 +121,7 @@ Retorne ESTRITAMENTE um JSON válido neste formato:
     try { json = JSON.parse(matchJson[0]); } catch { throw new Error('Falha na conversão do JSON retornado.'); }
 
     // ==========================================
-    // 🧠 DETECÇÃO DE CORRELAÇÃO DINÂMICA (V 9.9)
+    // 🧠 DETECÇÃO DE CORRELAÇÃO DINÂMICA (V 10.0)
     // ==========================================
     let structuralRiskScore = 0;
     let dynamicCorrelationPenalty = 0.98; 
@@ -190,6 +191,8 @@ Retorne ESTRITAMENTE um JSON válido neste formato:
           const divergencePenalty = (curr.divergenceRisk || isBackendDivergent) ? 0.95 : 1;
 
           // Filtro Quantitativo de Consistência Estatística
+          // Nota: Mantemos o penalty para probs > 85%. Isso atua como um simulador da "margem da casa de aposta" (Juice/Vig)
+          // Se a IA achar um mercado de 90%, o backend corta um pouco da gordura para evitar overconfidence cega.
           let probConstraintPenalty = 1;
           if (curr.prob > 85) probConstraintPenalty = 0.95; 
           else if (curr.prob < 65) probConstraintPenalty = 0.93; 
