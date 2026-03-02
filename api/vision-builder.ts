@@ -14,39 +14,29 @@ const getMarketVolatilityPenalty = (market: string) => {
   return 1;
 };
 
-// 🌍 MAPEAÇÃO DINÂMICA DE PRIORS POR LIGA
-const getDynamicPriors = (market: string, leagueName: string) => {
+// 🌍 MAPEAÇÃO DE PRIORS GLOBAIS FRACOS (WEAK PRIORS)
+// Ao invés de hardcodar ligas, usamos uma média global com baixo peso (alpha + beta = 4)
+// Isso ancora amostras pequenas sem esmagar as tendências fortes dos gráficos.
+const getGlobalWeakPriors = (market: string) => {
   const mkt = market.toLowerCase();
-  const l = (leagueName || '').toLowerCase();
-
-  const isHighScoring = l.includes('bundesliga') || l.includes('eredivisie') || l.includes('premier league') || l.includes('mls') || l.includes('norway') || l.includes('switzerland');
-  const isLowScoring = l.includes('serie b') || l.includes('championship') || l.includes('argentina') || l.includes('uruguay') || l.includes('segunda') || l.includes('africa');
   
-  let alpha = 3.0; 
-  let beta = 3.0;
+  let alpha = 2.0; 
+  let beta = 2.0;
 
   if (mkt.includes('gol') || mkt.includes('gols')) {
       if (mkt.includes('1.5') && !mkt.includes('ht') && !mkt.includes('1º')) {
-          if (isHighScoring) { alpha = 4.8; beta = 1.2; } 
-          else if (isLowScoring) { alpha = 3.9; beta = 2.1; } 
-          else { alpha = 4.5; beta = 1.5; } 
+          alpha = 2.9; beta = 1.1; // Baseline Global ~72%
       } else if (mkt.includes('0.5') && (mkt.includes('ht') || mkt.includes('1º'))) {
-          if (isHighScoring) { alpha = 4.4; beta = 1.6; } 
-          else if (isLowScoring) { alpha = 3.6; beta = 2.4; } 
-          else { alpha = 4.1; beta = 1.9; } 
+          alpha = 2.6; beta = 1.4; // Baseline Global ~65%
       } else if (mkt.includes('2.5')) {
-          if (isHighScoring) { alpha = 3.6; beta = 2.4; } 
-          else if (isLowScoring) { alpha = 2.4; beta = 3.6; } 
-          else { alpha = 3.0; beta = 3.0; } 
+          alpha = 2.0; beta = 2.0; // Baseline Global ~50%
       } else {
-          alpha = 3.6; beta = 2.4; 
+          alpha = 2.4; beta = 1.6; // ~60%
       }
   } else if (mkt.includes('ambos') || mkt.includes('btts') || mkt.includes('marcam')) {
-      if (isHighScoring) { alpha = 3.6; beta = 2.4; } 
-      else if (isLowScoring) { alpha = 2.7; beta = 3.3; } 
-      else { alpha = 3.3; beta = 2.7; } 
+      alpha = 2.2; beta = 1.8; // Baseline Global ~55%
   } else if (mkt.includes('escanteio') || mkt.includes('canto')) {
-      alpha = 3.3; beta = 2.7; 
+      alpha = 2.2; beta = 1.8; // Baseline Global ~55%
   }
 
   return { alpha, beta };
@@ -83,7 +73,7 @@ export default async function handler(req: any, res: any) {
 
     const imageParts = images.map((img: any) => ({ inlineData: { data: img.base64, mimeType: img.mimeType } }));
 
-    // 🔥 LOOP DE AUTO-HEALING (AGENTIC WORKFLOW)
+    // 🔥 LOOP DE AUTO-HEALING
     let finalValidJson = null;
     let attempts = 0;
     let lastInternalError = "";
@@ -98,28 +88,26 @@ ${lastInternalError ? `\n⚠️ ATENÇÃO - CORREÇÃO OBRIGATÓRIA DA TENTATIVA
 ⚙️ MOTOR MATEMÁTICO:
 1. NÃO invente números. Use o Hit Rate real (%).
 2. Se a amostra exata não estiver visível, DESCARTE O MERCADO.
-3. Extraia o nome da liga/campeonato na chave "league".
-4. DIVERGÊNCIA CASA/FORA: Retorne "true" se o Hit Rate for carregado por apenas um time.
-5. HIERARQUIA: H2H e dados das equipes têm PRIORIDADE ABSOLUTA.
+3. DIVERGÊNCIA CASA/FORA: Retorne "true" se o Hit Rate for carregado por apenas um time.
+4. HIERARQUIA: H2H e dados das equipes têm PRIORIDADE ABSOLUTA sobre dados da liga.
 
 ⚠️ REGRAS DE MERCADO E LIQUIDEZ:
 - Use: [ ${selectedMarketsStr} ].
 - 🛑 LINHAS DE LIQUIDEZ: Para Gols, prefira linhas de 0.5 a 3.5. Para Escanteios Totais, prefira de 6.5 a 11.5. PROIBIDO sugerir linhas de escanteios extremamente baixas para equipes (mínimo exigido 3.5 para times e 6.5 para partida).
 ${crossMarketInstruction}
 
-⚠️ REGRAS DE UX (PROIBIDO JSON BLEED):
-As chaves "alternativeCombination", "conservativeCombination" e "analysis" devem conter APENAS TEXTO CORRIDO HUMANO. É ESTRITAMENTE PROIBIDO INSERIR CÓDIGO JSON, CHAVES { } OU COLCHETES [ ] DENTRO DESSAS STRINGS.
-Formato da analysis:
-"📊 A Lógica dos Números: [...]"
-"⚽ Leitura de Jogo (Game Script): [...]"
-"🎯 Risco e Retorno: [...]"
+⚠️ REGRAS DE UX E FORMATAÇÃO (MUITO IMPORTANTE):
+As chaves "alternativeCombination", "conservativeCombination" e "analysis" devem conter APENAS TEXTO CORRIDO HUMANO. É ESTRITAMENTE PROIBIDO INSERIR CÓDIGO JSON DENTRO DESSAS STRINGS.
+Para a chave "analysis", VOCÊ DEVE OBRIGATORIAMENTE usar duas quebras de linha escapeadas ("\\n\\n") para separar os 3 parágrafos.
+
+Formato OBRIGATÓRIO da analysis:
+"📊 A Lógica dos Números: [...]\\n\\n⚽ Leitura de Jogo (Game Script): [...]\\n\\n🎯 Risco e Retorno: [...]"
 
 Retorne ESTRITAMENTE um JSON válido:
 {
   "selections": [
     {
       "match": "Time A vs Time B",
-      "league": "Liga",
       "market": "Partida (FT) - Mais de 8.5 Escanteios",
       "prob": 78,
       "sampleSize": 10,
@@ -129,7 +117,7 @@ Retorne ESTRITAMENTE um JSON válido:
   ],
   "alternativeCombination": "Apenas texto humano livre de código.",
   "conservativeCombination": "Apenas texto humano livre de código.",
-  "analysis": "..."
+  "analysis": "📊 A Lógica dos Números: O Hit rate é...\\n\\n⚽ Leitura de Jogo (Game Script): Esperamos que...\\n\\n🎯 Risco e Retorno: Isso protege..."
 }`;
 
       const result = await model.generateContent([prompt, ...imageParts]);
@@ -193,13 +181,12 @@ Retorne ESTRITAMENTE um JSON válido:
       finalValidJson = json; 
     }
 
-    // 🛡️ FALLBACK DETERMINÍSTICO (O nível 3 de orquestração)
+    // 🛡️ FALLBACK DETERMINÍSTICO
     if (!finalValidJson) {
       finalValidJson = {
         selections: [
           {
             match: "Análise Interrompida (Proteção de Capital)",
-            league: "Sistema de Risco",
             market: "Mercados lidos não possuem liquidez aceitável",
             prob: 0,
             sampleSize: 0,
@@ -213,11 +200,10 @@ Retorne ESTRITAMENTE um JSON válido:
         riskLevel: "ALTO",
         alternativeCombination: "A IA encontrou padrões fortes, mas as linhas comerciais exigidas (Ex: Over 0.5 HT, Over 7.5 Cantos FT) não atingiram a volumetria mínima no gráfico.",
         conservativeCombination: "Aguarde o jogo entrar no Ao Vivo para pegar linhas mais ajustadas e justas.",
-        analysis: "📊 A Lógica dos Números: Os Hit Rates mais altos extraídos destas imagens pertencem a linhas muito curtas (ex: Cantos baixos para uma única equipe), que as casas de apostas precificam com odds muito ruins (muito 'juice').\n\n⚽ Leitura de Jogo (Game Script): Para proteger seu capital, o motor backend abortou a sugestão da IA.\n\n🎯 Risco e Retorno: Sugerimos tirar prints de mercados mais amplos ou de jogos com maior liquidez."
+        analysis: "📊 A Lógica dos Números: Os Hit Rates mais altos extraídos destas imagens pertencem a linhas muito curtas (ex: Cantos baixos para uma única equipe), que as casas de apostas precificam com odds muito ruins.\n\n⚽ Leitura de Jogo (Game Script): Para proteger seu capital, o motor backend abortou a sugestão da IA.\n\n🎯 Risco e Retorno: Sugerimos tirar prints de mercados mais amplos ou de jogos com maior liquidez."
       };
     }
 
-    // 🔥 AQUI ESTÁ A VARIÁVEL QUE FALTAVA!
     const json = finalValidJson;
 
     // ==========================================
@@ -260,7 +246,7 @@ Retorne ESTRITAMENTE um JSON válido:
     }
 
     // ==========================================
-    // 🧮 CALCULO QUANTITATIVO COM MARKET THICKNESS
+    // 🧮 CALCULO QUANTITATIVO: FIM DO ERRO COMPOSTO
     // ==========================================
     if (json.selections && json.selections.length > 0) {
       
@@ -271,11 +257,10 @@ Retorne ESTRITAMENTE um JSON válido:
           if (sampleSize < 1) sampleSize = 10;
 
           let hits = Math.round(statedProb * sampleSize);
-          const { alpha, beta } = getDynamicPriors(curr.market || '', curr.league || '');
-          let rawProb = (hits + alpha) / (sampleSize + alpha + beta);
           
-          const excerpt = curr.sourceExcerpt || '';
-          let excerptPenalty = /\d/.test(excerpt) ? 1 : 0.85; 
+          // Uso de Global Weak Priors
+          const { alpha, beta } = getGlobalWeakPriors(curr.market || '');
+          let rawProb = (hits + alpha) / (sampleSize + alpha + beta);
           
           const mkt = (curr.market || '').toLowerCase();
           const matchStr = (curr.match || '').toLowerCase();
@@ -284,25 +269,34 @@ Retorne ESTRITAMENTE um JSON válido:
           const away = parts.length >= 3 ? parts[2].trim() : '';
           const isTeamMarket = (home && mkt.includes(home)) || (away && mkt.includes(away)) || (!mkt.includes('partida') && !mkt.includes('jogo') && !mkt.includes('total') && !mkt.includes('ambos'));
 
-          const divergencePenalty = (curr.divergenceRisk || (isTeamMarket && rawProb > 0.75)) ? 0.95 : 1;
-          let probConstraintPenalty = rawProb > 0.85 ? 0.97 : 1; 
+          // Agrupando multiplicadores em um Array para aplicar a trava de "Penalty Bounding"
+          let multipliers = [];
 
-          // 📈 MARKET THICKNESS SCORE (Alinhamento de Odds)
-          let marketThicknessPenalty = 1;
+          const excerpt = curr.sourceExcerpt || '';
+          if (!/\d/.test(excerpt)) multipliers.push(0.85);
+          
+          if (curr.divergenceRisk || (isTeamMarket && rawProb > 0.75)) multipliers.push(0.95);
+          if (rawProb > 0.85) multipliers.push(0.97);
+
           const lineMatch = mkt.match(/(?:mais|menos|over|under)[^\d]*(\d+(\.\d+)?)/i);
           if (lineMatch) {
              const line = parseFloat(lineMatch[1]);
              if (mkt.includes('escanteio') || mkt.includes('canto')) {
-                if (isTeamMarket && line < 4.5) marketThicknessPenalty = 0.92; 
-                if (!isTeamMarket && line < 8.5) marketThicknessPenalty = 0.95; 
+                if (isTeamMarket && line < 4.5) multipliers.push(0.92); 
+                if (!isTeamMarket && line < 8.5) multipliers.push(0.95); 
              } else if (mkt.includes('gol')) {
-                if (line < 1.0 && !mkt.includes('ht') && !mkt.includes('1º')) marketThicknessPenalty = 0.88; 
+                if (line < 1.0 && !mkt.includes('ht') && !mkt.includes('1º')) multipliers.push(0.88); 
              }
           }
 
-          const volatilityPenalty = getMarketVolatilityPenalty(curr.market || '');
+          multipliers.push(getMarketVolatilityPenalty(curr.market || ''));
+
+          // O Segredo contra o Compounding Error: Nós multiplicamos as penalidades, mas IMPEDIMOS
+          // que a punição total passe de 20% (0.80).
+          let combinedLegPenalty = multipliers.reduce((a, b) => a * b, 1);
+          combinedLegPenalty = Math.max(0.80, combinedLegPenalty);
           
-          return acc * (rawProb * volatilityPenalty * probConstraintPenalty * divergencePenalty * excerptPenalty * marketThicknessPenalty);
+          return acc * (rawProb * combinedLegPenalty);
         }, 1
       );
 
@@ -322,19 +316,18 @@ Retorne ESTRITAMENTE um JSON válido:
 
       let finalProb = rawCombinedProb * SHRINK_FACTOR * confidenceAdjustment * dynamicCorrelationPenalty * structuralPenalty;
 
-      finalProb = Math.min(finalProb, 0.60);
+      // REMOVIDO: finalProb = Math.min(finalProb, 0.60); A matemática agora é livre.
 
       json.combinedProb = Math.round(finalProb * 100);
       json.fairOdd = Number((1 / finalProb).toFixed(2));
       
       let riskLabel = "BAIXO";
-      // Fallback Visual para o Modo de Proteção
       if (json.fairOdd === Infinity || finalProb === 0) {
          riskLabel = "ALTO";
       } else if (structuralRiskScore >= 3 || avgSample < 10 || finalProb < 0.40) {
          riskLabel = "ALTO";
-      } else if (structuralRiskScore >= 1 || avgSample < 15 || finalProb < 0.50 || implicitCorrelationFlag) {
-         riskLabel = "MÉDIO";
+      } else if (structuralRiskScore >= 1 || avgSample < 15 || implicitCorrelationFlag) {
+         riskLabel = "MÉDIO"; // Sem travar em prob fixa, apenas pela estrutura
       }
       
       json.structuralRiskScore = structuralRiskScore;
