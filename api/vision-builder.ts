@@ -2,7 +2,6 @@ import { GoogleGenerativeAI } from '@google/generative-ai';
 
 export const maxDuration = 60;
 
-// 🔥 MOTOR DE VOLATILIDADE DE MERCADO (VOLATILITY MULTIPLIER)
 const getMarketVolatilityPenalty = (market: string) => {
   const m = market.toLowerCase();
   if (m.includes('1º tempo') || m.includes('1o tempo') || m.includes('(ht)') || m.includes('primeiro tempo')) {
@@ -15,43 +14,39 @@ const getMarketVolatilityPenalty = (market: string) => {
   return 1;
 };
 
-// 🌍 MAPEAÇÃO DINÂMICA DE PRIORS POR LIGA (LEAGUE-AWARE BAYESIAN ENGINE)
+// 🌍 MAPEAÇÃO DINÂMICA DE PRIORS POR LIGA
 const getDynamicPriors = (market: string, leagueName: string) => {
   const mkt = market.toLowerCase();
   const l = (leagueName || '').toLowerCase();
 
-  // Perfis de Ligas (Heurística de Baseline)
   const isHighScoring = l.includes('bundesliga') || l.includes('eredivisie') || l.includes('premier league') || l.includes('mls') || l.includes('norway') || l.includes('switzerland');
   const isLowScoring = l.includes('serie b') || l.includes('championship') || l.includes('argentina') || l.includes('uruguay') || l.includes('segunda') || l.includes('africa');
   
-  let alpha = 3.0; // Default weight
+  let alpha = 3.0; 
   let beta = 3.0;
 
   if (mkt.includes('gol') || mkt.includes('gols')) {
       if (mkt.includes('1.5') && !mkt.includes('ht') && !mkt.includes('1º')) {
-          // Over 1.5 FT
-          if (isHighScoring) { alpha = 4.8; beta = 1.2; } // Baseline ~80%
-          else if (isLowScoring) { alpha = 3.9; beta = 2.1; } // Baseline ~65%
-          else { alpha = 4.5; beta = 1.5; } // Global Baseline ~75%
+          if (isHighScoring) { alpha = 4.8; beta = 1.2; } 
+          else if (isLowScoring) { alpha = 3.9; beta = 2.1; } 
+          else { alpha = 4.5; beta = 1.5; } 
       } else if (mkt.includes('0.5') && (mkt.includes('ht') || mkt.includes('1º'))) {
-          // Over 0.5 HT
-          if (isHighScoring) { alpha = 4.4; beta = 1.6; } // ~73%
-          else if (isLowScoring) { alpha = 3.6; beta = 2.4; } // ~60%
-          else { alpha = 4.1; beta = 1.9; } // ~68%
+          if (isHighScoring) { alpha = 4.4; beta = 1.6; } 
+          else if (isLowScoring) { alpha = 3.6; beta = 2.4; } 
+          else { alpha = 4.1; beta = 1.9; } 
       } else if (mkt.includes('2.5')) {
-          if (isHighScoring) { alpha = 3.6; beta = 2.4; } // ~60%
-          else if (isLowScoring) { alpha = 2.4; beta = 3.6; } // ~40%
-          else { alpha = 3.0; beta = 3.0; } // ~50%
+          if (isHighScoring) { alpha = 3.6; beta = 2.4; } 
+          else if (isLowScoring) { alpha = 2.4; beta = 3.6; } 
+          else { alpha = 3.0; beta = 3.0; } 
       } else {
-          alpha = 3.6; beta = 2.4; // Generic Goals ~60%
+          alpha = 3.6; beta = 2.4; 
       }
   } else if (mkt.includes('ambos') || mkt.includes('btts') || mkt.includes('marcam')) {
-      if (isHighScoring) { alpha = 3.6; beta = 2.4; } // ~60%
-      else if (isLowScoring) { alpha = 2.7; beta = 3.3; } // ~45%
-      else { alpha = 3.3; beta = 2.7; } // ~55%
+      if (isHighScoring) { alpha = 3.6; beta = 2.4; } 
+      else if (isLowScoring) { alpha = 2.7; beta = 3.3; } 
+      else { alpha = 3.3; beta = 2.7; } 
   } else if (mkt.includes('escanteio') || mkt.includes('canto')) {
-      // Escanteios são menos dependentes da liga e mais do estilo de jogo das equipes, mantemos prior estável
-      alpha = 3.3; beta = 2.7; // ~55% Baseline genérico
+      alpha = 3.3; beta = 2.7; 
   }
 
   return { alpha, beta };
@@ -84,61 +79,145 @@ export default async function handler(req: any, res: any) {
 
     const crossMarketInstruction = isSingleMarket
       ? `- 🛑 REGRA DE ESTRUTURAÇÃO (MERCADO ÚNICO): Usuário restringiu a [ ${selectedMarketsStr} ]. É PROIBIDO sugerir outro mercado. OBRIGATORIAMENTE cruze linhas cronológicas diferentes (Ex: HT + FT).`
-      : `- 🛑 REGRA DE ESTRUTURAÇÃO (CROSS-MARKET): Priorize cruzar mercados diferentes (Ex: Gols + Escanteios). Exceção: Permitido repetir o mercado APENAS se forem cronologias diferentes (Ex: HT + FT).`;
+      : `- 🛑 REGRA DE ESTRUTURAÇÃO (CROSS-MARKET): Priorize cruzar mercados diferentes (Ex: Gols + Escanteios). Exceção: Permitido repetir o mercado APENAS se forem cronologias diferentes (Ex: HT + FT). NUNCA combine mercado de time com mercado de partida.`;
 
-    const prompt = `Você é um Analista Quantitativo HFT Institucional e Gestor de Risco.
-Sua missão é criar uma Aposta Combinada (Múltipla) lendo as imagens estatísticas fornecidas.
+    const imageParts = images.map((img: any) => ({ inlineData: { data: img.base64, mimeType: img.mimeType } }));
 
-🎯 SUA META DE ODD E PROBABILIDADE:
-A Odd Justa Final do seu bilhete deve ficar IDEALMENTE entre @1.60 e @2.00.
-Construa OBRIGATORIAMENTE uma DUPLA (Apenas 2 seleções). Evite triplas.
-Priorize linhas com probabilidade de acerto (Hit Rate) entre 65% e 85%. É PERMITIDO usar valores maiores se forem estatisticamente os mais representativos, mas nunca degrade o contexto.
+    // 🔥 LOOP DE AUTO-HEALING (AGENTIC WORKFLOW)
+    let finalValidJson = null;
+    let attempts = 0;
+    let lastInternalError = "";
 
-⚙️ MOTOR MATEMÁTICO E REGRAS VISUAIS INVIOLÁVEIS:
-1. LEITURA RESTRITA: É EXPRESSAMENTE PROIBIDO inventar números. Use apenas o Hit Rate real (%) visível.
-2. ANTI-AMBIGUIDADE: Se o número exato de jogos da amostra (ex: 5, 10) não estiver explicitamente visível, DESCARTE O MERCADO.
-3. VALIDAÇÃO CRUZADA: Na chave "sourceExcerpt", COPIE EXATAMENTE O TEXTO E NÚMEROS lidos que justificam a entrada.
-4. DIVERGÊNCIA CASA/FORA: Na chave "divergenceRisk", retorne "true" se o Hit Rate pertencer quase inteiramente a apenas um dos times.
-5. IDENTIFICAÇÃO DE LIGA: Extraia o nome do campeonato/liga presente na imagem e coloque na chave "league" (Ex: "England Championship").
-6. HIERARQUIA DE DADOS: Estatísticas específicas de Confronto Direto (H2H) ou das equipes em campo têm PRIORIDADE ABSOLUTA sobre dados agregados.
+    while (attempts < 2 && !finalValidJson) {
+      attempts++;
+      
+      const prompt = `Você é um Analista Quantitativo HFT Institucional.
+🎯 META DE ODD E PROBABILIDADE: A Odd Justa Final deve ficar IDEALMENTE entre @1.60 e @2.00. Construa OBRIGATORIAMENTE uma DUPLA. Priorize linhas com probabilidade entre 65% e 85%.
+${lastInternalError ? `\n⚠️ ATENÇÃO - CORREÇÃO OBRIGATÓRIA DA TENTATIVA ANTERIOR: ${lastInternalError}\n` : ''}
 
-⚠️ ESTRUTURAÇÃO DO BILHETE:
-- Proibido Resultado Final (1x2), Cartões, Jogadores. Use: [ ${selectedMarketsStr} ].
+⚙️ MOTOR MATEMÁTICO:
+1. NÃO invente números. Use o Hit Rate real (%).
+2. Se a amostra exata não estiver visível, DESCARTE O MERCADO.
+3. Extraia o nome da liga/campeonato na chave "league".
+4. DIVERGÊNCIA CASA/FORA: Retorne "true" se o Hit Rate for carregado por apenas um time.
+5. HIERARQUIA: H2H e dados das equipes têm PRIORIDADE ABSOLUTA.
+
+⚠️ REGRAS DE MERCADO E LIQUIDEZ:
+- Use: [ ${selectedMarketsStr} ].
+- 🛑 LINHAS DE LIQUIDEZ: Para Gols, prefira linhas de 0.5 a 3.5. Para Escanteios Totais, prefira de 6.5 a 11.5. PROIBIDO sugerir linhas de escanteios extremamente baixas para equipes (mínimo exigido 3.5 para times e 6.5 para partida).
 ${crossMarketInstruction}
-- "alternativeCombination": Abordagem tática TOTALMENTE DIFERENTE da principal.
-- "conservativeCombination": Aplique o "Fractional Drop" reduzindo as linhas.
 
-⚠️ REGRAS DE FORMATAÇÃO E UX:
-Tom 100% objetivo e técnico. Sem adjetivos emocionais.
-"📊 A Lógica dos Números: [Fatos objetivos do Hit rate]"
-"⚽ Leitura de Jogo (Game Script): [Dinâmica tática]"
-"🎯 Risco e Retorno: [Proteção de capital]"
+⚠️ REGRAS DE UX (PROIBIDO JSON BLEED):
+As chaves "alternativeCombination", "conservativeCombination" e "analysis" devem conter APENAS TEXTO CORRIDO HUMANO. É ESTRITAMENTE PROIBIDO INSERIR CÓDIGO JSON, CHAVES { } OU COLCHETES [ ] DENTRO DESSAS STRINGS.
+Formato da analysis:
+"📊 A Lógica dos Números: [...]"
+"⚽ Leitura de Jogo (Game Script): [...]"
+"🎯 Risco e Retorno: [...]"
 
-Retorne ESTRITAMENTE um JSON válido neste formato:
+Retorne ESTRITAMENTE um JSON válido:
 {
   "selections": [
     {
       "match": "Time A vs Time B",
-      "league": "Nome da Liga (Ex: Premier League)",
+      "league": "Liga",
       "market": "Partida (FT) - Mais de 8.5 Escanteios",
       "prob": 78,
       "sampleSize": 10,
-      "sourceExcerpt": "Transcreva literalmente o texto lido",
+      "sourceExcerpt": "Texto lido",
       "divergenceRisk": false
     }
   ],
-  "alternativeCombination": "...",
-  "conservativeCombination": "...",
+  "alternativeCombination": "Apenas texto humano livre de código.",
+  "conservativeCombination": "Apenas texto humano livre de código.",
   "analysis": "..."
 }`;
 
-    const imageParts = images.map((img: any) => ({ inlineData: { data: img.base64, mimeType: img.mimeType } }));
-    const result = await model.generateContent([prompt, ...imageParts]);
-    const matchJson = result.response.text().match(/\{[\s\S]*\}/);
-    if (!matchJson) throw new Error('Falha na extração de dados.');
+      const result = await model.generateContent([prompt, ...imageParts]);
+      let responseText = result.response.text();
+      
+      const matchJson = responseText.match(/\{[\s\S]*\}/);
+      if (!matchJson) {
+         lastInternalError = "Você não retornou um JSON válido. Retorne ESTRITAMENTE o formato JSON solicitado.";
+         continue;
+      }
 
-    let json;
-    try { json = JSON.parse(matchJson[0]); } catch { throw new Error('Falha no Parse.'); }
+      let json;
+      try { 
+        json = JSON.parse(matchJson[0]); 
+      } catch { 
+        lastInternalError = "O JSON retornado está quebrado. Certifique-se de escapar as aspas corretamente.";
+        continue; 
+      }
+
+      // UX Fallback contra JSON Bleed
+      if (typeof json.alternativeCombination === 'string' && json.alternativeCombination.includes('{"selections"')) {
+         json.alternativeCombination = "Recomendamos explorar mercados cronológicos (HT vs FT) ou linhas conservadoras de totais da partida.";
+      }
+      if (typeof json.conservativeCombination === 'string' && json.conservativeCombination.includes('{"selections"')) {
+         json.conservativeCombination = "Aplicar Fractional Drop: reduza as linhas originais em 1 ou 2 pontos de corte (ex: de 1.5 Gols para 0.5 Gols).";
+      }
+
+      // 🛡️ HARD FILTER DE LIQUIDEZ COM MELHOR CLASSIFICAÇÃO
+      let hasLiquidityError = false;
+      if (json.selections && Array.isArray(json.selections)) {
+        for (let sel of json.selections) {
+          const mkt = (sel.market || '').toLowerCase();
+          const matchStr = (sel.match || '').toLowerCase();
+          const parts = matchStr.split(/\s*(vs|x|-)\s*/i);
+          const home = parts.length >= 3 ? parts[0].trim() : '';
+          const away = parts.length >= 3 ? parts[2].trim() : '';
+          
+          const isTeamMarket = (home && mkt.includes(home)) || (away && mkt.includes(away)) || (!mkt.includes('partida') && !mkt.includes('jogo') && !mkt.includes('total') && !mkt.includes('ambos'));
+
+          if (mkt.includes('escanteio') || mkt.includes('canto')) {
+            const lineMatch = mkt.match(/(?:mais|menos|over|under)[^\d]*(\d+(\.\d+)?)/i);
+            if (lineMatch) {
+              const line = parseFloat(lineMatch[1]);
+              if (isTeamMarket && line < 3.5) {
+                 lastInternalError = `PROIBIDO usar a linha ${line} para escanteios de equipe no mercado '${sel.market}'. O mínimo de liquidez aceitável para um time é 3.5. Sugira uma linha maior ou mude para o mercado da partida inteira.`;
+                 hasLiquidityError = true;
+                 break;
+              }
+              if (!isTeamMarket && line < 6.5) {
+                 lastInternalError = `PROIBIDO usar a linha ${line} para escanteios da partida no mercado '${sel.market}'. O mínimo de liquidez aceitável para um jogo é 6.5. Sugira uma linha maior.`;
+                 hasLiquidityError = true;
+                 break;
+              }
+            }
+          }
+        }
+      }
+
+      if (hasLiquidityError) continue; // Volta para o while e tenta gerar de novo
+      
+      finalValidJson = json; // Passou nos testes
+    }
+
+    if (!finalValidJson) {
+      // 🛡️ FALLBACK DETERMINÍSTICO (O nível 3 de orquestração)
+      // Se a IA for teimosa por 2 vezes seguidas e insistir em mercados sem liquidez,
+      // nós NÃO quebramos o app. Devolvemos um JSON de fallback educando o usuário.
+      finalValidJson = {
+        selections: [
+          {
+            match: "Análise Interrompida (Proteção de Capital)",
+            league: "Sistema de Risco",
+            market: "Mercados lidos não possuem liquidez comercial aceitável",
+            prob: 0,
+            sampleSize: 0,
+            sourceExcerpt: "Fallback de Segurança Ativado pelo Motor Quant",
+            divergenceRisk: false
+          }
+        ],
+        combinedProb: 0,
+        fairOdd: 0,
+        structuralRiskScore: 5,
+        riskLevel: "ALTO",
+        alternativeCombination: "A IA encontrou padrões fortes, mas as linhas comerciais exigidas (Ex: Over 0.5 HT, Over 7.5 Cantos FT) não atingiram a volumetria mínima no gráfico.",
+        conservativeCombination: "Aguarde o jogo entrar no Ao Vivo para pegar linhas mais ajustadas e justas.",
+        analysis: "📊 A Lógica dos Números: Os Hit Rates mais altos extraídos destas imagens pertencem a linhas muito curtas (ex: Cantos baixos para uma única equipe), que as casas de apostas precificam com odds muito ruins (muito 'juice').\n\n⚽ Leitura de Jogo (Game Script): Para proteger seu capital, o motor backend abortou a sugestão da IA.\n\n🎯 Risco e Retorno: Sugerimos tirar prints de mercados mais amplos ou de jogos com maior liquidez."
+      };
+    }
 
     // ==========================================
     // 🧠 DETECÇÃO DE CORRELAÇÃO DINÂMICA
@@ -180,7 +259,7 @@ Retorne ESTRITAMENTE um JSON válido neste formato:
     }
 
     // ==========================================
-    // 🧮 CALCULO QUANTITATIVO: LEAGUE-AWARE BAYESIAN
+    // 🧮 CALCULO QUANTITATIVO COM MARKET THICKNESS
     // ==========================================
     if (json.selections && json.selections.length > 0) {
       
@@ -190,27 +269,39 @@ Retorne ESTRITAMENTE um JSON válido neste formato:
           let sampleSize = Number(curr.sampleSize) || 10;
           if (sampleSize < 1) sampleSize = 10;
 
-          // 1. Extração Discreta de Hits
           let hits = Math.round(statedProb * sampleSize);
-
-          // 2. Obtenção Dinâmica dos Priors baseados na Liga extraída pela IA
           const { alpha, beta } = getDynamicPriors(curr.market || '', curr.league || '');
-
-          // 3. Regressão Bayesiana Informada
           let rawProb = (hits + alpha) / (sampleSize + alpha + beta);
           
-          // BLINDAGENS
           const excerpt = curr.sourceExcerpt || '';
           let excerptPenalty = /\d/.test(excerpt) ? 1 : 0.85; 
           
-          const marketLow = (curr.market || '').toLowerCase();
-          const isTeamMarket = !marketLow.includes('partida') && !marketLow.includes('jogo') && !marketLow.includes('total') && !marketLow.includes('ambos');
-          const divergencePenalty = (curr.divergenceRisk || (isTeamMarket && rawProb > 0.75)) ? 0.95 : 1;
+          const mkt = (curr.market || '').toLowerCase();
+          const matchStr = (curr.match || '').toLowerCase();
+          const parts = matchStr.split(/\s*(vs|x|-)\s*/i);
+          const home = parts.length >= 3 ? parts[0].trim() : '';
+          const away = parts.length >= 3 ? parts[2].trim() : '';
+          const isTeamMarket = (home && mkt.includes(home)) || (away && mkt.includes(away)) || (!mkt.includes('partida') && !mkt.includes('jogo') && !mkt.includes('total') && !mkt.includes('ambos'));
 
+          const divergencePenalty = (curr.divergenceRisk || (isTeamMarket && rawProb > 0.75)) ? 0.95 : 1;
           let probConstraintPenalty = rawProb > 0.85 ? 0.97 : 1; 
+
+          // 📈 MARKET THICKNESS SCORE (Alinhamento de Odds)
+          let marketThicknessPenalty = 1;
+          const lineMatch = mkt.match(/(?:mais|menos|over|under)[^\d]*(\d+(\.\d+)?)/i);
+          if (lineMatch) {
+             const line = parseFloat(lineMatch[1]);
+             if (mkt.includes('escanteio') || mkt.includes('canto')) {
+                if (isTeamMarket && line < 4.5) marketThicknessPenalty = 0.92; // Linha de time magra
+                if (!isTeamMarket && line < 8.5) marketThicknessPenalty = 0.95; // Linha de jogo magra
+             } else if (mkt.includes('gol')) {
+                if (line < 1.0 && !mkt.includes('ht') && !mkt.includes('1º')) marketThicknessPenalty = 0.88; // Over 0.5 FT tem muito juice
+             }
+          }
+
           const volatilityPenalty = getMarketVolatilityPenalty(curr.market || '');
           
-          return acc * (rawProb * volatilityPenalty * probConstraintPenalty * divergencePenalty * excerptPenalty);
+          return acc * (rawProb * volatilityPenalty * probConstraintPenalty * divergencePenalty * excerptPenalty * marketThicknessPenalty);
         }, 1
       );
 
@@ -230,7 +321,6 @@ Retorne ESTRITAMENTE um JSON válido neste formato:
 
       let finalProb = rawCombinedProb * SHRINK_FACTOR * confidenceAdjustment * dynamicCorrelationPenalty * structuralPenalty;
 
-      // BLINDAGEM MÁXIMA
       finalProb = Math.min(finalProb, 0.60);
 
       json.combinedProb = Math.round(finalProb * 100);
