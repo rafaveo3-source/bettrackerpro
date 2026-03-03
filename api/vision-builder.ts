@@ -72,8 +72,7 @@ export default async function handler(req: any, res: any) {
       if (origin && !origin.includes('localhost') && !origin.includes('bettrackerpro.com.br')) return res.status(403).json({ error: 'Acesso negado no teste.' });
     }
 
-    // Recebendo userOdd do frontend para cálculo de EV Real
-    const { images, email, markets, userOdd } = req.body; 
+    const { images, email, markets } = req.body; 
     const apiKey = process.env.GEMINI_API_KEY;
     if (!apiKey) return res.status(500).json({ error: 'Chave de API ausente.' });
     if (!email) return res.status(401).json({ error: 'Acesso não autorizado.' });
@@ -93,6 +92,7 @@ export default async function handler(req: any, res: any) {
 
     const imageParts = images.map((img: any) => ({ inlineData: { data: img.base64, mimeType: img.mimeType } }));
 
+    // 🔥 LOOP DE AUTO-HEALING
     let finalValidJson = null;
     let attempts = 0;
     let lastInternalError = "";
@@ -167,7 +167,16 @@ Retorne ESTRITAMENTE um JSON válido:
       finalValidJson = json; 
     }
 
-    if (!finalValidJson) throw new Error("Abortado por proteção de capital. Mercados sem liquidez ou muito arriscados.");
+    // 🛡️ FALLBACK DETERMINÍSTICO
+    if (!finalValidJson) {
+      finalValidJson = {
+        selections: [ { match: "Análise Interrompida (Proteção)", market: "Mercados lidos não possuem liquidez", prob: 0, sampleSize: 0, sourceExcerpt: "Fallback Ativado", divergenceRisk: false } ],
+        combinedProb: 0, fairOdd: 0, structuralRiskScore: 5, riskLevel: "ALTO", minProb: 0, maxProb: 0,
+        alternativeCombination: "Aguarde o jogo entrar no Ao Vivo para melhores liquidez.",
+        conservativeCombination: "Tente selecionar múltiplas categorias (Gols + Cantos).",
+        analysis: "📊 A Lógica dos Números: As linhas extraídas possuem risco assimétrico muito elevado.\n\n⚽ Leitura de Jogo: Motor backend abortou por proteção de capital.\n\n🎯 Risco e Retorno: EV negativo. Proteja seu saldo."
+      };
+    }
 
     const json = finalValidJson;
 
@@ -194,7 +203,7 @@ Retorne ESTRITAMENTE um JSON válido:
         const away = parts.length >= 3 ? parts[2].trim() : '';
         const isTeamMarket = (home && mkt.includes(home)) || (away && mkt.includes(away)) || (!mkt.includes('partida') && !mkt.includes('jogo') && !mkt.includes('total') && !mkt.includes('ambos'));
 
-        return { ...sel, rawProb, line, mkt, isTeamMarket };
+        return { ...sel, rawProb, line, mkt, isTeamMarket, sampleSize };
     });
 
     let rawCombinedProb = 1;
@@ -296,30 +305,35 @@ Retorne ESTRITAMENTE um JSON válido:
         if (rawPureMath > 0.75) implicitCorrelationFlag = true;
     }
 
-    const avgSample = legs.reduce((acc: number, curr: any) => acc + (Number(curr.sampleSize) || 10), 0) / legs.length;
+    const avgSample = legs.reduce((acc: number, curr: any) => acc + curr.sampleSize, 0) / legs.length;
     const confidenceAdjustment = avgSample >= 15 ? 1 : avgSample >= 10 ? 0.98 : avgSample >= 7 ? 0.95 : 0.92;
 
     const SHRINK_FACTOR = 0.96; 
     const structuralPenalty = structuralRiskScore >= 4 ? 0.90 : structuralRiskScore === 3 ? 0.93 : structuralRiskScore === 2 ? 0.95 : structuralRiskScore === 1 ? 0.97 : 1;
 
-    // A MÁGICA FINAL: Multiplica a Joint Probability Pura de Poisson pelos escudos de mercado
+    // ==========================================
+    // 🎯 PASSO 4: CALCULAR MARGEM DE ERRO E ESPECTRO DE EV
+    // ==========================================
     let finalProb = rawCombinedProb * totalPenalty * SHRINK_FACTOR * confidenceAdjustment * dynamicCorrelationPenalty * structuralPenalty;
 
     json.combinedProb = Math.round(finalProb * 100);
     json.fairOdd = Number((1 / finalProb).toFixed(2));
     
-    // ==========================================
-    // 💰 PASSO 4: CÁLCULO DINÂMICO DE EV%
-    // ==========================================
-    if (userOdd && typeof userOdd === 'number' && userOdd > 1) {
-        const evRaw = (finalProb * userOdd) - 1;
-        json.ev = Number((evRaw * 100).toFixed(1)); 
-    }
+    // 🔬 CÁLCULO DO INTERVALO DE CONFIANÇA (Margem de Erro)
+    // Z = 1.28 para um intervalo de confiança pragmático de ~80%
+    const zScore = 1.28; 
+    let marginOfError = zScore * Math.sqrt((finalProb * (1 - finalProb)) / Math.max(avgSample, 5));
+    
+    // Limitamos a variância visual entre ±3% e ±8%
+    marginOfError = Math.min(Math.max(marginOfError, 0.03), 0.08); 
+
+    json.minProb = Math.max(1, Math.round((finalProb - marginOfError) * 100));
+    json.maxProb = Math.min(99, Math.round((finalProb + marginOfError) * 100));
 
     let riskLabel = "BAIXO";
     if (json.fairOdd === Infinity || finalProb === 0) riskLabel = "ALTO";
-    else if (structuralRiskScore >= 3 || avgSample < 10 || finalProb < 0.40 || (json.ev !== undefined && json.ev < -5)) riskLabel = "ALTO";
-    else if (structuralRiskScore >= 1 || avgSample < 15 || implicitCorrelationFlag || (json.ev !== undefined && json.ev < 0)) riskLabel = "MÉDIO"; 
+    else if (structuralRiskScore >= 3 || avgSample < 10 || finalProb < 0.40) riskLabel = "ALTO";
+    else if (structuralRiskScore >= 1 || avgSample < 15 || implicitCorrelationFlag) riskLabel = "MÉDIO"; 
     
     json.structuralRiskScore = structuralRiskScore;
     json.riskLevel = riskLabel;

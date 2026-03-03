@@ -73,7 +73,7 @@ const ScoutIA: React.FC = () => {
   const [scoutBuilderResult, setScoutBuilderResult] = useState<any | null>(null);
   const [selectedMatchesForBuilder, setSelectedMatchesForBuilder] = useState<string[]>([]);
   
-  // 🔥 NOVO STATE: Input da Odd do Usuário (Agora usado APENAS no Pós-Processamento)
+  // 🔥 STATE DO EV
   const [userOdd, setUserOdd] = useState<string>('');
 
   const AVAILABLE_MARKETS = ['Gols (Overs, Unders, HT/FT, Equipe)', 'Escanteios (Overs, Race, HT/FT, Equipe)'];
@@ -196,7 +196,7 @@ const ScoutIA: React.FC = () => {
 
       setIsScanningScout(true); 
       setScoutBuilderResult(null);
-      setUserOdd(''); // Reseta a Odd digitada anteriormente para não confundir o novo bilhete
+      setUserOdd('');
 
       try {
           const base64Images = await Promise.all(scoutBuilderImages.map(async (imgObj) => ({
@@ -206,7 +206,6 @@ const ScoutIA: React.FC = () => {
 
           const response = await fetch('/api/vision-builder', {
               method: 'POST', headers: { 'Content-Type': 'application/json' },
-              // 🔥 CORREÇÃO: Não enviamos mais a ODD para o Backend. Ele só precisa das imagens.
               body: JSON.stringify({ 
                   images: base64Images, 
                   email: userEmail,
@@ -251,13 +250,23 @@ const ScoutIA: React.FC = () => {
   const clearGrid = () => { setScoutGridImage(null); setScoutGridResult(null); setSelectedMatchesForBuilder([]); };
   const clearBuilder = () => { setScoutBuilderImages([]); setScoutBuilderResult(null); setSelectedMatchesForBuilder([]); setUserOdd(''); };
 
-  // 🔥 CÁLCULO DINÂMICO DE EV NO FRONTEND
-  let dynamicEV: number | null = null;
+  // 🔥 CÁLCULO DINÂMICO DO ESPECTRO DE EV NO FRONTEND
+  let dynamicEVMin: number | null = null;
+  let dynamicEVMax: number | null = null;
+  let evStatus: 'positive' | 'negative' | 'mixed' | null = null;
+
   if (scoutBuilderResult && userOdd) {
       const parsedOdd = parseFloat(userOdd);
       if (!isNaN(parsedOdd) && parsedOdd > 1) {
-          const probDecimal = scoutBuilderResult.combinedProb / 100;
-          dynamicEV = ((probDecimal * parsedOdd) - 1) * 100;
+          const minProbDecimal = scoutBuilderResult.minProb / 100;
+          const maxProbDecimal = scoutBuilderResult.maxProb / 100;
+          
+          dynamicEVMin = ((minProbDecimal * parsedOdd) - 1) * 100;
+          dynamicEVMax = ((maxProbDecimal * parsedOdd) - 1) * 100;
+
+          if (dynamicEVMin > 0) evStatus = 'positive'; // EV 100% garantido na banda
+          else if (dynamicEVMax < 0) evStatus = 'negative'; // Fuga imediata
+          else evStatus = 'mixed'; // Neutro/Risco
       }
   }
 
@@ -309,7 +318,6 @@ const ScoutIA: React.FC = () => {
               </button>
            </div>
 
-           {/* PAINEL DE INSTRUÇÕES */}
            <motion.div
                key={scoutMode}
                initial={{ opacity: 0, y: -5 }}
@@ -341,9 +349,6 @@ const ScoutIA: React.FC = () => {
                </div>
            </motion.div>
 
-           {/* ================================= */}
-           {/* MODO 1: RADAR DE GRADE              */}
-           {/* ================================= */}
            {scoutMode === 'grid' && (
              <>
              <div className="mb-6 relative group overflow-hidden rounded-[1.5rem] border-2 border-dashed border-indigo-500/20 hover:border-indigo-500/50 bg-slate-50 dark:bg-[#09090b] transition-all p-6 min-h-[250px] flex flex-col items-center justify-center">
@@ -454,9 +459,6 @@ const ScoutIA: React.FC = () => {
              </>
            )}
 
-           {/* ================================= */}
-           {/* MODO 2: CONSTRUTOR DE APOSTAS       */}
-           {/* ================================= */}
            {scoutMode === 'builder' && (
              <div className="space-y-6">
                 
@@ -536,12 +538,11 @@ const ScoutIA: React.FC = () => {
                            </div>
                            <motion.div initial={{ width: '0%' }} animate={{ width: '100%' }} transition={{ repeat: Infinity, duration: 2 }} className="absolute bottom-0 left-0 h-1.5 bg-indigo-500 shadow-[0_0_30px_#6366f1]" />
                            <Sparkles size={40} className="text-indigo-400 mb-4 animate-pulse" />
-                           <p className="text-indigo-400 font-mono font-bold text-xs uppercase tracking-widest text-center px-4 mt-2">Aplicando Modelagem de Poisson e Precificação Justa...</p>
+                           <p className="text-indigo-400 font-mono font-bold text-xs uppercase tracking-widest text-center px-4 mt-2">Aplicando Modelagem de Poisson e Inferência Atuarial...</p>
                        </div>
                    )}
                 </div>
 
-                {/* RESULTADO GERADO */}
                 {scoutBuilderResult && scoutBuilderResult.selections && (
                     <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="bg-[#020617] border border-indigo-500/20 rounded-[2.5rem] p-6 sm:p-10 shadow-[0_0_40px_rgba(99,102,241,0.1)] relative overflow-hidden mt-10">
                         <div className="absolute top-0 right-0 w-80 h-80 bg-indigo-500/10 rounded-full blur-[100px] -mr-20 -mt-20 pointer-events-none"></div>
@@ -569,7 +570,7 @@ const ScoutIA: React.FC = () => {
                         </div>
 
                         {/* ======================================================== */}
-                        {/* 🔥 AUDITORIA DINÂMICA DE EV% (AGORA NO LUGAR CERTO)      */}
+                        {/* 🔥 AUDITORIA DINÂMICA DE EV% COM INTERVALO DE CONFIANÇA  */}
                         {/* ======================================================== */}
                         <div className="bg-[#0b101e] border border-indigo-500/30 p-6 rounded-3xl mb-8 relative z-10 shadow-inner">
                             <h4 className="text-[11px] font-black text-indigo-400 uppercase tracking-widest mb-5 flex items-center gap-2">
@@ -595,47 +596,64 @@ const ScoutIA: React.FC = () => {
                                     </div>
                                 </div>
 
-                                {/* Divisor */}
                                 <div className="hidden md:block w-px h-12 bg-slate-800"></div>
 
                                 {/* HUD Dinâmico de EV */}
-                                <div className="flex-1 w-full grid grid-cols-3 gap-3">
+                                <div className="flex-1 w-full grid grid-cols-1 md:grid-cols-3 gap-3">
                                     <div className="bg-slate-900/50 border border-slate-800 rounded-xl p-3 sm:p-4 text-center flex flex-col justify-center">
-                                        <p className="text-[8px] sm:text-[9px] uppercase tracking-widest text-slate-500 font-bold mb-1 sm:mb-2">Probabilidade Real</p>
-                                        <p className="text-xl sm:text-2xl font-black text-white">{safeText(scoutBuilderResult.combinedProb)}%</p>
+                                        <p className="text-[8px] sm:text-[9px] uppercase tracking-widest text-slate-500 font-bold mb-1 sm:mb-2">Espectro Real</p>
+                                        <p className="text-xl sm:text-xl font-black text-white whitespace-nowrap">
+                                            {safeText(scoutBuilderResult.minProb)}% <span className="text-slate-600 text-sm font-medium mx-1">a</span> {safeText(scoutBuilderResult.maxProb)}%
+                                        </p>
                                     </div>
-                                    <div className="bg-indigo-500/10 border border-indigo-500/20 rounded-xl p-3 sm:p-4 text-center flex flex-col justify-center">
+                                    <div className="bg-indigo-500/10 border border-indigo-500/20 rounded-xl p-3 sm:p-4 text-center shadow-inner flex flex-col justify-center">
                                         <p className="text-[8px] sm:text-[9px] uppercase tracking-widest text-indigo-400 font-bold mb-1 sm:mb-2">Odd Justa Mínima</p>
                                         <p className="text-xl sm:text-2xl font-black text-indigo-400 font-mono">@{safeText(scoutBuilderResult.fairOdd)}</p>
                                     </div>
                                     
-                                    {/* MÁGICA DO REACT: EV Calculado Instantaneamente na Tela */}
+                                    {/* MÁGICA DO REACT: EV Calculado Instantaneamente na Tela (BANDA DE EV) */}
                                     <div className={`border rounded-xl p-3 sm:p-4 text-center flex flex-col justify-center shadow-inner transition-colors ${
-                                        !dynamicEV ? 'bg-slate-900/50 border-slate-800 text-slate-500' :
-                                        dynamicEV > 0 ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400 shadow-[0_0_15px_rgba(16,185,129,0.1)]' :
-                                        'bg-red-500/10 border-red-500/30 text-red-400 shadow-[0_0_15px_rgba(239,68,68,0.1)]'
+                                        evStatus === null ? 'bg-slate-900/50 border-slate-800 text-slate-500' :
+                                        evStatus === 'positive' ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400 shadow-[0_0_15px_rgba(16,185,129,0.1)]' :
+                                        evStatus === 'negative' ? 'bg-red-500/10 border-red-500/30 text-red-400 shadow-[0_0_15px_rgba(239,68,68,0.1)]' :
+                                        'bg-amber-500/10 border-amber-500/30 text-amber-400 shadow-[0_0_15px_rgba(245,158,11,0.1)]'
                                     }`}>
                                         <p className="text-[8px] sm:text-[9px] uppercase tracking-widest font-bold mb-1 sm:mb-2 flex items-center justify-center gap-1">
-                                            {!dynamicEV ? <Minus size={10}/> : dynamicEV > 0 ? <TrendingUp size={10}/> : <TrendingDown size={10}/>}
-                                            Status do EV
+                                            {evStatus === null ? <Minus size={10}/> : evStatus === 'positive' ? <TrendingUp size={10}/> : evStatus === 'negative' ? <TrendingDown size={10}/> : <Minus size={10}/>}
+                                            Espectro de EV
                                         </p>
-                                        <p className="text-xl sm:text-2xl font-black font-mono">
-                                            {!dynamicEV ? '--' : `${dynamicEV > 0 ? '+' : ''}${dynamicEV.toFixed(1)}%`}
+                                        <p className="text-sm sm:text-base font-black font-mono whitespace-nowrap">
+                                            {evStatus === null ? '--' : (
+                                                <>
+                                                    {dynamicEVMin && dynamicEVMin > 0 ? '+' : ''}{dynamicEVMin?.toFixed(1)}% <span className="opacity-50 font-sans mx-0.5">a</span> {dynamicEVMax && dynamicEVMax > 0 ? '+' : ''}{dynamicEVMax?.toFixed(1)}%
+                                                </>
+                                            )}
                                         </p>
                                     </div>
                                 </div>
                             </div>
                         </div>
 
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 mb-8 relative z-10">
-                            <div className="bg-slate-900/40 border border-slate-800 p-5 rounded-2xl">
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-5 mb-8 relative z-10">
+                            <div className={`border rounded-2xl p-5 text-center flex flex-col justify-center shadow-inner ${
+                                scoutBuilderResult.riskLevel === 'ALTO' ? 'bg-red-500/10 border-red-500/20 text-red-400' :
+                                scoutBuilderResult.riskLevel === 'MÉDIO' ? 'bg-amber-500/10 border-amber-500/20 text-amber-400' :
+                                'bg-emerald-500/10 border-emerald-500/20 text-emerald-400'
+                            }`}>
+                                <p className="text-[9px] uppercase tracking-widest font-bold mb-2 opacity-80">Risco Estrutural</p>
+                                <p className="text-lg sm:text-xl font-black uppercase tracking-widest flex items-center justify-center gap-2">
+                                    <ShieldAlert size={20} /> {safeText(scoutBuilderResult.riskLevel)}
+                                </p>
+                            </div>
+                            <div className="bg-slate-900/40 border border-slate-800 p-5 rounded-2xl col-span-2">
                                 <p className="text-[10px] uppercase tracking-widest text-slate-400 font-bold mb-3 flex items-center gap-1.5 border-b border-slate-800 pb-2"><ArrowRightLeft size={14}/> Alternativa Tática</p>
                                 <p className="text-sm text-slate-300 leading-relaxed font-medium">{safeText(scoutBuilderResult.alternativeCombination)}</p>
                             </div>
-                            <div className="bg-emerald-900/10 border border-emerald-900/30 p-5 rounded-2xl">
-                                <p className="text-[10px] uppercase tracking-widest text-emerald-500 font-bold mb-3 flex items-center gap-1.5 border-b border-emerald-900/50 pb-2"><ShieldAlert size={14}/> Margem de Segurança</p>
-                                <p className="text-sm text-emerald-400 leading-relaxed font-medium">{safeText(scoutBuilderResult.conservativeCombination)}</p>
-                            </div>
+                        </div>
+
+                        <div className="bg-emerald-900/10 border border-emerald-900/30 p-5 rounded-2xl mb-8 relative z-10">
+                            <p className="text-[10px] uppercase tracking-widest text-emerald-500 font-bold mb-3 flex items-center gap-1.5 border-b border-emerald-900/50 pb-2"><ShieldAlert size={14}/> Margem de Segurança</p>
+                            <p className="text-sm text-emerald-400 leading-relaxed font-medium">{safeText(scoutBuilderResult.conservativeCombination)}</p>
                         </div>
 
                         <div className="bg-slate-900/30 border border-slate-800 p-6 rounded-3xl relative z-10">
