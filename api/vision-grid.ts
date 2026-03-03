@@ -29,44 +29,45 @@ export default async function handler(req: any, res: any) {
 
     const isAdmin = email === adminEmail;
     if (!isAdmin) {
-        // 🔴 FUTURA INTEGRAÇÃO COM BANCO DE DADOS AQUI (Ex: Checar limite mensal extra)
+        // 🔴 FUTURA INTEGRAÇÃO COM BANCO DE DADOS AQUI
     }
 
     const genAI = new GoogleGenerativeAI(apiKey);
     const model = genAI.getGenerativeModel({ 
       model: 'gemini-2.5-flash',
       generationConfig: { 
-        temperature: 0.15 // Frio e determinístico para extração de grade
+        temperature: 0.15 // Frio e determinístico
       }
     });
 
-    // 🔥 PROMPT HEDGE FUND: AUDITORIA VISUAL E SELEÇÃO DE ASSIMETRIAS
+    // 🔥 PROMPT HEDGE FUND: AUDITORIA VISUAL CORRIGIDA ("X" = "VS")
     const prompt = `Você é um Analista Quantitativo de Scout Pré-Live.
-Sua missão é atuar como um Radar HFT: analisar a imagem de uma grade de jogos, ler as odds do mercado Resultado Final (1x2) e extrair EXCLUSIVAMENTE partidas que apresentem configurações estatísticas de EV+ (Expected Value Positivo) com base nas heurísticas abaixo.
+Sua missão é atuar como um Radar HFT: analisar a imagem de uma grade de jogos, ler as odds de vitória do Mandante e do Visitante e extrair EXCLUSIVAMENTE partidas que apresentem configurações estatísticas de EV+ (Expected Value Positivo).
+
+🛑 REGRAS VISUAIS DA GRADE (MUITO IMPORTANTE):
+Na imagem, a grade apresenta o layout com o nome dos times e suas respectivas odds de vitória nas pontas, separados por um "X" e alguns traços (Ex: 2.50 - X - 2.62). Este "X" significa apenas "Versus" (Time A x Time B) e NÃO É a odd de empate. Você deve extrair os dois números decimais visíveis (Mandante e Visitante).
 
 🛑 REGRAS DE FILTRAGEM (DESCARTAR O QUE NÃO SE ENCAIXAR):
-1. PADRÃO AMASSO (Foco em GOLS): Procure jogos onde exista um desajuste técnico absurdo. Um dos times (mandante ou visitante) deve ter uma odd de vitória igual ou inferior a @1.55. Isso indica jogo de ataque contra defesa.
-2. PADRÃO EQUILÍBRIO (Foco em CANTOS): Procure jogos extremamente truncados e parelhos, onde as odds do mandante e do visitante estejam muito próximas (Ambas entre @2.30 e @2.90). Isso indica disputa ferrenha e alta tendência a escanteios e laterais.
-3. ANTI-ALUCINAÇÃO: Se as odds (1x2) do jogo não estiverem visíveis na imagem, você DEVE ignorar esse jogo. Não dedua e não invente partidas.
+1. PADRÃO AMASSO (Foco em GOLS): Procure jogos onde exista um desajuste técnico absurdo. Um dos times (mandante ou visitante) deve ter uma odd de vitória igual ou inferior a @1.65 (Ex: 1.57, 1.50, 1.20). Isso indica jogo de ataque contra defesa.
+2. PADRÃO EQUILÍBRIO (Foco em CANTOS): Procure jogos extremamente truncados e parelhos, onde as odds do mandante e do visitante estejam muito próximas, ambas acima de @2.20. (Ex: 2.50 x 2.62). Isso indica disputa ferrenha e alta tendência a escanteios.
+3. ANTI-ALUCINAÇÃO: Se as duas odds (Mandante e Visitante) não estiverem legíveis, ignore o jogo.
 
-Na chave "reason", escreva como um analista institucional (tom frio, técnico, focado em assimetria e controle de jogo).
-
-Retorne ESTRITAMENTE um JSON válido neste formato exato (sem formatação markdown adicional):
+Retorne ESTRITAMENTE um JSON válido neste formato exato:
 {
   "matches": [
     {
       "time": "16:30",
       "teams": "Time A vs Time B",
-      "odds1x2": "1.45 - 4.50 - 7.00",
+      "matchOdds": "1.57 x 6.00",
       "market": "GOLS", 
-      "reason": "A odd de @1.45 indica um cenário de domínio territorial ('amasso'), favorecendo a exposição no mercado de Gols Totais ou Escanteios do favorito."
+      "reason": "A odd de @1.57 para o favorito indica um cenário de domínio territorial ('amasso'), favorecendo a exposição no mercado de Gols Totais ou Escanteios da Equipe."
     },
     {
       "time": "19:00",
       "teams": "Time C vs Time D",
-      "odds1x2": "2.50 - 3.10 - 2.62",
+      "matchOdds": "2.50 x 2.62",
       "market": "CANTOS",
-      "reason": "Odds niveladas (@2.50 vs @2.62) sugerem um confronto tático de alta intensidade pelo meio campo, propício para o mercado de Escanteios Totais."
+      "reason": "Odds niveladas e altas em ambos os lados (@2.50 vs @2.62) sugerem um confronto tático intenso, propício para o mercado de Escanteios Totais da Partida."
     }
   ]
 }`;
@@ -85,34 +86,36 @@ Retorne ESTRITAMENTE um JSON válido neste formato exato (sem formatação markd
     }
 
     // ==========================================
-    // 🛡️ BACKEND AUDIT: FILTRO HEURÍSTICO
-    // Garante que a IA não inventou um EV+ fantasma
+    // 🛡️ BACKEND AUDIT: SPREAD FILTER (A MÁGICA QUANTITATIVA)
     // ==========================================
     if (json.matches && Array.isArray(json.matches)) {
        const validatedMatches = json.matches.filter((match: any) => {
           const mkt = (match.market || '').toUpperCase();
-          const oddsStr = match.odds1x2 || '';
+          const oddsStr = match.matchOdds || '';
           
-          // Extrai todos os números flutuantes da string de odds
+          // Extrai todos os números decimais da string de odds
           const oddsMatches = oddsStr.match(/\b\d+\.\d{2}\b/g);
           
-          if (!oddsMatches || oddsMatches.length < 2) return true; // Se não conseguir parsear direito, deixa passar por segurança de UX
+          if (!oddsMatches || oddsMatches.length < 2) return true; // Deixa passar se não parsear direito (UX)
           
           const odds = oddsMatches.map((o: string) => parseFloat(o));
-          const minOdd = Math.min(...odds);
+          const homeOdd = odds[0];
+          const awayOdd = odds[odds.length - 1];
+          const minOdd = Math.min(homeOdd, awayOdd);
+          const spread = Math.abs(homeOdd - awayOdd); // Calcula a diferença real de forças
           
           if (mkt === 'GOLS') {
-             // O Padrão Amasso exige que o super favorito tenha odd <= 1.60 (Margem de tolerância do backend)
-             if (minOdd > 1.60) return false; 
+             // O Padrão Amasso exige que o super favorito tenha odd <= 1.65
+             if (minOdd > 1.65) return false; 
           }
           
           if (mkt === 'CANTOS') {
-             // O Padrão Equilíbrio exige que a menor odd (mandante ou visitante) não seja inferior a 2.10
-             // Ex: 2.20 x 3.00 (Aceitável). 1.80 x 4.00 (Rejeitado, não é tão equilibrado)
-             if (minOdd < 2.10) return false;
+             // O Padrão Equilíbrio exige odds iniciais altas E que o Spread (diferença) seja curto (<= 0.90)
+             // Ex: 2.50 e 2.80 (Spread = 0.30 -> PASSA) | 2.20 e 3.50 (Spread = 1.30 -> CORTA)
+             if (minOdd < 2.20 || spread > 0.90) return false;
           }
 
-          return true; // Passou na auditoria
+          return true; // Passou na auditoria quantitativa
        });
 
        json.matches = validatedMatches;
