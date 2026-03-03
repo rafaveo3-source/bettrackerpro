@@ -369,7 +369,7 @@ const ScoutIA: React.FC = () => {
                          <motion.div initial={{ top: '0%' }} animate={{ top: '100%' }} transition={{ repeat: Infinity, duration: 1.5, ease: "linear" }} className="absolute left-0 right-0 h-1 bg-indigo-500 shadow-[0_0_30px_#6366f1] z-10" />
                          <div className="absolute inset-0 flex flex-col items-center justify-center z-20">
                             <Sparkles size={32} className="text-indigo-400 mb-2 animate-pulse" />
-                            <p className="text-indigo-400 font-mono font-bold text-xs uppercase tracking-widest mt-2">Processando assimetrias...</p>
+                            <p className="text-indigo-400 font-mono font-bold text-xs uppercase tracking-widest mt-2">Escaneando a grade em busca de linhas desajustadas e EV+...</p>
                          </div>
                      </div>
                  )}
@@ -538,11 +538,12 @@ const ScoutIA: React.FC = () => {
                            </div>
                            <motion.div initial={{ width: '0%' }} animate={{ width: '100%' }} transition={{ repeat: Infinity, duration: 2 }} className="absolute bottom-0 left-0 h-1.5 bg-indigo-500 shadow-[0_0_30px_#6366f1]" />
                            <Sparkles size={40} className="text-indigo-400 mb-4 animate-pulse" />
-                           <p className="text-indigo-400 font-mono font-bold text-xs uppercase tracking-widest text-center px-4 mt-2">Aplicando Modelagem de Poisson e Inferência Atuarial...</p>
+                           <p className="text-indigo-400 font-mono font-bold text-xs uppercase tracking-widest text-center px-4 mt-2">Cruzando Hit Rates, calculando a Fair Odd e auditando o mercado...</p>
                        </div>
                    )}
                 </div>
 
+                {/* RESULTADO GERADO */}
                 {scoutBuilderResult && scoutBuilderResult.selections && (
                     <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="bg-[#020617] border border-indigo-500/20 rounded-[2.5rem] p-6 sm:p-10 shadow-[0_0_40px_rgba(99,102,241,0.1)] relative overflow-hidden mt-10">
                         <div className="absolute top-0 right-0 w-80 h-80 bg-indigo-500/10 rounded-full blur-[100px] -mr-20 -mt-20 pointer-events-none"></div>
