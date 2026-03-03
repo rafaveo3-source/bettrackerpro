@@ -2,11 +2,34 @@ import { GoogleGenerativeAI } from '@google/generative-ai';
 
 export const maxDuration = 60;
 
-// 🧠 INFERÊNCIA DE POISSON (Engenharia Reversa de Probabilidade para Gols Esperados λ)
-// Formula: P(X >= 1) = 1 - e^(-λ) => e^(-λ) = 1 - P => λ = -ln(1 - P)
-const getPoissonLambda = (prob: number) => {
-  const safeProb = Math.min(Math.max(prob, 0.01), 0.99); // Evita log(0)
-  return -Math.log(1 - safeProb);
+// ==========================================
+// 🧠 MOTOR ATUARIAL INSTITUCIONAL (POISSON PURE)
+// ==========================================
+const factorial = (n: number): number => n <= 1 ? 1 : n * factorial(n - 1);
+
+const poissonPDF = (lambda: number, k: number) => (Math.pow(lambda, k) * Math.exp(-lambda)) / factorial(k);
+
+const poissonCDF = (lambda: number, k: number) => {
+    let sum = 0;
+    for (let i = 0; i <= k; i++) sum += poissonPDF(lambda, i);
+    return sum;
+};
+
+// Algoritmo de Busca de Raiz (Bisection Method)
+// Encontra o Lambda exato para qualquer linha (ex: Over 1.5, k=1), revertendo a probabilidade dada.
+const findLambdaForProb = (targetProb: number, k: number): number => {
+    let low = 0.01;
+    let high = 10.0; // Teto realista para gols esperados
+    const safeTarget = Math.min(Math.max(targetProb, 0.01), 0.99); // Proteção contra 100% absoluto
+    
+    for (let iter = 0; iter < 20; iter++) {
+        let mid = (low + high) / 2;
+        let currentProb = 1 - poissonCDF(mid, k); // P(X > k)
+        
+        if (currentProb < safeTarget) low = mid; // Se a prob tá baixa, precisamos de um lambda maior
+        else high = mid;
+    }
+    return (low + high) / 2;
 };
 
 const getMarketVolatilityPenalty = (market: string) => {
@@ -49,7 +72,8 @@ export default async function handler(req: any, res: any) {
       if (origin && !origin.includes('localhost') && !origin.includes('bettrackerpro.com.br')) return res.status(403).json({ error: 'Acesso negado no teste.' });
     }
 
-    const { images, email, markets } = req.body; 
+    // Recebendo userOdd do frontend para cálculo de EV Real
+    const { images, email, markets, userOdd } = req.body; 
     const apiKey = process.env.GEMINI_API_KEY;
     if (!apiKey) return res.status(500).json({ error: 'Chave de API ausente.' });
     if (!email) return res.status(401).json({ error: 'Acesso não autorizado.' });
@@ -63,11 +87,8 @@ export default async function handler(req: any, res: any) {
     const isSingleMarket = markets && markets.length === 1;
     const selectedMarketsStr = markets && markets.length > 0 ? markets.join(', ') : 'Gols, Escanteios';
 
-    const isOnlyGols = isSingleMarket && selectedMarketsStr.toLowerCase().includes('gol');
     const crossMarketInstruction = isSingleMarket
-      ? (isOnlyGols 
-          ? `- 🛑 REGRA DE MERCADO ÚNICO (GOLS): OBRIGATÓRIO cruzar o desempenho de uma Equipe Específica com o contexto global do Jogo (Ex: Gols do Time Mandante + Ambas Marcam, ou Gols de Equipe + Over 1.5). EVITE cruzar HT com FT.`
-          : `- 🛑 REGRA DE MERCADO ÚNICO (CANTOS): Você OBRIGATORIAMENTE deve cruzar linhas cronológicas diferentes (Ex: Cantos HT + Cantos FT) ou o desempenho de Equipe vs Partida.`)
+      ? `- 🛑 REGRA DE MERCADO ÚNICO: Não repita lógicas óbvias. Varie as linhas para mitigar o desconto da casa (Ex: Cruce equipe vs partida, ou HT vs FT).`
       : `- 🛑 REGRA DE CROSS-MARKET: Priorize cruzar mercados diferentes (Ex: Gols + Escanteios) para evitar o bloqueio e o desconto do 'Same Game Multiplier'.`;
 
     const imageParts = images.map((img: any) => ({ inlineData: { data: img.base64, mimeType: img.mimeType } }));
@@ -87,16 +108,14 @@ ${lastInternalError ? `\n⚠️ ATENÇÃO - CORREÇÃO OBRIGATÓRIA DA TENTATIVA
 1. NÃO invente números. Use o Hit Rate real (%).
 2. Se a amostra exata não estiver visível, DESCARTE O MERCADO.
 3. DIVERGÊNCIA CASA/FORA: Retorne "true" se o Hit Rate for carregado por apenas um time.
-4. HIERARQUIA: H2H e dados das equipes têm PRIORIDADE ABSOLUTA.
 
 ⚠️ REGRAS DE MERCADO E LIQUIDEZ:
 - Use apenas: [ ${selectedMarketsStr} ].
-- 🛑 LINHAS DE LIQUIDEZ: Para Gols, prefira linhas de 0.5 a 3.5. Para Escanteios Totais, prefira de 6.5 a 11.5. Mínimo exigido: 3.5 para times e 6.5 para partida.
+- 🛑 LINHAS DE LIQUIDEZ: Para Gols, prefira 0.5 a 3.5. Para Escanteios, 6.5 a 11.5. Mínimo exigido: 3.5 para times e 6.5 para partida.
 ${crossMarketInstruction}
 
 ⚠️ REGRAS DE UX E FORMATAÇÃO:
-As chaves "alternativeCombination", "conservativeCombination" e "analysis" devem conter APENAS TEXTO CORRIDO HUMANO. PROIBIDO CÓDIGO JSON NESSAS STRINGS.
-Para a "analysis", use OBRIGATORIAMENTE duas quebras de linha ("\\n\\n") para separar os 3 parágrafos.
+As chaves "alternativeCombination", "conservativeCombination" e "analysis" devem conter APENAS TEXTO HUMANO (sem JSON interno). Use "\\n\\n" para separar os 3 parágrafos da analysis.
 
 Retorne ESTRITAMENTE um JSON válido:
 {
@@ -110,8 +129,8 @@ Retorne ESTRITAMENTE um JSON válido:
       "divergenceRisk": false
     }
   ],
-  "alternativeCombination": "Apenas texto livre. 🛑 REGRA: Sugira OBRIGATORIAMENTE uma tática com linhas DIFERENTES da seleção principal.",
-  "conservativeCombination": "Apenas texto livre. 🛑 REGRA: Sugira uma dupla muito mais segura reduzindo as linhas originais.",
+  "alternativeCombination": "Texto livre. Sugira tática com linhas DIFERENTES.",
+  "conservativeCombination": "Texto livre. Sugira dupla segura reduzindo as linhas originais.",
   "analysis": "📊 A Lógica dos Números: O Hit rate é...\\n\\n⚽ Leitura de Jogo (Game Script): Esperamos que...\\n\\n🎯 Risco e Retorno: Isso protege..."
 }`;
 
@@ -123,13 +142,6 @@ Retorne ESTRITAMENTE um JSON válido:
       let json;
       try { json = JSON.parse(matchJson[0]); } catch { lastInternalError = "JSON quebrado."; continue; }
 
-      if (typeof json.alternativeCombination === 'string' && json.alternativeCombination.includes('{"selections"')) {
-         json.alternativeCombination = "Recomendamos explorar mercados de gols de equipe ou buscar uma combinação mais ampla na partida inteira.";
-      }
-      if (typeof json.conservativeCombination === 'string' && json.conservativeCombination.includes('{"selections"')) {
-         json.conservativeCombination = "Aplicar Fractional Drop: reduza as linhas originais em 1 ou 2 pontos de corte (ex: de 1.5 Gols para 0.5 Gols).";
-      }
-
       let hasLiquidityError = false;
       if (json.selections && Array.isArray(json.selections)) {
         for (let sel of json.selections) {
@@ -138,7 +150,6 @@ Retorne ESTRITAMENTE um JSON válido:
           const parts = matchStr.split(/\s*(vs|x|-)\s*/i);
           const home = parts.length >= 3 ? parts[0].trim() : '';
           const away = parts.length >= 3 ? parts[2].trim() : '';
-          
           const isTeamMarket = (home && mkt.includes(home)) || (away && mkt.includes(away)) || (!mkt.includes('partida') && !mkt.includes('jogo') && !mkt.includes('total') && !mkt.includes('ambos'));
 
           if (mkt.includes('escanteio') || mkt.includes('canto')) {
@@ -156,180 +167,162 @@ Retorne ESTRITAMENTE um JSON válido:
       finalValidJson = json; 
     }
 
-    if (!finalValidJson) {
-      finalValidJson = {
-        selections: [ { match: "Análise Interrompida (Proteção)", market: "Mercados lidos não possuem liquidez", prob: 0, sampleSize: 0, sourceExcerpt: "Fallback Ativado", divergenceRisk: false } ],
-        combinedProb: 0, fairOdd: 0, structuralRiskScore: 5, riskLevel: "ALTO",
-        alternativeCombination: "Aguarde o jogo entrar no Ao Vivo para melhores liquidez.",
-        conservativeCombination: "Tente selecionar múltiplas categorias (Gols + Cantos).",
-        analysis: "📊 A Lógica dos Números: As linhas extraídas têm um Same Game Tax muito alto.\n\n⚽ Leitura de Jogo: Motor backend abortou.\n\n🎯 Risco e Retorno: EV negativo. Proteja seu capital."
-      };
-    }
+    if (!finalValidJson) throw new Error("Abortado por proteção de capital. Mercados sem liquidez ou muito arriscados.");
 
     const json = finalValidJson;
 
     // ==========================================
-    // 🧠 SAME GAME TAX ENGINE (Cálculo do Delta Δ)
+    // 🧮 PASSO 1: CALCULAR PROBABILIDADES INDIVIDUAIS (BAYESIAN)
     // ==========================================
+    let legs = json.selections.map((sel: any) => {
+        let statedProb = (Number(sel.prob) || 75) / 100;
+        let sampleSize = Number(sel.sampleSize) || 10;
+        if (sampleSize < 1) sampleSize = 10;
+
+        let hits = Math.round(statedProb * sampleSize);
+        const { alpha, beta } = getGlobalWeakPriors(sel.market || '');
+        let rawProb = (hits + alpha) / (sampleSize + alpha + beta);
+        
+        const mkt = (sel.market || '').toLowerCase();
+        let line = null;
+        const lineMatch = mkt.match(/(?:mais|menos|over|under)[^\d]*(\d+(\.\d+)?)/i);
+        if (lineMatch) line = parseFloat(lineMatch[1]);
+
+        const matchStr = (sel.match || '').toLowerCase();
+        const parts = matchStr.split(/\s*(vs|x|-)\s*/i);
+        const home = parts.length >= 3 ? parts[0].trim() : '';
+        const away = parts.length >= 3 ? parts[2].trim() : '';
+        const isTeamMarket = (home && mkt.includes(home)) || (away && mkt.includes(away)) || (!mkt.includes('partida') && !mkt.includes('jogo') && !mkt.includes('total') && !mkt.includes('ambos'));
+
+        return { ...sel, rawProb, line, mkt, isTeamMarket };
+    });
+
+    let rawCombinedProb = 1;
     let structuralRiskScore = 0;
-    let dynamicCorrelationPenalty = 0.98; 
+    let dynamicCorrelationPenalty = 1.0; 
+    let usedPoissonJoint = false;
+
+    // ==========================================
+    // 🧠 PASSO 2: INFERÊNCIA ESTRUTURAL POISSON (SAME GAME TAX REAL)
+    // ==========================================
+    const hasHTGoals = legs.some((l: any) => (l.mkt.includes('(ht)') || l.mkt.includes('1º')) && (l.mkt.includes('gol') || l.mkt.includes('gols')));
+    const hasFTGoals = legs.some((l: any) => (l.mkt.includes('(ft)') || l.mkt.includes('partida') || l.mkt.includes('jogo')) && (l.mkt.includes('gol') || l.mkt.includes('gols')));
+    const isDoubleOverGoals = hasHTGoals && hasFTGoals && legs.length === 2;
+
+    if (isDoubleOverGoals) {
+        const htLeg = legs.find((l: any) => l.mkt.includes('(ht)') || l.mkt.includes('1º'));
+        const ftLeg = legs.find((l: any) => l.mkt.includes('(ft)') || l.mkt.includes('partida') || l.mkt.includes('jogo'));
+
+        if (htLeg && ftLeg && htLeg.line !== null && ftLeg.line !== null) {
+            const targetHT = Math.floor(htLeg.line); // Ex: 0.5 vira 0 (exige > 0)
+            const targetFT = Math.floor(ftLeg.line); // Ex: 1.5 vira 1 (exige > 1)
+
+            // Engenharia Reversa (Busca de Raiz)
+            const lambda_HT = findLambdaForProb(htLeg.rawProb, targetHT);
+            const lambda_FT = findLambdaForProb(ftLeg.rawProb, targetFT);
+            const lambda_2T = Math.max(0.1, lambda_FT - lambda_HT);
+
+            let pureJointProbability = 0;
+            // Simulação de cenários: Aposta HT bate (i = targetHT + 1 até 7 gols)
+            for (let i = targetHT + 1; i <= 7; i++) { 
+                const prob_i_gols_no_HT = poissonPDF(lambda_HT, i);
+                
+                // Gols que o 2º tempo PRECISA entregar para salvar a aposta inteira
+                const gols_necessarios_2T = Math.max(0, (targetFT + 1) - i);
+                
+                // P(2T >= necessarios)
+                const prob_bater_resto_no_2T = 1 - poissonCDF(lambda_2T, gols_necessarios_2T - 1);
+                
+                pureJointProbability += (prob_i_gols_no_HT * prob_bater_resto_no_2T);
+            }
+
+            rawCombinedProb = pureJointProbability;
+            usedPoissonJoint = true;
+            structuralRiskScore += 3; // Mantemos o aviso de risco estrutural para a interface
+        }
+    }
+
+    // ==========================================
+    // 🛡️ PASSO 3: PENALIDADES DE LIQUIDEZ E CORRELAÇÃO SECUNDÁRIA
+    // ==========================================
+    let totalPenalty = 1;
     let implicitCorrelationFlag = false;
 
-    if (json.selections && json.selections.length > 1) {
-      const marketsLower = json.selections.map((s: any) => (s.market || '').toLowerCase());
-      
-      const hasHTGoals = marketsLower.some((m: string) => (m.includes('(ht)') || m.includes('1º')) && (m.includes('gol') || m.includes('gols')));
-      const hasFTGoals = marketsLower.some((m: string) => (m.includes('(ft)') || m.includes('partida') || m.includes('jogo')) && (m.includes('gol') || m.includes('gols')));
-      const isDoubleOverGoals = hasHTGoals && hasFTGoals;
+    legs.forEach((leg: any) => {
+        let multipliers = [];
+        const excerpt = leg.sourceExcerpt || '';
+        if (!/\d/.test(excerpt)) multipliers.push(0.85);
+        if (leg.divergenceRisk || (leg.isTeamMarket && leg.rawProb > 0.75)) multipliers.push(0.95);
+        if (leg.rawProb > 0.85) multipliers.push(0.97);
 
-      const hasBTTS = marketsLower.some((m: string) => m.includes('ambos') || m.includes('btts'));
-      const hasOverGols = marketsLower.some((m: string) => (m.includes('mais') || m.includes('over')) && (m.includes('gol') || m.includes('gols')));
-      
-      let htLine: number | null = null;
-      let ftLine: number | null = null;
-      let hasTeamMarket = false;
-      let hasMatchMarket = false;
-      const teamMentions: Record<string, number> = {};
-
-      json.selections.forEach((sel: any) => {
-        const mkt = (sel.market || '').toLowerCase();
-        
-        // Extração de Linhas para o Delta
-        const lineMatch = mkt.match(/(?:mais|menos|over|under)[^\d]*(\d+(\.\d+)?)/i);
-        if (lineMatch && (mkt.includes('gol') || mkt.includes('gols'))) {
-            const lineVal = parseFloat(lineMatch[1]);
-            if (mkt.includes('ht') || mkt.includes('1º')) htLine = lineVal;
-            if (mkt.includes('ft') || mkt.includes('partida')) ftLine = lineVal;
+        if (leg.line !== null) {
+            if (leg.mkt.includes('escanteio') || leg.mkt.includes('canto')) {
+                if (leg.isTeamMarket && leg.line < 4.5) multipliers.push(0.92); 
+                if (!leg.isTeamMarket && leg.line < 8.5) multipliers.push(0.95); 
+            } else if (leg.mkt.includes('gol')) {
+                if (leg.line < 1.0 && !leg.mkt.includes('ht') && !leg.mkt.includes('1º')) multipliers.push(0.88); 
+            }
         }
+        multipliers.push(getMarketVolatilityPenalty(leg.mkt));
 
-        const parts = (sel.match || '').split(/\s*(vs|x|-)\s*/i);
-        const home = parts.length >= 3 ? parts[0].trim().toLowerCase() : '';
-        const away = parts.length >= 3 ? parts[2].trim() : '';
+        let legPenalty = multipliers.reduce((a, b) => a * b, 1);
+        totalPenalty *= Math.max(0.80, legPenalty); // Limite de sangramento por leg
+    });
+
+    if (!usedPoissonJoint) {
+        // Se não foi um Double Over Goals (HT/FT), aplica matemática padrão
+        rawCombinedProb = legs.reduce((acc: number, leg: any) => acc * leg.rawProb, 1);
         
-        if (home && mkt.includes(home)) { teamMentions[home] = (teamMentions[home] || 0) + 1; hasTeamMarket = true; }
-        else if (away && mkt.includes(away)) { teamMentions[away] = (teamMentions[away] || 0) + 1; hasTeamMarket = true; }
-        else { hasMatchMarket = true; }
-      });
+        const hasBTTS = legs.some((l: any) => l.mkt.includes('ambos') || l.mkt.includes('btts'));
+        const hasOverGols = legs.some((l: any) => (l.mkt.includes('mais') || l.mkt.includes('over')) && (l.mkt.includes('gol') || l.mkt.includes('gols')));
+        const teamMentions: Record<string, number> = {};
+        let hasTeamMarket = false; let hasMatchMarket = false;
 
-      // 📐 O NOVO MULTIPLICADOR BASEADO NA DISTÂNCIA DAS LINHAS (Δ)
-      if (isDoubleOverGoals && htLine !== null && ftLine !== null) {
-          const delta = ftLine - htLine; // Distância entre o HT e o FT
-          
-          if (delta <= 1.0) {
-              dynamicCorrelationPenalty = 0.78; // Brutal! Altíssima dependência (Ex: 0.5 HT e 1.5 FT)
-              structuralRiskScore += 4;
-          } else if (delta <= 1.5) {
-              dynamicCorrelationPenalty = 0.84; // Forte dependência (Ex: 0.5 HT e 2.0 FT)
-              structuralRiskScore += 3;
-          } else if (delta >= 2.0) {
-              dynamicCorrelationPenalty = 0.89; // Menor dependência (Ex: 1.5 HT e 3.5 FT)
-              structuralRiskScore += 2;
-          }
-      } else if (isDoubleOverGoals) {
-          dynamicCorrelationPenalty = 0.82; // Fallback se não parsear a linha
-          structuralRiskScore += 4;
-      } else if (hasBTTS && hasOverGols) {
-          dynamicCorrelationPenalty = 0.85; 
-          structuralRiskScore += 3;
-      } else if (hasTeamMarket && hasMatchMarket && hasOverGols) {
-          dynamicCorrelationPenalty = 0.88;
-          structuralRiskScore += 2;
-      } else if (Object.values(teamMentions).some(count => count >= 2)) {
-          dynamicCorrelationPenalty = 0.92;
-          structuralRiskScore += 2;
-      } else {
-          dynamicCorrelationPenalty = 0.96; // Baseline geral intra-jogo (Ajustado para realismo)
-      }
+        legs.forEach((leg: any) => {
+            const parts = (leg.match || '').split(/\s*(vs|x|-)\s*/i);
+            const home = parts.length >= 3 ? parts[0].trim().toLowerCase() : '';
+            const away = parts.length >= 3 ? parts[2].trim().toLowerCase() : '';
+            if (home && leg.mkt.includes(home)) { teamMentions[home] = (teamMentions[home] || 0) + 1; hasTeamMarket = true; }
+            else if (away && leg.mkt.includes(away)) { teamMentions[away] = (teamMentions[away] || 0) + 1; hasTeamMarket = true; }
+            else { hasMatchMarket = true; }
+        });
+
+        if (hasBTTS && hasOverGols) { dynamicCorrelationPenalty = 0.88; structuralRiskScore += 3; } 
+        else if (hasTeamMarket && hasMatchMarket && hasOverGols) { dynamicCorrelationPenalty = 0.90; structuralRiskScore += 2; } 
+        else if (Object.values(teamMentions).some(count => count >= 2)) { dynamicCorrelationPenalty = 0.92; structuralRiskScore += 2; } 
+        else { dynamicCorrelationPenalty = 0.96; }
+
+        const rawPureMath = legs.reduce((acc: number, curr: any) => acc * ((Number(curr.prob) || 75) / 100), 1);
+        if (rawPureMath > 0.75) implicitCorrelationFlag = true;
     }
 
+    const avgSample = legs.reduce((acc: number, curr: any) => acc + (Number(curr.sampleSize) || 10), 0) / legs.length;
+    const confidenceAdjustment = avgSample >= 15 ? 1 : avgSample >= 10 ? 0.98 : avgSample >= 7 ? 0.95 : 0.92;
+
+    const SHRINK_FACTOR = 0.96; 
+    const structuralPenalty = structuralRiskScore >= 4 ? 0.90 : structuralRiskScore === 3 ? 0.93 : structuralRiskScore === 2 ? 0.95 : structuralRiskScore === 1 ? 0.97 : 1;
+
+    // A MÁGICA FINAL: Multiplica a Joint Probability Pura de Poisson pelos escudos de mercado
+    let finalProb = rawCombinedProb * totalPenalty * SHRINK_FACTOR * confidenceAdjustment * dynamicCorrelationPenalty * structuralPenalty;
+
+    json.combinedProb = Math.round(finalProb * 100);
+    json.fairOdd = Number((1 / finalProb).toFixed(2));
+    
     // ==========================================
-    // 🧮 CALCULO QUANTITATIVO: FIM DO ERRO COMPOSTO
+    // 💰 PASSO 4: CÁLCULO DINÂMICO DE EV%
     // ==========================================
-    if (json.selections && json.selections.length > 0) {
-      
-      const rawCombinedProb = json.selections.reduce(
-        (acc: number, curr: any) => {
-          let statedProb = (Number(curr.prob) || 75) / 100;
-          let sampleSize = Number(curr.sampleSize) || 10;
-          if (sampleSize < 1) sampleSize = 10;
-
-          // 💡 INJEÇÃO DE POISSON: Calculamos o Lambda implícito e garantimos que a prob 
-          // não desafie as leis matemáticas do decaimento exponencial.
-          const expectedGoalsLambda = getPoissonLambda(statedProb); 
-          let hits = Math.round(statedProb * sampleSize);
-          
-          const { alpha, beta } = getGlobalWeakPriors(curr.market || '');
-          let rawProb = (hits + alpha) / (sampleSize + alpha + beta);
-          
-          const mkt = (curr.market || '').toLowerCase();
-          const matchStr = (curr.match || '').toLowerCase();
-          const parts = matchStr.split(/\s*(vs|x|-)\s*/i);
-          const home = parts.length >= 3 ? parts[0].trim() : '';
-          const away = parts.length >= 3 ? parts[2].trim() : '';
-          const isTeamMarket = (home && mkt.includes(home)) || (away && mkt.includes(away)) || (!mkt.includes('partida') && !mkt.includes('jogo') && !mkt.includes('total') && !mkt.includes('ambos'));
-
-          let multipliers = [];
-
-          const excerpt = curr.sourceExcerpt || '';
-          if (!/\d/.test(excerpt)) multipliers.push(0.85);
-          
-          if (curr.divergenceRisk || (isTeamMarket && rawProb > 0.75)) multipliers.push(0.95);
-          if (rawProb > 0.85) multipliers.push(0.97);
-
-          const lineMatch = mkt.match(/(?:mais|menos|over|under)[^\d]*(\d+(\.\d+)?)/i);
-          if (lineMatch) {
-             const line = parseFloat(lineMatch[1]);
-             if (mkt.includes('escanteio') || mkt.includes('canto')) {
-                if (isTeamMarket && line < 4.5) multipliers.push(0.92); 
-                if (!isTeamMarket && line < 8.5) multipliers.push(0.95); 
-             } else if (mkt.includes('gol')) {
-                if (line < 1.0 && !mkt.includes('ht') && !mkt.includes('1º')) multipliers.push(0.88); 
-             }
-          }
-
-          multipliers.push(getMarketVolatilityPenalty(curr.market || ''));
-
-          let combinedLegPenalty = multipliers.reduce((a, b) => a * b, 1);
-          combinedLegPenalty = Math.max(0.80, combinedLegPenalty);
-          
-          return acc * (rawProb * combinedLegPenalty);
-        }, 1
-      );
-
-      const rawPureMath = json.selections.reduce((acc: number, curr: any) => acc * ((Number(curr.prob) || 75) / 100), 1);
-      if (rawPureMath > 0.75) implicitCorrelationFlag = true;
-
-      const avgSample = json.selections.reduce((acc: number, curr: any) => acc + (Number(curr.sampleSize) || 10), 0) / json.selections.length;
-      const confidenceAdjustment = avgSample >= 15 ? 1 : avgSample >= 10 ? 0.98 : avgSample >= 7 ? 0.95 : 0.92;
-
-      const SHRINK_FACTOR = 0.96; 
-      
-      const structuralPenalty =
-        structuralRiskScore >= 4 ? 0.90 :
-        structuralRiskScore === 3 ? 0.93 :
-        structuralRiskScore === 2 ? 0.95 :
-        structuralRiskScore === 1 ? 0.97 : 1;
-
-      let finalProb = rawCombinedProb * SHRINK_FACTOR * confidenceAdjustment * dynamicCorrelationPenalty * structuralPenalty;
-
-      json.combinedProb = Math.round(finalProb * 100);
-      json.fairOdd = Number((1 / finalProb).toFixed(2));
-      
-      let riskLabel = "BAIXO";
-      if (json.fairOdd === Infinity || finalProb === 0) {
-         riskLabel = "ALTO";
-      } else if (structuralRiskScore >= 3 || avgSample < 10 || finalProb < 0.40) {
-         riskLabel = "ALTO";
-      } else if (structuralRiskScore >= 1 || avgSample < 15 || implicitCorrelationFlag) {
-         riskLabel = "MÉDIO"; 
-      }
-      
-      json.structuralRiskScore = structuralRiskScore;
-      json.riskLevel = riskLabel;
-
-    } else {
-      throw new Error('Nenhuma seleção válida encontrada.');
+    if (userOdd && typeof userOdd === 'number' && userOdd > 1) {
+        const evRaw = (finalProb * userOdd) - 1;
+        json.ev = Number((evRaw * 100).toFixed(1)); 
     }
+
+    let riskLabel = "BAIXO";
+    if (json.fairOdd === Infinity || finalProb === 0) riskLabel = "ALTO";
+    else if (structuralRiskScore >= 3 || avgSample < 10 || finalProb < 0.40 || (json.ev !== undefined && json.ev < -5)) riskLabel = "ALTO";
+    else if (structuralRiskScore >= 1 || avgSample < 15 || implicitCorrelationFlag || (json.ev !== undefined && json.ev < 0)) riskLabel = "MÉDIO"; 
+    
+    json.structuralRiskScore = structuralRiskScore;
+    json.riskLevel = riskLabel;
 
     return res.status(200).json(json);
 

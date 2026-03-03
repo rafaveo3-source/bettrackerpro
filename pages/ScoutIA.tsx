@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Sparkles, Scan, Layers, Clock, Zap, Target, CheckCircle2, 
   Square, Goal, Flag, ArrowRight, Plus, ArrowRightLeft, 
-  ShieldAlert, Activity, Lock, Crown, Trash, Info
+  ShieldAlert, Activity, Crown, Trash, Info, TrendingUp, TrendingDown
 } from 'lucide-react';
 import { useBetStore } from '../store/useBetStore';
 
@@ -50,7 +50,7 @@ const MapIcon = ({ size, className }: any) => (
 );
 
 const safeText = (val: any): string => {
-    if (!val) return "Não especificada.";
+    if (!val && val !== 0) return "Não especificada.";
     if (typeof val === 'string' || typeof val === 'number') return String(val);
     if (typeof val === 'object') {
         if (val.market && val.match) return `${val.match} - ${val.market} (${val.prob}%)`;
@@ -61,8 +61,7 @@ const safeText = (val: any): string => {
 };
 
 const ScoutIA: React.FC = () => {
-  // 🔥 Puxamos o user dinamicamente. O e-mail blindado fica apenas na Vercel (.env)
-  const { user, isPro, aiScansUsedToday, canUseAiScan, incrementAiScan, setToast } = useBetStore();
+  const { user, isPro, canUseAiScan, incrementAiScan, setToast } = useBetStore();
   const userEmail = user?.email || "usuario@desconhecido.com"; 
   const navigate = useNavigate();
 
@@ -73,6 +72,9 @@ const ScoutIA: React.FC = () => {
   const [scoutGridResult, setScoutGridResult] = useState<any[] | null>(null);
   const [scoutBuilderResult, setScoutBuilderResult] = useState<any | null>(null);
   const [selectedMatchesForBuilder, setSelectedMatchesForBuilder] = useState<string[]>([]);
+  
+  // 🔥 NOVO STATE: Input da Odd do Usuário
+  const [userOdd, setUserOdd] = useState<string>('');
 
   const AVAILABLE_MARKETS = ['Gols (Overs, Unders, HT/FT, Equipe)', 'Escanteios (Overs, Race, HT/FT, Equipe)'];
   const [builderMarkets, setBuilderMarkets] = useState<string[]>([...AVAILABLE_MARKETS]);
@@ -86,6 +88,7 @@ const ScoutIA: React.FC = () => {
     if (scoutMode === 'grid') {
         setScoutBuilderImages([]);
         setScoutBuilderResult(null);
+        setUserOdd('');
     }
   }, [scoutMode]);
 
@@ -103,6 +106,9 @@ const ScoutIA: React.FC = () => {
   // Suporte a Ctrl+V
   useEffect(() => {
     const handleGlobalPaste = (e: ClipboardEvent) => {
+      // Impede colar imagem se o usuário estiver digitando no input da odd
+      if (document.activeElement?.tagName === 'INPUT') return;
+      
       const items = e.clipboardData?.items;
       if (!items) return;
 
@@ -198,12 +204,15 @@ const ScoutIA: React.FC = () => {
               mimeType: 'image/jpeg'
           })));
 
+          const parsedOdd = parseFloat(userOdd);
+
           const response = await fetch('/api/vision-builder', {
               method: 'POST', headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ 
                   images: base64Images, 
                   email: userEmail,
-                  markets: builderMarkets 
+                  markets: builderMarkets,
+                  userOdd: !isNaN(parsedOdd) ? parsedOdd : null // 🔥 Envia a ODD para o Backend calcular EV
               })
           });
 
@@ -242,7 +251,7 @@ const ScoutIA: React.FC = () => {
   };
 
   const clearGrid = () => { setScoutGridImage(null); setScoutGridResult(null); setSelectedMatchesForBuilder([]); };
-  const clearBuilder = () => { setScoutBuilderImages([]); setScoutBuilderResult(null); setSelectedMatchesForBuilder([]); };
+  const clearBuilder = () => { setScoutBuilderImages([]); setScoutBuilderResult(null); setSelectedMatchesForBuilder([]); setUserOdd(''); };
 
   if (!isPro) {
       return (
@@ -282,7 +291,7 @@ const ScoutIA: React.FC = () => {
         </div>
 
         <div className="bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-800 rounded-[2.5rem] p-4 sm:p-8 shadow-sm relative overflow-hidden">
-           
+            
            <div className="flex bg-[#09090b] p-1.5 rounded-2xl border border-slate-800 mb-6 shadow-inner">
               <button onClick={() => setScoutMode('grid')} className={`flex-1 py-3 text-[10px] sm:text-xs font-black uppercase tracking-widest rounded-xl transition-all ${scoutMode === 'grid' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/20 scale-[1.02]' : 'text-slate-500 hover:text-slate-300 hover:bg-slate-800/50'}`}>
                   1. Radar de Grade
@@ -310,14 +319,14 @@ const ScoutIA: React.FC = () => {
                        {scoutMode === 'grid' ? (
                            <>
                                <li><strong className="text-indigo-600 dark:text-indigo-300">Passo 1:</strong> Acesse uma lista de jogos do dia (Ex: Flashscore, Sofascore ou a própria Bet365).</li>
-                               <li><strong className="text-indigo-600 dark:text-indigo-300">Passo 2:</strong> Tire um Print (captura de tela) que mostre os times que vão jogar.</li>
-                               <li><strong className="text-indigo-600 dark:text-indigo-300">Passo 3:</strong> Cole a imagem aqui (Ctrl+V) ou faça upload. A IA vai varrer a grade e encontrar os jogos com maior potencial.</li>
+                               <li><strong className="text-indigo-600 dark:text-indigo-300">Passo 2:</strong> Tire um Print (captura de tela) que mostre os times que vão jogar e as odds 1x2.</li>
+                               <li><strong className="text-indigo-600 dark:text-indigo-300">Passo 3:</strong> Cole a imagem aqui (Ctrl+V) ou faça upload. A IA vai varrer a grade e encontrar os jogos com Assimetria Matemática.</li>
                            </>
                        ) : (
                            <>
                                <li><strong className="text-indigo-600 dark:text-indigo-300">Passo 1:</strong> Abra a partida na sua plataforma de análise (CornerPro, Flashscore, Sofascore, etc).</li>
-                               <li><strong className="text-indigo-600 dark:text-indigo-300">Passo 2 (O Segredo):</strong> Tire prints das abas de <strong>Gols</strong> e <strong>Escanteios</strong> que mostrem <strong>explicitamente as porcentagens (%) de acerto</strong> das linhas (Ex: % do Over 1.5 Gols, % do Over 8.5 Cantos).</li>
-                               <li><strong className="text-indigo-600 dark:text-indigo-300">Passo 3:</strong> Cole as imagens aqui (Ctrl+V) e clique em Processar. <span className="text-indigo-500 font-bold italic">Nossa IA não inventa dados! Ela precisa ler os números exatos nas suas imagens para calcular o valor real.</span></li>
+                               <li><strong className="text-indigo-600 dark:text-indigo-300">Passo 2 (O Segredo):</strong> Tire prints das abas de <strong>Gols</strong> e <strong>Escanteios</strong> que mostrem <strong>explicitamente as porcentagens (%) de acerto</strong> das linhas.</li>
+                               <li><strong className="text-indigo-600 dark:text-indigo-300">Passo 3:</strong> Cole as imagens aqui, digite a ODD da Bet365 (Opcional para cálculo de EV) e clique em Processar. <span className="text-indigo-500 font-bold italic">Nossa IA não inventa dados! Ela precisa ler os números exatos.</span></li>
                            </>
                        )}
                    </ul>
@@ -494,6 +503,30 @@ const ScoutIA: React.FC = () => {
                                ))}
                            </div>
                            
+                           {/* 🔥 NOVO: CAPTURA DO PREÇO DA CASA (EV%) */}
+                           <div className="w-full max-w-xs mx-auto mt-6 mb-8">
+                               <label className="text-[10px] font-black text-indigo-400 uppercase tracking-widest flex items-center justify-center gap-2 mb-2">
+                                   <Target size={12} /> Odd Oferecida pela Casa (Opcional)
+                               </label>
+                               <div className="relative">
+                                   <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 font-mono font-bold">@</span>
+                                   <input
+                                       type="text"
+                                       placeholder="Ex: 1.85"
+                                       value={userOdd}
+                                       onChange={(e) => {
+                                           // Validação estrita: Apenas números e até 1 ponto decimal
+                                           let val = e.target.value.replace(/[^0-9.]/g, '');
+                                           if ((val.match(/\./g) || []).length > 1) {
+                                               val = val.replace(/\.(?=[^.]*$)/, ''); // Remove o último ponto se houver mais de um
+                                           }
+                                           setUserOdd(val);
+                                       }}
+                                       className="w-full bg-[#020617] border border-indigo-500/30 focus:border-indigo-500 text-white text-center font-mono text-lg py-3 px-8 rounded-xl outline-none transition-colors shadow-inner placeholder:text-slate-800"
+                                   />
+                               </div>
+                           </div>
+
                            <div className="flex flex-wrap gap-3 justify-center">
                                {scoutBuilderImages.length < 4 && (
                                    <label className="text-[10px] font-black uppercase tracking-widest text-indigo-400 bg-indigo-500/10 hover:bg-indigo-500/20 border border-indigo-500/30 px-5 py-3 rounded-xl cursor-pointer transition-colors flex items-center gap-2">
@@ -520,7 +553,7 @@ const ScoutIA: React.FC = () => {
                            </div>
                            <motion.div initial={{ width: '0%' }} animate={{ width: '100%' }} transition={{ repeat: Infinity, duration: 2 }} className="absolute bottom-0 left-0 h-1.5 bg-indigo-500 shadow-[0_0_30px_#6366f1]" />
                            <Sparkles size={40} className="text-indigo-400 mb-4 animate-pulse" />
-                           <p className="text-indigo-400 font-mono font-bold text-xs uppercase tracking-widest text-center px-4 mt-2">Aplicando Volatility Engine e Precificação Justa...</p>
+                           <p className="text-indigo-400 font-mono font-bold text-xs uppercase tracking-widest text-center px-4 mt-2">Aplicando Modelagem de Poisson e Precificação Justa...</p>
                        </div>
                    )}
                 </div>
@@ -551,22 +584,40 @@ const ScoutIA: React.FC = () => {
                             ))}
                         </div>
 
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8 relative z-10">
+                        {/* 🔥 NOVO GRID DINÂMICO PARA ACOMODAR O EV% */}
+                        <div className={`grid grid-cols-2 ${scoutBuilderResult.ev !== undefined ? 'md:grid-cols-4' : 'md:grid-cols-3'} gap-3 sm:gap-4 mb-8 relative z-10`}>
                             <div className="bg-slate-900/50 border border-slate-800 rounded-2xl p-5 text-center flex flex-col justify-center">
                                 <p className="text-[9px] uppercase tracking-widest text-slate-500 font-bold mb-2">Win Rate Calculado</p>
                                 <p className="text-3xl font-black text-white">{safeText(scoutBuilderResult.combinedProb)}%</p>
                             </div>
                             <div className="bg-indigo-500/10 border border-indigo-500/20 rounded-2xl p-5 text-center shadow-inner flex flex-col justify-center">
                                 <p className="text-[9px] uppercase tracking-widest text-indigo-400 font-bold mb-2">Odd Justa Sugerida</p>
-                                <p className="text-4xl font-black text-indigo-400 font-mono">@{safeText(scoutBuilderResult.fairOdd)}</p>
+                                <p className="text-3xl font-black text-indigo-400 font-mono">@{safeText(scoutBuilderResult.fairOdd)}</p>
                             </div>
+
+                            {/* 🔥 CARD DO VALOR ESPERADO (Aparece apenas se enviou a Odd) */}
+                            {scoutBuilderResult.ev !== undefined && (
+                                <div className={`border rounded-2xl p-5 text-center flex flex-col justify-center shadow-inner ${
+                                    scoutBuilderResult.ev > 0 ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400' :
+                                    'bg-red-500/10 border-red-500/20 text-red-400'
+                                }`}>
+                                    <p className="text-[9px] uppercase tracking-widest font-bold mb-2 opacity-80 flex justify-center items-center gap-1.5">
+                                        {scoutBuilderResult.ev > 0 ? <TrendingUp size={12}/> : <TrendingDown size={12}/>}
+                                        Valor Esperado (EV)
+                                    </p>
+                                    <p className="text-3xl font-black font-mono">
+                                        {scoutBuilderResult.ev > 0 ? '+' : ''}{safeText(scoutBuilderResult.ev)}%
+                                    </p>
+                                </div>
+                            )}
+
                             <div className={`border rounded-2xl p-5 text-center flex flex-col justify-center shadow-inner ${
                                 scoutBuilderResult.riskLevel === 'ALTO' ? 'bg-red-500/10 border-red-500/20 text-red-400' :
                                 scoutBuilderResult.riskLevel === 'MÉDIO' ? 'bg-amber-500/10 border-amber-500/20 text-amber-400' :
                                 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400'
                             }`}>
                                 <p className="text-[9px] uppercase tracking-widest font-bold mb-2 opacity-80">Risco Estrutural</p>
-                                <p className="text-xl font-black uppercase tracking-widest flex items-center justify-center gap-2">
+                                <p className="text-lg sm:text-xl font-black uppercase tracking-widest flex items-center justify-center gap-2">
                                     <ShieldAlert size={20} /> {safeText(scoutBuilderResult.riskLevel)}
                                 </p>
                             </div>
