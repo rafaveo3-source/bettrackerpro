@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Sparkles, Scan, Layers, Clock, Zap, Target, CheckCircle2, 
   Square, Goal, Flag, ArrowRight, Plus, ArrowRightLeft, 
-  ShieldAlert, Activity, Crown, Trash, Info, TrendingUp, TrendingDown
+  ShieldAlert, Activity, Crown, Trash, Info, TrendingUp, TrendingDown, Calculator
 } from 'lucide-react';
 import { useBetStore } from '../store/useBetStore';
 
@@ -73,7 +73,7 @@ const ScoutIA: React.FC = () => {
   const [scoutBuilderResult, setScoutBuilderResult] = useState<any | null>(null);
   const [selectedMatchesForBuilder, setSelectedMatchesForBuilder] = useState<string[]>([]);
   
-  // 🔥 NOVO STATE: Input da Odd do Usuário
+  // 🔥 NOVO STATE: Input da Odd do Usuário (Agora usado APENAS no Pós-Processamento)
   const [userOdd, setUserOdd] = useState<string>('');
 
   const AVAILABLE_MARKETS = ['Gols (Overs, Unders, HT/FT, Equipe)', 'Escanteios (Overs, Race, HT/FT, Equipe)'];
@@ -103,10 +103,8 @@ const ScoutIA: React.FC = () => {
       }
   };
 
-  // Suporte a Ctrl+V
   useEffect(() => {
     const handleGlobalPaste = (e: ClipboardEvent) => {
-      // Impede colar imagem se o usuário estiver digitando no input da odd
       if (document.activeElement?.tagName === 'INPUT') return;
       
       const items = e.clipboardData?.items;
@@ -196,7 +194,9 @@ const ScoutIA: React.FC = () => {
       if (!isPro) { setToast({ type: 'error', message: 'Recurso exclusivo PRO.' }); return; }
       if (!checkAiLimit()) { setToast({ type: 'error', message: 'Limite atingido.' }); return; }
 
-      setIsScanningScout(true); setScoutBuilderResult(null);
+      setIsScanningScout(true); 
+      setScoutBuilderResult(null);
+      setUserOdd(''); // Reseta a Odd digitada anteriormente para não confundir o novo bilhete
 
       try {
           const base64Images = await Promise.all(scoutBuilderImages.map(async (imgObj) => ({
@@ -204,15 +204,13 @@ const ScoutIA: React.FC = () => {
               mimeType: 'image/jpeg'
           })));
 
-          const parsedOdd = parseFloat(userOdd);
-
           const response = await fetch('/api/vision-builder', {
               method: 'POST', headers: { 'Content-Type': 'application/json' },
+              // 🔥 CORREÇÃO: Não enviamos mais a ODD para o Backend. Ele só precisa das imagens.
               body: JSON.stringify({ 
                   images: base64Images, 
                   email: userEmail,
-                  markets: builderMarkets,
-                  userOdd: !isNaN(parsedOdd) ? parsedOdd : null // 🔥 Envia a ODD para o Backend calcular EV
+                  markets: builderMarkets
               })
           });
 
@@ -252,6 +250,16 @@ const ScoutIA: React.FC = () => {
 
   const clearGrid = () => { setScoutGridImage(null); setScoutGridResult(null); setSelectedMatchesForBuilder([]); };
   const clearBuilder = () => { setScoutBuilderImages([]); setScoutBuilderResult(null); setSelectedMatchesForBuilder([]); setUserOdd(''); };
+
+  // 🔥 CÁLCULO DINÂMICO DE EV NO FRONTEND
+  let dynamicEV: number | null = null;
+  if (scoutBuilderResult && userOdd) {
+      const parsedOdd = parseFloat(userOdd);
+      if (!isNaN(parsedOdd) && parsedOdd > 1) {
+          const probDecimal = scoutBuilderResult.combinedProb / 100;
+          dynamicEV = ((probDecimal * parsedOdd) - 1) * 100;
+      }
+  }
 
   if (!isPro) {
       return (
@@ -301,9 +309,9 @@ const ScoutIA: React.FC = () => {
               </button>
            </div>
 
-           {/* 🔥 PAINEL DE INSTRUÇÕES (GUIA PASSO A PASSO) */}
+           {/* PAINEL DE INSTRUÇÕES */}
            <motion.div
-               key={scoutMode} // Anima quando troca de aba
+               key={scoutMode}
                initial={{ opacity: 0, y: -5 }}
                animate={{ opacity: 1, y: 0 }}
                className="mb-8 bg-indigo-50 dark:bg-indigo-500/5 border border-indigo-100 dark:border-indigo-500/10 p-5 rounded-2xl flex gap-4 items-start shadow-sm"
@@ -326,7 +334,7 @@ const ScoutIA: React.FC = () => {
                            <>
                                <li><strong className="text-indigo-600 dark:text-indigo-300">Passo 1:</strong> Abra a partida na sua plataforma de análise (CornerPro, Flashscore, Sofascore, etc).</li>
                                <li><strong className="text-indigo-600 dark:text-indigo-300">Passo 2 (O Segredo):</strong> Tire prints das abas de <strong>Gols</strong> e <strong>Escanteios</strong> que mostrem <strong>explicitamente as porcentagens (%) de acerto</strong> das linhas.</li>
-                               <li><strong className="text-indigo-600 dark:text-indigo-300">Passo 3:</strong> Cole as imagens aqui, digite a ODD da Bet365 (Opcional para cálculo de EV) e clique em Processar. <span className="text-indigo-500 font-bold italic">Nossa IA não inventa dados! Ela precisa ler os números exatos.</span></li>
+                               <li><strong className="text-indigo-600 dark:text-indigo-300">Passo 3:</strong> Cole as imagens aqui e clique em Processar. Após a geração, você poderá informar a Odd da casa para auditar o Valor Esperado (EV).</li>
                            </>
                        )}
                    </ul>
@@ -374,7 +382,6 @@ const ScoutIA: React.FC = () => {
 
              {scoutGridResult && (
                  <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-8 mt-10">
-                     
                      {scoutGridResult.filter((m:any) => m.market === 'GOLS').length > 0 && (
                      <div className="bg-slate-900/40 border border-slate-800/60 rounded-[2rem] p-4 sm:p-8 shadow-inner">
                          <h3 className="text-xs font-black text-orange-500 uppercase tracking-widest mb-6 flex items-center gap-2 border-b border-slate-800/80 pb-4">
@@ -502,32 +509,8 @@ const ScoutIA: React.FC = () => {
                                    </div>
                                ))}
                            </div>
-                           
-                           {/* 🔥 NOVO: CAPTURA DO PREÇO DA CASA (EV%) */}
-                           <div className="w-full max-w-xs mx-auto mt-6 mb-8">
-                               <label className="text-[10px] font-black text-indigo-400 uppercase tracking-widest flex items-center justify-center gap-2 mb-2">
-                                   <Target size={12} /> Odd Oferecida pela Casa (Opcional)
-                               </label>
-                               <div className="relative">
-                                   <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 font-mono font-bold">@</span>
-                                   <input
-                                       type="text"
-                                       placeholder="Ex: 1.85"
-                                       value={userOdd}
-                                       onChange={(e) => {
-                                           // Validação estrita: Apenas números e até 1 ponto decimal
-                                           let val = e.target.value.replace(/[^0-9.]/g, '');
-                                           if ((val.match(/\./g) || []).length > 1) {
-                                               val = val.replace(/\.(?=[^.]*$)/, ''); // Remove o último ponto se houver mais de um
-                                           }
-                                           setUserOdd(val);
-                                       }}
-                                       className="w-full bg-[#020617] border border-indigo-500/30 focus:border-indigo-500 text-white text-center font-mono text-lg py-3 px-8 rounded-xl outline-none transition-colors shadow-inner placeholder:text-slate-800"
-                                   />
-                               </div>
-                           </div>
 
-                           <div className="flex flex-wrap gap-3 justify-center">
+                           <div className="flex flex-wrap gap-3 justify-center mt-6">
                                {scoutBuilderImages.length < 4 && (
                                    <label className="text-[10px] font-black uppercase tracking-widest text-indigo-400 bg-indigo-500/10 hover:bg-indigo-500/20 border border-indigo-500/30 px-5 py-3 rounded-xl cursor-pointer transition-colors flex items-center gap-2">
                                        <Plus size={16}/> Add Imagem
@@ -558,6 +541,7 @@ const ScoutIA: React.FC = () => {
                    )}
                 </div>
 
+                {/* RESULTADO GERADO */}
                 {scoutBuilderResult && scoutBuilderResult.selections && (
                     <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="bg-[#020617] border border-indigo-500/20 rounded-[2.5rem] p-6 sm:p-10 shadow-[0_0_40px_rgba(99,102,241,0.1)] relative overflow-hidden mt-10">
                         <div className="absolute top-0 right-0 w-80 h-80 bg-indigo-500/10 rounded-full blur-[100px] -mr-20 -mt-20 pointer-events-none"></div>
@@ -584,42 +568,62 @@ const ScoutIA: React.FC = () => {
                             ))}
                         </div>
 
-                        {/* 🔥 NOVO GRID DINÂMICO PARA ACOMODAR O EV% */}
-                        <div className={`grid grid-cols-2 ${scoutBuilderResult.ev !== undefined ? 'md:grid-cols-4' : 'md:grid-cols-3'} gap-3 sm:gap-4 mb-8 relative z-10`}>
-                            <div className="bg-slate-900/50 border border-slate-800 rounded-2xl p-5 text-center flex flex-col justify-center">
-                                <p className="text-[9px] uppercase tracking-widest text-slate-500 font-bold mb-2">Win Rate Calculado</p>
-                                <p className="text-3xl font-black text-white">{safeText(scoutBuilderResult.combinedProb)}%</p>
-                            </div>
-                            <div className="bg-indigo-500/10 border border-indigo-500/20 rounded-2xl p-5 text-center shadow-inner flex flex-col justify-center">
-                                <p className="text-[9px] uppercase tracking-widest text-indigo-400 font-bold mb-2">Odd Justa Sugerida</p>
-                                <p className="text-3xl font-black text-indigo-400 font-mono">@{safeText(scoutBuilderResult.fairOdd)}</p>
-                            </div>
-
-                            {/* 🔥 CARD DO VALOR ESPERADO (Aparece apenas se enviou a Odd) */}
-                            {scoutBuilderResult.ev !== undefined && (
-                                <div className={`border rounded-2xl p-5 text-center flex flex-col justify-center shadow-inner ${
-                                    scoutBuilderResult.ev > 0 ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400' :
-                                    'bg-red-500/10 border-red-500/20 text-red-400'
-                                }`}>
-                                    <p className="text-[9px] uppercase tracking-widest font-bold mb-2 opacity-80 flex justify-center items-center gap-1.5">
-                                        {scoutBuilderResult.ev > 0 ? <TrendingUp size={12}/> : <TrendingDown size={12}/>}
-                                        Valor Esperado (EV)
-                                    </p>
-                                    <p className="text-3xl font-black font-mono">
-                                        {scoutBuilderResult.ev > 0 ? '+' : ''}{safeText(scoutBuilderResult.ev)}%
-                                    </p>
+                        {/* ======================================================== */}
+                        {/* 🔥 AUDITORIA DINÂMICA DE EV% (AGORA NO LUGAR CERTO)      */}
+                        {/* ======================================================== */}
+                        <div className="bg-[#0b101e] border border-indigo-500/30 p-6 rounded-3xl mb-8 relative z-10 shadow-inner">
+                            <h4 className="text-[11px] font-black text-indigo-400 uppercase tracking-widest mb-5 flex items-center gap-2">
+                                <Calculator size={16} /> Auditoria de Valor Esperado (EV%)
+                            </h4>
+                            <div className="flex flex-col md:flex-row items-center gap-6">
+                                {/* Entrada do Usuário */}
+                                <div className="w-full md:w-1/3">
+                                    <p className="text-[10px] text-slate-400 uppercase tracking-widest font-bold mb-2 ml-1">Odd Oferecida na Bet365</p>
+                                    <div className="relative">
+                                        <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 font-mono font-bold">@</span>
+                                        <input
+                                            type="text"
+                                            placeholder="Ex: 1.85"
+                                            value={userOdd}
+                                            onChange={(e) => {
+                                                let val = e.target.value.replace(/[^0-9.]/g, '');
+                                                if ((val.match(/\./g) || []).length > 1) val = val.replace(/\.(?=[^.]*$)/, '');
+                                                setUserOdd(val);
+                                            }}
+                                            className="w-full bg-[#020617] border border-slate-700 focus:border-indigo-500 text-white text-left font-mono text-lg py-3 pl-10 pr-4 rounded-xl outline-none transition-colors shadow-inner placeholder:text-slate-700"
+                                        />
+                                    </div>
                                 </div>
-                            )}
 
-                            <div className={`border rounded-2xl p-5 text-center flex flex-col justify-center shadow-inner ${
-                                scoutBuilderResult.riskLevel === 'ALTO' ? 'bg-red-500/10 border-red-500/20 text-red-400' :
-                                scoutBuilderResult.riskLevel === 'MÉDIO' ? 'bg-amber-500/10 border-amber-500/20 text-amber-400' :
-                                'bg-emerald-500/10 border-emerald-500/20 text-emerald-400'
-                            }`}>
-                                <p className="text-[9px] uppercase tracking-widest font-bold mb-2 opacity-80">Risco Estrutural</p>
-                                <p className="text-lg sm:text-xl font-black uppercase tracking-widest flex items-center justify-center gap-2">
-                                    <ShieldAlert size={20} /> {safeText(scoutBuilderResult.riskLevel)}
-                                </p>
+                                {/* Divisor */}
+                                <div className="hidden md:block w-px h-12 bg-slate-800"></div>
+
+                                {/* HUD Dinâmico de EV */}
+                                <div className="flex-1 w-full grid grid-cols-3 gap-3">
+                                    <div className="bg-slate-900/50 border border-slate-800 rounded-xl p-3 sm:p-4 text-center flex flex-col justify-center">
+                                        <p className="text-[8px] sm:text-[9px] uppercase tracking-widest text-slate-500 font-bold mb-1 sm:mb-2">Probabilidade Real</p>
+                                        <p className="text-xl sm:text-2xl font-black text-white">{safeText(scoutBuilderResult.combinedProb)}%</p>
+                                    </div>
+                                    <div className="bg-indigo-500/10 border border-indigo-500/20 rounded-xl p-3 sm:p-4 text-center flex flex-col justify-center">
+                                        <p className="text-[8px] sm:text-[9px] uppercase tracking-widest text-indigo-400 font-bold mb-1 sm:mb-2">Odd Justa Mínima</p>
+                                        <p className="text-xl sm:text-2xl font-black text-indigo-400 font-mono">@{safeText(scoutBuilderResult.fairOdd)}</p>
+                                    </div>
+                                    
+                                    {/* MÁGICA DO REACT: EV Calculado Instantaneamente na Tela */}
+                                    <div className={`border rounded-xl p-3 sm:p-4 text-center flex flex-col justify-center shadow-inner transition-colors ${
+                                        !dynamicEV ? 'bg-slate-900/50 border-slate-800 text-slate-500' :
+                                        dynamicEV > 0 ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400 shadow-[0_0_15px_rgba(16,185,129,0.1)]' :
+                                        'bg-red-500/10 border-red-500/30 text-red-400 shadow-[0_0_15px_rgba(239,68,68,0.1)]'
+                                    }`}>
+                                        <p className="text-[8px] sm:text-[9px] uppercase tracking-widest font-bold mb-1 sm:mb-2 flex items-center justify-center gap-1">
+                                            {!dynamicEV ? <Minus size={10}/> : dynamicEV > 0 ? <TrendingUp size={10}/> : <TrendingDown size={10}/>}
+                                            Status do EV
+                                        </p>
+                                        <p className="text-xl sm:text-2xl font-black font-mono">
+                                            {!dynamicEV ? '--' : `${dynamicEV > 0 ? '+' : ''}${dynamicEV.toFixed(1)}%`}
+                                        </p>
+                                    </div>
+                                </div>
                             </div>
                         </div>
 
@@ -649,5 +653,12 @@ const ScoutIA: React.FC = () => {
     </div>
   );
 };
+
+// Ícone Auxiliar adicionado para o estado vazio do EV
+const Minus = ({ size }: any) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+    <line x1="5" y1="12" x2="19" y2="12"></line>
+  </svg>
+);
 
 export default ScoutIA;
