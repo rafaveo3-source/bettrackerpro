@@ -104,10 +104,11 @@ ${lastInternalError ? `\n⚠️ ATENÇÃO - CORREÇÃO OBRIGATÓRIA DA TENTATIVA
 
 ⚙️ MOTOR MATEMÁTICO E LEITURA VISUAL:
 1. NÃO invente números. Use o Hit Rate real (%).
-2. DIVERGÊNCIA CASA/FORA: Retorne "true" se o Hit Rate for carregado por apenas um time.
-3. 🔎 CAÇADOR DE ODDS (NOVO): Procure ativamente nas imagens por tabelas de Odds (frequentemente com blocos ou textos verdes indicando valor).
-   - Se você encontrar UMA ÚNICA linha com probabilidade alta (ex: > 70%) e a ODD VISÍVEL na imagem para esse mercado já estiver entre @1.60 e @2.00, CONSTRUA UMA APOSTA SIMPLES (Apenas 1 item no array 'selections').
-   - Se as odds individuais visíveis forem baixas (ex: 1.20) ou não houver odds na imagem, construa OBRIGATORIAMENTE uma DUPLA para atingir a meta de odd.
+2. ⚖️ VALIDAÇÃO CRUZADA (MUITO IMPORTANTE): Se você sugerir um mercado de equipe (Ex: Gols do Time A), você DEVE obrigatoriamente calcular a MÉDIA entre o % de sucesso do Ataque do Time A e o % de fracasso da Defesa do Time B. A chave "prob" deve conter essa média, e não apenas o número de um lado só. Explique isso na "analysis".
+3. DIVERGÊNCIA CASA/FORA: Retorne "true" se houver uma discrepância maior que 20% entre ataque e defesa.
+4. 🔎 CAÇADOR DE ODDS (NOVO): Procure ativamente nas imagens por tabelas de Odds (blocos ou textos verdes indicando valor).
+   - Se você encontrar UMA ÚNICA linha com probabilidade alta (ex: > 70% APÓS a média cruzada) e a ODD VISÍVEL na imagem já estiver entre @1.60 e @2.00, CONSTRUA UMA APOSTA SIMPLES.
+   - Se não houver odds ou forem fracas, construa OBRIGATORIAMENTE uma DUPLA.
 
 ⚠️ REGRAS DE MERCADO E LIQUIDEZ:
 - Use apenas: [ ${selectedMarketsStr} ].
