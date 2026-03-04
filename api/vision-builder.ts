@@ -15,18 +15,16 @@ const poissonCDF = (lambda: number, k: number) => {
     return sum;
 };
 
-// Algoritmo de Busca de Raiz (Bisection Method)
-// Encontra o Lambda exato para qualquer linha (ex: Over 1.5, k=1), revertendo a probabilidade dada.
 const findLambdaForProb = (targetProb: number, k: number): number => {
     let low = 0.01;
-    let high = 10.0; // Teto realista para gols esperados
-    const safeTarget = Math.min(Math.max(targetProb, 0.01), 0.99); // Proteção contra 100% absoluto
+    let high = 10.0; 
+    const safeTarget = Math.min(Math.max(targetProb, 0.01), 0.99); 
     
     for (let iter = 0; iter < 20; iter++) {
         let mid = (low + high) / 2;
-        let currentProb = 1 - poissonCDF(mid, k); // P(X > k)
+        let currentProb = 1 - poissonCDF(mid, k); 
         
-        if (currentProb < safeTarget) low = mid; // Se a prob tá baixa, precisamos de um lambda maior
+        if (currentProb < safeTarget) low = mid; 
         else high = mid;
     }
     return (low + high) / 2;
@@ -101,13 +99,15 @@ export default async function handler(req: any, res: any) {
       attempts++;
       
       const prompt = `Você é um Analista Quantitativo HFT Institucional.
-🎯 META DE ODD E PROBABILIDADE: A Odd Justa Final deve ficar IDEALMENTE entre @1.60 e @2.00. Construa OBRIGATORIAMENTE uma DUPLA. Priorize linhas com probabilidade entre 65% e 85%.
+🎯 META DE ODD E PROBABILIDADE: A Odd Justa Final deve ficar IDEALMENTE entre @1.60 e @2.00. Priorize linhas com probabilidade acima de 65%.
 ${lastInternalError ? `\n⚠️ ATENÇÃO - CORREÇÃO OBRIGATÓRIA DA TENTATIVA ANTERIOR: ${lastInternalError}\n` : ''}
 
-⚙️ MOTOR MATEMÁTICO:
+⚙️ MOTOR MATEMÁTICO E LEITURA VISUAL:
 1. NÃO invente números. Use o Hit Rate real (%).
-2. Se a amostra exata não estiver visível, DESCARTE O MERCADO.
-3. DIVERGÊNCIA CASA/FORA: Retorne "true" se o Hit Rate for carregado por apenas um time.
+2. DIVERGÊNCIA CASA/FORA: Retorne "true" se o Hit Rate for carregado por apenas um time.
+3. 🔎 CAÇADOR DE ODDS (NOVO): Procure ativamente nas imagens por tabelas de Odds (frequentemente com blocos ou textos verdes indicando valor).
+   - Se você encontrar UMA ÚNICA linha com probabilidade alta (ex: > 70%) e a ODD VISÍVEL na imagem para esse mercado já estiver entre @1.60 e @2.00, CONSTRUA UMA APOSTA SIMPLES (Apenas 1 item no array 'selections').
+   - Se as odds individuais visíveis forem baixas (ex: 1.20) ou não houver odds na imagem, construa OBRIGATORIAMENTE uma DUPLA para atingir a meta de odd.
 
 ⚠️ REGRAS DE MERCADO E LIQUIDEZ:
 - Use apenas: [ ${selectedMarketsStr} ].
@@ -116,22 +116,24 @@ ${crossMarketInstruction}
 
 ⚠️ REGRAS DE UX E FORMATAÇÃO:
 As chaves "alternativeCombination", "conservativeCombination" e "analysis" devem conter APENAS TEXTO HUMANO (sem JSON interno). Use "\\n\\n" para separar os 3 parágrafos da analysis.
+Se a imagem sugerir um EV+ (verde) justifique isso na análise.
 
-Retorne ESTRITAMENTE um JSON válido:
+Retorne ESTRITAMENTE um JSON válido neste formato:
 {
   "selections": [
     {
       "match": "Time A vs Time B",
-      "market": "Partida (FT) - Mais de 8.5 Escanteios",
-      "prob": 78,
+      "market": "Equipe da Casa - Mais de 5.5 Escanteios",
+      "prob": 80,
       "sampleSize": 10,
-      "sourceExcerpt": "Texto lido",
+      "sourceExcerpt": "Odd de 1.72 identificada com indicador verde.",
+      "extractedOdd": 1.72, // NOVO: Coloque o número float da odd lida na imagem. Use nulo se não achar.
       "divergenceRisk": false
     }
   ],
   "alternativeCombination": "Texto livre. Sugira tática com linhas DIFERENTES.",
-  "conservativeCombination": "Texto livre. Sugira dupla segura reduzindo as linhas originais.",
-  "analysis": "📊 A Lógica dos Números: O Hit rate é...\\n\\n⚽ Leitura de Jogo (Game Script): Esperamos que...\\n\\n🎯 Risco e Retorno: Isso protege..."
+  "conservativeCombination": "Texto livre. Sugira opção mais segura reduzindo linhas.",
+  "analysis": "📊 A Lógica dos Números: O Hit rate é...\\n\\n⚽ Leitura de Jogo (Game Script): Esperamos que...\\n\\n🎯 Risco e Retorno: A odd lida aponta valor..."
 }`;
 
       const result = await model.generateContent([prompt, ...imageParts]);
@@ -167,14 +169,13 @@ Retorne ESTRITAMENTE um JSON válido:
       finalValidJson = json; 
     }
 
-    // 🛡️ FALLBACK DETERMINÍSTICO
     if (!finalValidJson) {
       finalValidJson = {
-        selections: [ { match: "Análise Interrompida (Proteção)", market: "Mercados lidos não possuem liquidez", prob: 0, sampleSize: 0, sourceExcerpt: "Fallback Ativado", divergenceRisk: false } ],
+        selections: [ { match: "Análise Interrompida", market: "Mercados sem liquidez", prob: 0, sampleSize: 0, sourceExcerpt: "Fallback", divergenceRisk: false } ],
         combinedProb: 0, fairOdd: 0, structuralRiskScore: 5, riskLevel: "ALTO", minProb: 0, maxProb: 0,
         alternativeCombination: "Aguarde o jogo entrar no Ao Vivo para melhores liquidez.",
         conservativeCombination: "Tente selecionar múltiplas categorias (Gols + Cantos).",
-        analysis: "📊 A Lógica dos Números: As linhas extraídas possuem risco assimétrico muito elevado.\n\n⚽ Leitura de Jogo: Motor backend abortou por proteção de capital.\n\n🎯 Risco e Retorno: EV negativo. Proteja seu saldo."
+        analysis: "📊 A Lógica dos Números: As linhas extraídas possuem risco assimétrico.\n\n⚽ Leitura de Jogo: Motor abortou.\n\n🎯 Risco e Retorno: Proteja seu capital."
       };
     }
 
@@ -211,43 +212,41 @@ Retorne ESTRITAMENTE um JSON válido:
     let dynamicCorrelationPenalty = 1.0; 
     let usedPoissonJoint = false;
 
+    // 🔥 VERIFICAÇÃO DE APOSTA SIMPLES (SINGLE BET)
+    const isSingleBet = legs.length === 1;
+
     // ==========================================
-    // 🧠 PASSO 2: INFERÊNCIA ESTRUTURAL POISSON (SAME GAME TAX REAL)
+    // 🧠 PASSO 2: INFERÊNCIA ESTRUTURAL (POISSON / CORRELAÇÃO)
     // ==========================================
-    const hasHTGoals = legs.some((l: any) => (l.mkt.includes('(ht)') || l.mkt.includes('1º')) && (l.mkt.includes('gol') || l.mkt.includes('gols')));
-    const hasFTGoals = legs.some((l: any) => (l.mkt.includes('(ft)') || l.mkt.includes('partida') || l.mkt.includes('jogo')) && (l.mkt.includes('gol') || l.mkt.includes('gols')));
-    const isDoubleOverGoals = hasHTGoals && hasFTGoals && legs.length === 2;
+    if (!isSingleBet) {
+        const hasHTGoals = legs.some((l: any) => (l.mkt.includes('(ht)') || l.mkt.includes('1º')) && (l.mkt.includes('gol') || l.mkt.includes('gols')));
+        const hasFTGoals = legs.some((l: any) => (l.mkt.includes('(ft)') || l.mkt.includes('partida') || l.mkt.includes('jogo')) && (l.mkt.includes('gol') || l.mkt.includes('gols')));
+        const isDoubleOverGoals = hasHTGoals && hasFTGoals && legs.length === 2;
 
-    if (isDoubleOverGoals) {
-        const htLeg = legs.find((l: any) => l.mkt.includes('(ht)') || l.mkt.includes('1º'));
-        const ftLeg = legs.find((l: any) => l.mkt.includes('(ft)') || l.mkt.includes('partida') || l.mkt.includes('jogo'));
+        if (isDoubleOverGoals) {
+            const htLeg = legs.find((l: any) => l.mkt.includes('(ht)') || l.mkt.includes('1º'));
+            const ftLeg = legs.find((l: any) => l.mkt.includes('(ft)') || l.mkt.includes('partida') || l.mkt.includes('jogo'));
 
-        if (htLeg && ftLeg && htLeg.line !== null && ftLeg.line !== null) {
-            const targetHT = Math.floor(htLeg.line); // Ex: 0.5 vira 0 (exige > 0)
-            const targetFT = Math.floor(ftLeg.line); // Ex: 1.5 vira 1 (exige > 1)
+            if (htLeg && ftLeg && htLeg.line !== null && ftLeg.line !== null) {
+                const targetHT = Math.floor(htLeg.line); 
+                const targetFT = Math.floor(ftLeg.line); 
 
-            // Engenharia Reversa (Busca de Raiz)
-            const lambda_HT = findLambdaForProb(htLeg.rawProb, targetHT);
-            const lambda_FT = findLambdaForProb(ftLeg.rawProb, targetFT);
-            const lambda_2T = Math.max(0.1, lambda_FT - lambda_HT);
+                const lambda_HT = findLambdaForProb(htLeg.rawProb, targetHT);
+                const lambda_FT = findLambdaForProb(ftLeg.rawProb, targetFT);
+                const lambda_2T = Math.max(0.1, lambda_FT - lambda_HT);
 
-            let pureJointProbability = 0;
-            // Simulação de cenários: Aposta HT bate (i = targetHT + 1 até 7 gols)
-            for (let i = targetHT + 1; i <= 7; i++) { 
-                const prob_i_gols_no_HT = poissonPDF(lambda_HT, i);
-                
-                // Gols que o 2º tempo PRECISA entregar para salvar a aposta inteira
-                const gols_necessarios_2T = Math.max(0, (targetFT + 1) - i);
-                
-                // P(2T >= necessarios)
-                const prob_bater_resto_no_2T = 1 - poissonCDF(lambda_2T, gols_necessarios_2T - 1);
-                
-                pureJointProbability += (prob_i_gols_no_HT * prob_bater_resto_no_2T);
+                let pureJointProbability = 0;
+                for (let i = targetHT + 1; i <= 7; i++) { 
+                    const prob_i_gols_no_HT = poissonPDF(lambda_HT, i);
+                    const gols_necessarios_2T = Math.max(0, (targetFT + 1) - i);
+                    const prob_bater_resto_no_2T = 1 - poissonCDF(lambda_2T, gols_necessarios_2T - 1);
+                    pureJointProbability += (prob_i_gols_no_HT * prob_bater_resto_no_2T);
+                }
+
+                rawCombinedProb = pureJointProbability;
+                usedPoissonJoint = true;
+                structuralRiskScore += 3; 
             }
-
-            rawCombinedProb = pureJointProbability;
-            usedPoissonJoint = true;
-            structuralRiskScore += 3; // Mantemos o aviso de risco estrutural para a interface
         }
     }
 
@@ -275,11 +274,15 @@ Retorne ESTRITAMENTE um JSON válido:
         multipliers.push(getMarketVolatilityPenalty(leg.mkt));
 
         let legPenalty = multipliers.reduce((a, b) => a * b, 1);
-        totalPenalty *= Math.max(0.80, legPenalty); // Limite de sangramento por leg
+        totalPenalty *= Math.max(0.80, legPenalty); 
     });
 
-    if (!usedPoissonJoint) {
-        // Se não foi um Double Over Goals (HT/FT), aplica matemática padrão
+    if (isSingleBet) {
+        // 🔥 APOSTA SIMPLES: Sem correlação, apenas usa a probabilidade lida.
+        rawCombinedProb = legs[0].rawProb;
+        dynamicCorrelationPenalty = 1.0;
+        structuralRiskScore += 0;
+    } else if (!usedPoissonJoint) {
         rawCombinedProb = legs.reduce((acc: number, leg: any) => acc * leg.rawProb, 1);
         
         const hasBTTS = legs.some((l: any) => l.mkt.includes('ambos') || l.mkt.includes('btts'));
@@ -308,23 +311,20 @@ Retorne ESTRITAMENTE um JSON válido:
     const avgSample = legs.reduce((acc: number, curr: any) => acc + curr.sampleSize, 0) / legs.length;
     const confidenceAdjustment = avgSample >= 15 ? 1 : avgSample >= 10 ? 0.98 : avgSample >= 7 ? 0.95 : 0.92;
 
-    const SHRINK_FACTOR = 0.96; 
+    // Se for single bet, não aplica Shrink Factor agressivo da casa para múltiplas
+    const SHRINK_FACTOR = isSingleBet ? 0.98 : 0.96; 
     const structuralPenalty = structuralRiskScore >= 4 ? 0.90 : structuralRiskScore === 3 ? 0.93 : structuralRiskScore === 2 ? 0.95 : structuralRiskScore === 1 ? 0.97 : 1;
 
     // ==========================================
-    // 🎯 PASSO 4: CALCULAR MARGEM DE ERRO E ESPECTRO DE EV
+    // 🎯 PASSO 4: CALCULAR MARGEM DE ERRO E ESPECTRO
     // ==========================================
     let finalProb = rawCombinedProb * totalPenalty * SHRINK_FACTOR * confidenceAdjustment * dynamicCorrelationPenalty * structuralPenalty;
 
     json.combinedProb = Math.round(finalProb * 100);
     json.fairOdd = Number((1 / finalProb).toFixed(2));
     
-    // 🔬 CÁLCULO DO INTERVALO DE CONFIANÇA (Margem de Erro)
-    // Z = 1.28 para um intervalo de confiança pragmático de ~80%
     const zScore = 1.28; 
     let marginOfError = zScore * Math.sqrt((finalProb * (1 - finalProb)) / Math.max(avgSample, 5));
-    
-    // Limitamos a variância visual entre ±3% e ±8%
     marginOfError = Math.min(Math.max(marginOfError, 0.03), 0.08); 
 
     json.minProb = Math.max(1, Math.round((finalProb - marginOfError) * 100));
