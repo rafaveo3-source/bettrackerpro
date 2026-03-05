@@ -103,12 +103,12 @@ export default async function handler(req: any, res: any) {
 ${lastInternalError ? `\n⚠️ ATENÇÃO - CORREÇÃO OBRIGATÓRIA DA TENTATIVA ANTERIOR: ${lastInternalError}\n` : ''}
 
 ⚙️ MOTOR MATEMÁTICO E LEITURA VISUAL:
-1. 🛑 ANTI-FALSIFICAÇÃO DE DADOS (CRÍTICO): É ESTRITAMENTE PROIBIDO inventar, arredondar ou falsificar a probabilidade (Hit Rate) para satisfazer regras do sistema. O valor da chave "prob" deve ser EXATAMENTE o número lido na coluna "Dados" da imagem. Se a probabilidade real não servir, troque a aposta, mas NUNCA minta o número.
-2. ⚖️ VALIDAÇÃO CRUZADA: Se você sugerir um mercado de equipe (Ex: Gols do Time A), você DEVE obrigatoriamente calcular a MÉDIA entre o % de sucesso do Ataque do Time A e o % de fracasso da Defesa do Time B.
+1. 🛑 ANTI-CHERRY-PICKING (CRÍTICO): É ESTRITAMENTE PROIBIDO misturar dados de tabelas diferentes. Se você extrair uma Odd da tabela "Odds - Principais Mercados", a probabilidade (chave "prob") DEVE ser EXATAMENTE o número que está na coluna "Dados" daquela mesma linha. Não pegue a probabilidade isolada de um time em outra tabela para justificar a Odd.
+2. ⚖️ VALIDAÇÃO CRUZADA: Se você sugerir um mercado de equipe (Ex: Gols do Time A) e não houver um dado consolidado, você DEVE calcular a MÉDIA entre o % de sucesso do Ataque do Time A e o % de fracasso da Defesa do Time B.
 3. 🔎 CAÇADOR DE ODDS (SINGLE BET): Procure ativamente nas tabelas de Odds da imagem.
-   - 🛑 REGRA DE OURO: Para sugerir uma Aposta Simples, a ODD DEVE ESTAR VISÍVEL NUMERICAMENTE na imagem (Ex: 1.72).
-   - Se você encontrar UMA ÚNICA linha com Hit Rate aceitável (ex: >= 60%) E a ODD VISÍVEL for entre @1.60 e @2.00, CONSTRUA UMA APOSTA SIMPLES. (Note que 60% em odd 1.80 tem EV+, é uma boa entrada).
-   - Se a coluna da odd estiver com um traço "-" ou vazia, ou se a odd for muito baixa (ex: 1.20), construa OBRIGATORIAMENTE uma DUPLA.
+   - 🛑 REGRA DE OURO: Para sugerir uma Aposta Simples, a ODD DEVE ESTAR VISÍVEL NUMERICAMENTE na imagem.
+   - Se você encontrar UMA ÚNICA linha com Hit Rate aceitável (ex: >= 60%) NA MESMA LINHA DA ODD, E a ODD VISÍVEL for entre @1.60 e @2.00, CONSTRUA UMA APOSTA SIMPLES. 
+   - Se o Hit Rate na coluna 'Dados' for menor que 60%, a aposta é ruim. DESCARTE a aposta simples e construa OBRIGATORIAMENTE uma DUPLA combinando mercados mais seguros para atingir a odd alvo.
 
 ⚠️ REGRAS DE MERCADO E LIQUIDEZ:
 - Use apenas: [ ${selectedMarketsStr} ].
@@ -127,7 +127,7 @@ Retorne ESTRITAMENTE um JSON válido neste formato:
       "market": "Equipe da Casa - Mais de 5.5 Escanteios",
       "prob": 80,
       "sampleSize": 10,
-      "sourceExcerpt": "Odd de 1.72 visível na tabela.",
+      "sourceExcerpt": "Odd de 1.72 visível na tabela com Dados a 80%.",
       "extractedOdd": 1.72,
       "divergenceRisk": false
     }
