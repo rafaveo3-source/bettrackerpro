@@ -124,7 +124,6 @@ const estimateCornerLambdaFromMarket = (lines: {line: number, prob: number}[]) =
     return bestLambda;
 };
 
-// ✅ CÁLCULO DO BTTS COM COERÊNCIA TOTAL À MATRIZ DIXON-COLES
 const calculateBTTSProbability = (lh: number, la: number) => {
     let p = 0; let total = 0;
     for (let i = 0; i <= 8; i++) {
@@ -132,7 +131,6 @@ const calculateBTTSProbability = (lh: number, la: number) => {
             const base = poissonPDF(lh, i) * poissonPDF(la, j);
             const tau = dixonColesAdjustment(i, j, lh, la);
             const prob = base * tau;
-            
             total += prob;
             if (i >= 1 && j >= 1) p += prob;
         }
@@ -147,7 +145,6 @@ const calculateExactBTTSAndOver = (lh: number, la: number, overLine: number) => 
             const base = poissonPDF(lh, i) * poissonPDF(la, j);
             const tau = dixonColesAdjustment(i, j, lh, la);
             const prob = base * tau;
-            
             total += prob;
             if (i >= 1 && j >= 1 && (i + j) > overLine) p += prob;
         }
@@ -155,7 +152,6 @@ const calculateExactBTTSAndOver = (lh: number, la: number, overLine: number) => 
     return p / total;
 };
 
-// ✅ VOLATILITY PENALTIES (Controle de Risco Global)
 const getMarketVolatilityPenalty = (market: string) => {
   const m = market.toLowerCase();
   if (m.includes('1º tempo') || m.includes('1o tempo') || m.includes('(ht)') || m.includes('primeiro tempo')) {
@@ -207,25 +203,24 @@ export default async function handler(req: any, res: any) {
     while (attempts < 2 && !finalValidJson) {
       attempts++;
       
-      const prompt = `Você é um Analista Quantitativo HFT Institucional extraindo dados de um terminal.
-🎯 META DE ODD E PROBABILIDADE: A Odd Justa Final deve ficar IDEALMENTE entre @1.60 e @2.00. 
+      const prompt = `Você é um Extrator de Dados HFT. O Motor Quantitativo de Backend tomará as decisões. Sua função é apenas estruturar as oportunidades lidas nas imagens.
+🎯 META: Buscar odds de valor entre @1.60 e @2.00.
 ${lastInternalError ? `\n⚠️ CORREÇÃO OBRIGATÓRIA DA TENTATIVA ANTERIOR: ${lastInternalError}\n` : ''}
 
 ⚙️ LEITURA DE DADOS (CRÍTICO):
-1. 🛑 ANTI-FALSIFICAÇÃO: É ESTRITAMENTE PROIBIDO inventar ou misturar dados de tabelas diferentes.
-2. 📉 VARREDURA COMPLETA DE MERCADO:
+1. 🛑 ANTI-CONTAMINAÇÃO CRUZADA: Se houver imagens de JOGOS DIFERENTES, agrupe TODAS as odds (matchOdds1x2, goalMarketLines, cornerMarketLines) APENAS do jogo principal/primeiro jogo que você escolher como alvo. NUNCA misture estatísticas de um jogo no array do outro.
+2. 📉 VARREDURA DO JOGO ALVO:
    - Extraia as Odds 1x2 em "matchOdds1x2" (home, draw, away). Se não houver, null.
-   - Extraia TODAS as linhas de Gols FT (ex: 0.5, 1.5, 2.5) visíveis e seus Hit Rates para o array "goalMarketLines".
-   - Extraia TODAS as linhas de Escanteios FT (ex: 8.5, 9.5) visíveis e seus Hit Rates para o array "cornerMarketLines".
-3. 🔎 ESTRUTURA DO BILHETE: 
+   - Extraia TODAS as linhas de Gols FT visíveis e seus Hit Rates para o array "goalMarketLines".
+   - Extraia TODAS as linhas de Escanteios FT visíveis e seus Hit Rates para o array "cornerMarketLines".
+3. 🔎 EXTRAÇÃO DE APOSTAS NO ARRAY 'SELECTIONS': 
+   - Extraia as opções viáveis que tenham Hit Rate aceitável (>= 60%). 
    - A ODD DEVE ESTAR VISÍVEL NUMERICAMENTE na imagem.
-   - Se achar UMA linha de valor (>= 60%) com ODD VISÍVEL entre @1.60 e @2.00, faça APOSTA SIMPLES.
-   - Caso contrário, faça DUPLA combinando mercados.
 4. 🛡️ EVIDÊNCIA VISUAL: Em "sourceExcerpt", transcreva a prova exata (OBRIGATÓRIO conter símbolo % ou fração). Extraia "sampleSize" se visível.
 
-⚠️ REGRAS: Apenas [ ${selectedMarketsStr} ]. Sem redundâncias nas combinações alternativas.
+⚠️ REGRAS: Apenas [ ${selectedMarketsStr} ]. Sem redundâncias nas alternativas.
 
-Retorne ESTRITAMENTE um JSON válido:
+Retorne ESTRITAMENTE um JSON válido neste formato:
 {
   "selections": [{ "match": "A v B", "market": "Partida - Mais de 8.5 Escanteios", "prob": 67, "sampleSize": 10, "sourceExcerpt": "67% em 10 jogos", "extractedOdd": 1.72, "divergenceRisk": false }],
   "matchOdds1x2": { "home": 1.80, "draw": 3.60, "away": 4.20 },
@@ -243,6 +238,17 @@ Retorne ESTRITAMENTE um JSON válido:
 
     if (!finalValidJson) throw new Error("Abortado: Dados sem evidência válida.");
     const json = finalValidJson;
+
+    // 🔒 HARD LIMIT DETERMINÍSTICO (Anti-Gula do LLM)
+    // O Backend atua como Quant Manager e degola qualquer alucinação de triplas
+    if (json.selections && json.selections.length > 2) {
+        json.selections.sort((a: any, b: any) => {
+            const scoreA = (a.prob || 0) * (a.extractedOdd || 1);
+            const scoreB = (b.prob || 0) * (b.extractedOdd || 1);
+            return scoreB - scoreA;
+        });
+        json.selections = json.selections.slice(0, 2);
+    }
 
     // ==========================================
     // 🧮 PASSO 3: POSTERIOR BAYESIANA (FALLBACK BASE)
@@ -314,7 +320,6 @@ Retorne ESTRITAMENTE um JSON válido:
     for (let leg of legs) {
         if (isGoalEngineActive && hasGoals) {
             if (leg.mkt.includes('ambos') || leg.mkt.includes('btts')) {
-                // ✅ CHAMADA DA NOVA FUNÇÃO BTTS COM DIXON-COLES
                 leg.rawProb = calculateBTTSProbability(globalLambdaHome, globalLambdaAway);
             } else if (leg.line !== null) {
                 const k = Math.floor(leg.line);
