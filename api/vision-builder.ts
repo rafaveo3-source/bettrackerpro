@@ -99,17 +99,16 @@ export default async function handler(req: any, res: any) {
       attempts++;
       
       const prompt = `Você é um Analista Quantitativo HFT Institucional.
-🎯 META DE ODD E PROBABILIDADE: A Odd Justa Final deve ficar IDEALMENTE entre @1.60 e @2.00. Priorize linhas com probabilidade acima de 65%.
+🎯 META DE ODD E PROBABILIDADE: A Odd Justa Final deve ficar IDEALMENTE entre @1.60 e @2.00. 
 ${lastInternalError ? `\n⚠️ ATENÇÃO - CORREÇÃO OBRIGATÓRIA DA TENTATIVA ANTERIOR: ${lastInternalError}\n` : ''}
 
 ⚙️ MOTOR MATEMÁTICO E LEITURA VISUAL:
-1. NÃO invente números. Use o Hit Rate real (%).
-2. ⚖️ VALIDAÇÃO CRUZADA (MUITO IMPORTANTE): Se você sugerir um mercado de equipe (Ex: Gols do Time A), você DEVE obrigatoriamente calcular a MÉDIA entre o % de sucesso do Ataque do Time A e o % de fracasso da Defesa do Time B. 
+1. 🛑 ANTI-FALSIFICAÇÃO DE DADOS (CRÍTICO): É ESTRITAMENTE PROIBIDO inventar, arredondar ou falsificar a probabilidade (Hit Rate) para satisfazer regras do sistema. O valor da chave "prob" deve ser EXATAMENTE o número lido na coluna "Dados" da imagem. Se a probabilidade real não servir, troque a aposta, mas NUNCA minta o número.
+2. ⚖️ VALIDAÇÃO CRUZADA: Se você sugerir um mercado de equipe (Ex: Gols do Time A), você DEVE obrigatoriamente calcular a MÉDIA entre o % de sucesso do Ataque do Time A e o % de fracasso da Defesa do Time B.
 3. 🔎 CAÇADOR DE ODDS (SINGLE BET): Procure ativamente nas tabelas de Odds da imagem.
    - 🛑 REGRA DE OURO: Para sugerir uma Aposta Simples, a ODD DEVE ESTAR VISÍVEL NUMERICAMENTE na imagem (Ex: 1.72).
-   - Se a coluna da odd estiver com um traço "-" ou vazia para aquele mercado, É ESTRITAMENTE PROIBIDO sugeri-lo como aposta simples. NUNCA ALUCINE OU INVENTE UMA ODD.
-   - Se você encontrar UMA ÚNICA linha com probabilidade alta (ex: > 70% APÓS a média cruzada) E a ODD VISÍVEL for entre @1.60 e @2.00, CONSTRUA UMA APOSTA SIMPLES.
-   - Se não houver odds numéricas visíveis que atendam à meta, construa OBRIGATORIAMENTE uma DUPLA.
+   - Se você encontrar UMA ÚNICA linha com Hit Rate aceitável (ex: >= 60%) E a ODD VISÍVEL for entre @1.60 e @2.00, CONSTRUA UMA APOSTA SIMPLES. (Note que 60% em odd 1.80 tem EV+, é uma boa entrada).
+   - Se a coluna da odd estiver com um traço "-" ou vazia, ou se a odd for muito baixa (ex: 1.20), construa OBRIGATORIAMENTE uma DUPLA.
 
 ⚠️ REGRAS DE MERCADO E LIQUIDEZ:
 - Use apenas: [ ${selectedMarketsStr} ].
@@ -118,7 +117,7 @@ ${crossMarketInstruction}
 
 ⚠️ REGRAS DE UX E FORMATAÇÃO (MUITO IMPORTANTE):
 As chaves "alternativeCombination", "conservativeCombination" e "analysis" devem conter APENAS TEXTO HUMANO. Use "\\n\\n" para separar os 3 parágrafos da analysis.
-- 🛑 REGRA ANTI-SINÔNIMOS PARA ALTERNATIVA: A "alternativeCombination" DEVE ter uma estrutura LOGICAMENTE DIFERENTE da aposta principal. É ESTRITAMENTE PROIBIDO sugerir "sinônimos matemáticos" (Ex: Se a principal for "Ambas Marcam", JAMAIS sugira "Mais de 0.5 Gols Time A + Mais de 0.5 Gols Time B", pois é exatamente a mesma coisa). Mude de mercado (ex: vá para Escanteios se a principal foi Gols) ou sugira um Game Script totalmente oposto.
+- 🛑 REGRA ANTI-SINÔNIMOS PARA ALTERNATIVA: A "alternativeCombination" DEVE ter uma estrutura LOGICAMENTE DIFERENTE da aposta principal. NUNCA sugira sinônimos matemáticos (Ex: Se a principal for "Ambas Marcam", JAMAIS sugira "Mais de 0.5 Gols Time A + Mais de 0.5 Gols Time B"). Mude o mercado ou o Game Script.
 
 Retorne ESTRITAMENTE um JSON válido neste formato:
 {
@@ -214,7 +213,6 @@ Retorne ESTRITAMENTE um JSON válido neste formato:
     let dynamicCorrelationPenalty = 1.0; 
     let usedPoissonJoint = false;
 
-    // 🔥 VERIFICAÇÃO DE APOSTA SIMPLES (SINGLE BET)
     const isSingleBet = legs.length === 1;
 
     // ==========================================
