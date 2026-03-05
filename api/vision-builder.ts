@@ -491,9 +491,67 @@ Retorne ESTRITAMENTE um JSON válido neste formato:
     else if (avgSample < 10 || dynamicCorrelationPenalty < 0.9) riskLabel = "MÉDIO"; 
     
     json.structuralRiskScore = structuralRiskScore;
-    json.riskLevel = riskLabel;
+json.riskLevel = riskLabel;
 
-    return res.status(200).json(json);
+// =====================================================
+// 🧠 GERAÇÃO DETERMINÍSTICA DE TEXTO PARA O FRONTEND
+// =====================================================
+
+// Tese Quantitativa da IA
+if (!json.analysis) {
+  if (riskLabel === "BAIXO") {
+    json.analysis =
+      "Modelo quantitativo identifica valor esperado positivo com baixa correlação estrutural entre eventos.";
+  } else if (riskLabel === "MÉDIO") {
+    json.analysis =
+      "A aposta possui valor esperado positivo, porém com dependência moderada entre mercados.";
+  } else {
+    json.analysis =
+      "O motor detectou alta variância estrutural nesta combinação. A probabilidade depende fortemente de eventos correlacionados.";
+  }
+}
+
+// Alternativa Tática (segunda melhor pick)
+if (!json.alternativeCombination) {
+  try {
+    const secondBest =
+      validMatches[0]?.viablePicks?.find(
+        (p: any) => !selectedLegs.includes(p)
+      );
+
+    if (secondBest) {
+      json.alternativeCombination =
+        `Alternativa com perfil semelhante de valor: ${secondBest.market} (${Math.round(
+          secondBest.rawProb * 100
+        )}% estimado).`;
+    } else {
+      json.alternativeCombination =
+        "Nenhuma alternativa tática clara foi identificada com valor esperado superior.";
+    }
+  } catch {
+    json.alternativeCombination =
+      "Nenhuma alternativa tática clara foi identificada.";
+  }
+}
+
+// Estratégia Conservadora
+if (!json.conservativeCombination) {
+  const safestLeg = selectedLegs.sort(
+    (a: any, b: any) => b.finalLegProb - a.finalLegProb
+  )[0];
+
+  if (safestLeg) {
+    json.conservativeCombination =
+      `Estratégia conservadora: considerar apenas "${safestLeg.market}", que possui a maior probabilidade individual (${Math.round(
+        safestLeg.finalLegProb * 100
+      )}%).`;
+  } else {
+    json.conservativeCombination =
+      "Estratégia conservadora indisponível para este conjunto de dados.";
+  }
+}
+
+return res.status(200).json(json);
 
   } catch (error: any) {
     console.error("Erro Engine:", error);
