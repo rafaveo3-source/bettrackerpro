@@ -345,9 +345,14 @@ Retorne ESTRITAMENTE um JSON válido neste formato:
             
             const ev = (pick.finalLegProb * odd) - 1;
             const weight = entropyWeight(pick.finalLegProb);
-            pick.score = ev * weight * Math.log(odd); 
+            const implied = 1 / odd;
+const edge = pick.finalLegProb - implied;
+
+pick.score = edge * weight * Math.log(odd); 
             pick.extractedOdd = odd; // Atualiza a odd sanitizada para o frontend
         }
+
+        match.viablePicks = match.viablePicks.filter((p:any)=>p.score > 0);
         
         match.viablePicks.sort((a:any, b:any) => b.score - a.score);
     }
@@ -371,7 +376,7 @@ Retorne ESTRITAMENTE um JSON válido neste formato:
                 const p1 = validMatches[0].viablePicks[i];
                 const p2 = validMatches[1].viablePicks[j];
                 
-                if (p1.score > -0.1 && p2.score > -0.1) {
+                if (p1.score > 0 && p2.score > 0) {
                     const combProb = p1.finalLegProb * p2.finalLegProb;
                     const comboScore = (p1.score + p2.score) * combProb;
                     
@@ -402,8 +407,8 @@ Retorne ESTRITAMENTE um JSON válido neste formato:
     const isSingleBet = selectedLegs.length === 1;
 
     if (isSingleBet) {
-        rawCombinedProb = selectedLegs[0].rawProb;
-    } else if (isSameGameMulti) {
+    rawCombinedProb = selectedLegs[0].finalLegProb;
+} else if (isSameGameMulti) {
         const eng = validMatches[0].engine;
         const hasGoals = selectedLegs.some((l:any) => l.mkt.includes('gol'));
         const hasCorners = selectedLegs.some((l:any) => l.mkt.includes('escanteio') || l.mkt.includes('canto'));
@@ -436,7 +441,7 @@ Retorne ESTRITAMENTE um JSON válido neste formato:
                 rawCombinedProb = pureJoint;
                 structuralRiskScore += 3; 
             } else {
-                rawCombinedProb = selectedLegs.reduce((acc: number, leg: any) => acc * leg.rawProb, 1);
+                rawCombinedProb = selectedLegs.reduce((acc: number, leg: any) => acc * leg.finalLegProb, 1);
             }
         }
 
@@ -447,7 +452,7 @@ Retorne ESTRITAMENTE um JSON válido neste formato:
         if (hasBTTS && !overGoalLeg && hasGoals) corrMultipliers.push(0.90);
         dynamicCorrelationPenalty = corrMultipliers.reduce((a, b) => a * b, 1);
     } else {
-        rawCombinedProb = selectedLegs.reduce((acc: number, leg: any) => acc * leg.rawProb, 1);
+        rawCombinedProb = selectedLegs.reduce((acc: number, leg: any) => acc * leg.finalLegProb, 1);
     }
 
     // ==========================================
@@ -514,10 +519,11 @@ if (!json.analysis) {
 // Alternativa Tática (segunda melhor pick)
 if (!json.alternativeCombination) {
   try {
-    const secondBest =
-      validMatches[0]?.viablePicks?.find(
-        (p: any) => !selectedLegs.includes(p)
-      );
+    const allPicks = validMatches.flatMap((m:any)=>m.viablePicks || []);
+
+const secondBest = allPicks
+  .filter((p:any)=>!selectedLegs.includes(p))
+  .sort((a:any,b:any)=>b.score-a.score)[0];
 
     if (secondBest) {
       json.alternativeCombination =
@@ -536,9 +542,9 @@ if (!json.alternativeCombination) {
 
 // Estratégia Conservadora
 if (!json.conservativeCombination) {
-  const safestLeg = selectedLegs.sort(
-    (a: any, b: any) => b.finalLegProb - a.finalLegProb
-  )[0];
+  const safestLeg = [...selectedLegs].sort(
+  (a: any, b: any) => b.finalLegProb - a.finalLegProb
+)[0];
 
   if (safestLeg) {
     json.conservativeCombination =
