@@ -116,8 +116,9 @@ ${lastInternalError ? `\n⚠️ ATENÇÃO - CORREÇÃO OBRIGATÓRIA DA TENTATIVA
 - 🛑 LINHAS DE LIQUIDEZ: Para Gols, prefira 0.5 a 3.5. Para Escanteios, 6.5 a 11.5. Mínimo exigido: 3.5 para times e 6.5 para partida.
 ${crossMarketInstruction}
 
-⚠️ REGRAS DE UX E FORMATAÇÃO:
+⚠️ REGRAS DE UX E FORMATAÇÃO (MUITO IMPORTANTE):
 As chaves "alternativeCombination", "conservativeCombination" e "analysis" devem conter APENAS TEXTO HUMANO. Use "\\n\\n" para separar os 3 parágrafos da analysis.
+- 🛑 REGRA ANTI-SINÔNIMOS PARA ALTERNATIVA: A "alternativeCombination" DEVE ter uma estrutura LOGICAMENTE DIFERENTE da aposta principal. É ESTRITAMENTE PROIBIDO sugerir "sinônimos matemáticos" (Ex: Se a principal for "Ambas Marcam", JAMAIS sugira "Mais de 0.5 Gols Time A + Mais de 0.5 Gols Time B", pois é exatamente a mesma coisa). Mude de mercado (ex: vá para Escanteios se a principal foi Gols) ou sugira um Game Script totalmente oposto.
 
 Retorne ESTRITAMENTE um JSON válido neste formato:
 {
@@ -132,8 +133,8 @@ Retorne ESTRITAMENTE um JSON válido neste formato:
       "divergenceRisk": false
     }
   ],
-  "alternativeCombination": "Texto livre. Sugira tática com linhas DIFERENTES.",
-  "conservativeCombination": "Texto livre. Sugira opção mais segura reduzindo linhas.",
+  "alternativeCombination": "Texto livre sugerindo tática estruturalmente DIFERENTE e sem redundância.",
+  "conservativeCombination": "Texto livre sugerindo opção mais segura reduzindo linhas.",
   "analysis": "📊 A Lógica dos Números: O Hit rate é...\\n\\n⚽ Leitura de Jogo (Game Script): Esperamos que...\\n\\n🎯 Risco e Retorno: A odd lida aponta valor..."
 }`;
 
@@ -279,7 +280,6 @@ Retorne ESTRITAMENTE um JSON válido neste formato:
     });
 
     if (isSingleBet) {
-        // 🔥 APOSTA SIMPLES: Sem correlação, apenas usa a probabilidade lida.
         rawCombinedProb = legs[0].rawProb;
         dynamicCorrelationPenalty = 1.0;
         structuralRiskScore += 0;
@@ -312,7 +312,6 @@ Retorne ESTRITAMENTE um JSON válido neste formato:
     const avgSample = legs.reduce((acc: number, curr: any) => acc + curr.sampleSize, 0) / legs.length;
     const confidenceAdjustment = avgSample >= 15 ? 1 : avgSample >= 10 ? 0.98 : avgSample >= 7 ? 0.95 : 0.92;
 
-    // Se for single bet, não aplica Shrink Factor agressivo da casa para múltiplas
     const SHRINK_FACTOR = isSingleBet ? 0.98 : 0.96; 
     const structuralPenalty = structuralRiskScore >= 4 ? 0.90 : structuralRiskScore === 3 ? 0.93 : structuralRiskScore === 2 ? 0.95 : structuralRiskScore === 1 ? 0.97 : 1;
 
