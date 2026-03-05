@@ -104,11 +104,12 @@ ${lastInternalError ? `\n⚠️ ATENÇÃO - CORREÇÃO OBRIGATÓRIA DA TENTATIVA
 
 ⚙️ MOTOR MATEMÁTICO E LEITURA VISUAL:
 1. NÃO invente números. Use o Hit Rate real (%).
-2. ⚖️ VALIDAÇÃO CRUZADA (MUITO IMPORTANTE): Se você sugerir um mercado de equipe (Ex: Gols do Time A), você DEVE obrigatoriamente calcular a MÉDIA entre o % de sucesso do Ataque do Time A e o % de fracasso da Defesa do Time B. A chave "prob" deve conter essa média, e não apenas o número de um lado só. Explique isso na "analysis".
-3. DIVERGÊNCIA CASA/FORA: Retorne "true" se houver uma discrepância maior que 20% entre ataque e defesa.
-4. 🔎 CAÇADOR DE ODDS (NOVO): Procure ativamente nas imagens por tabelas de Odds (blocos ou textos verdes indicando valor).
-   - Se você encontrar UMA ÚNICA linha com probabilidade alta (ex: > 70% APÓS a média cruzada) e a ODD VISÍVEL na imagem já estiver entre @1.60 e @2.00, CONSTRUA UMA APOSTA SIMPLES.
-   - Se não houver odds ou forem fracas, construa OBRIGATORIAMENTE uma DUPLA.
+2. ⚖️ VALIDAÇÃO CRUZADA (MUITO IMPORTANTE): Se você sugerir um mercado de equipe (Ex: Gols do Time A), você DEVE obrigatoriamente calcular a MÉDIA entre o % de sucesso do Ataque do Time A e o % de fracasso da Defesa do Time B. 
+3. 🔎 CAÇADOR DE ODDS (SINGLE BET): Procure ativamente nas tabelas de Odds da imagem.
+   - 🛑 REGRA DE OURO: Para sugerir uma Aposta Simples, a ODD DEVE ESTAR VISÍVEL NUMERICAMENTE na imagem (Ex: 1.72).
+   - Se a coluna da odd estiver com um traço "-" ou vazia para aquele mercado, É ESTRITAMENTE PROIBIDO sugeri-lo como aposta simples. NUNCA ALUCINE OU INVENTE UMA ODD.
+   - Se você encontrar UMA ÚNICA linha com probabilidade alta (ex: > 70% APÓS a média cruzada) E a ODD VISÍVEL for entre @1.60 e @2.00, CONSTRUA UMA APOSTA SIMPLES.
+   - Se não houver odds numéricas visíveis que atendam à meta, construa OBRIGATORIAMENTE uma DUPLA.
 
 ⚠️ REGRAS DE MERCADO E LIQUIDEZ:
 - Use apenas: [ ${selectedMarketsStr} ].
@@ -116,8 +117,7 @@ ${lastInternalError ? `\n⚠️ ATENÇÃO - CORREÇÃO OBRIGATÓRIA DA TENTATIVA
 ${crossMarketInstruction}
 
 ⚠️ REGRAS DE UX E FORMATAÇÃO:
-As chaves "alternativeCombination", "conservativeCombination" e "analysis" devem conter APENAS TEXTO HUMANO (sem JSON interno). Use "\\n\\n" para separar os 3 parágrafos da analysis.
-Se a imagem sugerir um EV+ (verde) justifique isso na análise.
+As chaves "alternativeCombination", "conservativeCombination" e "analysis" devem conter APENAS TEXTO HUMANO. Use "\\n\\n" para separar os 3 parágrafos da analysis.
 
 Retorne ESTRITAMENTE um JSON válido neste formato:
 {
@@ -127,8 +127,8 @@ Retorne ESTRITAMENTE um JSON válido neste formato:
       "market": "Equipe da Casa - Mais de 5.5 Escanteios",
       "prob": 80,
       "sampleSize": 10,
-      "sourceExcerpt": "Odd de 1.72 identificada com indicador verde.",
-      "extractedOdd": 1.72, // NOVO: Coloque o número float da odd lida na imagem. Use nulo se não achar.
+      "sourceExcerpt": "Odd de 1.72 visível na tabela.",
+      "extractedOdd": 1.72,
       "divergenceRisk": false
     }
   ],
