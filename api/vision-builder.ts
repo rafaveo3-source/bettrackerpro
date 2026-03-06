@@ -83,15 +83,14 @@ const getTrueProbabilitiesFrom1X2 = (oddH: number, oddD: number, oddA: number) =
     return { pH: pH / sum, pD: pD / sum, pA: pA / sum };
 };
 
-const estimateLambdasFrom1X2 = (pH: number, pD: number, pA: number) => {
+// ✅ FIX: Recebe o Expected Total do mercado para quebrar o feedback loop do l3
+const estimateLambdasFrom1X2 = (pH: number, pD: number, pA: number, expectedTotal: number) => {
     let best = { error: Infinity, lh: 1.3, la: 1.1 };
-    
+    const l3 = Math.min(0.22, expectedTotal * 0.07); 
+
     for (let lh = 0.3; lh <= 3.5; lh += 0.2) {
         for (let la = 0.3; la <= 3.5; la += 0.2) {
             let ph_model = 0, pd_model = 0, pa_model = 0, total = 0;
-            
-            // ✅ OTIMIZAÇÃO INSTITUCIONAL: λ3 Dinâmico baseado no Expected Goals (lh + la)
-            const l3 = Math.min(0.25, (lh + la) * 0.08); 
             const l1 = Math.max(0.1, lh - l3);
             const l2 = Math.max(0.1, la - l3);
 
@@ -144,10 +143,9 @@ const estimateCornerLambdaFromMarket = (lines: {line: number, prob: number}[]) =
     return bestLambda;
 };
 
-const calculateBTTSProbability = (lh: number, la: number) => {
+const calculateBTTSProbability = (lh: number, la: number, expectedTotal: number) => {
     let p = 0; let total = 0;
-    // ✅ λ3 Dinâmico para cálculo exato do BTTS
-    const l3 = Math.min(0.25, (lh + la) * 0.08); 
+    const l3 = Math.min(0.22, expectedTotal * 0.07); 
     const l1 = Math.max(0.1, lh - l3);
     const l2 = Math.max(0.1, la - l3);
 
@@ -167,7 +165,6 @@ const getMarketType = (market: string) => {
     if (m.includes("btts") || m.includes("ambos")) return "btts";
     if (m.includes("escanteio") || m.includes("canto")) return isUnder ? "under_corners" : "over_corners";
     if (m.includes("gol") || m.includes("gols")) return isUnder ? "under_goals" : "over_goals";
-    if (m.includes("race") || m.includes("primeiro a")) return "race";
     return "other";
 };
 
@@ -281,8 +278,9 @@ Formato JSON esperado:
         let lsLambdaTotal = estimateLambdaFromMarket(match.goalMarketLines);
 
         if (trueProbs && lsLambdaTotal) {
-            const est = estimateLambdasFrom1X2(trueProbs.pH, trueProbs.pD, trueProbs.pA);
-            lh = est.lh; la = est.la; lt = (0.6 * est.total) + (0.4 * lsLambdaTotal);
+            lt = (0.6 * (trueProbs.pH * 2 + trueProbs.pA * 1.5)) + (0.4 * lsLambdaTotal); // Approx
+            const est = estimateLambdasFrom1X2(trueProbs.pH, trueProbs.pD, trueProbs.pA, lt);
+            lh = est.lh; la = est.la; 
             activeGoals = true;
         } else if (lsLambdaTotal) {
             lt = lsLambdaTotal; lh = lsLambdaTotal * 0.55; la = lsLambdaTotal * 0.45;
@@ -297,11 +295,10 @@ Formato JSON esperado:
             pick.match = match.matchName;
             const mkt = (pick.market || '').toLowerCase();
             pick.mkt = mkt;
-            pick.matchLt = lt; // ⚡ Salva o Expected Goals (lt) para o Tempo Factor na Copula
+            pick.matchLt = lt; 
             
             if (mkt.includes('race') || mkt.includes('exat') || mkt.includes('ímpar') || mkt.includes('par')) continue;
 
-            // ✅ OTIMIZAÇÃO: Filtro Estrito de Sample Size (Ignora ruídos de baixa amostra)
             let realSample = Number(pick.sampleSize);
             if (!realSample || realSample < 6) continue;
 
@@ -316,7 +313,7 @@ Formato JSON esperado:
 
             if (activeGoals && mkt.includes('gol')) {
                 if (mkt.includes('ambos') || mkt.includes('btts')) {
-                    rawProb = calculateBTTSProbability(lh, la);
+                    rawProb = calculateBTTSProbability(lh, la, lt);
                 } else if (line !== null && !isTeamMarket) {
                     const k = Math.floor(line);
                     rawProb = isUnder ? poissonCDF(lt, k) : 1 - poissonCDF(lt, k);
@@ -335,8 +332,11 @@ Formato JSON esperado:
             pick.extractedOdd = Math.min(Math.max(rawOdd, 1.01), 10.0);
             pick.confidence = pick.confidence !== undefined ? Number(pick.confidence) : 1.0;
             
-            // ✅ OTIMIZAÇÃO: The "Too Good To Be True" Circuit Breaker (OCR Error)
-            if (pick.finalLegProb > 0.80 && pick.extractedOdd > 1.50) continue;
+            pick.samplePenalty = Math.min(1, Math.log(realSample) / Math.log(15));
+            
+            // ✅ FIX: O Filtro "Too Good To Be True"
+            const fairOdd = 1 / pick.finalLegProb;
+            if (pick.extractedOdd > fairOdd * 1.35) continue; // Corta alucinações de OCR e Modelo
 
             allProcessedLegs.push(pick);
         }
@@ -350,19 +350,19 @@ Formato JSON esperado:
     const ODD_MAX = 2.00;
     const EDGE_MIN = -0.01; 
 
-    // 1. Validar Singles
+    // 1. Singles
     for (let leg of allProcessedLegs) {
         const marketProb = 1 / leg.extractedOdd;
         const edge = leg.finalLegProb - marketProb; 
         const ev = (leg.finalLegProb * leg.extractedOdd) - 1; 
         
         if (leg.extractedOdd >= ODD_MIN && leg.extractedOdd <= ODD_MAX && edge >= EDGE_MIN) {
-            const score = edge * entropyWeight(leg.finalLegProb) * leg.confidence;
+            const score = edge * entropyWeight(leg.finalLegProb) * leg.confidence * leg.samplePenalty;
             opportunities.push({ type: 'Simples', legs: [leg], prob: leg.finalLegProb, odd: leg.extractedOdd, ev, edge, score });
         }
     }
 
-    // 2. Validar Duplas (Cópula de Variância Real e Same Game Tax)
+    // 2. Duplas (Cópula de Variância Real e Same Game Tax)
     for (let i = 0; i < allProcessedLegs.length; i++) {
         for (let j = i + 1; j < allProcessedLegs.length; j++) {
             const l1 = allProcessedLegs[i];
@@ -376,16 +376,15 @@ Formato JSON esperado:
 
             if (isSameGame) {
                 let rho = getCorrelation(l1.mkt, l2.mkt);
-                // ✅ OTIMIZAÇÃO: Ritmo de Jogo amplificando a correlação
+                // ✅ FIX: Cap na Correlação (Teto em 0.28)
                 const tempoFactor = Math.min(1.3, l1.matchLt / 2.5);
-                rho = rho * tempoFactor;
+                rho = Math.min(0.28, rho * tempoFactor);
 
-                // ✅ OTIMIZAÇÃO: Cópula de Pearson baseada em Variância Binomial Real
                 const var1 = l1.finalLegProb * (1 - l1.finalLegProb);
                 const var2 = l2.finalLegProb * (1 - l2.finalLegProb);
                 combProb = combProb + (rho * Math.sqrt(var1 * var2));
                 
-                // ✅ OTIMIZAÇÃO: Same Game Tax (Margem Institucional de Risco)
+                // ✅ FIX: Same Game Tax (Margem Institucional de Risco)
                 combProb *= 0.96; 
                 corrLabel = rho > 0 ? " (Sinergia Positiva)" : rho < 0 ? " (Desconto de Risco)" : " (SGP Tax)";
             }
@@ -398,7 +397,8 @@ Formato JSON esperado:
 
             if (combOdd >= ODD_MIN && combOdd <= ODD_MAX && edge >= EDGE_MIN) {
                 const avgConf = (l1.confidence + l2.confidence) / 2;
-                const score = edge * entropyWeight(combProb) * avgConf;
+                const avgSamplePen = (l1.samplePenalty + l2.samplePenalty) / 2;
+                const score = edge * entropyWeight(combProb) * avgConf * avgSamplePen;
                 opportunities.push({ 
                     type: isSameGame ? `Dupla Intragame${corrLabel}` : 'Dupla Cruzada', 
                     legs: [l1, l2], prob: combProb, odd: combOdd, ev, edge, score 
@@ -407,11 +407,21 @@ Formato JSON esperado:
         }
     }
 
+    // ✅ FIX: Filtro Hash para Remover Oportunidades Duplicadas/Sobrepostas
+    const uniqueOps = new Map();
+    for (let op of opportunities) {
+        const opKey = op.legs.map((l:any) => l.market.trim().toLowerCase()).sort().join("|");
+        if (!uniqueOps.has(opKey) || uniqueOps.get(opKey).score < op.score) {
+            uniqueOps.set(opKey, op);
+        }
+    }
+    opportunities = Array.from(uniqueOps.values());
+
     opportunities.sort((a, b) => b.score - a.score);
     const topOpportunities = opportunities.slice(0, 3);
 
     if (topOpportunities.length === 0) {
-        throw new Error("NO BET: O Scanner Quantitativo varreu os dados e não encontrou NENHUMA oportunidade com Valor (Edge Real/EV+) e Base Amostral Mínima (6+ jogos) dentro da faixa de odd @1.60 a @2.00.");
+        throw new Error("NO BET: O Scanner Quantitativo não encontrou NENHUMA oportunidade de aposta (Simples ou Dupla) com Valor Real (EV+) e Amostra Segura (6+ jogos) dentro do range de odd @1.60 a @2.00.");
     }
 
     const bestOpp = topOpportunities[0];
@@ -442,6 +452,11 @@ Formato JSON esperado:
             return `Entrada ${idx + 1} (${op.type}): ${desc}. Odd: @${op.odd.toFixed(2)} | EV: ${(op.ev*100).toFixed(1)}% | Edge Real: ${(op.edge*100).toFixed(1)}%`;
         }).join("\n");
 
+        const narrativeModel = genAI.getGenerativeModel({ 
+            model: 'gemini-2.5-flash',
+            generationConfig: { responseMimeType: "application/json" }
+        });
+
         const narrativePrompt = `Aja como um Analista Quantitativo de Sportsbook.
 Nosso Value Scanner processou a matriz e filtrou as seguintes oportunidades de valor matemático (EV+):
 ${opsText}
@@ -456,7 +471,7 @@ Formato JSON esperado:
   "conservativeCombination": "Uma recomendação de Stake de acordo com o risco ou uma variação conservadora."
 }`;
 
-        const textResult = await model.generateContent(narrativePrompt);
+        const textResult = await narrativeModel.generateContent(narrativePrompt);
         const textData = JSON.parse(textResult.response.text());
         
         if (!textData || !textData.analysis || !textData.alternativeCombination || !textData.conservativeCombination) throw new Error("JSON incompleto do Narrador.");
