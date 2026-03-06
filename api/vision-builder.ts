@@ -306,7 +306,7 @@ Formato JSON esperado:
             }
         }
 
-        // Pós-processamento
+        // Pós-processamento dos Counters
         for (let mkt of activeMarkets) {
             const pick = mkt.ref;
             let realSample = Number(pick.sampleSize);
@@ -319,9 +319,13 @@ Formato JSON esperado:
             const finalOdd = Math.min(Math.max(rawOdd, 1.01), 10.0);
             const fairOdd = 1 / rawProb;
 
-            // 🛡️ FILTRO DINÂMICO DE SANIDADE (O Mercado não comete erros grotescos em Super Favoritos)
-const maxOddTolerance = rawProb > 0.70 ? 1.15 : 1.35; 
-if (finalOdd > fairOdd * maxOddTolerance) continue; 
+            // 🛡️ A BANDA DE REALIDADE (O Assassino de Fantasmas do OCR)
+            // Se a probabilidade for alta (> 65%), o mercado não comete erros grotescos.
+            // Reduzimos a tolerância de erro do OCR para no máximo 18% de descolamento.
+            const maxOddTolerance = rawProb > 0.65 ? 1.18 : 1.35;
+            
+            if (finalOdd > fairOdd * maxOddTolerance) continue; 
+            
             // ✅ FIX: Limite baixado para 1.25 para permitir construção de Bet Builders fortes
             if (finalOdd < 1.25) continue; 
 
