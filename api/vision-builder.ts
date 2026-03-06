@@ -319,7 +319,9 @@ Formato JSON esperado:
             const finalOdd = Math.min(Math.max(rawOdd, 1.01), 10.0);
             const fairOdd = 1 / rawProb;
 
-            if (finalOdd > fairOdd * 1.35) continue; 
+            // 🛡️ FILTRO DINÂMICO DE SANIDADE (O Mercado não comete erros grotescos em Super Favoritos)
+const maxOddTolerance = rawProb > 0.70 ? 1.15 : 1.35; 
+if (finalOdd > fairOdd * maxOddTolerance) continue; 
             // ✅ FIX: Limite baixado para 1.25 para permitir construção de Bet Builders fortes
             if (finalOdd < 1.25) continue; 
 
