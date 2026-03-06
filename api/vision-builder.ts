@@ -16,7 +16,6 @@ const entropyWeight = (p: number) => {
     return Math.max(0.05, Math.min(weight, 1));
 };
 
-// Tabela de Lookup O(1) para evitar estouro de Call Stack
 const factorialTable = [1, 1, 2, 6, 24, 120, 720, 5040, 40320, 362880, 3628800, 39916800, 479001600, 6227020800, 87178291200, 1307674368000];
 const factorial = (n: number) => {
     if (n < factorialTable.length) return factorialTable[n];
@@ -26,10 +25,15 @@ const factorial = (n: number) => {
 };
 
 // ==========================================
-// 🧠 2. MOTOR ATUARIAL: TRUE BIVARIATE POISSON
+// 🧠 2. MOTOR ATUARIAL: ADAPTIVE BIVARIATE POISSON
 // ==========================================
+const poissonCache: Record<string, number> = {};
 const poissonPDF = (lambda: number, k: number) => {
-    return (Math.pow(lambda, k) * Math.exp(-lambda)) / factorial(k);
+    const key = `${lambda}_${k}`;
+    if (poissonCache[key] !== undefined) return poissonCache[key];
+    const p = (Math.pow(lambda, k) * Math.exp(-lambda)) / factorial(k);
+    poissonCache[key] = p;
+    return p;
 };
 
 const poissonCDF = (lambda: number, k: number) => {
@@ -38,7 +42,6 @@ const poissonCDF = (lambda: number, k: number) => {
     return sum;
 };
 
-// ✅ NOVO: Karlis-Ntzoufras Bivariate Poisson PDF (Modelagem de Correlação de Gols)
 const bivariatePoissonPDF = (x: number, y: number, l1: number, l2: number, l3: number) => {
     let sum = 0;
     const minXY = Math.min(x, y);
@@ -82,11 +85,13 @@ const getTrueProbabilitiesFrom1X2 = (oddH: number, oddD: number, oddA: number) =
 
 const estimateLambdasFrom1X2 = (pH: number, pD: number, pA: number) => {
     let best = { error: Infinity, lh: 1.3, la: 1.1 };
-    const l3 = 0.15; // Fator comum de correlação esportiva
-
+    
     for (let lh = 0.3; lh <= 3.5; lh += 0.2) {
         for (let la = 0.3; la <= 3.5; la += 0.2) {
             let ph_model = 0, pd_model = 0, pa_model = 0, total = 0;
+            
+            // ✅ OTIMIZAÇÃO INSTITUCIONAL: λ3 Dinâmico baseado no Expected Goals (lh + la)
+            const l3 = Math.min(0.25, (lh + la) * 0.08); 
             const l1 = Math.max(0.1, lh - l3);
             const l2 = Math.max(0.1, la - l3);
 
@@ -141,7 +146,8 @@ const estimateCornerLambdaFromMarket = (lines: {line: number, prob: number}[]) =
 
 const calculateBTTSProbability = (lh: number, la: number) => {
     let p = 0; let total = 0;
-    const l3 = 0.15; 
+    // ✅ λ3 Dinâmico para cálculo exato do BTTS
+    const l3 = Math.min(0.25, (lh + la) * 0.08); 
     const l1 = Math.max(0.1, lh - l3);
     const l2 = Math.max(0.1, la - l3);
 
@@ -161,7 +167,7 @@ const getMarketType = (market: string) => {
     if (m.includes("btts") || m.includes("ambos")) return "btts";
     if (m.includes("escanteio") || m.includes("canto")) return isUnder ? "under_corners" : "over_corners";
     if (m.includes("gol") || m.includes("gols")) return isUnder ? "under_goals" : "over_goals";
-    if (m.includes("race")) return "race";
+    if (m.includes("race") || m.includes("primeiro a")) return "race";
     return "other";
 };
 
@@ -185,7 +191,7 @@ const getCorrelation = (m1: string, m2: string) => {
 
 const getMarketVolatilityPenalty = (market: string) => {
   const m = market.toLowerCase();
-  if (m.includes('1º tempo') || m.includes('1o tempo') || m.includes('(ht)')) return 0.95; 
+  if (m.includes('1º tempo') || m.includes('1o tempo') || m.includes('(ht)') || m.includes('primeiro tempo')) return 0.95; 
   if (m.includes('ambos') || m.includes('btts')) return 0.96;
   if (m.includes('escanteios') || m.includes('cantos')) return 0.97;
   return 1;
@@ -230,11 +236,11 @@ export default async function handler(req: any, res: any) {
       attempts++;
       const prompt = `Você é um Extrator de Dados. Transcreva as estatísticas das imagens.
 1. Agrupe por jogo em "matches".
-2. Extraia "matchOdds1x2" (home, draw, away) e as linhas de "goalMarketLines" e "cornerMarketLines".
-3. Em "viablePicks", liste APENAS mercados válidos (${selectedMarketsStr}) lidos nas imagens com Hit Rate >= 55% e ODD visível. 
-   - 🛑 IGNORE COMPLETAMENTE mercados como "Race", "Primeiro a Marcar", "Par/Ímpar", "Exato".
-   - Atribua "confidence" (0.1 a 1.0) sobre a clareza visual da leitura.
-4. "matchContext": Breve resumo do cenário tático lido estritamente na tela (Sem inventar dados).
+2. Extraia "matchOdds1x2" (home, draw, away) e "goalMarketLines" e "cornerMarketLines".
+3. Em "viablePicks", liste APENAS mercados válidos (${selectedMarketsStr}) com Hit Rate >= 55% e ODD visível. 
+   - 🛑 IGNORE "Race", "Primeiro a Marcar", "Par/Ímpar", "Exato".
+   - "confidence": 0.1 a 1.0 sobre a clareza da leitura da odd.
+4. "matchContext": Breve resumo do cenário tático lido (Sem inventar dados).
 
 Formato JSON esperado:
 {
@@ -246,7 +252,7 @@ Formato JSON esperado:
       "goalMarketLines": [ {"line": 1.5, "prob": 70} ],
       "cornerMarketLines": [ {"line": 8.5, "prob": 65} ],
       "viablePicks": [
-        { "market": "Mais de 8.5 Escanteios", "prob": 67, "extractedOdd": 1.72, "confidence": 0.95 }
+        { "market": "Mais de 8.5 Escanteios", "prob": 67, "sampleSize": 10, "extractedOdd": 1.72, "confidence": 0.95 }
       ]
     }
   ]
@@ -257,7 +263,7 @@ Formato JSON esperado:
       } catch (e: any) { continue; }
     }
 
-    if (!finalValidJson || !finalValidJson.matches) throw new Error("Abortado: O OCR não conseguiu extrair dados.");
+    if (!finalValidJson || !finalValidJson.matches) throw new Error("Abortado: O OCR não conseguiu extrair dados numéricos válidos.");
 
     // ==========================================
     // 🧮 CAMADA 2: QUANT ENGINE MODELING
@@ -291,17 +297,22 @@ Formato JSON esperado:
             pick.match = match.matchName;
             const mkt = (pick.market || '').toLowerCase();
             pick.mkt = mkt;
+            pick.matchLt = lt; // ⚡ Salva o Expected Goals (lt) para o Tempo Factor na Copula
             
             if (mkt.includes('race') || mkt.includes('exat') || mkt.includes('ímpar') || mkt.includes('par')) continue;
 
+            // ✅ OTIMIZAÇÃO: Filtro Estrito de Sample Size (Ignora ruídos de baixa amostra)
+            let realSample = Number(pick.sampleSize);
+            if (!realSample || realSample < 6) continue;
+
             let statedProb = (Number(pick.prob) || 50) / 100;
             const { alpha, beta } = getGlobalWeakPriors(mkt);
-            let rawProb = (statedProb * 3 + (alpha / (alpha + beta)) * (alpha + beta)) / (3 + alpha + beta);
+            let rawProb = (statedProb * realSample + (alpha / (alpha + beta)) * (alpha + beta)) / (realSample + alpha + beta);
             
             let line = null; const lineMatch = mkt.match(/(?:mais|menos|over|under|acima|abaixo)[^\d]*(\d+(\.\d+)?)/i);
             if (lineMatch) line = parseFloat(lineMatch[1]);
             const isTeamMarket = mkt.includes('casa') || mkt.includes('visitante');
-            const isUnder = mkt.includes('menos') || mkt.includes('under');
+            const isUnder = mkt.includes('menos') || mkt.includes('under') || mkt.includes('abaixo');
 
             if (activeGoals && mkt.includes('gol')) {
                 if (mkt.includes('ambos') || mkt.includes('btts')) {
@@ -316,19 +327,17 @@ Formato JSON esperado:
                 rawProb = isUnder ? poissonCDF(lc, k) : 1 - poissonCDF(lc, k);
             }
 
-            const volatilityPenalty = getMarketVolatilityPenalty(mkt);
-            const highProbSqueeze = rawProb > 0.85 ? 0.97 : 1;
-            pick.finalLegProb = rawProb * volatilityPenalty * highProbSqueeze;
+            pick.volatilityPenalty = getMarketVolatilityPenalty(mkt);
+            pick.finalLegProb = rawProb * pick.volatilityPenalty * (rawProb > 0.85 ? 0.97 : 1);
             pick.finalLegProb = Math.max(0.01, Math.min(pick.finalLegProb, 0.98));
 
             const rawOdd = pick.extractedOdd || 1;
             pick.extractedOdd = Math.min(Math.max(rawOdd, 1.01), 10.0);
             pick.confidence = pick.confidence !== undefined ? Number(pick.confidence) : 1.0;
             
-            // ✅ NOVO: Sample Size Penalty
-            const sampleSize = Number(pick.sampleSize) || 3;
-            pick.samplePenalty = Math.min(1, Math.log(sampleSize) / Math.log(15));
-            
+            // ✅ OTIMIZAÇÃO: The "Too Good To Be True" Circuit Breaker (OCR Error)
+            if (pick.finalLegProb > 0.80 && pick.extractedOdd > 1.50) continue;
+
             allProcessedLegs.push(pick);
         }
     }
@@ -348,7 +357,7 @@ Formato JSON esperado:
         const ev = (leg.finalLegProb * leg.extractedOdd) - 1; 
         
         if (leg.extractedOdd >= ODD_MIN && leg.extractedOdd <= ODD_MAX && edge >= EDGE_MIN) {
-            const score = edge * entropyWeight(leg.finalLegProb) * leg.confidence * leg.samplePenalty;
+            const score = edge * entropyWeight(leg.finalLegProb) * leg.confidence;
             opportunities.push({ type: 'Simples', legs: [leg], prob: leg.finalLegProb, odd: leg.extractedOdd, ev, edge, score });
         }
     }
@@ -366,13 +375,17 @@ Formato JSON esperado:
             let corrLabel = "";
 
             if (isSameGame) {
-                const rho = getCorrelation(l1.mkt, l2.mkt);
-                // ✅ NOVO: Pearson Correlation (Variância)
+                let rho = getCorrelation(l1.mkt, l2.mkt);
+                // ✅ OTIMIZAÇÃO: Ritmo de Jogo amplificando a correlação
+                const tempoFactor = Math.min(1.3, l1.matchLt / 2.5);
+                rho = rho * tempoFactor;
+
+                // ✅ OTIMIZAÇÃO: Cópula de Pearson baseada em Variância Binomial Real
                 const var1 = l1.finalLegProb * (1 - l1.finalLegProb);
                 const var2 = l2.finalLegProb * (1 - l2.finalLegProb);
                 combProb = combProb + (rho * Math.sqrt(var1 * var2));
                 
-                // ✅ NOVO: Same Game Tax Penalty (Margem Institucional)
+                // ✅ OTIMIZAÇÃO: Same Game Tax (Margem Institucional de Risco)
                 combProb *= 0.96; 
                 corrLabel = rho > 0 ? " (Sinergia Positiva)" : rho < 0 ? " (Desconto de Risco)" : " (SGP Tax)";
             }
@@ -385,8 +398,7 @@ Formato JSON esperado:
 
             if (combOdd >= ODD_MIN && combOdd <= ODD_MAX && edge >= EDGE_MIN) {
                 const avgConf = (l1.confidence + l2.confidence) / 2;
-                const avgSamplePen = (l1.samplePenalty + l2.samplePenalty) / 2;
-                const score = edge * entropyWeight(combProb) * avgConf * avgSamplePen;
+                const score = edge * entropyWeight(combProb) * avgConf;
                 opportunities.push({ 
                     type: isSameGame ? `Dupla Intragame${corrLabel}` : 'Dupla Cruzada', 
                     legs: [l1, l2], prob: combProb, odd: combOdd, ev, edge, score 
@@ -399,7 +411,7 @@ Formato JSON esperado:
     const topOpportunities = opportunities.slice(0, 3);
 
     if (topOpportunities.length === 0) {
-        throw new Error("NO BET: O Scanner Quantitativo varreu os dados e não encontrou NENHUMA oportunidade de aposta (Simples ou Dupla) com Valor (Edge/EV+) dentro da faixa de odd @1.60 a @2.00.");
+        throw new Error("NO BET: O Scanner Quantitativo varreu os dados e não encontrou NENHUMA oportunidade com Valor (Edge Real/EV+) e Base Amostral Mínima (6+ jogos) dentro da faixa de odd @1.60 a @2.00.");
     }
 
     const bestOpp = topOpportunities[0];
@@ -416,7 +428,7 @@ Formato JSON esperado:
     const riskLabel = bestOpp.prob < 0.45 ? "ALTO" : bestOpp.legs.length > 1 ? "MÉDIO" : "BAIXO";
 
     // =====================================================
-    // ✍️ CAMADA 4: NARRATIVE AI (Relatório do Radar)
+    // ✍️ CAMADA 4: NARRATIVE AI (Relatório Institucional)
     // =====================================================
     let generatedAnalysis = "";
     let generatedAlt = "";
@@ -430,13 +442,8 @@ Formato JSON esperado:
             return `Entrada ${idx + 1} (${op.type}): ${desc}. Odd: @${op.odd.toFixed(2)} | EV: ${(op.ev*100).toFixed(1)}% | Edge Real: ${(op.edge*100).toFixed(1)}%`;
         }).join("\n");
 
-        const narrativeModel = genAI.getGenerativeModel({ 
-            model: 'gemini-2.5-flash',
-            generationConfig: { responseMimeType: "application/json" }
-        });
-
         const narrativePrompt = `Aja como um Analista Quantitativo de Sportsbook.
-Nosso Value Scanner processou a matriz e filtrou as seguintes oportunidades de valor matemático:
+Nosso Value Scanner processou a matriz e filtrou as seguintes oportunidades de valor matemático (EV+):
 ${opsText}
 
 Contexto extraído das imagens pelo OCR: "${allContexts}".
@@ -449,7 +456,7 @@ Formato JSON esperado:
   "conservativeCombination": "Uma recomendação de Stake de acordo com o risco ou uma variação conservadora."
 }`;
 
-        const textResult = await narrativeModel.generateContent(narrativePrompt);
+        const textResult = await model.generateContent(narrativePrompt);
         const textData = JSON.parse(textResult.response.text());
         
         if (!textData || !textData.analysis || !textData.alternativeCombination || !textData.conservativeCombination) throw new Error("JSON incompleto do Narrador.");
@@ -459,9 +466,9 @@ Formato JSON esperado:
         generatedCons = textData.conservativeCombination;
         
     } catch (e) {
-        generatedAnalysis = `📊 **Radar de Valor Ativado:** O Scanner processou o modelo e identificou a operação primária com Edge Real de ${formattedEdge}%. O Valor Esperado atende perfeitamente à nossa tese estatística frente à odd de @${bestOpp.odd.toFixed(2)}.`;
-        generatedAlt = topOpportunities.length > 1 ? `O Radar também detectou valor secundário em: ${topOpportunities[1].legs.map((l:any)=>l.market).join(' + ')} (Odd @${topOpportunities[1].odd.toFixed(2)}, EV: ${(topOpportunities[1].ev*100).toFixed(1)}%).` : "O radar não identificou operações secundárias válidas nesta rodada.";
-        generatedCons = "Ajuste sua gestão de banca (Stake) de acordo com a Odd combinada e a sua exposição no mercado de apostas.";
+        generatedAnalysis = `📊 **Radar de Valor Ativado:** O Scanner processou a modelagem Bivariada e identificou a operação primária com Edge Real de ${formattedEdge}%. O Valor Esperado atende perfeitamente à tese estatística frente à odd de @${bestOpp.odd.toFixed(2)}.`;
+        generatedAlt = topOpportunities.length > 1 ? `O Radar também detectou valor secundário: ${topOpportunities[1].legs.map((l:any)=>l.market).join(' + ')} (Odd @${topOpportunities[1].odd.toFixed(2)}, EV: ${(topOpportunities[1].ev*100).toFixed(1)}%).` : "O radar não identificou operações secundárias válidas com base amostral suficiente.";
+        generatedCons = "Ajuste sua gestão de banca (Stake) de acordo com a Odd combinada e a sua exposição no mercado.";
     }
 
     return res.status(200).json({
