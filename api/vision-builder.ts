@@ -13,14 +13,12 @@ const shannonEntropy = (p: number) => {
 const entropyWeight = (p: number) => {
     const maxEntropy = 0.693147; 
     const weight = 1 - (shannonEntropy(p) / maxEntropy);
-    // Clamp para evitar pesos negativos por float noise e garantir peso mínimo
     return Math.max(0.05, Math.min(weight, 1));
 };
 
 // ==========================================
 // 🧠 2. MOTOR ATUARIAL E CACHE (OTIMIZADO PARA SERVERLESS)
 // ==========================================
-// Tabela de Lookup para O(1) time - cobre 99.9% dos casos (Gols e Cantos)
 const factorialTable = [1, 1, 2, 6, 24, 120, 720, 5040, 40320, 362880, 3628800, 39916800, 479001600, 6227020800, 87178291200, 1307674368000];
 
 const factorial = (n: number) => {
@@ -33,7 +31,6 @@ const factorial = (n: number) => {
 const poissonCache: Record<string, number> = {};
 
 const poissonPDF = (lambda: number, k: number) => {
-    // Chave exata para evitar colisão de hash e truncamento de floats
     const key = `${lambda}_${k}`;
     if (poissonCache[key] !== undefined) return poissonCache[key];
     const p = (Math.pow(lambda, k) * Math.exp(-lambda)) / factorial(k);
@@ -119,6 +116,7 @@ const estimateLambdaFromMarket = (lines: {line: number, prob: number}[]) => {
     return bestLambda;
 };
 
+// 🐛 BUG CORRIGIDO: Removido multiplicador 1.25 do Least Squares, pois os dados da imagem já contêm o overdispersion real do mercado.
 const estimateCornerLambdaFromMarket = (lines: {line: number, prob: number}[]) => {
     if (!lines || lines.length < 2) return null; 
     let bestLambda = 9.0; let bestError = Infinity;
@@ -129,7 +127,7 @@ const estimateCornerLambdaFromMarket = (lines: {line: number, prob: number}[]) =
             const targetProb = l.prob > 1 ? l.prob / 100 : l.prob;
             const safeProb = Math.min(Math.max(targetProb, 0.05), 0.95);
             const weight = Math.min(1 / (safeProb * (1 - safeProb)), 10);
-            const modelProb = 1 - poissonCDF(lambda * 1.25, k);
+            const modelProb = 1 - poissonCDF(lambda, k); 
             error += weight * Math.pow(modelProb - targetProb, 2);
         }
         if (error < bestError) { bestError = error; bestLambda = lambda; }
@@ -323,9 +321,11 @@ Retorne ESTRITAMENTE um JSON válido neste formato:
                     }
                 }
             }
+            
+            // 🐛 BUG CORRIGIDO: Removido multiplicador 1.25 do cálculo da probabilidade de cantos.
             if (lc && (mkt.includes('escanteio') || mkt.includes('canto')) && !isTeamMarket && line !== null) {
                 const k = Math.floor(line);
-                rawProb = isUnder ? poissonCDF(lc * 1.25, k) : 1 - poissonCDF(lc * 1.25, k);
+                rawProb = isUnder ? poissonCDF(lc, k) : 1 - poissonCDF(lc, k);
             }
 
             pick.rawProb = rawProb;
@@ -336,24 +336,23 @@ Retorne ESTRITAMENTE um JSON válido neste formato:
             pick.realSample = realSample;
             pick.volatilityPenalty = getMarketVolatilityPenalty(mkt);
             
-            // 🎯 O ALGORITMO SHANNON & KELLY: EV vs Incerteza Estrutural vs Upside Logarítmico
+            // 🎯 O ALGORITMO SHANNON & KELLY (Pick Evaluation)
+            // Calculamos a prob final provisória (com punição de OCR) APENAS para gerar o Score
             pick.finalLegProb = rawProb * pick.volatilityPenalty * (hasValidEvidence ? 1 : 0.90) * (rawProb > 0.85 ? 0.97 : 1);
             
-            // Disjuntor de OCR para evitar EV infinito causado por erros de vírgula (ex: 1.72 lido como 17.2)
             const rawOdd = pick.extractedOdd || 1;
             const odd = Math.min(Math.max(rawOdd, 1.01), 15);
             
             const ev = (pick.finalLegProb * odd) - 1;
             const weight = entropyWeight(pick.finalLegProb);
             const implied = 1 / odd;
-const edge = pick.finalLegProb - implied;
+            const edge = pick.finalLegProb - implied;
 
-pick.score = edge * weight * Math.log(odd); 
-            pick.extractedOdd = odd; // Atualiza a odd sanitizada para o frontend
+            pick.score = edge * weight * Math.log(odd); 
+            pick.extractedOdd = odd;
         }
 
         match.viablePicks = match.viablePicks.filter((p:any)=>p.score > 0);
-        
         match.viablePicks.sort((a:any, b:any) => b.score - a.score);
     }
 
@@ -363,11 +362,10 @@ pick.score = edge * weight * Math.log(odd);
     const validMatches = json.matches.filter((m:any) => m.viablePicks && m.viablePicks.length > 0);
     validMatches.sort((a:any, b:any) => b.viablePicks[0].score - a.viablePicks[0].score);
 
-    let selectedLegs = [];
+    let selectedLegs: any[] = [];
     let isSameGameMulti = false;
 
     if (validMatches.length >= 2) {
-        // Cross-Game Combinatorics: Maximiza o "Combo Score" (Valor Total do Ticket)
         let bestCombo = [validMatches[0].viablePicks[0], validMatches[1].viablePicks[0]];
         let bestScore = -Infinity;
 
@@ -376,7 +374,7 @@ pick.score = edge * weight * Math.log(odd);
                 const p1 = validMatches[0].viablePicks[i];
                 const p2 = validMatches[1].viablePicks[j];
                 
-                if (p1.score > 0 && p2.score > 0) {
+                if (p1.score > -0.1 && p2.score > -0.1) {
                     const combProb = p1.finalLegProb * p2.finalLegProb;
                     const comboScore = (p1.score + p2.score) * combProb;
                     
@@ -406,9 +404,10 @@ pick.score = edge * weight * Math.log(odd);
     let rawCombinedProb = 1; let structuralRiskScore = 0; let dynamicCorrelationPenalty = 1.0;
     const isSingleBet = selectedLegs.length === 1;
 
+    // 🐛 BUG CORRIGIDO: Usamos a rawProb PURA para evitar "Double Penalty" nos cálculos do Passo 7
     if (isSingleBet) {
-    rawCombinedProb = selectedLegs[0].finalLegProb;
-} else if (isSameGameMulti) {
+        rawCombinedProb = selectedLegs[0].rawProb;
+    } else if (isSameGameMulti) {
         const eng = validMatches[0].engine;
         const hasGoals = selectedLegs.some((l:any) => l.mkt.includes('gol'));
         const hasCorners = selectedLegs.some((l:any) => l.mkt.includes('escanteio') || l.mkt.includes('canto'));
@@ -441,7 +440,7 @@ pick.score = edge * weight * Math.log(odd);
                 rawCombinedProb = pureJoint;
                 structuralRiskScore += 3; 
             } else {
-                rawCombinedProb = selectedLegs.reduce((acc: number, leg: any) => acc * leg.finalLegProb, 1);
+                rawCombinedProb = selectedLegs.reduce((acc: number, leg: any) => acc * leg.rawProb, 1);
             }
         }
 
@@ -452,13 +451,15 @@ pick.score = edge * weight * Math.log(odd);
         if (hasBTTS && !overGoalLeg && hasGoals) corrMultipliers.push(0.90);
         dynamicCorrelationPenalty = corrMultipliers.reduce((a, b) => a * b, 1);
     } else {
-        rawCombinedProb = selectedLegs.reduce((acc: number, leg: any) => acc * leg.finalLegProb, 1);
+        // Multiplicação Pura usando rawProb para evitar double penalty
+        rawCombinedProb = selectedLegs.reduce((acc: number, leg: any) => acc * leg.rawProb, 1);
     }
 
     // ==========================================
-    // 🎯 CAMADA 3: APRESENTAÇÃO E UI
+    // 🎯 PASSO 7: APRESENTAÇÃO E UI
     // ==========================================
-    let evidencePenalty = selectedLegs.some((l:any) => !l.hasValidEvidence) ? 0.90 : 1;
+    // Aplicação global e limpa das penalidades
+    let evidencePenalty = selectedLegs.reduce((acc: number, leg: any) => acc * (leg.hasValidEvidence ? 1 : 0.90), 1);
     let highProbSqueeze = selectedLegs.reduce((acc: number, leg: any) => acc * (leg.rawProb > 0.85 ? 0.97 : 1), 1);
     let legVolatilityPenalty = selectedLegs.reduce((acc: number, leg: any) => acc * leg.volatilityPenalty, 1);
 
@@ -469,7 +470,6 @@ pick.score = edge * weight * Math.log(odd);
 
     let finalProb = rawCombinedProb * legVolatilityPenalty * evidencePenalty * highProbSqueeze * SHRINK_FACTOR * confidenceAdjustment * dynamicCorrelationPenalty * structuralPenalty;
 
-    // Disjuntor Matemático de Estabilidade de UI
     finalProb = Math.max(0.01, Math.min(finalProb, 0.98));
 
     json.selections = selectedLegs.map(l => ({
@@ -496,68 +496,46 @@ pick.score = edge * weight * Math.log(odd);
     else if (avgSample < 10 || dynamicCorrelationPenalty < 0.9) riskLabel = "MÉDIO"; 
     
     json.structuralRiskScore = structuralRiskScore;
-json.riskLevel = riskLabel;
+    json.riskLevel = riskLabel;
 
-// =====================================================
-// 🧠 GERAÇÃO DETERMINÍSTICA DE TEXTO PARA O FRONTEND
-// =====================================================
-
-// Tese Quantitativa da IA
-if (!json.analysis) {
-  if (riskLabel === "BAIXO") {
-    json.analysis =
-      "Modelo quantitativo identifica valor esperado positivo com baixa correlação estrutural entre eventos.";
-  } else if (riskLabel === "MÉDIO") {
-    json.analysis =
-      "A aposta possui valor esperado positivo, porém com dependência moderada entre mercados.";
-  } else {
-    json.analysis =
-      "O motor detectou alta variância estrutural nesta combinação. A probabilidade depende fortemente de eventos correlacionados.";
-  }
-}
-
-// Alternativa Tática (segunda melhor pick)
-if (!json.alternativeCombination) {
-  try {
-    const allPicks = validMatches.flatMap((m:any)=>m.viablePicks || []);
-
-const secondBest = allPicks
-  .filter((p:any)=>!selectedLegs.includes(p))
-  .sort((a:any,b:any)=>b.score-a.score)[0];
-
-    if (secondBest) {
-      json.alternativeCombination =
-        `Alternativa com perfil semelhante de valor: ${secondBest.market} (${Math.round(
-          secondBest.rawProb * 100
-        )}% estimado).`;
-    } else {
-      json.alternativeCombination =
-        "Nenhuma alternativa tática clara foi identificada com valor esperado superior.";
+    // =====================================================
+    // 🧠 GERAÇÃO DETERMINÍSTICA DE TEXTO PARA O FRONTEND
+    // =====================================================
+    if (!json.analysis) {
+      if (riskLabel === "BAIXO") {
+        json.analysis = "Modelo quantitativo identifica valor esperado positivo com baixa correlação estrutural entre eventos.";
+      } else if (riskLabel === "MÉDIO") {
+        json.analysis = "A aposta possui valor esperado positivo, porém com dependência moderada entre mercados.";
+      } else {
+        json.analysis = "O motor detectou alta variância estrutural nesta combinação. A probabilidade depende fortemente de eventos correlacionados.";
+      }
     }
-  } catch {
-    json.alternativeCombination =
-      "Nenhuma alternativa tática clara foi identificada.";
-  }
-}
 
-// Estratégia Conservadora
-if (!json.conservativeCombination) {
-  const safestLeg = [...selectedLegs].sort(
-  (a: any, b: any) => b.finalLegProb - a.finalLegProb
-)[0];
+    if (!json.alternativeCombination) {
+      try {
+        const allPicks = validMatches.flatMap((m:any)=>m.viablePicks || []);
+        const secondBest = allPicks.filter((p:any)=>!selectedLegs.includes(p)).sort((a:any,b:any)=>b.score-a.score)[0];
 
-  if (safestLeg) {
-    json.conservativeCombination =
-      `Estratégia conservadora: considerar apenas "${safestLeg.market}", que possui a maior probabilidade individual (${Math.round(
-        safestLeg.finalLegProb * 100
-      )}%).`;
-  } else {
-    json.conservativeCombination =
-      "Estratégia conservadora indisponível para este conjunto de dados.";
-  }
-}
+        if (secondBest) {
+          json.alternativeCombination = `Alternativa com perfil semelhante de valor em ${secondBest.match}: ${secondBest.market} (${Math.round(secondBest.rawProb * 100)}% estimado, Odd @${secondBest.extractedOdd}).`;
+        } else {
+          json.alternativeCombination = "Nenhuma alternativa tática secundária clara foi identificada com valor esperado superior no contexto analisado.";
+        }
+      } catch {
+        json.alternativeCombination = "Nenhuma alternativa tática clara foi identificada.";
+      }
+    }
 
-return res.status(200).json(json);
+    if (!json.conservativeCombination) {
+      const safestLeg = [...selectedLegs].sort((a: any, b: any) => b.finalLegProb - a.finalLegProb)[0];
+      if (safestLeg) {
+        json.conservativeCombination = `Estratégia conservadora: considerar apenas "${safestLeg.market}" em ${safestLeg.match}, que isoladamente possui a maior base de probabilidade do bilhete (${Math.round(safestLeg.finalLegProb * 100)}%).`;
+      } else {
+        json.conservativeCombination = "Estratégia conservadora indisponível para este conjunto de dados.";
+      }
+    }
+
+    return res.status(200).json(json);
 
   } catch (error: any) {
     console.error("Erro Engine:", error);
