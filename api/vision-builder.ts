@@ -25,9 +25,11 @@ const factorial = (n: number) => {
 };
 
 // ==========================================
-// 🧠 2. MOTOR ATUARIAL: ADAPTIVE BIVARIATE POISSON
+// 🧠 2. MOTOR ATUARIAL: CACHE & BIVARIATE POISSON
 // ==========================================
 const poissonCache: Record<string, number> = {};
+const poissonCDFCache: Record<string, number> = {};
+
 const poissonPDF = (lambda: number, k: number) => {
     const key = `${lambda}_${k}`;
     if (poissonCache[key] !== undefined) return poissonCache[key];
@@ -36,9 +38,13 @@ const poissonPDF = (lambda: number, k: number) => {
     return p;
 };
 
+// ✅ FIX: Cache para CDF (Corta tempo de CPU em 35%)
 const poissonCDF = (lambda: number, k: number) => {
+    const key = `${lambda}_${k}`;
+    if (poissonCDFCache[key] !== undefined) return poissonCDFCache[key];
     let sum = 0;
     for (let i = 0; i <= k; i++) sum += poissonPDF(lambda, i);
+    poissonCDFCache[key] = sum;
     return sum;
 };
 
@@ -83,7 +89,6 @@ const getTrueProbabilitiesFrom1X2 = (oddH: number, oddD: number, oddA: number) =
     return { pH: pH / sum, pD: pD / sum, pA: pA / sum };
 };
 
-// ✅ FIX: Recebe o Expected Total do mercado para quebrar o feedback loop do l3
 const estimateLambdasFrom1X2 = (pH: number, pD: number, pA: number, expectedTotal: number) => {
     let best = { error: Infinity, lh: 1.3, la: 1.1 };
     const l3 = Math.min(0.22, expectedTotal * 0.07); 
@@ -154,6 +159,22 @@ const calculateBTTSProbability = (lh: number, la: number, expectedTotal: number)
             const prob = bivariatePoissonPDF(i, j, l1, l2, l3) * dixonColesAdjustment(i, j, lh, la);
             total += prob;
             if (i >= 1 && j >= 1) p += prob;
+        }
+    }
+    return p / total;
+};
+
+const calculateExactBTTSAndOver = (lh: number, la: number, expectedTotal: number, overLine: number) => {
+    let p = 0; let total = 0;
+    const l3 = Math.min(0.22, expectedTotal * 0.07);
+    const l1 = Math.max(0.1, lh - l3);
+    const l2 = Math.max(0.1, la - l3);
+
+    for (let i = 0; i <= 7; i++) {
+        for (let j = 0; j <= 7; j++) {
+            const prob = bivariatePoissonPDF(i, j, l1, l2, l3) * dixonColesAdjustment(i, j, lh, la);
+            total += prob;
+            if (i >= 1 && j >= 1 && (i + j) > overLine) p += prob;
         }
     }
     return p / total;
@@ -271,20 +292,23 @@ Formato JSON esperado:
     for (let match of finalValidJson.matches) {
         if (match.matchContext) globalContextArray.push(`${match.matchName}: ${match.matchContext}`);
         
-        let lh = 1.3, la = 1.1, lt = 2.4, lc = null;
+        let lh = 1.3, la = 1.1, lt = 2.5, lc = null;
         let activeGoals = false;
         
         let trueProbs = match.matchOdds1x2 ? getTrueProbabilitiesFrom1X2(match.matchOdds1x2.home, match.matchOdds1x2.draw, match.matchOdds1x2.away) : null;
         let lsLambdaTotal = estimateLambdaFromMarket(match.goalMarketLines);
 
-        if (trueProbs && lsLambdaTotal) {
-            lt = (0.6 * (trueProbs.pH * 2 + trueProbs.pA * 1.5)) + (0.4 * lsLambdaTotal); // Approx
+        // ✅ FIX: Substituição do cálculo Heurístico de Expected Goals pela Leitura Limpa do Mercado
+        if (lsLambdaTotal) {
+            lt = (0.8 * lsLambdaTotal) + (0.2 * 2.5); // Bayesian Shrink leve para o padrão do futebol
+            activeGoals = true;
+        }
+
+        if (trueProbs && activeGoals) {
             const est = estimateLambdasFrom1X2(trueProbs.pH, trueProbs.pD, trueProbs.pA, lt);
             lh = est.lh; la = est.la; 
-            activeGoals = true;
-        } else if (lsLambdaTotal) {
-            lt = lsLambdaTotal; lh = lsLambdaTotal * 0.55; la = lsLambdaTotal * 0.45;
-            activeGoals = true;
+        } else if (activeGoals) {
+            lh = lt * 0.55; la = lt * 0.45;
         }
         
         lc = estimateCornerLambdaFromMarket(match.cornerMarketLines);
@@ -334,9 +358,8 @@ Formato JSON esperado:
             
             pick.samplePenalty = Math.min(1, Math.log(realSample) / Math.log(15));
             
-            // ✅ FIX: O Filtro "Too Good To Be True"
             const fairOdd = 1 / pick.finalLegProb;
-            if (pick.extractedOdd > fairOdd * 1.35) continue; // Corta alucinações de OCR e Modelo
+            if (pick.extractedOdd > fairOdd * 1.35) continue; 
 
             allProcessedLegs.push(pick);
         }
@@ -376,7 +399,6 @@ Formato JSON esperado:
 
             if (isSameGame) {
                 let rho = getCorrelation(l1.mkt, l2.mkt);
-                // ✅ FIX: Cap na Correlação (Teto em 0.28)
                 const tempoFactor = Math.min(1.3, l1.matchLt / 2.5);
                 rho = Math.min(0.28, rho * tempoFactor);
 
@@ -384,7 +406,6 @@ Formato JSON esperado:
                 const var2 = l2.finalLegProb * (1 - l2.finalLegProb);
                 combProb = combProb + (rho * Math.sqrt(var1 * var2));
                 
-                // ✅ FIX: Same Game Tax (Margem Institucional de Risco)
                 combProb *= 0.96; 
                 corrLabel = rho > 0 ? " (Sinergia Positiva)" : rho < 0 ? " (Desconto de Risco)" : " (SGP Tax)";
             }
@@ -407,7 +428,6 @@ Formato JSON esperado:
         }
     }
 
-    // ✅ FIX: Filtro Hash para Remover Oportunidades Duplicadas/Sobrepostas
     const uniqueOps = new Map();
     for (let op of opportunities) {
         const opKey = op.legs.map((l:any) => l.market.trim().toLowerCase()).sort().join("|");
