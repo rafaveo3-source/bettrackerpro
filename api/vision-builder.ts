@@ -3,7 +3,7 @@ import { GoogleGenerativeAI } from '@google/generative-ai';
 export const maxDuration = 60; // Limite Serverless Vercel
 
 // ==========================================
-// 🧠 1. MOTOR DE TEORIA DA INFORMAÇÃO E SRE
+// 🧠 1. MOTOR DE TEORIA DA INFORMAÇÃO 
 // ==========================================
 const shannonEntropy = (p: number) => {
     if (p <= 0 || p >= 1) return 0;
@@ -31,10 +31,8 @@ const poissonCDF = (lambda: number, k: number) => {
 };
 
 // ==========================================
-// 🎲 2. DISTRIBUIÇÕES ESTOCÁSTICAS (HFT SAMPLING)
+// 🎲 2. DISTRIBUIÇÕES ESTOCÁSTICAS 
 // ==========================================
-
-// Box-Muller Transform (Normal Distribution)
 const randomNormal = () => {
     let u = 0, v = 0;
     while(u === 0) u = Math.random();
@@ -42,7 +40,6 @@ const randomNormal = () => {
     return Math.sqrt(-2.0 * Math.log(u)) * Math.cos(2.0 * Math.PI * v);
 };
 
-// Algoritmo de Marsaglia e Tsang (Gamma Distribution)
 const randomGamma = (shape: number, scale: number) => {
     let d, c, x, v, u;
     let actualShape = shape;
@@ -66,7 +63,6 @@ const randomGamma = (shape: number, scale: number) => {
     }
 };
 
-// ✅ FIX: Knuth Otimizado com Aproximação Gaussiana para lambda > 15 (Protege CPU em ligas de alto escanteio)
 const poissonSample = (lambda: number) => {
     if (lambda > 15) {
         const val = Math.round(lambda + Math.sqrt(lambda) * randomNormal());
@@ -79,7 +75,6 @@ const poissonSample = (lambda: number) => {
     return k - 1;
 };
 
-// Gamma-Poisson Mixture (True Negative Binomial com R real)
 const negativeBinomialSample = (mean: number, dispersion: number) => {
     const scale = mean / dispersion;
     const lambda = randomGamma(dispersion, scale);
@@ -101,6 +96,7 @@ const normalizeMarket = (marketStr: string) => {
     if (lineMatch) line = parseFloat(lineMatch[1]);
 
     isOver = m.includes('mais') || m.includes('over') || m.includes('acima');
+    const isHT = m.includes('ht') || m.includes('1º tempo') || m.includes('1o tempo') || m.includes('primeiro');
 
     if (m.includes('gol') || m.includes('gols')) type = 'goals';
     else if (m.includes('escanteio') || m.includes('canto')) type = 'corners';
@@ -109,13 +105,13 @@ const normalizeMarket = (marketStr: string) => {
     if (type === 'other') return null;
 
     const condition = type === 'btts' ? 'yes' : isOver ? 'over' : 'under';
-    const hash = `${type}_${condition}_${line}`;
+    const hash = `${type}_${condition}_${line}_${isHT ? 'ht' : 'ft'}`;
 
-    return { type, line, isOver, hash };
+    return { type, line, isOver, isHT, hash };
 };
 
 // ==========================================
-// 🎯 4. PRICING & BLENDED PRIORS (Calibração)
+// 🎯 4. PRICING & BLENDED PRIORS 
 // ==========================================
 const getTrueProbabilitiesFrom1X2 = (oddH: number, oddD: number, oddA: number) => {
     if (!oddH || !oddD || !oddA) return null;
@@ -190,8 +186,8 @@ export default async function handler(req: any, res: any) {
 2. Extraia "matchOdds1x2" (home, draw, away) e "goalMarketLines" e "cornerMarketLines".
 3. Em "viablePicks", liste mercados (${selectedMarketsStr}) com ODD visível. 
    - 🛑 IGNORE "Race", "Exato", "Par/Ímpar", "Primeiro a Marcar".
-   - "prob": Extraia a probabilidade histórica mostrada no site (se houver).
-   - "sampleSize": Tamanho da amostra visível (ex: 10 jogos).
+   - "prob": Extraia a probabilidade histórica mostrada no site.
+   - "sampleSize": Tamanho da amostra visível (ex: 10).
    - "extractedOdd": Odd da casa de apostas (decimal).
    - "confidence": 0.1 a 1.0 (clareza da imagem).
 4. "matchContext": Resumo tático do jogo.
@@ -250,7 +246,6 @@ Formato JSON esperado:
         const l1 = Math.max(0.1, lh - l3);
         const l2 = Math.max(0.1, la - l3);
 
-        // Prepara os mercados válidos antes do loop (Zero alocações no loop)
         const activeMarketsMap = new Map();
         for (let pick of match.viablePicks) {
             const norm = normalizeMarket(pick.market || '');
@@ -265,6 +260,7 @@ Formato JSON esperado:
 
         // 🎲 O MULTIVERSO OTIMIZADO (O(1) Memory Footprint)
         for (let i = 0; i < ITERATIONS; i++) {
+            // --- FULL TIME (90 Min) ---
             const z = poissonSample(l3);
             const goalsHome = poissonSample(l1) + z;
             const goalsAway = poissonSample(l2) + z;
@@ -272,31 +268,45 @@ Formato JSON esperado:
 
             const pressure = totalGoals;
             const adjustedCornerMean = market_lc * (1 + pressure * 0.04);
-            // ✅ FIX: Crescimento Sublinear da Dispersão
             const dispersion = 2.0 + (Math.sqrt(pressure) * 0.8); 
-            
             let corners = negativeBinomialSample(adjustedCornerMean, dispersion);
             corners = Math.min(corners, 22);
 
-            // Avaliação on-the-fly
+            // --- HALF TIME (45 Min) ---
+            const z_ht = poissonSample(l3 * 0.45);
+            const goalsHomeHT = poissonSample(l1 * 0.45) + z_ht;
+            const goalsAwayHT = poissonSample(l2 * 0.45) + z_ht;
+            const totalGoalsHT = goalsHomeHT + goalsAwayHT;
+            
+            const pressureHT = totalGoalsHT;
+            const adjustedCornerMeanHT = (market_lc * 0.45) * (1 + pressureHT * 0.04);
+            const dispersionHT = 2.0 + (Math.sqrt(pressureHT) * 0.8);
+            let cornersHT = negativeBinomialSample(adjustedCornerMeanHT, dispersionHT);
+            cornersHT = Math.min(cornersHT, 12);
+
+            // Avaliação
             for (let j = 0; j < activeMarkets.length; j++) {
                 const mkt = activeMarkets[j];
                 const norm = mkt.norm;
                 let isHit = false;
 
+                const simGoals = norm.isHT ? totalGoalsHT : totalGoals;
+                const simCorners = norm.isHT ? cornersHT : corners;
+
                 if (norm.type === 'goals') {
-                    isHit = norm.isOver ? (totalGoals > norm.line) : (totalGoals < norm.line);
+                    isHit = norm.isOver ? (simGoals > norm.line) : (simGoals < norm.line);
                 } else if (norm.type === 'corners') {
-                    isHit = norm.isOver ? (corners > norm.line) : (corners < norm.line);
+                    isHit = norm.isOver ? (simCorners > norm.line) : (simCorners < norm.line);
                 } else if (norm.type === 'btts') {
-                    isHit = (goalsHome > 0 && goalsAway > 0);
+                    if (norm.isHT) isHit = (goalsHomeHT > 0 && goalsAwayHT > 0);
+                    else isHit = (goalsHome > 0 && goalsAway > 0);
                 }
                 
                 if (isHit) mkt.hits++;
             }
         }
 
-        // Pós-processamento dos Counters
+        // Pós-processamento
         for (let mkt of activeMarkets) {
             const pick = mkt.ref;
             let realSample = Number(pick.sampleSize);
@@ -310,7 +320,8 @@ Formato JSON esperado:
             const fairOdd = 1 / rawProb;
 
             if (finalOdd > fairOdd * 1.35) continue; 
-            if (finalOdd < 1.45) continue; 
+            // ✅ FIX: Limite baixado para 1.25 para permitir construção de Bet Builders fortes
+            if (finalOdd < 1.25) continue; 
 
             allProcessedLegs.push({
                 match: match.matchName,
@@ -325,14 +336,13 @@ Formato JSON esperado:
     }
 
     // ==========================================
-    // 💡 PASSO 4: OPPORTUNITY FINDER (Range Filter)
+    // 💡 PASSO 4: OPPORTUNITY FINDER 
     // ==========================================
     let opportunities: any[] = [];
     const ODD_MIN = 1.60;
     const ODD_MAX = 2.00;
     const EDGE_MIN = 0.03; 
 
-    // 1. Singles
     for (let leg of allProcessedLegs) {
         const marketProb = 1 / leg.extractedOdd;
         const edge = leg.rawProb - marketProb; 
@@ -344,7 +354,6 @@ Formato JSON esperado:
         }
     }
 
-    // 2. Duplas (Same Game Tax e Cruzadas)
     for (let i = 0; i < allProcessedLegs.length; i++) {
         for (let j = i + 1; j < allProcessedLegs.length; j++) {
             const l1 = allProcessedLegs[i];
@@ -405,7 +414,7 @@ Formato JSON esperado:
     const riskLabel = bestOpp.prob < 0.45 ? "ALTO" : bestOpp.legs.length > 1 ? "MÉDIO" : "BAIXO";
 
     // =====================================================
-    // ✍️ CAMADA 5: NARRATIVE AI (Relatório Quantitativo)
+    // ✍️ CAMADA 5: NARRATIVE AI 
     // =====================================================
     let generatedAnalysis = "";
     let generatedAlt = "";
@@ -452,7 +461,7 @@ Sua tarefa: Traduzir os dados em um relatório coeso.
 Formato JSON esperado:
 {
   "analysis": "Fale APENAS da Operação Principal. 2 parágrafos justificando como o cenário do jogo valida a Edge de ${formattedEdge}%.",
-  "alternativeCombination": "Descreva a Operação 2 como oportunidade detectada no scanner secundário. Se for 'Nenhuma', explique que a Edge secou.",
+  "alternativeCombination": "Descreva a Operação 2 como oportunidade detectada no scanner secundário. Se for 'Nenhuma', explique que a Edge secou e valide a postura conservadora do motor.",
   "conservativeCombination": "Descreva a Operação 3. Caso não exista, sugira uma gestão de stake moderada baseada no risco."
 }`;
 
@@ -467,8 +476,8 @@ Formato JSON esperado:
         
     } catch (e) {
         generatedAnalysis = `📊 **Simulação Monte Carlo (25k paths):** O motor identificou Edge de ${formattedEdge}% na operação primária. A Odd do Mercado (@${marketOdd}) é ineficiente frente à nossa Odd Justa (@${fairOdd}), configurando Valor Esperado.`;
-        generatedAlt = topOpportunities.length > 1 ? `Radar Secundário: ${topOpportunities[1].legs.map((l:any)=>l.market).join(' + ')} (Odd Mercado @${topOpportunities[1].odd.toFixed(2)}).` : "Sem operações secundárias no range.";
-        generatedCons = topOpportunities.length > 2 ? `Radar Terciário: ${topOpportunities[2].legs.map((l:any)=>l.market).join(' + ')} (Odd @${topOpportunities[2].odd.toFixed(2)}).` : "Mantenha Stake de 1 Unidade.";
+        generatedAlt = topOpportunities.length > 1 ? `Radar Secundário: ${topOpportunities[1].legs.map((l:any)=>l.market).join(' + ')} (Odd Mercado @${topOpportunities[1].odd.toFixed(2)}).` : "Sem operações secundárias com EV superior ao benchmark.";
+        generatedCons = topOpportunities.length > 2 ? `Radar Terciário: ${topOpportunities[2].legs.map((l:any)=>l.market).join(' + ')} (Odd @${topOpportunities[2].odd.toFixed(2)}).` : "Mantenha Stake de 1 Unidade e respeite a gestão de banca.";
     }
 
     return res.status(200).json({
