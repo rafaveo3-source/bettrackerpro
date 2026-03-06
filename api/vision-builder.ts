@@ -3,10 +3,10 @@ import { GoogleGenerativeAI } from '@google/generative-ai';
 export const maxDuration = 60; // Limite Serverless Vercel
 
 // ==========================================
-// 🧠 1. MOTOR DE TEORIA DA INFORMAÇÃO 
+// 🧠 1. MOTOR DE TEORIA DA INFORMAÇÃO E SRE
 // ==========================================
 const shannonEntropy = (p: number) => {
-    if (p <= 0 || p >= 1) return 0;
+    if (p <= 0 || p >= 1 || isNaN(p)) return 0;
     return -p * Math.log(p) - (1 - p) * Math.log(1 - p);
 };
 
@@ -25,14 +25,19 @@ const factorial = (n: number) => {
 };
 
 const poissonCDF = (lambda: number, k: number) => {
+    // 🛡️ FAILSAFE: Previne colapso se OCR extrair texto em vez de número
+    if (isNaN(lambda) || isNaN(k) || lambda < 0 || k < 0) return 0;
     let sum = 0;
-    for (let i = 0; i <= k; i++) sum += (Math.pow(lambda, i) * Math.exp(-lambda)) / factorial(i);
+    // 🛡️ FAILSAFE: Previne CPU Lock caso o OCR alucine uma linha gigantesca (ex: 9999)
+    const limit = Math.min(k, 50); 
+    for (let i = 0; i <= limit; i++) sum += (Math.pow(lambda, i) * Math.exp(-lambda)) / factorial(i);
     return sum;
 };
 
 // ==========================================
-// 🎲 2. DISTRIBUIÇÕES ESTOCÁSTICAS 
+// 🎲 2. DISTRIBUIÇÕES ESTOCÁSTICAS (HFT SAMPLING)
 // ==========================================
+
 const randomNormal = () => {
     let u = 0, v = 0;
     while(u === 0) u = Math.random();
@@ -41,6 +46,9 @@ const randomNormal = () => {
 };
 
 const randomGamma = (shape: number, scale: number) => {
+    // 🛡️ FAILSAFE CRÍTICO: Previne Loop Infinito da Morte (O que travou seu app)
+    if (isNaN(shape) || shape <= 0 || isNaN(scale) || scale <= 0) return 0;
+
     let d, c, x, v, u;
     let actualShape = shape;
     if (shape < 1) actualShape = shape + 1;
@@ -64,6 +72,9 @@ const randomGamma = (shape: number, scale: number) => {
 };
 
 const poissonSample = (lambda: number) => {
+    // 🛡️ FAILSAFE
+    if (isNaN(lambda) || lambda <= 0) return 0;
+    
     if (lambda > 15) {
         const val = Math.round(lambda + Math.sqrt(lambda) * randomNormal());
         return Math.max(0, val);
@@ -76,6 +87,7 @@ const poissonSample = (lambda: number) => {
 };
 
 const negativeBinomialSample = (mean: number, dispersion: number) => {
+    if (isNaN(mean) || isNaN(dispersion) || dispersion <= 0) return 0;
     const scale = mean / dispersion;
     const lambda = randomGamma(dispersion, scale);
     return poissonSample(lambda);
@@ -85,6 +97,7 @@ const negativeBinomialSample = (mean: number, dispersion: number) => {
 // 🛠️ 3. NORMALIZAÇÃO HFT (Hash Deduplication & Team Target)
 // ==========================================
 const normalizeMarket = (marketStr: string, matchName: string) => {
+    if (!marketStr || !matchName) return null;
     const m = marketStr.toLowerCase();
     const teams = matchName.toLowerCase().split(/ v | vs | - /);
     const homeTeam = teams[0] ? teams[0].trim() : '';
@@ -108,14 +121,12 @@ const normalizeMarket = (marketStr: string, matchName: string) => {
 
     if (type === 'other') return null;
 
-    // 🎯 NOVO: Identificação de Alvo (Home, Away ou Match)
     let target = 'match';
     if (homeTeam && m.includes(homeTeam)) target = 'home';
     else if (awayTeam && m.includes(awayTeam)) target = 'away';
     else if (m.includes('casa')) target = 'home';
     else if (m.includes('visitante')) target = 'away';
 
-    // 🛡️ Proteção: O Simulador atual não divide cantos por time. Bloqueia Team Corners para evitar falsos EVs.
     if (type === 'corners' && target !== 'match') return null; 
 
     const condition = type === 'btts' ? 'yes' : isOver ? 'over' : 'under';
@@ -128,9 +139,10 @@ const normalizeMarket = (marketStr: string, matchName: string) => {
 // 🎯 4. PRICING & BLENDED PRIORS 
 // ==========================================
 const getTrueProbabilitiesFrom1X2 = (oddH: number, oddD: number, oddA: number) => {
-    if (!oddH || !oddD || !oddA) return null;
+    if (!oddH || !oddD || !oddA || isNaN(oddH) || isNaN(oddD) || isNaN(oddA)) return null;
     const pH = 1 / oddH; const pD = 1 / oddD; const pA = 1 / oddA;
     const sum = pH + pD + pA;
+    if (sum === 0 || isNaN(sum)) return null;
     return { pH: pH / sum, pD: pD / sum, pA: pA / sum };
 };
 
@@ -141,12 +153,13 @@ const estimateLambdaFromMarket = (lines: {line: number, prob: number}[]) => {
         let error = 0;
         for (let l of lines) {
             const k = Math.floor(l.line); 
+            if (isNaN(k)) continue;
             const targetProb = l.prob > 1 ? l.prob / 100 : l.prob;
             const safeProb = Math.min(Math.max(targetProb, 0.05), 0.95);
             const weight = Math.min(1 / (safeProb * (1 - safeProb)), 10); 
             error += weight * Math.pow((1 - poissonCDF(lambda, k)) - targetProb, 2);
         }
-        if (error < bestError) { bestError = error; bestLambda = lambda; }
+        if (error < bestError && !isNaN(error)) { bestError = error; bestLambda = lambda; }
     }
     return bestLambda;
 };
@@ -158,12 +171,13 @@ const estimateCornerLambdaFromMarket = (lines: {line: number, prob: number}[]) =
         let error = 0;
         for (let l of lines) {
             const k = Math.floor(l.line);
+            if (isNaN(k)) continue;
             const targetProb = l.prob > 1 ? l.prob / 100 : l.prob;
             const safeProb = Math.min(Math.max(targetProb, 0.05), 0.95);
             const weight = Math.min(1 / (safeProb * (1 - safeProb)), 10);
             error += weight * Math.pow((1 - poissonCDF(lambda, k)) - targetProb, 2);
         }
-        if (error < bestError) { bestError = error; bestLambda = lambda; }
+        if (error < bestError && !isNaN(error)) { bestError = error; bestLambda = lambda; }
     }
     return bestLambda;
 };
@@ -242,7 +256,7 @@ Formato JSON esperado:
         let market_lt = 2.6; 
         let market_lc = 10.0; 
         
-        const trueProbs = match.matchOdds1x2 ? getTrueProbabilitiesFrom1X2(match.matchOdds1x2.home, match.matchOdds1x2.draw, match.matchOdds1x2.away) : null;
+        const trueProbs = match.matchOdds1x2 ? getTrueProbabilitiesFrom1X2(Number(match.matchOdds1x2.home), Number(match.matchOdds1x2.draw), Number(match.matchOdds1x2.away)) : null;
         const lsLambdaTotal = estimateLambdaFromMarket(match.goalMarketLines);
         const lsCorners = estimateCornerLambdaFromMarket(match.cornerMarketLines);
 
@@ -260,10 +274,8 @@ Formato JSON esperado:
         const l1 = Math.max(0.1, lh - l3);
         const l2 = Math.max(0.1, la - l3);
 
-        // Prepara os mercados válidos antes do loop
         const activeMarketsMap = new Map();
         for (let pick of match.viablePicks) {
-            // ✅ FIX: Passa o nome do jogo para o parser
             const norm = normalizeMarket(pick.market || '', match.matchName);
             if (!norm) continue; 
             if (!activeMarketsMap.has(norm.hash)) {
@@ -272,6 +284,8 @@ Formato JSON esperado:
         }
         
         const activeMarkets = Array.from(activeMarketsMap.values());
+        if (activeMarkets.length === 0) continue; // Evita loop inútil
+
         const ITERATIONS = 25000;
 
         // 🎲 O MULTIVERSO OTIMIZADO (O(1) Memory Footprint)
@@ -300,13 +314,12 @@ Formato JSON esperado:
             let cornersHT = negativeBinomialSample(adjustedCornerMeanHT, dispersionHT);
             cornersHT = Math.min(cornersHT, 12);
 
-            // Avaliação on-the-fly (Diferencia HT vs FT e Home vs Away automaticamente)
+            // Avaliação on-the-fly 
             for (let j = 0; j < activeMarkets.length; j++) {
                 const mkt = activeMarkets[j];
                 const norm = mkt.norm;
                 let isHit = false;
 
-                // 🎯 NOVO: Roteamento Inteligente de Gols (Match, Home ou Away)
                 let simGoals = norm.isHT ? totalGoalsHT : totalGoals;
                 if (norm.target === 'home') simGoals = norm.isHT ? goalsHomeHT : goalsHome;
                 if (norm.target === 'away') simGoals = norm.isHT ? goalsAwayHT : goalsAway;
@@ -327,6 +340,7 @@ Formato JSON esperado:
                 
                 if (isHit) mkt.hits++;
             }
+        }
 
         // Pós-processamento dos Counters
         for (let mkt of activeMarkets) {
@@ -337,18 +351,14 @@ Formato JSON esperado:
             let rawProb = mkt.hits / ITERATIONS;
             rawProb = Math.max(0.01, Math.min(rawProb * (rawProb > 0.85 ? 0.96 : 1), 0.98));
 
-            const rawOdd = pick.extractedOdd || 1;
+            const rawOdd = Number(pick.extractedOdd) || 1;
+            if (isNaN(rawOdd)) continue;
+            
             const finalOdd = Math.min(Math.max(rawOdd, 1.01), 10.0);
             const fairOdd = 1 / rawProb;
 
-            // 🛡️ A BANDA DE REALIDADE (O Assassino de Fantasmas do OCR)
-            // Se a probabilidade for alta (> 65%), o mercado não comete erros grotescos.
-            // Reduzimos a tolerância de erro do OCR para no máximo 18% de descolamento.
             const maxOddTolerance = rawProb > 0.65 ? 1.18 : 1.35;
-            
             if (finalOdd > fairOdd * maxOddTolerance) continue; 
-            
-            // ✅ FIX: Limite baixado para 1.25 para permitir construção de Bet Builders fortes
             if (finalOdd < 1.25) continue; 
 
             allProcessedLegs.push({
