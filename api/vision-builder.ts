@@ -82,10 +82,14 @@ const negativeBinomialSample = (mean: number, dispersion: number) => {
 };
 
 // ==========================================
-// 🛠️ 3. NORMALIZAÇÃO HFT (Hash Deduplication)
+// 🛠️ 3. NORMALIZAÇÃO HFT (Hash Deduplication & Team Target)
 // ==========================================
-const normalizeMarket = (marketStr: string) => {
+const normalizeMarket = (marketStr: string, matchName: string) => {
     const m = marketStr.toLowerCase();
+    const teams = matchName.toLowerCase().split(/ v | vs | - /);
+    const homeTeam = teams[0] ? teams[0].trim() : '';
+    const awayTeam = teams[1] ? teams[1].trim() : '';
+
     let type = 'other';
     let line = 0;
     let isOver = false;
@@ -104,10 +108,20 @@ const normalizeMarket = (marketStr: string) => {
 
     if (type === 'other') return null;
 
-    const condition = type === 'btts' ? 'yes' : isOver ? 'over' : 'under';
-    const hash = `${type}_${condition}_${line}_${isHT ? 'ht' : 'ft'}`;
+    // 🎯 NOVO: Identificação de Alvo (Home, Away ou Match)
+    let target = 'match';
+    if (homeTeam && m.includes(homeTeam)) target = 'home';
+    else if (awayTeam && m.includes(awayTeam)) target = 'away';
+    else if (m.includes('casa')) target = 'home';
+    else if (m.includes('visitante')) target = 'away';
 
-    return { type, line, isOver, isHT, hash };
+    // 🛡️ Proteção: O Simulador atual não divide cantos por time. Bloqueia Team Corners para evitar falsos EVs.
+    if (type === 'corners' && target !== 'match') return null; 
+
+    const condition = type === 'btts' ? 'yes' : isOver ? 'over' : 'under';
+    const hash = `${type}_${target}_${condition}_${line}_${isHT ? 'ht' : 'ft'}`;
+
+    return { type, target, line, isOver, isHT, hash };
 };
 
 // ==========================================
@@ -246,9 +260,11 @@ Formato JSON esperado:
         const l1 = Math.max(0.1, lh - l3);
         const l2 = Math.max(0.1, la - l3);
 
+        // Prepara os mercados válidos antes do loop
         const activeMarketsMap = new Map();
         for (let pick of match.viablePicks) {
-            const norm = normalizeMarket(pick.market || '');
+            // ✅ FIX: Passa o nome do jogo para o parser
+            const norm = normalizeMarket(pick.market || '', match.matchName);
             if (!norm) continue; 
             if (!activeMarketsMap.has(norm.hash)) {
                 activeMarketsMap.set(norm.hash, { norm, hits: 0, ref: pick });
@@ -284,13 +300,17 @@ Formato JSON esperado:
             let cornersHT = negativeBinomialSample(adjustedCornerMeanHT, dispersionHT);
             cornersHT = Math.min(cornersHT, 12);
 
-            // Avaliação
+            // Avaliação on-the-fly (Diferencia HT vs FT e Home vs Away automaticamente)
             for (let j = 0; j < activeMarkets.length; j++) {
                 const mkt = activeMarkets[j];
                 const norm = mkt.norm;
                 let isHit = false;
 
-                const simGoals = norm.isHT ? totalGoalsHT : totalGoals;
+                // 🎯 NOVO: Roteamento Inteligente de Gols (Match, Home ou Away)
+                let simGoals = norm.isHT ? totalGoalsHT : totalGoals;
+                if (norm.target === 'home') simGoals = norm.isHT ? goalsHomeHT : goalsHome;
+                if (norm.target === 'away') simGoals = norm.isHT ? goalsAwayHT : goalsAway;
+
                 const simCorners = norm.isHT ? cornersHT : corners;
 
                 if (norm.type === 'goals') {
@@ -298,13 +318,15 @@ Formato JSON esperado:
                 } else if (norm.type === 'corners') {
                     isHit = norm.isOver ? (simCorners > norm.line) : (simCorners < norm.line);
                 } else if (norm.type === 'btts') {
-                    if (norm.isHT) isHit = (goalsHomeHT > 0 && goalsAwayHT > 0);
-                    else isHit = (goalsHome > 0 && goalsAway > 0);
+                    if (norm.isHT) {
+                        isHit = (goalsHomeHT > 0 && goalsAwayHT > 0);
+                    } else {
+                        isHit = (goalsHome > 0 && goalsAway > 0);
+                    }
                 }
                 
                 if (isHit) mkt.hits++;
             }
-        }
 
         // Pós-processamento dos Counters
         for (let mkt of activeMarkets) {
