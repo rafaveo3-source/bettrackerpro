@@ -1,6 +1,6 @@
 import { GoogleGenerativeAI } from '@google/generative-ai';
 
-export const maxDuration = 60;
+export const maxDuration = 60; // Limite Serverless Vercel
 
 // ==========================================
 // 🧠 1. MOTOR DE TEORIA DA INFORMAÇÃO E SRE
@@ -24,63 +24,98 @@ const factorial = (n: number) => {
     return result;
 };
 
-// ==========================================
-// 🧠 2. MOTOR ATUARIAL: CACHE & BIVARIATE POISSON
-// ==========================================
-const poissonCache: Record<string, number> = {};
-const poissonCDFCache: Record<string, number> = {};
-
-const poissonPDF = (lambda: number, k: number) => {
-    const key = `${lambda}_${k}`;
-    if (poissonCache[key] !== undefined) return poissonCache[key];
-    const p = (Math.pow(lambda, k) * Math.exp(-lambda)) / factorial(k);
-    poissonCache[key] = p;
-    return p;
-};
-
-// ✅ FIX: Cache para CDF (Corta tempo de CPU em 35%)
 const poissonCDF = (lambda: number, k: number) => {
-    const key = `${lambda}_${k}`;
-    if (poissonCDFCache[key] !== undefined) return poissonCDFCache[key];
     let sum = 0;
-    for (let i = 0; i <= k; i++) sum += poissonPDF(lambda, i);
-    poissonCDFCache[key] = sum;
+    for (let i = 0; i <= k; i++) sum += (Math.pow(lambda, i) * Math.exp(-lambda)) / factorial(i);
     return sum;
 };
 
-const bivariatePoissonPDF = (x: number, y: number, l1: number, l2: number, l3: number) => {
-    let sum = 0;
-    const minXY = Math.min(x, y);
-    for (let i = 0; i <= minXY; i++) {
-        sum += (Math.pow(l3, i) / factorial(i)) *
-               (Math.pow(l1, x - i) / factorial(x - i)) *
-               (Math.pow(l2, y - i) / factorial(y - i));
-    }
-    return Math.exp(-(l1 + l2 + l3)) * sum;
+// ==========================================
+// 🎲 2. DISTRIBUIÇÕES ESTOCÁSTICAS (HFT SAMPLING)
+// ==========================================
+
+// Box-Muller Transform (Normal Distribution)
+const randomNormal = () => {
+    let u = 0, v = 0;
+    while(u === 0) u = Math.random();
+    while(v === 0) v = Math.random();
+    return Math.sqrt(-2.0 * Math.log(u)) * Math.cos(2.0 * Math.PI * v);
 };
 
-const dixonColesAdjustment = (x: number, y: number, lambdaH: number, lambdaA: number, rho: number = -0.10) => {
-  if (x === 0 && y === 0) return 1 - (lambdaH * lambdaA * rho);
-  if (x === 0 && y === 1) return 1 + (lambdaH * rho);
-  if (x === 1 && y === 0) return 1 + (lambdaA * rho);
-  if (x === 1 && y === 1) return 1 - rho;
-  return 1;
+// Algoritmo de Marsaglia e Tsang (Gamma Distribution)
+const randomGamma = (shape: number, scale: number) => {
+    let d, c, x, v, u;
+    let actualShape = shape;
+    if (shape < 1) actualShape = shape + 1;
+    
+    d = actualShape - 1 / 3;
+    c = 1 / Math.sqrt(9 * d);
+    
+    while (true) {
+        x = randomNormal();
+        v = 1 + c * x;
+        while (v <= 0) { x = randomNormal(); v = 1 + c * x; }
+        v = v * v * v;
+        u = Math.random();
+        let x2 = x * x;
+        if (u < 1 - 0.0331 * x2 * x2 || Math.log(u) < 0.5 * x2 + d * (1 - v + Math.log(v))) {
+            let result = d * v;
+            if (shape < 1) result *= Math.pow(Math.random(), 1 / shape);
+            return result * scale;
+        }
+    }
 };
 
-const findLambdaForProb = (targetProb: number, k: number): number => {
-    let low = 0.1; let high = 5.0; 
-    const safeTarget = Math.min(Math.max(targetProb, 0.05), 0.95); 
-    for (let iter = 0; iter < 15; iter++) {
-        let mid = (low + high) / 2;
-        let currentProb = 1 - poissonCDF(mid, k); 
-        if (currentProb < safeTarget) low = mid; 
-        else high = mid;
+// ✅ FIX: Knuth Otimizado com Aproximação Gaussiana para lambda > 15 (Protege CPU em ligas de alto escanteio)
+const poissonSample = (lambda: number) => {
+    if (lambda > 15) {
+        const val = Math.round(lambda + Math.sqrt(lambda) * randomNormal());
+        return Math.max(0, val);
     }
-    return (low + high) / 2;
+    const L = Math.exp(-lambda);
+    let p = 1.0;
+    let k = 0;
+    do { k++; p *= Math.random(); } while (p > L);
+    return k - 1;
+};
+
+// Gamma-Poisson Mixture (True Negative Binomial com R real)
+const negativeBinomialSample = (mean: number, dispersion: number) => {
+    const scale = mean / dispersion;
+    const lambda = randomGamma(dispersion, scale);
+    return poissonSample(lambda);
 };
 
 // ==========================================
-// 🎯 3. PRICING ENGINES & MATRIZES BIVARIADAS
+// 🛠️ 3. NORMALIZAÇÃO HFT (Hash Deduplication)
+// ==========================================
+const normalizeMarket = (marketStr: string) => {
+    const m = marketStr.toLowerCase();
+    let type = 'other';
+    let line = 0;
+    let isOver = false;
+
+    if (m.includes('race') || m.includes('exato') || m.includes('ímpar') || m.includes('par') || m.includes('primeiro a')) return null;
+
+    const lineMatch = m.match(/(?:mais|menos|over|under|acima|abaixo)[^\d]*(\d+(\.\d+)?)/i);
+    if (lineMatch) line = parseFloat(lineMatch[1]);
+
+    isOver = m.includes('mais') || m.includes('over') || m.includes('acima');
+
+    if (m.includes('gol') || m.includes('gols')) type = 'goals';
+    else if (m.includes('escanteio') || m.includes('canto')) type = 'corners';
+    else if (m.includes('btts') || m.includes('ambos')) type = 'btts';
+
+    if (type === 'other') return null;
+
+    const condition = type === 'btts' ? 'yes' : isOver ? 'over' : 'under';
+    const hash = `${type}_${condition}_${line}`;
+
+    return { type, line, isOver, hash };
+};
+
+// ==========================================
+// 🎯 4. PRICING & BLENDED PRIORS (Calibração)
 // ==========================================
 const getTrueProbabilitiesFrom1X2 = (oddH: number, oddD: number, oddA: number) => {
     if (!oddH || !oddD || !oddA) return null;
@@ -89,35 +124,10 @@ const getTrueProbabilitiesFrom1X2 = (oddH: number, oddD: number, oddA: number) =
     return { pH: pH / sum, pD: pD / sum, pA: pA / sum };
 };
 
-const estimateLambdasFrom1X2 = (pH: number, pD: number, pA: number, expectedTotal: number) => {
-    let best = { error: Infinity, lh: 1.3, la: 1.1 };
-    const l3 = Math.min(0.22, expectedTotal * 0.07); 
-
-    for (let lh = 0.3; lh <= 3.5; lh += 0.2) {
-        for (let la = 0.3; la <= 3.5; la += 0.2) {
-            let ph_model = 0, pd_model = 0, pa_model = 0, total = 0;
-            const l1 = Math.max(0.1, lh - l3);
-            const l2 = Math.max(0.1, la - l3);
-
-            for (let i = 0; i <= 7; i++) {
-                for (let j = 0; j <= 7; j++) {
-                    const p = bivariatePoissonPDF(i, j, l1, l2, l3) * dixonColesAdjustment(i, j, lh, la);
-                    total += p;
-                    if (i > j) ph_model += p; else if (i === j) pd_model += p; else pa_model += p;
-                }
-            }
-            ph_model /= total; pd_model /= total; pa_model /= total;
-            const error = Math.pow(ph_model - pH, 2) + Math.pow(pd_model - pD, 2) + Math.pow(pa_model - pA, 2);
-            if (error < best.error) best = { error, lh, la };
-        }
-    }
-    return { lh: best.lh, la: best.la, total: best.lh + best.la };
-};
-
 const estimateLambdaFromMarket = (lines: {line: number, prob: number}[]) => {
     if (!lines || lines.length < 2) return null; 
-    let bestLambda = 2.0; let bestError = Infinity;
-    for (let lambda = 0.3; lambda <= 4.5; lambda += 0.05) {
+    let bestLambda = 2.5; let bestError = Infinity;
+    for (let lambda = 0.5; lambda <= 4.5; lambda += 0.05) {
         let error = 0;
         for (let l of lines) {
             const k = Math.floor(l.line); 
@@ -133,8 +143,8 @@ const estimateLambdaFromMarket = (lines: {line: number, prob: number}[]) => {
 
 const estimateCornerLambdaFromMarket = (lines: {line: number, prob: number}[]) => {
     if (!lines || lines.length < 2) return null; 
-    let bestLambda = 9.0; let bestError = Infinity;
-    for (let lambda = 5.0; lambda <= 15.0; lambda += 0.1) {
+    let bestLambda = 9.5; let bestError = Infinity;
+    for (let lambda = 6.0; lambda <= 15.0; lambda += 0.1) {
         let error = 0;
         for (let l of lines) {
             const k = Math.floor(l.line);
@@ -146,83 +156,6 @@ const estimateCornerLambdaFromMarket = (lines: {line: number, prob: number}[]) =
         if (error < bestError) { bestError = error; bestLambda = lambda; }
     }
     return bestLambda;
-};
-
-const calculateBTTSProbability = (lh: number, la: number, expectedTotal: number) => {
-    let p = 0; let total = 0;
-    const l3 = Math.min(0.22, expectedTotal * 0.07); 
-    const l1 = Math.max(0.1, lh - l3);
-    const l2 = Math.max(0.1, la - l3);
-
-    for (let i = 0; i <= 7; i++) {
-        for (let j = 0; j <= 7; j++) {
-            const prob = bivariatePoissonPDF(i, j, l1, l2, l3) * dixonColesAdjustment(i, j, lh, la);
-            total += prob;
-            if (i >= 1 && j >= 1) p += prob;
-        }
-    }
-    return p / total;
-};
-
-const calculateExactBTTSAndOver = (lh: number, la: number, expectedTotal: number, overLine: number) => {
-    let p = 0; let total = 0;
-    const l3 = Math.min(0.22, expectedTotal * 0.07);
-    const l1 = Math.max(0.1, lh - l3);
-    const l2 = Math.max(0.1, la - l3);
-
-    for (let i = 0; i <= 7; i++) {
-        for (let j = 0; j <= 7; j++) {
-            const prob = bivariatePoissonPDF(i, j, l1, l2, l3) * dixonColesAdjustment(i, j, lh, la);
-            total += prob;
-            if (i >= 1 && j >= 1 && (i + j) > overLine) p += prob;
-        }
-    }
-    return p / total;
-};
-
-const getMarketType = (market: string) => {
-    const m = market.toLowerCase();
-    const isUnder = m.includes("menos") || m.includes("under") || m.includes("abaixo");
-    if (m.includes("btts") || m.includes("ambos")) return "btts";
-    if (m.includes("escanteio") || m.includes("canto")) return isUnder ? "under_corners" : "over_corners";
-    if (m.includes("gol") || m.includes("gols")) return isUnder ? "under_goals" : "over_goals";
-    return "other";
-};
-
-const correlationMatrix = [
-    { a: "over_goals", b: "over_corners", rho: 0.18 },
-    { a: "under_goals", b: "over_corners", rho: -0.12 },
-    { a: "over_goals", b: "under_corners", rho: -0.10 },
-    { a: "under_goals", b: "under_corners", rho: 0.15 },
-    { a: "btts", b: "over_goals", rho: 0.32 },
-    { a: "btts", b: "under_goals", rho: -0.25 },
-    { a: "btts", b: "over_corners", rho: 0.10 }
-];
-
-const getCorrelation = (m1: string, m2: string) => {
-    const t1 = getMarketType(m1); const t2 = getMarketType(m2);
-    for (const c of correlationMatrix) {
-        if ((c.a === t1 && c.b === t2) || (c.a === t2 && c.b === t1)) return c.rho;
-    }
-    return 0; 
-};
-
-const getMarketVolatilityPenalty = (market: string) => {
-  const m = market.toLowerCase();
-  if (m.includes('1º tempo') || m.includes('1o tempo') || m.includes('(ht)') || m.includes('primeiro tempo')) return 0.95; 
-  if (m.includes('ambos') || m.includes('btts')) return 0.96;
-  if (m.includes('escanteios') || m.includes('cantos')) return 0.97;
-  return 1;
-};
-
-const getGlobalWeakPriors = (market: string) => {
-  const mkt = market.toLowerCase();
-  let alpha = 2.0; let beta = 2.0;
-  if (mkt.includes('gol') || mkt.includes('gols')) {
-      if (mkt.includes('1.5') && !mkt.includes('ht') && !mkt.includes('1º')) { alpha = 2.9; beta = 1.1; } 
-      else { alpha = 2.4; beta = 1.6; }
-  } else if (mkt.includes('escanteio') || mkt.includes('canto')) { alpha = 2.2; beta = 1.8; }
-  return { alpha, beta };
 };
 
 export default async function handler(req: any, res: any) {
@@ -252,13 +185,16 @@ export default async function handler(req: any, res: any) {
 
     while (attempts < 2 && !finalValidJson) {
       attempts++;
-      const prompt = `Você é um Extrator de Dados. Transcreva as estatísticas das imagens.
+      const prompt = `Você é um Extrator de Dados de Sportsbook.
 1. Agrupe por jogo em "matches".
 2. Extraia "matchOdds1x2" (home, draw, away) e "goalMarketLines" e "cornerMarketLines".
-3. Em "viablePicks", liste APENAS mercados válidos (${selectedMarketsStr}) com Hit Rate >= 55% e ODD visível. 
-   - 🛑 IGNORE "Race", "Primeiro a Marcar", "Par/Ímpar", "Exato".
-   - "confidence": 0.1 a 1.0 sobre a clareza da leitura da odd.
-4. "matchContext": Breve resumo do cenário tático lido (Sem inventar dados).
+3. Em "viablePicks", liste mercados (${selectedMarketsStr}) com ODD visível. 
+   - 🛑 IGNORE "Race", "Exato", "Par/Ímpar", "Primeiro a Marcar".
+   - "prob": Extraia a probabilidade histórica mostrada no site (se houver).
+   - "sampleSize": Tamanho da amostra visível (ex: 10 jogos).
+   - "extractedOdd": Odd da casa de apostas (decimal).
+   - "confidence": 0.1 a 1.0 (clareza da imagem).
+4. "matchContext": Resumo tático do jogo.
 
 Formato JSON esperado:
 {
@@ -281,135 +217,145 @@ Formato JSON esperado:
       } catch (e: any) { continue; }
     }
 
-    if (!finalValidJson || !finalValidJson.matches) throw new Error("Abortado: O OCR não conseguiu extrair dados numéricos válidos.");
+    if (!finalValidJson || !finalValidJson.matches) throw new Error("Abortado: O OCR não extraiu matriz de dados válida.");
 
     // ==========================================
-    // 🧮 CAMADA 2: QUANT ENGINE MODELING
+    // ⚙️ CAMADA 2: ON-THE-FLY MONTE CARLO ENGINE
     // ==========================================
     let allProcessedLegs: any[] = [];
     let globalContextArray: string[] = []; 
 
     for (let match of finalValidJson.matches) {
         if (match.matchContext) globalContextArray.push(`${match.matchName}: ${match.matchContext}`);
+        if (!match.viablePicks || match.viablePicks.length === 0) continue;
         
-        let lh = 1.3, la = 1.1, lt = 2.5, lc = null;
-        let activeGoals = false;
+        let market_lt = 2.6; 
+        let market_lc = 10.0; 
         
-        let trueProbs = match.matchOdds1x2 ? getTrueProbabilitiesFrom1X2(match.matchOdds1x2.home, match.matchOdds1x2.draw, match.matchOdds1x2.away) : null;
-        let lsLambdaTotal = estimateLambdaFromMarket(match.goalMarketLines);
+        const trueProbs = match.matchOdds1x2 ? getTrueProbabilitiesFrom1X2(match.matchOdds1x2.home, match.matchOdds1x2.draw, match.matchOdds1x2.away) : null;
+        const lsLambdaTotal = estimateLambdaFromMarket(match.goalMarketLines);
+        const lsCorners = estimateCornerLambdaFromMarket(match.cornerMarketLines);
 
-        // ✅ FIX: Substituição do cálculo Heurístico de Expected Goals pela Leitura Limpa do Mercado
-        if (lsLambdaTotal) {
-            lt = (0.8 * lsLambdaTotal) + (0.2 * 2.5); // Bayesian Shrink leve para o padrão do futebol
-            activeGoals = true;
+        if (lsLambdaTotal) market_lt = (0.75 * lsLambdaTotal) + (0.25 * 2.6); 
+        if (lsCorners) market_lc = (0.75 * lsCorners) + (0.25 * 10.0);
+
+        let lh = market_lt * 0.55; 
+        let la = market_lt * 0.45;
+        if (trueProbs) {
+            lh = market_lt * trueProbs.pH;
+            la = market_lt * trueProbs.pA;
         }
 
-        if (trueProbs && activeGoals) {
-            const est = estimateLambdasFrom1X2(trueProbs.pH, trueProbs.pD, trueProbs.pA, lt);
-            lh = est.lh; la = est.la; 
-        } else if (activeGoals) {
-            lh = lt * 0.55; la = lt * 0.45;
-        }
-        
-        lc = estimateCornerLambdaFromMarket(match.cornerMarketLines);
+        const l3 = Math.min(0.25, market_lt * 0.07);
+        const l1 = Math.max(0.1, lh - l3);
+        const l2 = Math.max(0.1, la - l3);
 
-        if (!match.viablePicks) continue;
-
+        // Prepara os mercados válidos antes do loop (Zero alocações no loop)
+        const activeMarketsMap = new Map();
         for (let pick of match.viablePicks) {
-            pick.match = match.matchName;
-            const mkt = (pick.market || '').toLowerCase();
-            pick.mkt = mkt;
-            pick.matchLt = lt; 
-            
-            if (mkt.includes('race') || mkt.includes('exat') || mkt.includes('ímpar') || mkt.includes('par')) continue;
+            const norm = normalizeMarket(pick.market || '');
+            if (!norm) continue; 
+            if (!activeMarketsMap.has(norm.hash)) {
+                activeMarketsMap.set(norm.hash, { norm, hits: 0, ref: pick });
+            }
+        }
+        
+        const activeMarkets = Array.from(activeMarketsMap.values());
+        const ITERATIONS = 25000;
 
+        // 🎲 O MULTIVERSO OTIMIZADO (O(1) Memory Footprint)
+        for (let i = 0; i < ITERATIONS; i++) {
+            const z = poissonSample(l3);
+            const goalsHome = poissonSample(l1) + z;
+            const goalsAway = poissonSample(l2) + z;
+            const totalGoals = goalsHome + goalsAway;
+
+            const pressure = totalGoals;
+            const adjustedCornerMean = market_lc * (1 + pressure * 0.04);
+            // ✅ FIX: Crescimento Sublinear da Dispersão
+            const dispersion = 2.0 + (Math.sqrt(pressure) * 0.8); 
+            
+            let corners = negativeBinomialSample(adjustedCornerMean, dispersion);
+            corners = Math.min(corners, 22);
+
+            // Avaliação on-the-fly
+            for (let j = 0; j < activeMarkets.length; j++) {
+                const mkt = activeMarkets[j];
+                const norm = mkt.norm;
+                let isHit = false;
+
+                if (norm.type === 'goals') {
+                    isHit = norm.isOver ? (totalGoals > norm.line) : (totalGoals < norm.line);
+                } else if (norm.type === 'corners') {
+                    isHit = norm.isOver ? (corners > norm.line) : (corners < norm.line);
+                } else if (norm.type === 'btts') {
+                    isHit = (goalsHome > 0 && goalsAway > 0);
+                }
+                
+                if (isHit) mkt.hits++;
+            }
+        }
+
+        // Pós-processamento dos Counters
+        for (let mkt of activeMarkets) {
+            const pick = mkt.ref;
             let realSample = Number(pick.sampleSize);
             if (!realSample || realSample < 6) continue;
 
-            let statedProb = (Number(pick.prob) || 50) / 100;
-            const { alpha, beta } = getGlobalWeakPriors(mkt);
-            let rawProb = (statedProb * realSample + (alpha / (alpha + beta)) * (alpha + beta)) / (realSample + alpha + beta);
-            
-            let line = null; const lineMatch = mkt.match(/(?:mais|menos|over|under|acima|abaixo)[^\d]*(\d+(\.\d+)?)/i);
-            if (lineMatch) line = parseFloat(lineMatch[1]);
-            const isTeamMarket = mkt.includes('casa') || mkt.includes('visitante');
-            const isUnder = mkt.includes('menos') || mkt.includes('under') || mkt.includes('abaixo');
-
-            if (activeGoals && mkt.includes('gol')) {
-                if (mkt.includes('ambos') || mkt.includes('btts')) {
-                    rawProb = calculateBTTSProbability(lh, la, lt);
-                } else if (line !== null && !isTeamMarket) {
-                    const k = Math.floor(line);
-                    rawProb = isUnder ? poissonCDF(lt, k) : 1 - poissonCDF(lt, k);
-                }
-            }
-            if (lc && (mkt.includes('escanteio') || mkt.includes('canto')) && !isTeamMarket && line !== null) {
-                const k = Math.floor(line);
-                rawProb = isUnder ? poissonCDF(lc, k) : 1 - poissonCDF(lc, k);
-            }
-
-            pick.volatilityPenalty = getMarketVolatilityPenalty(mkt);
-            pick.finalLegProb = rawProb * pick.volatilityPenalty * (rawProb > 0.85 ? 0.97 : 1);
-            pick.finalLegProb = Math.max(0.01, Math.min(pick.finalLegProb, 0.98));
+            let rawProb = mkt.hits / ITERATIONS;
+            rawProb = Math.max(0.01, Math.min(rawProb * (rawProb > 0.85 ? 0.96 : 1), 0.98));
 
             const rawOdd = pick.extractedOdd || 1;
-            pick.extractedOdd = Math.min(Math.max(rawOdd, 1.01), 10.0);
-            pick.confidence = pick.confidence !== undefined ? Number(pick.confidence) : 1.0;
-            
-            pick.samplePenalty = Math.min(1, Math.log(realSample) / Math.log(15));
-            
-            const fairOdd = 1 / pick.finalLegProb;
-            if (pick.extractedOdd > fairOdd * 1.35) continue; 
+            const finalOdd = Math.min(Math.max(rawOdd, 1.01), 10.0);
+            const fairOdd = 1 / rawProb;
 
-            allProcessedLegs.push(pick);
+            if (finalOdd > fairOdd * 1.35) continue; 
+            if (finalOdd < 1.45) continue; 
+
+            allProcessedLegs.push({
+                match: match.matchName,
+                market: pick.market,
+                normHash: mkt.norm.hash,
+                rawProb: rawProb,
+                extractedOdd: finalOdd,
+                confidence: pick.confidence !== undefined ? Number(pick.confidence) : 1.0,
+                samplePenalty: Math.min(1, Math.sqrt(realSample / 12)) 
+            });
         }
     }
 
     // ==========================================
-    // 💡 PASSO 3: O VALUE SCANNER (Combinatorics & Edge)
+    // 💡 PASSO 4: OPPORTUNITY FINDER (Range Filter)
     // ==========================================
     let opportunities: any[] = [];
     const ODD_MIN = 1.60;
     const ODD_MAX = 2.00;
-    const EDGE_MIN = -0.01; 
+    const EDGE_MIN = 0.03; 
 
     // 1. Singles
     for (let leg of allProcessedLegs) {
         const marketProb = 1 / leg.extractedOdd;
-        const edge = leg.finalLegProb - marketProb; 
-        const ev = (leg.finalLegProb * leg.extractedOdd) - 1; 
+        const edge = leg.rawProb - marketProb; 
+        const ev = (leg.rawProb * leg.extractedOdd) - 1; 
         
         if (leg.extractedOdd >= ODD_MIN && leg.extractedOdd <= ODD_MAX && edge >= EDGE_MIN) {
-            const score = edge * entropyWeight(leg.finalLegProb) * leg.confidence * leg.samplePenalty;
-            opportunities.push({ type: 'Simples', legs: [leg], prob: leg.finalLegProb, odd: leg.extractedOdd, ev, edge, score });
+            const score = edge * entropyWeight(leg.rawProb) * leg.confidence * leg.samplePenalty;
+            opportunities.push({ type: 'Simples', legs: [leg], prob: leg.rawProb, odd: leg.extractedOdd, ev, edge, score });
         }
     }
 
-    // 2. Duplas (Cópula de Variância Real e Same Game Tax)
+    // 2. Duplas (Same Game Tax e Cruzadas)
     for (let i = 0; i < allProcessedLegs.length; i++) {
         for (let j = i + 1; j < allProcessedLegs.length; j++) {
             const l1 = allProcessedLegs[i];
             const l2 = allProcessedLegs[j];
             const isSameGame = l1.match === l2.match;
 
-            if (isSameGame && getMarketType(l1.mkt) === getMarketType(l2.mkt)) continue;
+            if (isSameGame && l1.normHash.split('_')[0] === l2.normHash.split('_')[0]) continue;
 
-            let combProb = l1.finalLegProb * l2.finalLegProb;
-            let corrLabel = "";
-
-            if (isSameGame) {
-                let rho = getCorrelation(l1.mkt, l2.mkt);
-                const tempoFactor = Math.min(1.3, l1.matchLt / 2.5);
-                rho = Math.min(0.28, rho * tempoFactor);
-
-                const var1 = l1.finalLegProb * (1 - l1.finalLegProb);
-                const var2 = l2.finalLegProb * (1 - l2.finalLegProb);
-                combProb = combProb + (rho * Math.sqrt(var1 * var2));
-                
-                combProb *= 0.96; 
-                corrLabel = rho > 0 ? " (Sinergia Positiva)" : rho < 0 ? " (Desconto de Risco)" : " (SGP Tax)";
-            }
-
+            let combProb = l1.rawProb * l2.rawProb;
+            if (isSameGame) combProb *= 0.95; 
+            
             combProb = Math.max(0.01, Math.min(combProb, 0.98));
             const combOdd = l1.extractedOdd * l2.extractedOdd;
             const marketProb = 1 / combOdd;
@@ -421,7 +367,7 @@ Formato JSON esperado:
                 const avgSamplePen = (l1.samplePenalty + l2.samplePenalty) / 2;
                 const score = edge * entropyWeight(combProb) * avgConf * avgSamplePen;
                 opportunities.push({ 
-                    type: isSameGame ? `Dupla Intragame${corrLabel}` : 'Dupla Cruzada', 
+                    type: isSameGame ? 'Dupla Intragame (Bet Builder)' : 'Dupla Cruzada (Parlay)', 
                     legs: [l1, l2], prob: combProb, odd: combOdd, ev, edge, score 
                 });
             }
@@ -430,35 +376,36 @@ Formato JSON esperado:
 
     const uniqueOps = new Map();
     for (let op of opportunities) {
-        const opKey = op.legs.map((l:any) => l.market.trim().toLowerCase()).sort().join("|");
+        const opKey = op.legs.map((l:any) => l.normHash).sort().join("|");
         if (!uniqueOps.has(opKey) || uniqueOps.get(opKey).score < op.score) {
             uniqueOps.set(opKey, op);
         }
     }
     opportunities = Array.from(uniqueOps.values());
-
     opportunities.sort((a, b) => b.score - a.score);
+    
     const topOpportunities = opportunities.slice(0, 3);
 
     if (topOpportunities.length === 0) {
-        throw new Error("NO BET: O Scanner Quantitativo não encontrou NENHUMA oportunidade de aposta (Simples ou Dupla) com Valor Real (EV+) e Amostra Segura (6+ jogos) dentro do range de odd @1.60 a @2.00.");
+        throw new Error("NO BET: O Scanner Monte Carlo rodou 25.000 iterações matemáticas e não encontrou NENHUMA Edge sólida (+3%) dentro do range de Odd @1.60 a @2.00.");
     }
 
     const bestOpp = topOpportunities[0];
     const finalSelections = bestOpp.legs.map((l:any) => ({
         match: l.match,
         market: l.market,
-        prob: Math.round(l.finalLegProb * 100),
+        prob: Math.round(l.rawProb * 100),
         extractedOdd: l.extractedOdd
     }));
 
     const combinedProb = Math.round(bestOpp.prob * 100);
     const fairOdd = Number((1 / bestOpp.prob).toFixed(2));
+    const marketOdd = Number(bestOpp.odd.toFixed(2));
     const formattedEdge = (bestOpp.edge * 100) > 0 ? `+${(bestOpp.edge * 100).toFixed(1)}` : `${(bestOpp.edge * 100).toFixed(1)}`;
     const riskLabel = bestOpp.prob < 0.45 ? "ALTO" : bestOpp.legs.length > 1 ? "MÉDIO" : "BAIXO";
 
     // =====================================================
-    // ✍️ CAMADA 4: NARRATIVE AI (Relatório Institucional)
+    // ✍️ CAMADA 5: NARRATIVE AI (Relatório Quantitativo)
     // =====================================================
     let generatedAnalysis = "";
     let generatedAlt = "";
@@ -466,49 +413,68 @@ Formato JSON esperado:
 
     try {
         const allContexts = globalContextArray.join(" | ");
+        const topPickDesc = bestOpp.legs.map((l:any) => `${l.market} (${l.match})`).join(" + ");
         
-        let opsText = topOpportunities.map((op, idx) => {
-            const desc = op.legs.map((l:any) => `${l.market} (${l.match})`).join(" + ");
-            return `Entrada ${idx + 1} (${op.type}): ${desc}. Odd: @${op.odd.toFixed(2)} | EV: ${(op.ev*100).toFixed(1)}% | Edge Real: ${(op.edge*100).toFixed(1)}%`;
-        }).join("\n");
+        let altPickDesc = "Nenhuma alternativa com EV forte detectada no range.";
+        let consPickDesc = "Nenhuma variação secundária detectada.";
+
+        if (topOpportunities.length > 1) {
+            altPickDesc = `OPORTUNIDADE 2 (${topOpportunities[1].type}): ${topOpportunities[1].legs.map((l:any) => `${l.market} (${l.match})`).join(" + ")} (Odd: @${topOpportunities[1].odd.toFixed(2)} | EV: ${(topOpportunities[1].ev*100).toFixed(1)}%)`;
+        }
+        if (topOpportunities.length > 2) {
+            consPickDesc = `OPORTUNIDADE 3 (${topOpportunities[2].type}): ${topOpportunities[2].legs.map((l:any) => `${l.market} (${l.match})`).join(" + ")} (Odd: @${topOpportunities[2].odd.toFixed(2)} | EV: ${(topOpportunities[2].ev*100).toFixed(1)}%)`;
+        }
 
         const narrativeModel = genAI.getGenerativeModel({ 
             model: 'gemini-2.5-flash',
             generationConfig: { responseMimeType: "application/json" }
         });
 
-        const narrativePrompt = `Aja como um Analista Quantitativo de Sportsbook.
-Nosso Value Scanner processou a matriz e filtrou as seguintes oportunidades de valor matemático (EV+):
-${opsText}
+        const narrativePrompt = `Aja como um Analista de Hedge Fund Esportivo.
+Nosso Motor de Simulação Monte Carlo (25k iterações) mapeou a grade e extraiu o Top 3 Operações de Valor (EV+).
 
-Contexto extraído das imagens pelo OCR: "${allContexts}".
+⚽ GAME SCRIPT LIDO NA TELA: "${allContexts}"
 
-Escreva o relatório final focado apenas na ENTRADA 1.
+🎯 OPERAÇÃO PRINCIPAL (Para a chave 'analysis'):
+Aposta: ${topPickDesc}
+- Odd do Mercado: @${marketOdd.toFixed(2)}
+- Probabilidade Simulada: ${combinedProb}% (Odd Justa: @${fairOdd.toFixed(2)})
+- Vantagem sobre o Mercado (Edge): ${formattedEdge}%
+
+🔄 OPERAÇÃO 2 (Para a chave 'alternativeCombination'):
+${altPickDesc}
+
+🛡️ OPERAÇÃO 3 (Para a chave 'conservativeCombination'):
+${consPickDesc}
+
+Sua tarefa: Traduzir os dados em um relatório coeso.
+
 Formato JSON esperado:
 {
-  "analysis": "Escreva 3 parágrafos curtos. 1: Scanner de Valor (Fale sobre a Entrada 1 ser a 'Top Pick' e cite a Odd, EV e a Edge contra o mercado). 2: Leitura de Jogo (Use o contexto para explicar o porquê taticamente). 3: Perfil de Risco.",
-  "alternativeCombination": "Descreva as Entradas 2 ou 3 (se existirem no texto acima) como oportunidades secundárias detectadas no radar de valor.",
-  "conservativeCombination": "Uma recomendação de Stake de acordo com o risco ou uma variação conservadora."
+  "analysis": "Fale APENAS da Operação Principal. 2 parágrafos justificando como o cenário do jogo valida a Edge de ${formattedEdge}%.",
+  "alternativeCombination": "Descreva a Operação 2 como oportunidade detectada no scanner secundário. Se for 'Nenhuma', explique que a Edge secou.",
+  "conservativeCombination": "Descreva a Operação 3. Caso não exista, sugira uma gestão de stake moderada baseada no risco."
 }`;
 
         const textResult = await narrativeModel.generateContent(narrativePrompt);
         const textData = JSON.parse(textResult.response.text());
         
-        if (!textData || !textData.analysis || !textData.alternativeCombination || !textData.conservativeCombination) throw new Error("JSON incompleto do Narrador.");
+        if (!textData || !textData.analysis || !textData.alternativeCombination || !textData.conservativeCombination) throw new Error();
 
         generatedAnalysis = textData.analysis;
         generatedAlt = textData.alternativeCombination;
         generatedCons = textData.conservativeCombination;
         
     } catch (e) {
-        generatedAnalysis = `📊 **Radar de Valor Ativado:** O Scanner processou a modelagem Bivariada e identificou a operação primária com Edge Real de ${formattedEdge}%. O Valor Esperado atende perfeitamente à tese estatística frente à odd de @${bestOpp.odd.toFixed(2)}.`;
-        generatedAlt = topOpportunities.length > 1 ? `O Radar também detectou valor secundário: ${topOpportunities[1].legs.map((l:any)=>l.market).join(' + ')} (Odd @${topOpportunities[1].odd.toFixed(2)}, EV: ${(topOpportunities[1].ev*100).toFixed(1)}%).` : "O radar não identificou operações secundárias válidas com base amostral suficiente.";
-        generatedCons = "Ajuste sua gestão de banca (Stake) de acordo com a Odd combinada e a sua exposição no mercado.";
+        generatedAnalysis = `📊 **Simulação Monte Carlo (25k paths):** O motor identificou Edge de ${formattedEdge}% na operação primária. A Odd do Mercado (@${marketOdd}) é ineficiente frente à nossa Odd Justa (@${fairOdd}), configurando Valor Esperado.`;
+        generatedAlt = topOpportunities.length > 1 ? `Radar Secundário: ${topOpportunities[1].legs.map((l:any)=>l.market).join(' + ')} (Odd Mercado @${topOpportunities[1].odd.toFixed(2)}).` : "Sem operações secundárias no range.";
+        generatedCons = topOpportunities.length > 2 ? `Radar Terciário: ${topOpportunities[2].legs.map((l:any)=>l.market).join(' + ')} (Odd @${topOpportunities[2].odd.toFixed(2)}).` : "Mantenha Stake de 1 Unidade.";
     }
 
     return res.status(200).json({
         selections: finalSelections,
-        combinedProb, fairOdd, minProb: Math.max(1, combinedProb - 10), maxProb: Math.min(99, combinedProb + 10), 
+        combinedProb, fairOdd, marketOdd, 
+        minProb: Math.max(1, combinedProb - 5), maxProb: Math.min(99, combinedProb + 5), 
         riskLevel: riskLabel, structuralRiskScore: 0,
         analysis: generatedAnalysis,
         alternativeCombination: generatedAlt,
