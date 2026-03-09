@@ -86,7 +86,7 @@ const negativeBinomialSample = (mean: number, dispersion: number) => {
 };
 
 // ==========================================
-// 🛠️ 3. NORMALIZAÇÃO HFT 
+// 🛠️ 3. NORMALIZAÇÃO HFT (Com suporte a Nenhum Race e Nomes Precisos)
 // ==========================================
 const normalizeMarket = (marketStr: string, matchName: string) => {
     if (!marketStr || !matchName) return null;
@@ -99,6 +99,7 @@ const normalizeMarket = (marketStr: string, matchName: string) => {
     let line = 0;
     let isOver = false;
 
+    // Remove coisas impossíveis, mas aceita races e nenhum race
     if ((m.includes('exato') || m.includes('ímpar') || m.includes('par') || m.includes('primeiro a')) && !m.includes('race')) return null;
 
     const raceMatch = m.match(/race\s*(\d+)/i);
@@ -123,8 +124,11 @@ const normalizeMarket = (marketStr: string, matchName: string) => {
     if (type === 'other') return null;
 
     let target = 'match';
-    if (homeTeam && m.includes(homeTeam.toLowerCase())) target = 'home';
-    else if (awayTeam && m.includes(awayTeam.toLowerCase())) target = 'away';
+    
+    // Tratamento de Alvos (Quem faz a ação)
+    if (m.includes('nenhum') || m.includes('neither')) target = 'none'; // Para o Nenhum Race
+    else if (homeTeam && m.includes(homeTeam)) target = 'home';
+    else if (awayTeam && m.includes(awayTeam)) target = 'away';
     else if (m.includes('casa')) target = 'home';
     else if (m.includes('visitante')) target = 'away';
 
@@ -166,26 +170,27 @@ export default async function handler(req: any, res: any) {
     const openai = openaiKey ? new OpenAI({ apiKey: openaiKey }) : null;
 
     // ==========================================
-    // 👁️ CAMADA 1: TEXT-TO-JSON (NLP Extractor Avançado)
+    // 👁️ CAMADA 1: TEXT-TO-JSON (NLP Extractor de Alta Calibragem)
     // ==========================================
     let finalValidJson = null; 
 
-    // 🔥 PROMPT EVOLUÍDO: Agora extrai Shots (Remates) e médias individuais
-    const prompt = `Atue como um Analista Quantitativo de Dados.
-Leia o texto bruto de estatísticas esportivas (CornerPro, Sofascore) e extraia para JSON.
+    // Prompt ajustado para exigir Mercado, Odd e Prob para todas as menções do texto
+    const prompt = `Atue como um Extrator Quantitativo de Dados de Casas de Apostas.
+Leia o texto colado (que pode conter tabelas bagunçadas de gols, cantos, handicaps e odds) e estruture estritamente em JSON.
 
 Regras Vitais:
 1. Identifique os times (Ex: "Lazio v Sassuolo").
 2. Extraia "matchOdds1x2" se houver.
-3. Extraia o "teamStats" (Média de Gols, Cantos a Favor e Remates/Shots por jogo) para o Home e Away. Se não achar Remates, use 10.0.
-4. Na chave "viablePicks", liste todas as probabilidades de linhas de Gols, Cantos e Races que encontrar.
+3. Extraia o "teamStats" (Média de Gols, Cantos e Remates/Shots). Se não achar Remates, assuma 10.0.
+4. Na chave "viablePicks", crie uma lista com TODAS as linhas do texto. Extraia estritamente: "market" (O nome legível), "odd" (se mostrada) e "prob" (A porcentagem de acerto). 
+   - ATENÇÃO: NÃO ignore menções a "Nenhum Race", "Race 3", ou cantos de time específico. Extraia todos.
 
 TEXTO BRUTO:
 """
 ${textData}
 """
 
-Retorne APENAS um JSON:
+Retorne APENAS um JSON válido:
 {
  "matches":[
   {
@@ -195,7 +200,11 @@ Retorne APENAS um JSON:
        "home": { "goals": 1.5, "corners": 5.2, "shots": 13.0 },
        "away": { "goals": 1.1, "corners": 3.9, "shots": 10.0 }
    },
-   "viablePicks":[{"market":"Mais de 1.5 Gols","prob":80,"sampleSize":10,"extractedOdd":1.40}]
+   "viablePicks":[
+       {"market":"Mais de 1.5 Gols","prob":80,"sampleSize":10,"extractedOdd":1.40},
+       {"market":"Time Casa Race 3","prob":70,"sampleSize":10,"extractedOdd":1.85},
+       {"market":"Nenhum Race 3","prob":30,"sampleSize":10,"extractedOdd":2.20}
+   ]
   }
  ]
 }`;
@@ -243,15 +252,15 @@ Retorne APENAS um JSON:
     }
 
     // ==========================================
-    // ⚙️ CAMADA 2: GAME SCRIPT & TPI ENGINE
+    // ⚙️ CAMADA 2: GAME SCRIPT ENGINE & TPI
     // ==========================================
     let allProcessedLegs: any[] = [];
     let detectedGameScript = "OPEN_GAME"; 
-    let dynamicCorrelationBoost = 1.0; // Default
+    let dynamicCorrelationBoost = 1.0; 
 
     for (let match of finalValidJson.matches) {
         
-        // 🔥 2.1 TEAM PRESSURE INDEX (TPI) 
+        // 🔥 TEAM PRESSURE INDEX (TPI) - Calcula a intensidade do Amasso
         const statsH = match.teamStats?.home || { goals: 1.2, corners: 4.5, shots: 10.0 };
         const statsA = match.teamStats?.away || { goals: 1.2, corners: 4.5, shots: 10.0 };
 
@@ -259,9 +268,8 @@ Retorne APENAS um JSON:
         const tpiAway = (statsA.shots * 0.4) + (statsA.goals * 0.3) + (statsA.corners * 0.3);
         const tpiDiff = Math.abs(tpiHome - tpiAway);
 
-        // A Matemática da Cópula (Correlação Dinâmica baseada em intensidade de pressão)
-        // Se a diferença for brutal (ex: Espanyol 6.8 vs Oviedo 5.3 = Diff 1.5) -> Boost de 1.075 a 1.10
-        dynamicCorrelationBoost = 1 + Math.min(tpiDiff * 0.05, 0.20); 
+        // A Cópula de Correlação da Equipe (Se TPI muito diferente, Correlação explode)
+        dynamicCorrelationBoost = 1 + Math.min(tpiDiff * 0.06, 0.22); // Max boost 22%
 
         let pH = 0.45; let pA = 0.30;
         const trueProbs = match.matchOdds1x2 ? getTrueProbabilitiesFrom1X2(Number(match.matchOdds1x2.home), Number(match.matchOdds1x2.draw), Number(match.matchOdds1x2.away)) : null;
@@ -273,7 +281,7 @@ Retorne APENAS um JSON:
         let lh = market_lt * (tpiHome / (tpiHome + tpiAway)); 
         let la = market_lt * (tpiAway / (tpiHome + tpiAway));
 
-        // GAME SCRIPT DETECTION (Orientado ao TPI e Odds)
+        // GAME SCRIPT CLASSIFIER
         const homeDominance = tpiHome / (tpiHome + tpiAway);
         if (pH > 0.40 && homeDominance > 0.55) {
             detectedGameScript = "HOME_PRESSURE";
@@ -303,7 +311,7 @@ Retorne APENAS um JSON:
             }
         }
 
-        // 🔥 2.2 SCRIPT TEMPLATES (Espaço de Busca com Races e Corners de Equipe)
+        // 🔥 O GERADOR DE BUILDERS OBRIGATÓRIOS (Baseado no Script)
         let smartLines: string[] = [];
         
         if (detectedGameScript === "HOME_PRESSURE") {
@@ -311,14 +319,20 @@ Retorne APENAS um JSON:
                 `${homeTeam} Mais de 0.5 Gols`, `${homeTeam} Mais de 1.5 Gols`, "Mais de 1.5 Gols", 
                 `${homeTeam} Mais de 2.5 Escanteios`, `${homeTeam} Mais de 3.5 Escanteios`, `${homeTeam} Mais de 4.5 Escanteios`,
                 "Mais de 7.5 Escanteios", "Mais de 8.5 Escanteios",
-                `${homeTeam} Race 3`, `${homeTeam} Race 5`, `${homeTeam} Race 7`
+                `${homeTeam} Race 3`, `${homeTeam} Race 5`
             ];
         } else if (detectedGameScript === "AWAY_PRESSURE") {
             smartLines = [
                 `${awayTeam} Mais de 0.5 Gols`, `${awayTeam} Mais de 1.5 Gols`, "Mais de 1.5 Gols",
                 `${awayTeam} Mais de 2.5 Escanteios`, `${awayTeam} Mais de 3.5 Escanteios`, `${awayTeam} Mais de 4.5 Escanteios`,
                 "Mais de 7.5 Escanteios", "Mais de 8.5 Escanteios",
-                `${awayTeam} Race 3`, `${awayTeam} Race 5`, `${awayTeam} Race 7`
+                `${awayTeam} Race 3`, `${awayTeam} Race 5`
+            ];
+        } else if (detectedGameScript === "LOW_TEMPO") {
+            smartLines = [
+                "Menos de 2.5 Gols", "Menos de 3.5 Gols", "Menos de 1.5 Gols HT",
+                "Menos de 9.5 Escanteios", "Menos de 10.5 Escanteios",
+                "Nenhum Race 5", "Nenhum Race 7"
             ];
         } else {
             smartLines = [
@@ -341,45 +355,32 @@ Retorne APENAS um JSON:
 
         const ITERATIONS = 25000;
         
-        // Probabilidade de chegada de cantos (Pesa para o dominante)
-        // distribuição de cantos baseada em histórico + pressão
-let homeCornerShare =
-(statsH.corners / (statsH.corners + statsA.corners)) * 0.6 +
-(tpiHome / (tpiHome + tpiAway)) * 0.4;
+        // Distribution Factor para Cantos
+        let homeCornerShare = tpiHome / (tpiHome + tpiAway);
 
-        // 🔥 2.3 CONDITIONAL MONTE CARLO (Game Kill Factor)
+        // 🔥 MONTE CARLO COM TIMING DE CANTOS E GAME KILL
         for (let i = 0; i < ITERATIONS; i++) {
             const z = poissonSample(l3);
             const goalsHome = poissonSample(l1) + z;
             const goalsAway = poissonSample(l2) + z;
             const totalGoals = goalsHome + goalsAway;
 
-            // Game Kill Factor: Se um time abre larga vantagem, a pressão (e cantos) cai
+            // Game Kill Factor: Se o favorito goleia cedo, ele para de atacar e os cantos desabam
             let gameKillFactor = 1.0;
-            // 🔥 Game Kill Factor mais realista
-if (Math.abs(goalsHome - goalsAway) >= 2) gameKillFactor = 0.92; 
+            if (Math.abs(goalsHome - goalsAway) >= 2) gameKillFactor = 0.70; 
 
-            const pressure = totalGoals * gameKillFactor;
+            const baseCornerRate = (statsH.corners + statsA.corners) * 0.4;
+            const shotPressure = ((statsH.shots + statsA.shots) / 20) * 0.6;
+            const adjustedCornerMean = (baseCornerRate + shotPressure * market_lc) * gameKillFactor;
             
-            // 🔥 Modelo realista de lambda de cantos (bookmaker style)
-const baseCornerRate = statsH.corners + statsA.corners;
-
-// ritmo de jogo baseado em volume ofensivo
-const paceFactor = (statsH.shots + statsA.shots) / 24;
-
-// ajuste suave de intensidade ofensiva
-const adjustedCornerMean =
-baseCornerRate * (0.9 + paceFactor * 0.2) * gameKillFactor;
-            
-            // 🔥 Overdispersion realista para cantos
-const dispersion = 4.5; 
+            const dispersion = 2.0 + (Math.sqrt(adjustedCornerMean) * 0.8); 
             let corners = negativeBinomialSample(adjustedCornerMean, dispersion);
             corners = Math.min(corners, 22);
 
             let cornersHome = 0; let cornersAway = 0;
             let race3Winner = 'none'; let race5Winner = 'none'; let race7Winner = 'none'; let race9Winner = 'none';
 
-            // Arrival Time Distribution para Races (Baseado na dominância TPI)
+            // Simulação da Corrida de Cantos 
             for (let c = 0; c < corners; c++) {
                 if (Math.random() < homeCornerShare) cornersHome++;
                 else cornersAway++;
@@ -414,17 +415,22 @@ const dispersion = 4.5;
                 } else if (norm.type === 'btts') {
                     isHit = (goalsHome > 0 && goalsAway > 0);
                 } else if (norm.type === 'race') {
-                    if (norm.line === 3) isHit = (norm.target === 'home' && race3Winner === 'home') || (norm.target === 'away' && race3Winner === 'away');
-                    else if (norm.line === 5) isHit = (norm.target === 'home' && race5Winner === 'home') || (norm.target === 'away' && race5Winner === 'away');
-                    else if (norm.line === 7) isHit = (norm.target === 'home' && race7Winner === 'home') || (norm.target === 'away' && race7Winner === 'away');
-                    else if (norm.line === 9) isHit = (norm.target === 'home' && race9Winner === 'home') || (norm.target === 'away' && race9Winner === 'away');
+                    if (norm.target === 'none') {
+                        if (norm.line === 3) isHit = (race3Winner === 'none');
+                        if (norm.line === 5) isHit = (race5Winner === 'none');
+                        if (norm.line === 7) isHit = (race7Winner === 'none');
+                    } else {
+                        if (norm.line === 3) isHit = (norm.target === 'home' && race3Winner === 'home') || (norm.target === 'away' && race3Winner === 'away');
+                        else if (norm.line === 5) isHit = (norm.target === 'home' && race5Winner === 'home') || (norm.target === 'away' && race5Winner === 'away');
+                        else if (norm.line === 7) isHit = (norm.target === 'home' && race7Winner === 'home') || (norm.target === 'away' && race7Winner === 'away');
+                    }
                 }
                 
                 if (isHit) mkt.hits++;
             }
         }
 
-        // 🔥 2.4 FILTRO QUANTITATIVO (Ajustado para permitir as pernas do Bet Builder)
+        // 🔥 FILTRO PRE-BUILDER
         for (let mkt of activeMarkets) {
             const pick = mkt.ref;
             let rawProb = mkt.hits / ITERATIONS;
@@ -439,17 +445,18 @@ const dispersion = 4.5;
             
             const finalOdd = Math.min(Math.max(rawOdd, 1.01), 10.0);
 
-            // 🔥 Filtro de pernas otimizado para Bet Builder
-if (rawProb < 0.55) continue; 
-if (finalOdd > 2.35) continue;
-if (finalOdd < 1.22) continue;
+            // Permite pernas medianas (42%) para construções pesadas, descarta lixo
+            if (rawProb < 0.42) continue; 
+            if (finalOdd > 2.35) continue; 
+            if (finalOdd < 1.15) continue; 
 
             allProcessedLegs.push({
                 match: match.matchName,
                 market: pick.market,
                 normHash: mkt.norm.hash,
                 mktType: mkt.norm.type,      
-                mktTarget: mkt.norm.target,  
+                mktTarget: mkt.norm.target, 
+                mktLine: mkt.norm.line,
                 rawProb: rawProb,
                 extractedOdd: finalOdd,
                 confidence: 1.0,
@@ -459,64 +466,55 @@ if (finalOdd < 1.22) continue;
     }
 
     // ==========================================
-    // 💡 PASSO 3: O "SMART BUILDER" OPTIMIZER 
+    // 💡 PASSO 3: O ORQUESTRADOR HFT DE BUILDERS
     // ==========================================
     let opportunities: any[] = [];
     
-    const BUILDER_MIN = 1.55;
-const BUILDER_MAX = 2.20;
-const LEG_MIN = 1.22;
-const LEG_MAX = 1.45; 
+    // O RANGE SAGRADO
+    const BUILDER_MIN = 1.55; 
+    const BUILDER_MAX = 2.25; 
     const EDGE_MIN = -0.05; 
 
-    // Singles permitidos SOMENTE dentro do range final
-for (let leg of allProcessedLegs) {
+    // SINGLES (Restritas rigorosamente ao Range. Chega de odd 1.23 solta)
+    for (let leg of allProcessedLegs) {
+        if (leg.extractedOdd < BUILDER_MIN || leg.extractedOdd > BUILDER_MAX) continue;
 
-    if (leg.extractedOdd < BUILDER_MIN || leg.extractedOdd > BUILDER_MAX) {
-        continue;
+        const marketProb = 1 / leg.extractedOdd;
+        const edge = leg.rawProb - marketProb; 
+        const ev = (leg.rawProb * leg.extractedOdd) - 1; 
+        
+        if (edge >= EDGE_MIN) {
+            const score = edge * entropyWeight(leg.rawProb) * 0.5; // Single tem score penalizado frente ao Builder
+            opportunities.push({ type: 'Simples', legs: [leg], prob: leg.rawProb, odd: leg.extractedOdd, ev, edge, score });
+        }
     }
 
-    const marketProb = 1 / leg.extractedOdd;
-    const edge = leg.rawProb - marketProb;
-    const ev = (leg.rawProb * leg.extractedOdd) - 1;
-
-    if (edge < EDGE_MIN) continue;
-
-    const score = edge * entropyWeight(leg.rawProb) * 0.2;
-
-    opportunities.push({
-        type: 'Simples',
-        legs: [leg],
-        prob: leg.rawProb,
-        odd: leg.extractedOdd,
-        ev,
-        edge,
-        score
-    });
-}
-
-    // Duplas (Modelagem de Cópula e Causalidade)
+    // DUPLAS (A alma do sistema)
     for (let i = 0; i < allProcessedLegs.length; i++) {
         for (let j = i + 1; j < allProcessedLegs.length; j++) {
             const l1 = allProcessedLegs[i];
             const l2 = allProcessedLegs[j];
             const isSameGame = l1.match === l2.match;
 
+            // 🔥 MARKET CONFLICT FILTER: Bloqueia pernas conflitantes (Ex: Over 1.5 Gols + Over 2.5 Gols)
             if (isSameGame && l1.mktType === l2.mktType && l1.mktTarget === l2.mktTarget) continue;
+            // Bloqueia conflitantes táticos (Ex: Home Over 0.5 Gols + Match Over 0.5 Gols é redundante)
+            if (isSameGame && l1.mktType === 'goals' && l2.mktType === 'goals' && (l1.mktTarget === 'match' || l2.mktTarget === 'match')) continue;
 
             let combProb = l1.rawProb * l2.rawProb;
 
             // 🔥 APROXIMAÇÃO DA CÓPULA DE SYNDICATE
             if (isSameGame) {
-                // Gols da Equipe + Cantos/Race da mesma equipe = Correlação Positiva Dinâmica (Baseada no TPI)
+                // Team Goal + Team Corners/Race = Correlação Máxima 
                 if (l1.mktTarget === l2.mktTarget && l1.mktTarget !== 'match' && l1.mktType !== l2.mktType) {
                     combProb = combProb * dynamicCorrelationBoost; 
                 } 
-                else if (l1.mktTarget === 'match' && l2.mktTarget === 'match' && l1.mktType !== l2.mktType) {
-                    combProb = combProb * (1 + (dynamicCorrelationBoost - 1) / 2); // Metade do boost para o jogo geral
+                // Global Goals + Team Corners = Correlação Moderada
+                else if (l1.mktTarget !== l2.mktTarget && l1.mktType !== l2.mktType) {
+                    combProb = combProb * (1 + (dynamicCorrelationBoost - 1) / 2);
                 }
                 else {
-                    combProb *= 0.95; // Taxa de construtor descorrelacionado
+                    combProb *= 0.95; 
                 }
             }
             
@@ -528,11 +526,8 @@ for (let leg of allProcessedLegs) {
 
             if (combOdd >= BUILDER_MIN && combOdd <= BUILDER_MAX && edge >= EDGE_MIN) {
                 const isSmartBuilder = isSameGame && l1.mktType !== l2.mktType;
-                // Valoriza brutalmente o "Feeling do Apostador" (Gols + Race/Cantos)
-                const score =
-edge *
-entropyWeight(combProb) *
-(isSameGame ? 5.0 : 0.5);
+                // Boost colossal para o Builder Inteligente
+                const score = edge * entropyWeight(combProb) * (isSmartBuilder ? 5.0 : 1.0);
                 
                 opportunities.push({ 
                     type: isSameGame ? `Game Script: ${detectedGameScript}` : 'Dupla Cruzada', 
@@ -542,50 +537,40 @@ entropyWeight(combProb) *
         }
     }
 
-    // 🔥 TRIPLAS (builder avançado)
+    // TRIPLAS (Para preencher o range caso as odds sejam muito baixas)
+    for (let i = 0; i < allProcessedLegs.length; i++) {
+        for (let j = i + 1; j < allProcessedLegs.length; j++) {
+            for (let k = j + 1; k < allProcessedLegs.length; k++) {
+                const l1 = allProcessedLegs[i];
+                const l2 = allProcessedLegs[j];
+                const l3 = allProcessedLegs[k];
+                if (l1.match !== l2.match || l1.match !== l3.match) continue;
 
-for (let i = 0; i < allProcessedLegs.length; i++) {
-for (let j = i + 1; j < allProcessedLegs.length; j++) {
-for (let k = j + 1; k < allProcessedLegs.length; k++) {
+                // Bloqueio de Conflito em Triplas
+                if (l1.mktType === l2.mktType || l2.mktType === l3.mktType || l1.mktType === l3.mktType) continue;
 
-const l1 = allProcessedLegs[i];
-const l2 = allProcessedLegs[j];
-const l3 = allProcessedLegs[k];
+                let combProb = l1.rawProb * l2.rawProb * l3.rawProb * dynamicCorrelationBoost;
+                combProb = Math.max(0.01, Math.min(combProb, 0.98));
+                
+                const combOdd = l1.extractedOdd * l2.extractedOdd * l3.extractedOdd;
+                const edge = combProb - (1 / combOdd);
 
-if (l1.match !== l2.match || l1.match !== l3.match) continue;
+                if (combOdd >= BUILDER_MIN && combOdd <= BUILDER_MAX && edge >= EDGE_MIN) {
+                    const score = edge * entropyWeight(combProb) * 6.0;
+                    opportunities.push({ 
+                        type: `Super Builder: ${detectedGameScript}`, 
+                        legs: [l1,l2,l3], prob: combProb, odd: combOdd, ev: (combProb * combOdd) - 1, edge, score 
+                    });
+                }
+            }
+        }
+    }
 
-let combProb = l1.rawProb * l2.rawProb * l3.rawProb;
-
-combProb = Math.max(0.01, Math.min(combProb, 0.98));
-
-const combOdd =
-l1.extractedOdd *
-l2.extractedOdd *
-l3.extractedOdd;
-
-const marketProb = 1 / combOdd;
-
-const edge = combProb - marketProb;
-
-if (combOdd < BUILDER_MIN || combOdd > BUILDER_MAX) continue;
-if (edge < EDGE_MIN) continue;
-
-const score =
-edge *
-entropyWeight(combProb) *
-6.0;
-
-opportunities.push({
-type: `Builder Triplo`,
-legs: [l1,l2,l3],
-prob: combProb,
-odd: combOdd,
-ev: (combProb * combOdd) - 1,
-edge,
-score
-});
-
-}}}
+    // 🔥 A GUILHOTINA: Força o Motor a entregar um Builder. Se existir dupla/tripla, descarta as apostas simples.
+    const builderOps = opportunities.filter(o => o.legs.length > 1);
+    if (builderOps.length > 0) {
+        opportunities = builderOps;
+    }
 
     const uniqueOps = new Map();
     for (let op of opportunities) {
@@ -595,30 +580,12 @@ score
         }
     }
     opportunities = Array.from(uniqueOps.values());
-    // 🔥 Prioriza Bet Builders
-opportunities.sort((a, b) => {
-
-    const aBuilder = a.legs.length > 1;
-    const bBuilder = b.legs.length > 1;
-
-    if (aBuilder && !bBuilder) return -1;
-    if (!aBuilder && bBuilder) return 1;
-
-    return b.score - a.score;
-});
+    opportunities.sort((a, b) => b.score - a.score);
     
     const topOpportunities = opportunities.slice(0, 3);
 
-    // 🔥 BLOQUEIO DE SINGLE FORA DO BUILDER
-
-const builderOps = opportunities.filter(o => o.legs.length > 1);
-
-if (builderOps.length > 0) {
-    opportunities = builderOps;
-}
-
     if (topOpportunities.length === 0) {
-        throw new Error(`NO BET: O Game Script (${detectedGameScript}) foi lido, mas as linhas filtradas não ofereceram segurança matemática suficiente (Min 42% Prob por perna) no range @1.60 - @2.20.`);
+        throw new Error(`NO BET: O Script [${detectedGameScript}] não ofereceu pernas com valor suficiente para construir um Bet Builder no range @1.60 a @2.20.`);
     }
 
     const bestOpp = topOpportunities[0];
@@ -633,31 +600,31 @@ if (builderOps.length > 0) {
     const fairOdd = Number((1 / bestOpp.prob).toFixed(2));
     const marketOdd = Number(bestOpp.odd.toFixed(2));
     const formattedEdge = (bestOpp.edge * 100) > 0 ? `+${(bestOpp.edge * 100).toFixed(1)}` : `${(bestOpp.edge * 100).toFixed(1)}`;
-    const riskLabel = bestOpp.prob < 0.52 ? "ALTO" : bestOpp.prob >= 0.65 ? "BAIXO" : "MÉDIO";
+    const riskLabel = bestOpp.prob < 0.45 ? "ALTO" : bestOpp.prob >= 0.60 ? "BAIXO" : "MÉDIO";
 
     // =====================================================
     // ✍️ CAMADA 5: RELATÓRIO INSTITUCIONAL
     // =====================================================
-    const topPickDesc = bestOpp.legs.map((l:any) => `${l.market} (${l.match})`).join(" + ");
+    const topPickDesc = bestOpp.legs.map((l:any) => `${l.market}`).join(" + ");
 
-    const generatedAnalysis = `O TPI Engine (Team Pressure Index) classificou a dinâmica tática deste confronto como [${detectedGameScript}]. Baseado neste grau de pressão e na diferença técnica das equipes, modelamos o bilhete "${topPickDesc}". \n\nUtilizando Aproximação de Cópula para capturar a dependência não-linear dos eventos, identificamos uma correlação dinâmica de +${((dynamicCorrelationBoost - 1)*100).toFixed(1)}% entre as pernas (aumento da probabilidade conjunta). Esta correlação matemática valida a operação como superior a entradas descorrelacionadas de mesma odd.`;
+    const generatedAnalysis = `O Motor (TPI Engine) classificou a dinâmica deste confronto como [${detectedGameScript}]. Através de Simulação de Cópula, forçamos o cruzamento de [${topPickDesc}] para maximizar a correlação não-linear entre Gols e Cantos da equipe agressora.\n\nO modelo matemático precificou a Odd Justa desta combinação em @${fairOdd.toFixed(2)} (Hit Rate de ${combinedProb}%). Esta estrutura tática é a base das operações profissionais de Valor Esperado (EV+), eliminando entradas descorrelacionadas (Singles soltas) e travando a operação no Range Alvo paramétrico.`;
 
     let generatedAlt = "";
     if (topOpportunities.length > 1) {
         const altOp = topOpportunities[1];
-        const altDesc = altOp.legs.map((l:any) => `${l.market} (${l.match})`).join(" + ");
-        generatedAlt = `OPORTUNIDADE SECUNDÁRIA (${altOp.type}): ${altDesc} (Odd Simulada: @${altOp.odd.toFixed(2)}). Alternativa de valor retida no radar.`;
+        const altDesc = altOp.legs.map((l:any) => `${l.market}`).join(" + ");
+        generatedAlt = `OPORTUNIDADE 2 (${altOp.type}): ${altDesc} (Odd Simulada: @${altOp.odd.toFixed(2)}).`;
     } else {
-        generatedAlt = "Nenhum Bet Builder secundário sobreviveu ao filtro de probabilidade e correlação no range desejado.";
+        generatedAlt = "O filtro de conflitos eliminou outras opções para evitar sobreposição de risco (Market Conflict).";
     }
 
     let generatedCons = "";
     if (topOpportunities.length > 2) {
         const consOp = topOpportunities[2];
-        const consDesc = consOp.legs.map((l:any) => `${l.market} (${l.match})`).join(" + ");
-        generatedCons = `OPORTUNIDADE DE COBERTURA: ${consDesc} (Odd: @${consOp.odd.toFixed(2)}).`;
+        const consDesc = consOp.legs.map((l:any) => `${l.market}`).join(" + ");
+        generatedCons = `OPORTUNIDADE 3: ${consDesc} (Odd Simulada: @${consOp.odd.toFixed(2)}).`;
     } else {
-        generatedCons = `Gerencie o capital com rigor, respeitando o Risco ${riskLabel} apontado pela matriz.`;
+        generatedCons = `Atenção à liquidez das linhas de Cantos no momento de montar a aposta (Risco: ${riskLabel}).`;
     }
 
     return res.status(200).json({
