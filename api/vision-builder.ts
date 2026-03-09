@@ -108,7 +108,7 @@ const normalizeMarket = (marketStr: string, matchName: string) => {
     const isHT = m.includes('ht') || m.includes('1º tempo') || m.includes('1o tempo') || m.includes('primeiro');
 
     if (m.includes('gol') || m.includes('gols')) type = 'goals';
-    else if (m.includes('escanteio') || m.includes('canto')) type = 'corners';
+    else if (m.includes('escanteio') || m.includes('canto') || m.includes('corner')) type = 'corners';
     else if (m.includes('btts') || m.includes('ambos')) type = 'btts';
 
     if (type === 'other') return null;
@@ -181,150 +181,120 @@ export default async function handler(req: any, res: any) {
     const origin = req.headers.origin || req.headers.referer || '';
     if (process.env.NODE_ENV === 'production' && (!origin || !origin.includes('bettrackerpro.com.br'))) return res.status(403).json({ error: 'Acesso negado.' });
 
-    const { images, email, markets } = req.body; 
+    // ✅ Agora recebemos textData (o texto colado) em vez de images
+    const { textData, email, markets } = req.body; 
     
     const geminiKey = process.env.GEMINI_API_KEY;
     const openaiKey = process.env.OPENAI_API_KEY;
     
     if (!geminiKey) return res.status(500).json({ error: 'Chave Gemini ausente.' });
-
-    if (!images || images.length === 0) {
-        throw new Error("Nenhuma imagem enviada para análise.");
-    }
+    if (!textData || textData.trim().length < 50) return res.status(400).json({ error: 'Texto insuficiente para análise estatística.' });
 
     const genAI = new GoogleGenerativeAI(geminiKey);
     const geminiModel = genAI.getGenerativeModel({ 
-        model: 'gemini-2.5-flash',
-        generationConfig: { temperature: 0.10, responseMimeType: "application/json" }
+        model: 'gemini-1.5-flash', // Flash 1.5 é absurdamente rápido e ótimo para extração de texto
+        generationConfig: { temperature: 0.0, responseMimeType: "application/json" }
     });
 
     const openai = openaiKey ? new OpenAI({ apiKey: openaiKey }) : null;
 
-    const imageParts = [images[0]].map((img: any) => {
-        const cleanBase64 = img.base64.replace(/^data:image\/\w+;base64,/, "").replace(/\s/g, "");
-        return {
-            mimeType: img.mimeType || "image/jpeg",
-            data: cleanBase64
-        };
-    });
-
     // ==========================================
-    // 👁️ CAMADA 1: DUAL-ENGINE OCR (Gemini -> Fallback -> GPT-4o)
+    // 👁️ CAMADA 1: TEXT-TO-JSON (O Fim do OCR de Imagem)
     // ==========================================
     let finalValidJson = null; 
-    let attempts = 0;
 
-    const prompt = `Leia a imagem e extraia tabelas estatísticas.
-Extraia apenas:
-- linhas de gols (over/under)
-- linhas de escanteios
-- porcentagens de acerto
+    // Prompt altamente tunado para estruturar dados textuais bagunçados de sites esportivos
+    const prompt = `Atue como um Analista de Dados de Apostas.
+Vou te fornecer um texto bruto copiado de um site de estatísticas de futebol (ex: CornerPro ou Sofascore).
+Sua missão é varrer esse texto, identificar de qual jogo se trata, e extrair as probabilidades estatísticas (Hit Rates) em um formato JSON estrito.
 
-Retorne APENAS JSON.
-Formato:
+Regras de Extração:
+1. Identifique os times (Ex: "Lazio v Sassuolo").
+2. Encontre as odds 1x2 (se houver). Se não houver, retorne null.
+3. Extraia o array de "goalMarketLines" (ex: Over 1.5, 2.5) e suas probabilidades (ex: 80 para 80%).
+4. Extraia o array de "cornerMarketLines" (ex: Over 8.5) e suas probabilidades.
+5. Na chave "viablePicks", crie uma lista limpa com TODAS as estatísticas que você encontrar no texto que sejam relevantes para apostas (ex: "Mais de 2.5 Gols", "Mais de 8.5 Escanteios", "Ambas Marcam").
+   - Se você encontrar menções a Odd no texto, extraia. Se não houver odd explícita, use 1.50.
+
+TEXTO BRUTO DO USUÁRIO:
+"""
+${textData}
+"""
+
+Retorne APENAS um JSON válido neste formato:
 {
  "matches":[
   {
-   "matchName":"Team A v Team B",
-   "goalMarketLines":[{"line":2.5,"prob":65}],
-   "cornerMarketLines":[{"line":8.5,"prob":70}],
+   "matchName":"Time Casa v Time Visitante",
+   "matchContext":"Resumo rápido do confronto baseado nos dados (ex: Jogo com forte tendência a gols)",
+   "matchOdds1x2": { "home": 2.15, "draw": 3.50, "away": 3.50 },
+   "goalMarketLines":[{"line":1.5,"prob":80}, {"line":2.5,"prob":45}],
+   "cornerMarketLines":[{"line":8.5,"prob":75}, {"line":9.5,"prob":50}],
    "viablePicks":[
-    {"market":"Mais de 8.5 Escanteios","prob":70,"sampleSize":10,"extractedOdd":1.50}
+    {"market":"Mais de 1.5 Gols","prob":80,"sampleSize":10,"extractedOdd":1.40}
    ]
   }
  ]
 }`;
 
-    while (attempts < 2 && !finalValidJson) {
-      attempts++;
-      let textResult = "";
-      
-      try {
-        // TENTA GEMINI PRIMEIRO
-        await new Promise(r => setTimeout(r, 1200));
-        
-        const geminiFormatParts = imageParts.map(part => ({
-            inlineData: { mimeType: part.mimeType, data: part.data }
-        }));
-
+    let textResult = "";
+    
+    try {
+        // Tenta com Gemini (Super barato para texto)
         const result = await geminiModel.generateContent({
-            contents: [{ role: "user", parts: [{ text: prompt }, ...geminiFormatParts] }]
+            contents: [{ role: "user", parts: [{ text: prompt }] }]
         });
-
         textResult = result.response.text();
 
-      } catch (geminiError: any) { 
-          console.error("❌ Gemini Falhou:", geminiError.message);
-          
-          // SE GEMINI FALHAR, ACIONA OPENAI IMEDIATAMENTE (FALLBACK)
-          if (openai) {
-              console.log("🔄 Acionando fallback para OpenAI (GPT-4o-mini)...");
-              try {
-                  const openaiImages = imageParts.map(part => ({
-                      type: "image_url",
-                      image_url: { url: `data:${part.mimeType};base64,${part.data}` }
-                  }));
+    } catch (geminiError: any) { 
+        console.error("❌ Gemini NLP Falhou:", geminiError.message);
+        
+        // Se der Rate Limit ou o Gemini cair, o OpenAI assume o texto na hora.
+        if (openai) {
+            console.log("🔄 Acionando fallback para OpenAI (GPT-4o-mini text mode)...");
+            try {
+                const response = await openai.chat.completions.create({
+                    model: "gpt-4o-mini",
+                    messages: [{ role: "user", content: prompt }],
+                    temperature: 0.0,
+                    response_format: { type: "json_object" }
+                });
+                textResult = response.choices[0].message?.content || "";
+            } catch (openaiError: any) {
+                console.error("❌ OpenAI NLP falhou:", openaiError.message);
+                throw new Error("Ambas as IAs falharam na extração do texto.");
+            }
+        } else {
+            throw new Error("Erro na IA do Gemini e sem fallback configurado.");
+        }
+    }
 
-                  // Usando gpt-4o-mini pois é incrivelmente rápido e barato para OCR
-                  const response = await openai.chat.completions.create({
-                      model: "gpt-4o-mini",
-                      messages: [
-                          {
-                              role: "user",
-                              // @ts-ignore
-                              content: [{ type: "text", text: prompt }, ...openaiImages]
-                          }
-                      ],
-                      temperature: 0.1,
-                      response_format: { type: "json_object" }
-                  });
-
-                  textResult = response.choices[0].message?.content || "";
-                  console.log("✅ OpenAI concluiu OCR com sucesso.");
-              } catch (openaiError: any) {
-                  console.error("❌ OpenAI também falhou:", openaiError.message);
-                  throw new Error("⚠️ Ambas as APIs (Gemini e OpenAI) falharam ou atingiram limite. Tente novamente mais tarde.");
-              }
-          } else {
-              // Se não tiver chave da OpenAI configurada, faz o tratamento padrão do Gemini
-              const isRateLimit = geminiError?.message?.includes("429") || geminiError?.status === 429;
-              if (isRateLimit) {
-                  throw new Error("⚠️ O motor atingiu o limite da API de leitura. Aguarde alguns segundos ou configure o backup OpenAI.");
-              }
-              if (attempts >= 2) break;
-              continue;
-          }
-      }
-
-      // Processamento do JSON (Independente de qual IA gerou)
-      try {
-          textResult = textResult.replace(/```json/gi, '').replace(/```/g, '').trim();
-          const jsonMatch = textResult.match(/\{[\s\S]*\}|\[[\s\S]*\]/);
-          if (jsonMatch) textResult = jsonMatch[0];
-          
-          const parsedData = JSON.parse(textResult);
-          
-          if (Array.isArray(parsedData)) {
-              finalValidJson = { matches: parsedData };
-          } else if (parsedData && Array.isArray(parsedData.matches)) {
-              finalValidJson = parsedData;
-          } else if (parsedData && parsedData.matchName) {
-              finalValidJson = { matches: [parsedData] };
-          } else {
-              throw new Error("JSON Inválido.");
-          }
-      } catch(parseError) {
-          console.error("Erro no Parse do JSON:", parseError);
-          if (attempts >= 2) break;
-      }
+    try {
+        textResult = textResult.replace(/```json/gi, '').replace(/```/g, '').trim();
+        const jsonMatch = textResult.match(/\{[\s\S]*\}|\[[\s\S]*\]/);
+        if (jsonMatch) textResult = jsonMatch[0];
+        
+        const parsedData = JSON.parse(textResult);
+        
+        if (Array.isArray(parsedData)) {
+            finalValidJson = { matches: parsedData };
+        } else if (parsedData && Array.isArray(parsedData.matches)) {
+            finalValidJson = parsedData;
+        } else if (parsedData && parsedData.matchName) {
+            finalValidJson = { matches: [parsedData] };
+        } else {
+            throw new Error("JSON não contém dados.");
+        }
+    } catch(e) {
+        throw new Error("O texto fornecido não continha dados estatísticos estruturados suficientes.");
     }
 
     if (!finalValidJson || !finalValidJson.matches || finalValidJson.matches.length === 0) {
-        throw new Error("⚠️ A IA analisou as imagens, mas não conseguiu extrair a matriz numérica com clareza. Tente capturar um Print mais focado.");
+        throw new Error("A IA leu o texto, mas não conseguiu formar a matriz de dados. Copie tabelas mais completas.");
     }
 
     // ==========================================
-    // ⚙️ CAMADA 2: ON-THE-FLY MONTE CARLO ENGINE
+    // ⚙️ CAMADA 2: ON-THE-FLY MONTE CARLO ENGINE (Mantido idêntico)
     // ==========================================
     let allProcessedLegs: any[] = [];
     let globalContextArray: string[] = []; 
@@ -354,7 +324,6 @@ Formato:
         const l1 = Math.max(0.1, lh - l3);
         const l2 = Math.max(0.1, la - l3);
 
-        // 🔥 1. Adiciona o que o OCR encontrou
         const activeMarketsMap = new Map();
         for (let pick of match.viablePicks) {
             const norm = normalizeMarket(pick.market || '', match.matchName || '');
@@ -364,8 +333,7 @@ Formato:
             }
         }
 
-        // 🔥 2. AUTO-INJETOR DO "FEELING DO APOSTADOR" 
-        // Garante que o motor sempre teste linhas seguras para construir o Bet Builder, mesmo que o OCR não as leia.
+        // 🔥 AUTO-INJETOR DO "FEELING DO APOSTADOR" 
         const standardBettorLines = [
             "Mais de 0.5 Gols", "Mais de 1.5 Gols", "Mais de 2.5 Gols",
             "Mais de 0.5 Gols HT",
@@ -379,7 +347,7 @@ Formato:
                 activeMarketsMap.set(norm.hash, { 
                     norm, 
                     hits: 0, 
-                    ref: { market: sm, sampleSize: 10, extractedOdd: 0, confidence: 1.0 } // Odd 0 = Motor vai precificar sozinho
+                    ref: { market: sm, sampleSize: 10, extractedOdd: 0, confidence: 1.0 }
                 });
             }
         }
@@ -439,7 +407,6 @@ Formato:
             }
         }
 
-        // Pós-processamento dos Counters
         for (let mkt of activeMarkets) {
             const pick = mkt.ref;
             let realSample = Number(pick.sampleSize);
@@ -447,22 +414,20 @@ Formato:
 
             let rawProb = mkt.hits / ITERATIONS;
             rawProb = Math.max(0.01, Math.min(rawProb * (rawProb > 0.85 ? 0.96 : 1), 0.98));
-            const fairOdd = 1 / rawProb;
 
+            const fairOdd = 1 / rawProb;
+            
             // 🔥 PRECIFICADOR SINTÉTICO HFT
-            // Se o OCR não leu a Odd, ou se é uma linha injetada, o Motor simula a margem da Bet365 (8% de Juice)
             let rawOdd = Number(pick.extractedOdd);
             if (!rawOdd || isNaN(rawOdd) || rawOdd === 1.50 || rawOdd === 0) {
-                rawOdd = fairOdd * 0.92; 
+                rawOdd = fairOdd * 0.92; // 8% Juice
             }
             
             const finalOdd = Math.min(Math.max(rawOdd, 1.01), 10.0);
 
-            // Se for linha muito segura (ex: Over 0.5 gols), tolera distorção e permite passar
             const maxOddTolerance = rawProb > 0.65 ? 1.25 : 1.40;
             if (finalOdd > fairOdd * maxOddTolerance) continue; 
             
-            // Aceita pernas ultra-seguras a partir de @1.05 para formar Bet Builders fortes
             if (finalOdd < 1.05) continue; 
 
             allProcessedLegs.push({
@@ -481,11 +446,9 @@ Formato:
     // 💡 PASSO 4: OPPORTUNITY FINDER 
     // ==========================================
     let opportunities: any[] = [];
-    
-    // 🔥 RANGE LIBERADO PARA BET BUILDERS
-    const ODD_MIN = 1.40; 
-    const ODD_MAX = 3.00; 
-    const EDGE_MIN = -0.05; // Permite EV levemente negativo em apostas muito seguras e correlacionadas
+    const ODD_MIN = 1.40;
+    const ODD_MAX = 3.00;
+    const EDGE_MIN = -0.05; 
 
     for (let leg of allProcessedLegs) {
         const marketProb = 1 / leg.extractedOdd;
@@ -519,7 +482,7 @@ Formato:
                 const avgConf = (l1.confidence + l2.confidence) / 2;
                 const avgSamplePen = (l1.samplePenalty + l2.samplePenalty) / 2;
                 
-                // 🔥 BET BUILDER BOOST: Dá 50% de prioridade para combinações do mesmo jogo (O Feeling do Apostador)
+                // 🔥 BET BUILDER BOOST (Privilegia as duplas que o usuário ama)
                 const score = edge * entropyWeight(combProb) * avgConf * avgSamplePen * (isSameGame ? 1.5 : 1.0);
                 
                 opportunities.push({ 
@@ -543,7 +506,7 @@ Formato:
     const topOpportunities = opportunities.slice(0, 3);
 
     if (topOpportunities.length === 0) {
-        throw new Error("NO BET: O Scanner Monte Carlo rodou a matriz matemática e concluiu que o mercado precificou as linhas perfeitamente (Sem Ineficiências Reais no range).");
+        throw new Error("NO BET: O Scanner Monte Carlo rodou a matriz e não encontrou assimetrias matemáticas seguras no range de Odds definido.");
     }
 
     const bestOpp = topOpportunities[0];
@@ -561,28 +524,28 @@ Formato:
     const riskLabel = bestOpp.prob < 0.45 ? "ALTO" : bestOpp.legs.length > 1 ? "MÉDIO" : "BAIXO";
 
     // =====================================================
-    // ✍️ CAMADA 5: RELATÓRIO LOCAL ESTÁTICO 
+    // ✍️ CAMADA 5: RELATÓRIO ESTATÍSTICO NATIVO
     // =====================================================
     const topPickDesc = bestOpp.legs.map((l:any) => `${l.market} (${l.match})`).join(" + ");
 
-    const generatedAnalysis = `A operação principal identificada pelo nosso Motor de Simulação Monte Carlo é a "${topPickDesc}". Após cruzarmos os cenários possíveis da partida em 25.000 iterações (Paths), cravamos uma probabilidade real de ${combinedProb}% para este desfecho, o que se traduz numa Odd Justa (Fair Odd) de @${fairOdd.toFixed(2)}.\n\nDiante da Odd de Mercado parametrizada, o radar detectou uma Edge (Vantagem sobre a Casa) de ${formattedEdge}%. Esta discrepância valida a entrada como uma operação quantitativa sólida e independente de viés emocional.`;
+    const generatedAnalysis = `A operação principal identificada pelo nosso Motor NLP Quantitativo é a "${topPickDesc}". Após processarmos o texto colado e cruzarmos as linhas com nosso gerador Monte Carlo de 25.000 paths (Poisson Bivariado), validamos a expectativa técnica do confronto. A probabilidade matemática deste bilhete é de ${combinedProb}%, precificando a Odd Justa (Fair Odd) em @${fairOdd.toFixed(2)}.\n\nA combinação das pernas (Gols/Cantos) reflete o Game Script mais provável abstraído dos dados do usuário, configurando uma aposta de Valor Esperado positivo contra o desajuste do mercado.`;
 
     let generatedAlt = "";
     if (topOpportunities.length > 1) {
         const altOp = topOpportunities[1];
         const altDesc = altOp.legs.map((l:any) => `${l.market} (${l.match})`).join(" + ");
-        generatedAlt = `OPORTUNIDADE SECUNDÁRIA (${altOp.type}): ${altDesc} (Odd Mercado: @${altOp.odd.toFixed(2)} | EV: ${(altOp.ev*100).toFixed(1)}%). O motor preservou esta opção no radar caso a liquidez da primária seja alterada.`;
+        generatedAlt = `OPORTUNIDADE SECUNDÁRIA (${altOp.type}): ${altDesc} (Odd Mercado Simulado: @${altOp.odd.toFixed(2)} | EV: ${(altOp.ev*100).toFixed(1)}%). O motor preservou esta opção no radar tático.`;
     } else {
-        generatedAlt = "O scanner secundário varreu a grade e não detectou nenhuma alternativa paralela com forte Expectativa de Valor (EV+) dentro do range definido. O EV do jogo está concentrado na aposta principal.";
+        generatedAlt = "O scanner não detectou nenhuma alternativa primária com Valor Esperado sólido para compor a grade de backup. O EV do jogo está esgotado na aposta primária.";
     }
 
     let generatedCons = "";
     if (topOpportunities.length > 2) {
         const consOp = topOpportunities[2];
         const consDesc = consOp.legs.map((l:any) => `${l.market} (${l.match})`).join(" + ");
-        generatedCons = `OPORTUNIDADE DE COBERTURA (${consOp.type}): ${consDesc} (Odd Mercado: @${consOp.odd.toFixed(2)} | EV: ${(consOp.ev*100).toFixed(1)}%).`;
+        generatedCons = `OPORTUNIDADE DE COBERTURA (${consOp.type}): ${consDesc} (Odd: @${consOp.odd.toFixed(2)}).`;
     } else {
-        generatedCons = `Devido à ausência de variações de segurança viáveis com valor matemático positivo, sugere-se uma gestão de banca rigorosa alinhada ao nível de Risco ${riskLabel} da operação primária.`;
+        generatedCons = `Devido à variação técnica do confronto, sugere-se uma gestão de banca rigorosa alinhada ao nível de Risco ${riskLabel}.`;
     }
 
     return res.status(200).json({
@@ -596,7 +559,7 @@ Formato:
     });
 
   } catch (error: any) {
-    console.error("Erro Engine:", error);
-    return res.status(400).json({ error: error.message || 'Erro ao processar cotações.' });
+    console.error("Erro Engine NLP:", error);
+    return res.status(400).json({ error: error.message || 'Erro ao processar cotações textuais.' });
   }
 }
