@@ -86,7 +86,7 @@ const negativeBinomialSample = (mean: number, dispersion: number) => {
 };
 
 // ==========================================
-// 🛠️ 3. NORMALIZAÇÃO HFT (NLP Support)
+// 🛠️ 3. NORMALIZAÇÃO HFT (AGORA SUPORTA "RACE")
 // ==========================================
 const normalizeMarket = (marketStr: string, matchName: string) => {
     if (!marketStr || !matchName) return null;
@@ -99,17 +99,27 @@ const normalizeMarket = (marketStr: string, matchName: string) => {
     let line = 0;
     let isOver = false;
 
-    if (m.includes('exato') || m.includes('ímpar') || m.includes('par') || m.includes('primeiro a')) return null;
+    // Bloqueia lixo, mas garante que "Race" passe
+    if ((m.includes('exato') || m.includes('ímpar') || m.includes('par') || m.includes('primeiro a')) && !m.includes('race')) return null;
 
+    const raceMatch = m.match(/race\s*(\d+)/i);
     const lineMatch = m.match(/(?:mais|menos|over|under|acima|abaixo)[^\d]*(\d+(\.\d+)?)/i);
-    if (lineMatch) line = parseFloat(lineMatch[1]);
 
-    isOver = m.includes('mais') || m.includes('over') || m.includes('acima');
-    const isHT = m.includes('ht') || m.includes('1º tempo') || m.includes('1o tempo') || m.includes('primeiro');
+    if (raceMatch) {
+        type = 'race';
+        line = parseInt(raceMatch[1]);
+    } else if (lineMatch) {
+        line = parseFloat(lineMatch[1]);
+        isOver = m.includes('mais') || m.includes('over') || m.includes('acima');
+    }
 
-    if (m.includes('gol') || m.includes('gols')) type = 'goals';
-    else if (m.includes('escanteio') || m.includes('canto') || m.includes('corner') || m.includes('race')) type = 'corners';
-    else if (m.includes('btts') || m.includes('ambos')) type = 'btts';
+    const isHT = m.includes('ht') || m.includes('1º tempo') || m.includes('1o tempo');
+
+    if (type !== 'race') {
+        if (m.includes('gol') || m.includes('gols')) type = 'goals';
+        else if (m.includes('escanteio') || m.includes('canto') || m.includes('corner')) type = 'corners';
+        else if (m.includes('btts') || m.includes('ambos')) type = 'btts';
+    }
 
     if (type === 'other') return null;
 
@@ -119,7 +129,7 @@ const normalizeMarket = (marketStr: string, matchName: string) => {
     else if (m.includes('casa')) target = 'home';
     else if (m.includes('visitante')) target = 'away';
 
-    const condition = type === 'btts' ? 'yes' : isOver ? 'over' : 'under';
+    const condition = type === 'btts' ? 'yes' : type === 'race' ? 'first_to' : isOver ? 'over' : 'under';
     const hash = `${type}_${target}_${condition}_${line}_${isHT ? 'ht' : 'ft'}`;
 
     return { type, target, line, isOver, isHT, hash };
@@ -197,12 +207,12 @@ export default async function handler(req: any, res: any) {
     // ==========================================
     let finalValidJson = null; 
 
-    const prompt = `Atue como um Analista de Dados.
-Leia o texto bruto de estatísticas esportivas e extraia as porcentagens (Hit Rates) em JSON.
+    const prompt = `Atue como um Analista Quantitativo de Dados.
+Leia o texto bruto de estatísticas esportivas (CornerPro, Sofascore) e extraia TUDO para JSON.
 1. Identifique os times (Ex: "Lazio v Sassuolo").
 2. Encontre odds 1x2 se existirem.
 3. Extraia "goalMarketLines" e "cornerMarketLines".
-4. Na chave "viablePicks", crie uma lista com as estatísticas claras encontradas (ex: "Ambas Marcam", "Mais de 2.5 Gols").
+4. Na chave "viablePicks", crie uma lista com todas as estatísticas numéricas encontradas no texto (ex: "Ambas Marcam", "Mais de 2.5 Gols", "Race 3 Escanteios Equipe A").
 
 TEXTO BRUTO:
 """
@@ -268,7 +278,7 @@ Retorne APENAS um JSON:
     // ⚙️ CAMADA 2: GAME SCRIPT ENGINE & MONTE CARLO
     // ==========================================
     let allProcessedLegs: any[] = [];
-    let detectedGameScript = "OPEN_GAME"; // Default
+    let detectedGameScript = "OPEN_GAME"; 
 
     for (let match of finalValidJson.matches) {
         let market_lt = 2.6; 
@@ -287,7 +297,7 @@ Retorne APENAS um JSON:
         let lh = market_lt * pH; 
         let la = market_lt * pA;
 
-        // 🔥 2.1 GAME SCRIPT DETECTION (Classificador Profissional)
+        // 🔥 2.1 GAME SCRIPT DETECTION (Causalidade Institucional)
         const homeDominance = lh / (lh + la);
         if (pH > 0.45 && homeDominance > 0.55 && lh > la * 1.2) {
             detectedGameScript = "HOME_PRESSURE";
@@ -309,7 +319,7 @@ Retorne APENAS um JSON:
 
         const activeMarketsMap = new Map();
         
-        // Adiciona as apostas extraídas
+        // Adiciona as apostas do texto extraído
         if (match.viablePicks) {
             for (let pick of match.viablePicks) {
                 const norm = normalizeMarket(pick.market || '', match.matchName || '');
@@ -318,27 +328,35 @@ Retorne APENAS um JSON:
             }
         }
 
-        // 🔥 2.2 MARKET TEMPLATES (Causalidade baseada no Script)
+        // 🔥 2.2 SCRIPT TEMPLATES (Espaço de Busca Rico)
         let smartLines: string[] = [];
         
         if (detectedGameScript === "HOME_PRESSURE") {
             smartLines = [
-                `${homeTeam} Mais de 0.5 Gols`, `${homeTeam} Mais de 1.5 Gols`, "Mais de 1.5 Gols",
-                `${homeTeam} Mais de 3.5 Escanteios`, `${homeTeam} Mais de 4.5 Escanteios`, "Mais de 8.5 Escanteios"
+                `${homeTeam} Mais de 0.5 Gols`, `${homeTeam} Mais de 1.5 Gols`, "Mais de 1.5 Gols", "Mais de 2.5 Gols", "Mais de 0.5 Gols HT",
+                `${homeTeam} Mais de 2.5 Escanteios`, `${homeTeam} Mais de 3.5 Escanteios`, `${homeTeam} Mais de 4.5 Escanteios`,
+                "Mais de 6.5 Escanteios", "Mais de 7.5 Escanteios", "Mais de 8.5 Escanteios",
+                `${homeTeam} Race 3`, `${homeTeam} Race 5`, `${homeTeam} Race 7`
             ];
         } else if (detectedGameScript === "AWAY_PRESSURE") {
             smartLines = [
-                `${awayTeam} Mais de 0.5 Gols`, `${awayTeam} Mais de 1.5 Gols`, "Mais de 1.5 Gols",
-                `${awayTeam} Mais de 3.5 Escanteios`, `${awayTeam} Mais de 4.5 Escanteios`, "Mais de 8.5 Escanteios"
+                `${awayTeam} Mais de 0.5 Gols`, `${awayTeam} Mais de 1.5 Gols`, "Mais de 1.5 Gols", "Mais de 2.5 Gols", "Mais de 0.5 Gols HT",
+                `${awayTeam} Mais de 2.5 Escanteios`, `${awayTeam} Mais de 3.5 Escanteios`, `${awayTeam} Mais de 4.5 Escanteios`,
+                "Mais de 6.5 Escanteios", "Mais de 7.5 Escanteios", "Mais de 8.5 Escanteios",
+                `${awayTeam} Race 3`, `${awayTeam} Race 5`, `${awayTeam} Race 7`
             ];
         } else if (detectedGameScript === "OPEN_GAME") {
             smartLines = [
-                "Mais de 1.5 Gols", "Mais de 2.5 Gols", "Ambas Marcam Sim",
-                "Mais de 7.5 Escanteios", "Mais de 8.5 Escanteios"
+                "Mais de 1.5 Gols", "Mais de 2.5 Gols", "Mais de 3.5 Gols", "Ambas Marcam Sim", "Mais de 0.5 Gols HT",
+                "Mais de 7.5 Escanteios", "Mais de 8.5 Escanteios", "Mais de 9.5 Escanteios",
+                `${homeTeam} Mais de 0.5 Gols`, `${awayTeam} Mais de 0.5 Gols`,
+                `${homeTeam} Mais de 3.5 Escanteios`, `${awayTeam} Mais de 3.5 Escanteios`
             ];
         } else { // LOW_TEMPO
             smartLines = [
-                "Menos de 2.5 Gols", "Menos de 3.5 Gols", "Menos de 10.5 Escanteios"
+                "Menos de 2.5 Gols", "Menos de 3.5 Gols", "Menos de 1.5 Gols HT",
+                "Menos de 9.5 Escanteios", "Menos de 10.5 Escanteios",
+                `${homeTeam} Menos de 1.5 Gols`, `${awayTeam} Menos de 1.5 Gols`
             ];
         }
 
@@ -355,7 +373,7 @@ Retorne APENAS um JSON:
         const ITERATIONS = 25000;
         const homeCornerShare = l1 / (l1 + l2);
 
-        // 🔥 2.3 MONTE CARLO BIVARIADO (Rodando a Causalidade)
+        // 🔥 2.3 MONTE CARLO BIVARIADO (Rodando a Causalidade e Race Markets)
         for (let i = 0; i < ITERATIONS; i++) {
             const z = poissonSample(l3);
             const goalsHome = poissonSample(l1) + z;
@@ -369,9 +387,20 @@ Retorne APENAS um JSON:
             corners = Math.min(corners, 22);
 
             let cornersHome = 0; let cornersAway = 0;
+            let race3Winner = 'none'; let race5Winner = 'none'; let race7Winner = 'none'; let race9Winner = 'none';
+
             for (let c = 0; c < corners; c++) {
                 if (Math.random() < homeCornerShare) cornersHome++;
                 else cornersAway++;
+
+                if (cornersHome === 3 && race3Winner === 'none') race3Winner = 'home';
+                if (cornersAway === 3 && race3Winner === 'none') race3Winner = 'away';
+                if (cornersHome === 5 && race5Winner === 'none') race5Winner = 'home';
+                if (cornersAway === 5 && race5Winner === 'none') race5Winner = 'away';
+                if (cornersHome === 7 && race7Winner === 'none') race7Winner = 'home';
+                if (cornersAway === 7 && race7Winner === 'none') race7Winner = 'away';
+                if (cornersHome === 9 && race9Winner === 'none') race9Winner = 'home';
+                if (cornersAway === 9 && race9Winner === 'none') race9Winner = 'away';
             }
 
             for (let j = 0; j < activeMarkets.length; j++) {
@@ -393,13 +422,22 @@ Retorne APENAS um JSON:
                     isHit = norm.isOver ? (simCorners > norm.line) : (simCorners < norm.line);
                 } else if (norm.type === 'btts') {
                     isHit = (goalsHome > 0 && goalsAway > 0);
+                } else if (norm.type === 'race') {
+                    if (norm.line === 3) isHit = (norm.target === 'home' && race3Winner === 'home') || (norm.target === 'away' && race3Winner === 'away');
+                    else if (norm.line === 5) isHit = (norm.target === 'home' && race5Winner === 'home') || (norm.target === 'away' && race5Winner === 'away');
+                    else if (norm.line === 7) isHit = (norm.target === 'home' && race7Winner === 'home') || (norm.target === 'away' && race7Winner === 'away');
+                    else if (norm.line === 9) isHit = (norm.target === 'home' && race9Winner === 'home') || (norm.target === 'away' && race9Winner === 'away');
+                    else {
+                         if (norm.target === 'home') isHit = cornersHome >= norm.line && cornersHome > cornersAway;
+                         if (norm.target === 'away') isHit = cornersAway >= norm.line && cornersAway > cornersHome;
+                    }
                 }
                 
                 if (isHit) mkt.hits++;
             }
         }
 
-        // 🔥 2.4 PRE-FILTRO DE LINHAS BURRAS (O que o usuário exigiu)
+        // 🔥 2.4 FILTRO RELAXADO E LINHAS BURRAS (O Segredo do Builder)
         for (let mkt of activeMarkets) {
             const pick = mkt.ref;
             let rawProb = mkt.hits / ITERATIONS;
@@ -409,15 +447,15 @@ Retorne APENAS um JSON:
             
             let rawOdd = Number(pick.extractedOdd);
             if (!rawOdd || isNaN(rawOdd) || rawOdd === 1.50 || rawOdd === 0) {
-                rawOdd = fairOdd * 0.92; // Odd Simulada (Juice)
+                rawOdd = fairOdd * 0.92; // Juice Simulado
             }
             
             const finalOdd = Math.min(Math.max(rawOdd, 1.01), 10.0);
 
-            // O FILTRO DE QUALIDADE (Limpa o espaço de busca)
-            if (rawProb < 0.52) continue; // Probabilidade menor que 52% é lixo
-            if (finalOdd > 2.30) continue; // Odd irreal
-            if (finalOdd < 1.18) continue; // Retorno inútil
+            // FILTRO MODERNO: Não mata pernas sólidas (>42%) e limpa lixo irreal
+            if (rawProb < 0.42) continue; 
+            if (finalOdd > 2.35) continue; 
+            if (finalOdd < 1.18) continue; 
 
             allProcessedLegs.push({
                 match: match.matchName,
@@ -434,11 +472,10 @@ Retorne APENAS um JSON:
     }
 
     // ==========================================
-    // 💡 PASSO 3: O "SMART BUILDER" (Correlação Real)
+    // 💡 PASSO 3: O "SMART BUILDER" (Correlação Real de Syndicate)
     // ==========================================
     let opportunities: any[] = [];
     
-    // Range Alvo Final para o Bilhete
     const ODD_MIN = 1.55; 
     const ODD_MAX = 2.20; 
     const EDGE_MIN = -0.05; 
@@ -462,24 +499,18 @@ Retorne APENAS um JSON:
             const l2 = allProcessedLegs[j];
             const isSameGame = l1.match === l2.match;
 
-            // Previne duplas inúteis (Ex: Lazio Over 0.5 Gols + Lazio Over 1.5 Gols)
             if (isSameGame && l1.mktType === l2.mktType && l1.mktTarget === l2.mktTarget) continue;
 
             let combProb = l1.rawProb * l2.rawProb;
 
-            // 🔥 A CORRELAÇÃO DE SYNDICATE
+            // 🔥 A CORRELAÇÃO MATEMÁTICA (+18% Boost para Gols + Cantos/Race da Equipe)
             if (isSameGame) {
-                // Gols do Time + Cantos do Mesmo Time (Ataque total) = Correlação Altamente Positiva
                 if (l1.mktTarget === l2.mktTarget && l1.mktTarget !== 'match' && l1.mktType !== l2.mktType) {
-                    combProb = combProb * 1.12; // +12% Boost na probabilidade combinada
-                } 
-                // Gols do Jogo + Cantos do Jogo = Correlação Positiva Moderada
-                else if (l1.mktTarget === 'match' && l2.mktTarget === 'match' && l1.mktType !== l2.mktType) {
-                    combProb = combProb * 1.05; // +5% Boost
-                }
-                // Apostas descasadas no mesmo jogo sofrem a taxa normal da casa
-                else {
-                    combProb *= 0.95; 
+                    combProb = combProb * 1.18; // Super Correlação Positiva (Ataque -> Gol e Canto)
+                } else if (l1.mktTarget === 'match' && l2.mktTarget === 'match' && l1.mktType !== l2.mktType) {
+                    combProb = combProb * 1.05; // Correlação Leve (Jogo aberto -> Gols e Cantos gerais)
+                } else {
+                    combProb *= 0.95; // Taxa normal da casa (Same Game Tax)
                 }
             }
             
@@ -490,7 +521,7 @@ Retorne APENAS um JSON:
             const ev = (combProb * combOdd) - 1;
 
             if (combOdd >= ODD_MIN && combOdd <= ODD_MAX && edge >= EDGE_MIN) {
-                // Multiplicador massivo para forçar o Bet Builder tático pro Topo
+                // Multiplicador massivo para forçar o Bet Builder Causal pro Topo
                 const isSmartBuilder = isSameGame && l1.mktType !== l2.mktType;
                 const score = edge * entropyWeight(combProb) * (isSmartBuilder ? 3.0 : 0.8);
                 
@@ -515,7 +546,7 @@ Retorne APENAS um JSON:
     const topOpportunities = opportunities.slice(0, 3);
 
     if (topOpportunities.length === 0) {
-        throw new Error(`NO BET: O Game Script (${detectedGameScript}) foi lido, mas as linhas filtradas não ofereceram segurança matemática suficiente (Min 52% Prob) no range @1.60 - @2.20.`);
+        throw new Error(`NO BET: O Game Script (${detectedGameScript}) foi lido, mas as linhas disponíveis não geraram combinações de valor no range @1.60 - @2.20.`);
     }
 
     const bestOpp = topOpportunities[0];
@@ -530,14 +561,14 @@ Retorne APENAS um JSON:
     const fairOdd = Number((1 / bestOpp.prob).toFixed(2));
     const marketOdd = Number(bestOpp.odd.toFixed(2));
     const formattedEdge = (bestOpp.edge * 100) > 0 ? `+${(bestOpp.edge * 100).toFixed(1)}` : `${(bestOpp.edge * 100).toFixed(1)}`;
-    const riskLabel = bestOpp.prob < 0.52 ? "ALTO" : bestOpp.prob >= 0.65 ? "BAIXO" : "MÉDIO";
+    const riskLabel = bestOpp.prob < 0.45 ? "ALTO" : bestOpp.prob >= 0.60 ? "BAIXO" : "MÉDIO";
 
     // =====================================================
     // ✍️ CAMADA 5: RELATÓRIO CAUSAL
     // =====================================================
     const topPickDesc = bestOpp.legs.map((l:any) => `${l.market} (${l.match})`).join(" + ");
 
-    const generatedAnalysis = `O Motor identificou um padrão tático de [${detectedGameScript}] para este confronto. Baseado nisso, aplicamos a estratégia de Variance Smoothing para montar o bilhete "${topPickDesc}". \n\nAtravés da matriz bivariada, calculamos que as pernas possuem correlação positiva real (Ataque gera Gols e Cantos simultaneamente). Esta causalidade eleva a probabilidade matemática do bilhete para ${combinedProb}%, configurando uma operação superior a apostas singulares cegas de alta odd.`;
+    const generatedAnalysis = `O Motor identificou um padrão tático de [${detectedGameScript}] para este confronto. Baseado nisso, aplicamos a estratégia de Correlação Direta para montar o bilhete "${topPickDesc}". \n\nAtravés da matriz bivariada, calculamos que as pernas possuem correlação positiva real (A pressão gera Gols e Escanteios simultaneamente). Esta causalidade eleva a probabilidade matemática do bilhete para ${combinedProb}%, configurando uma operação de valor superior a apostas singulares cegas de alta odd.`;
 
     let generatedAlt = "";
     if (topOpportunities.length > 1) {
@@ -545,7 +576,7 @@ Retorne APENAS um JSON:
         const altDesc = altOp.legs.map((l:any) => `${l.market} (${l.match})`).join(" + ");
         generatedAlt = `OPORTUNIDADE SECUNDÁRIA (${altOp.type}): ${altDesc} (Odd Simulada: @${altOp.odd.toFixed(2)}). Preservada como alternativa tática com correlação matemática positiva.`;
     } else {
-        generatedAlt = "O filtro de linhas bloqueou alternativas secundárias devido à falta de margem de segurança (>52% Win Rate). Foco absoluto na aposta principal.";
+        generatedAlt = "O filtro de linhas bloqueou alternativas secundárias devido à falta de margem de segurança. Foco absoluto na aposta principal.";
     }
 
     let generatedCons = "";
