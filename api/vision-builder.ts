@@ -203,38 +203,33 @@ export default async function handler(req: any, res: any) {
     const imageParts = images.map((img: any) => ({ inlineData: { data: img.base64, mimeType: img.mimeType } }));
 
     // ==========================================
-    // 👁️ CAMADA 1: VISION OCR (The Scraper "Trator")
+    // 👁️ CAMADA 1: VISION OCR (The Scraper Resiliente)
     // ==========================================
     let finalValidJson = null; 
     let attempts = 0;
 
     while (attempts < 3 && !finalValidJson) {
       attempts++;
-      // Prompt simplificado: Força a IA a ser um digitador literal e parar de julgar os dados
-      const prompt = `Aja estritamente como um Extrator de Dados Literal.
-Sua única função é ler as tabelas da imagem e transcrever os números para JSON. NÃO julgue se os dados são bons ou ruins.
+      const prompt = `Extraia os dados estatísticos das imagens e retorne APENAS um arquivo JSON válido.
 
-1. Agrupe por jogo em "matches".
-2. Extraia "matchOdds1x2" (home, draw, away), "goalMarketLines" e "cornerMarketLines".
-3. Em "viablePicks", transcreva TODOS os mercados de Gols e Escanteios visíveis, com suas porcentagens.
-   - 🛑 IGNORE "Race", "Exato", "Par/Ímpar", "Primeiro a".
-   - "prob": A porcentagem de acerto na tela (ex: 80).
-   - "sampleSize": Use 10.
-   - "extractedOdd": SE NÃO ACHAR A ODD NA IMAGEM, COLOQUE 1.50 OBRIGATORIAMENTE.
-   - "confidence": 0.9.
-4. "matchContext": Uma linha curta sobre o jogo.
+Instruções rápidas:
+1. Agrupe os dados no array "matches".
+2. Extraia "matchOdds1x2" (home, draw, away).
+3. Na chave "viablePicks", coloque os mercados de Gols e Escanteios encontrados com suas probabilidades ("prob").
+4. Se a odd ("extractedOdd") não estiver visível na imagem, use o número 1.50 como padrão.
+5. Ignore mercados de Race, Handicap ou nomes de Jogadores.
 
-Formato JSON esperado:
+Exemplo de formato:
 {
   "matches": [
     {
-      "matchName": "A v B",
+      "matchName": "Time A v Time B",
       "matchContext": "Resumo...",
       "matchOdds1x2": { "home": 1.80, "draw": 3.60, "away": 4.20 },
       "goalMarketLines": [ {"line": 1.5, "prob": 70} ],
       "cornerMarketLines": [ {"line": 8.5, "prob": 65} ],
       "viablePicks": [
-        { "market": "Mais de 8.5 Escanteios", "prob": 67, "sampleSize": 10, "extractedOdd": 1.72, "confidence": 0.95 }
+        { "market": "Mais de 8.5 Escanteios", "prob": 67, "sampleSize": 10, "extractedOdd": 1.72 }
       ]
     }
   ]
@@ -243,34 +238,41 @@ Formato JSON esperado:
         const result = await model.generateContent([{ text: prompt }, ...imageParts]);
         let textResult = result.response.text();
         
-        // 🛡️ EXTRATOR BRUTO: Ignora "Olá, aqui está o JSON" e puxa apenas a estrutura de chaves { }
-        const jsonMatch = textResult.match(/\{[\s\S]*\}/);
-        if (!jsonMatch) {
-            throw new Error("A IA não retornou nenhuma estrutura JSON legível.");
+        // Limpeza de segurança
+        textResult = textResult.replace(/```json/gi, '').replace(/```/g, '').trim();
+        
+        // 🛡️ Extrator Universal: Puxa tanto Objetos {} quanto Arrays [] gerados pela IA
+        const jsonMatch = textResult.match(/\{[\s\S]*\}|\[[\s\S]*\]/);
+        if (jsonMatch) {
+            textResult = jsonMatch[0];
         }
         
-        // Limpa possíveis marcações markdown restantes dentro do match
-        let cleanJsonStr = jsonMatch[0].replace(/```json/gi, '').replace(/```/g, '').trim();
+        const parsedData = JSON.parse(textResult);
         
-        const parsedData = JSON.parse(cleanJsonStr);
-        
-        // 🛡️ VALIDAÇÃO RELAXADA: Se veio a chave 'matches', aceita e passa a bola para o Monte Carlo
-        if (parsedData && Array.isArray(parsedData.matches)) {
+        // 🛡️ VALIDAÇÃO ULTRA-FLEXÍVEL: Aceita qualquer formato que a IA inventar e converte para o Motor
+        if (Array.isArray(parsedData)) {
+            // Se a IA mandou direto um array de jogos
+            finalValidJson = { matches: parsedData };
+        } else if (parsedData && Array.isArray(parsedData.matches)) {
+            // Se mandou no formato exato solicitado
             finalValidJson = parsedData;
+        } else if (parsedData && parsedData.matchName) {
+            // Se mandou apenas 1 jogo solto como objeto
+            finalValidJson = { matches: [parsedData] };
         } else {
-            throw new Error("A estrutura JSON não continha o array 'matches'.");
+            throw new Error("JSON não contém dados de jogos identificáveis.");
         }
         
       } catch (e: any) { 
           console.error(`Tentativa OCR ${attempts} falhou:`, e.message);
-          // Pausa de 2.5 segundos para evitar bloqueio da API do Google
+          // Pausa de 2.5s para evitar Rate Limit e bloqueio da API
           await new Promise(resolve => setTimeout(resolve, 2500));
           continue; 
       }
     }
 
-    if (!finalValidJson || !finalValidJson.matches) {
-        throw new Error("Abortado: O Google Gemini não conseguiu ler a imagem com clareza. Tente focar o print nas tabelas numéricas.");
+    if (!finalValidJson || !finalValidJson.matches || finalValidJson.matches.length === 0) {
+        throw new Error("⚠️ A IA analisou as imagens, mas não conseguiu extrair números claros o suficiente. DICA: Em celulares, tente dar zoom e focar os prints apenas nas tabelas de Gols/Cantos.");
     }
 
     // ==========================================
