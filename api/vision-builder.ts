@@ -4,7 +4,7 @@ import OpenAI from 'openai';
 export const maxDuration = 60;
 
 // ==========================================
-// 🧠 1. MOTOR DE TEORIA DA INFORMAÇÃO 
+// 🧠 1. MOTOR DE TEORIA DA INFORMAÇÃO E SRE
 // ==========================================
 const shannonEntropy = (p: number) => {
     if (p <= 0 || p >= 1 || isNaN(p)) return 0;
@@ -86,7 +86,7 @@ const negativeBinomialSample = (mean: number, dispersion: number) => {
 };
 
 // ==========================================
-// 🛠️ 3. NORMALIZAÇÃO HFT (AGORA SUPORTA "RACE")
+// 🛠️ 3. NORMALIZAÇÃO HFT 
 // ==========================================
 const normalizeMarket = (marketStr: string, matchName: string) => {
     if (!marketStr || !matchName) return null;
@@ -99,7 +99,6 @@ const normalizeMarket = (marketStr: string, matchName: string) => {
     let line = 0;
     let isOver = false;
 
-    // Bloqueia lixo, mas garante que "Race" passe
     if ((m.includes('exato') || m.includes('ímpar') || m.includes('par') || m.includes('primeiro a')) && !m.includes('race')) return null;
 
     const raceMatch = m.match(/race\s*(\d+)/i);
@@ -143,42 +142,6 @@ const getTrueProbabilitiesFrom1X2 = (oddH: number, oddD: number, oddA: number) =
     return { pH: pH / sum, pD: pD / sum, pA: pA / sum };
 };
 
-const estimateLambdaFromMarket = (lines: {line: number, prob: number}[]) => {
-    if (!lines || lines.length < 2) return null; 
-    let bestLambda = 2.5; let bestError = Infinity;
-    for (let lambda = 0.5; lambda <= 4.5; lambda += 0.05) {
-        let error = 0;
-        for (let l of lines) {
-            const k = Math.floor(l.line); 
-            if (isNaN(k)) continue;
-            const targetProb = l.prob > 1 ? l.prob / 100 : l.prob;
-            const safeProb = Math.min(Math.max(targetProb, 0.05), 0.95);
-            const weight = Math.min(1 / (safeProb * (1 - safeProb)), 10); 
-            error += weight * Math.pow((1 - poissonCDF(lambda, k)) - targetProb, 2);
-        }
-        if (error < bestError && !isNaN(error)) { bestError = error; bestLambda = lambda; }
-    }
-    return bestLambda;
-};
-
-const estimateCornerLambdaFromMarket = (lines: {line: number, prob: number}[]) => {
-    if (!lines || lines.length < 2) return null; 
-    let bestLambda = 9.5; let bestError = Infinity;
-    for (let lambda = 6.0; lambda <= 15.0; lambda += 0.1) {
-        let error = 0;
-        for (let l of lines) {
-            const k = Math.floor(l.line);
-            if (isNaN(k)) continue;
-            const targetProb = l.prob > 1 ? l.prob / 100 : l.prob;
-            const safeProb = Math.min(Math.max(targetProb, 0.05), 0.95);
-            const weight = Math.min(1 / (safeProb * (1 - safeProb)), 10);
-            error += weight * Math.pow((1 - poissonCDF(lambda, k)) - targetProb, 2);
-        }
-        if (error < bestError && !isNaN(error)) { bestError = error; bestLambda = lambda; }
-    }
-    return bestLambda;
-};
-
 export default async function handler(req: any, res: any) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method Not Allowed' });
 
@@ -203,16 +166,19 @@ export default async function handler(req: any, res: any) {
     const openai = openaiKey ? new OpenAI({ apiKey: openaiKey }) : null;
 
     // ==========================================
-    // 👁️ CAMADA 1: TEXT-TO-JSON (NLP Extractor)
+    // 👁️ CAMADA 1: TEXT-TO-JSON (NLP Extractor Avançado)
     // ==========================================
     let finalValidJson = null; 
 
+    // 🔥 PROMPT EVOLUÍDO: Agora extrai Shots (Remates) e médias individuais
     const prompt = `Atue como um Analista Quantitativo de Dados.
-Leia o texto bruto de estatísticas esportivas (CornerPro, Sofascore) e extraia TUDO para JSON.
+Leia o texto bruto de estatísticas esportivas (CornerPro, Sofascore) e extraia para JSON.
+
+Regras Vitais:
 1. Identifique os times (Ex: "Lazio v Sassuolo").
-2. Encontre odds 1x2 se existirem.
-3. Extraia "goalMarketLines" e "cornerMarketLines".
-4. Na chave "viablePicks", crie uma lista com todas as estatísticas numéricas encontradas no texto (ex: "Ambas Marcam", "Mais de 2.5 Gols", "Race 3 Escanteios Equipe A").
+2. Extraia "matchOdds1x2" se houver.
+3. Extraia o "teamStats" (Média de Gols, Cantos a Favor e Remates/Shots por jogo) para o Home e Away. Se não achar Remates, use 10.0.
+4. Na chave "viablePicks", liste todas as probabilidades de linhas de Gols, Cantos e Races que encontrar.
 
 TEXTO BRUTO:
 """
@@ -225,8 +191,10 @@ Retorne APENAS um JSON:
   {
    "matchName":"Time Casa v Time Visitante",
    "matchOdds1x2": { "home": 2.15, "draw": 3.50, "away": 3.50 },
-   "goalMarketLines":[{"line":1.5,"prob":80}],
-   "cornerMarketLines":[{"line":8.5,"prob":75}],
+   "teamStats": {
+       "home": { "goals": 1.5, "corners": 5.2, "shots": 13.0 },
+       "away": { "goals": 1.1, "corners": 3.9, "shots": 10.0 }
+   },
    "viablePicks":[{"market":"Mais de 1.5 Gols","prob":80,"sampleSize":10,"extractedOdd":1.40}]
   }
  ]
@@ -275,35 +243,43 @@ Retorne APENAS um JSON:
     }
 
     // ==========================================
-    // ⚙️ CAMADA 2: GAME SCRIPT ENGINE & MONTE CARLO
+    // ⚙️ CAMADA 2: GAME SCRIPT & TPI ENGINE
     // ==========================================
     let allProcessedLegs: any[] = [];
     let detectedGameScript = "OPEN_GAME"; 
+    let dynamicCorrelationBoost = 1.0; // Default
 
     for (let match of finalValidJson.matches) {
-        let market_lt = 2.6; 
-        let market_lc = 10.0; 
         
-        let pH = 0.45; let pD = 0.25; let pA = 0.30;
+        // 🔥 2.1 TEAM PRESSURE INDEX (TPI) 
+        const statsH = match.teamStats?.home || { goals: 1.2, corners: 4.5, shots: 10.0 };
+        const statsA = match.teamStats?.away || { goals: 1.2, corners: 4.5, shots: 10.0 };
+
+        const tpiHome = (statsH.shots * 0.4) + (statsH.goals * 0.3) + (statsH.corners * 0.3);
+        const tpiAway = (statsA.shots * 0.4) + (statsA.goals * 0.3) + (statsA.corners * 0.3);
+        const tpiDiff = Math.abs(tpiHome - tpiAway);
+
+        // A Matemática da Cópula (Correlação Dinâmica baseada em intensidade de pressão)
+        // Se a diferença for brutal (ex: Espanyol 6.8 vs Oviedo 5.3 = Diff 1.5) -> Boost de 1.075 a 1.10
+        dynamicCorrelationBoost = 1 + Math.min(tpiDiff * 0.05, 0.20); 
+
+        let pH = 0.45; let pA = 0.30;
         const trueProbs = match.matchOdds1x2 ? getTrueProbabilitiesFrom1X2(Number(match.matchOdds1x2.home), Number(match.matchOdds1x2.draw), Number(match.matchOdds1x2.away)) : null;
-        if (trueProbs) { pH = trueProbs.pH; pD = trueProbs.pD; pA = trueProbs.pA; }
+        if (trueProbs) { pH = trueProbs.pH; pA = trueProbs.pA; }
 
-        const lsLambdaTotal = estimateLambdaFromMarket(match.goalMarketLines);
-        const lsCorners = estimateCornerLambdaFromMarket(match.cornerMarketLines);
+        let market_lt = statsH.goals + statsA.goals; 
+        let market_lc = statsH.corners + statsA.corners; 
 
-        if (lsLambdaTotal) market_lt = (0.75 * lsLambdaTotal) + (0.25 * 2.6); 
-        if (lsCorners) market_lc = (0.75 * lsCorners) + (0.25 * 10.0);
+        let lh = market_lt * (tpiHome / (tpiHome + tpiAway)); 
+        let la = market_lt * (tpiAway / (tpiHome + tpiAway));
 
-        let lh = market_lt * pH; 
-        let la = market_lt * pA;
-
-        // 🔥 2.1 GAME SCRIPT DETECTION (Causalidade Institucional)
-        const homeDominance = lh / (lh + la);
-        if (pH > 0.45 && homeDominance > 0.55 && lh > la * 1.2) {
+        // GAME SCRIPT DETECTION (Orientado ao TPI e Odds)
+        const homeDominance = tpiHome / (tpiHome + tpiAway);
+        if (pH > 0.40 && homeDominance > 0.55) {
             detectedGameScript = "HOME_PRESSURE";
-        } else if (pA > 0.40 && (1 - homeDominance) > 0.55 && la > lh * 1.2) {
+        } else if (pA > 0.40 && (1 - homeDominance) > 0.55) {
             detectedGameScript = "AWAY_PRESSURE";
-        } else if (market_lt < 2.2 && market_lc < 8.5) {
+        } else if (market_lt < 2.2) {
             detectedGameScript = "LOW_TEMPO";
         } else {
             detectedGameScript = "OPEN_GAME";
@@ -319,7 +295,6 @@ Retorne APENAS um JSON:
 
         const activeMarketsMap = new Map();
         
-        // Adiciona as apostas do texto extraído
         if (match.viablePicks) {
             for (let pick of match.viablePicks) {
                 const norm = normalizeMarket(pick.market || '', match.matchName || '');
@@ -328,35 +303,29 @@ Retorne APENAS um JSON:
             }
         }
 
-        // 🔥 2.2 SCRIPT TEMPLATES (Espaço de Busca Rico)
+        // 🔥 2.2 SCRIPT TEMPLATES (Espaço de Busca com Races e Corners de Equipe)
         let smartLines: string[] = [];
         
         if (detectedGameScript === "HOME_PRESSURE") {
             smartLines = [
-                `${homeTeam} Mais de 0.5 Gols`, `${homeTeam} Mais de 1.5 Gols`, "Mais de 1.5 Gols", "Mais de 2.5 Gols", "Mais de 0.5 Gols HT",
+                `${homeTeam} Mais de 0.5 Gols`, `${homeTeam} Mais de 1.5 Gols`, "Mais de 1.5 Gols", 
                 `${homeTeam} Mais de 2.5 Escanteios`, `${homeTeam} Mais de 3.5 Escanteios`, `${homeTeam} Mais de 4.5 Escanteios`,
-                "Mais de 6.5 Escanteios", "Mais de 7.5 Escanteios", "Mais de 8.5 Escanteios",
+                "Mais de 7.5 Escanteios", "Mais de 8.5 Escanteios",
                 `${homeTeam} Race 3`, `${homeTeam} Race 5`, `${homeTeam} Race 7`
             ];
         } else if (detectedGameScript === "AWAY_PRESSURE") {
             smartLines = [
-                `${awayTeam} Mais de 0.5 Gols`, `${awayTeam} Mais de 1.5 Gols`, "Mais de 1.5 Gols", "Mais de 2.5 Gols", "Mais de 0.5 Gols HT",
+                `${awayTeam} Mais de 0.5 Gols`, `${awayTeam} Mais de 1.5 Gols`, "Mais de 1.5 Gols",
                 `${awayTeam} Mais de 2.5 Escanteios`, `${awayTeam} Mais de 3.5 Escanteios`, `${awayTeam} Mais de 4.5 Escanteios`,
-                "Mais de 6.5 Escanteios", "Mais de 7.5 Escanteios", "Mais de 8.5 Escanteios",
+                "Mais de 7.5 Escanteios", "Mais de 8.5 Escanteios",
                 `${awayTeam} Race 3`, `${awayTeam} Race 5`, `${awayTeam} Race 7`
             ];
-        } else if (detectedGameScript === "OPEN_GAME") {
+        } else {
             smartLines = [
-                "Mais de 1.5 Gols", "Mais de 2.5 Gols", "Mais de 3.5 Gols", "Ambas Marcam Sim", "Mais de 0.5 Gols HT",
-                "Mais de 7.5 Escanteios", "Mais de 8.5 Escanteios", "Mais de 9.5 Escanteios",
+                "Mais de 1.5 Gols", "Mais de 2.5 Gols", "Ambas Marcam Sim",
+                "Mais de 7.5 Escanteios", "Mais de 8.5 Escanteios",
                 `${homeTeam} Mais de 0.5 Gols`, `${awayTeam} Mais de 0.5 Gols`,
-                `${homeTeam} Mais de 3.5 Escanteios`, `${awayTeam} Mais de 3.5 Escanteios`
-            ];
-        } else { // LOW_TEMPO
-            smartLines = [
-                "Menos de 2.5 Gols", "Menos de 3.5 Gols", "Menos de 1.5 Gols HT",
-                "Menos de 9.5 Escanteios", "Menos de 10.5 Escanteios",
-                `${homeTeam} Menos de 1.5 Gols`, `${awayTeam} Menos de 1.5 Gols`
+                `${homeTeam} Race 3`, `${awayTeam} Race 3`
             ];
         }
 
@@ -371,24 +340,36 @@ Retorne APENAS um JSON:
         if (activeMarkets.length === 0) continue; 
 
         const ITERATIONS = 25000;
-        const homeCornerShare = l1 / (l1 + l2);
+        
+        // Probabilidade de chegada de cantos (Pesa para o dominante)
+        let homeCornerShare = tpiHome / (tpiHome + tpiAway);
 
-        // 🔥 2.3 MONTE CARLO BIVARIADO (Rodando a Causalidade e Race Markets)
+        // 🔥 2.3 CONDITIONAL MONTE CARLO (Game Kill Factor)
         for (let i = 0; i < ITERATIONS; i++) {
             const z = poissonSample(l3);
             const goalsHome = poissonSample(l1) + z;
             const goalsAway = poissonSample(l2) + z;
             const totalGoals = goalsHome + goalsAway;
 
-            const pressure = totalGoals;
-            const adjustedCornerMean = market_lc * (1 + pressure * 0.04);
-            const dispersion = 2.0 + (Math.sqrt(pressure) * 0.8); 
+            // Game Kill Factor: Se um time abre larga vantagem, a pressão (e cantos) cai
+            let gameKillFactor = 1.0;
+            if (Math.abs(goalsHome - goalsAway) >= 2) gameKillFactor = 0.75; 
+
+            const pressure = totalGoals * gameKillFactor;
+            
+            // Cantos Condicionais baseados nos Shots (TPI)
+            const baseCornerRate = (statsH.corners + statsA.corners) * 0.4;
+            const shotPressure = ((statsH.shots + statsA.shots) / 20) * 0.6;
+            const adjustedCornerMean = (baseCornerRate + shotPressure * market_lc) * gameKillFactor;
+            
+            const dispersion = 2.0 + (Math.sqrt(adjustedCornerMean) * 0.8); 
             let corners = negativeBinomialSample(adjustedCornerMean, dispersion);
             corners = Math.min(corners, 22);
 
             let cornersHome = 0; let cornersAway = 0;
             let race3Winner = 'none'; let race5Winner = 'none'; let race7Winner = 'none'; let race9Winner = 'none';
 
+            // Arrival Time Distribution para Races (Baseado na dominância TPI)
             for (let c = 0; c < corners; c++) {
                 if (Math.random() < homeCornerShare) cornersHome++;
                 else cornersAway++;
@@ -427,17 +408,13 @@ Retorne APENAS um JSON:
                     else if (norm.line === 5) isHit = (norm.target === 'home' && race5Winner === 'home') || (norm.target === 'away' && race5Winner === 'away');
                     else if (norm.line === 7) isHit = (norm.target === 'home' && race7Winner === 'home') || (norm.target === 'away' && race7Winner === 'away');
                     else if (norm.line === 9) isHit = (norm.target === 'home' && race9Winner === 'home') || (norm.target === 'away' && race9Winner === 'away');
-                    else {
-                         if (norm.target === 'home') isHit = cornersHome >= norm.line && cornersHome > cornersAway;
-                         if (norm.target === 'away') isHit = cornersAway >= norm.line && cornersAway > cornersHome;
-                    }
                 }
                 
                 if (isHit) mkt.hits++;
             }
         }
 
-        // 🔥 2.4 FILTRO RELAXADO E LINHAS BURRAS (O Segredo do Builder)
+        // 🔥 2.4 FILTRO QUANTITATIVO (Ajustado para permitir as pernas do Bet Builder)
         for (let mkt of activeMarkets) {
             const pick = mkt.ref;
             let rawProb = mkt.hits / ITERATIONS;
@@ -447,12 +424,12 @@ Retorne APENAS um JSON:
             
             let rawOdd = Number(pick.extractedOdd);
             if (!rawOdd || isNaN(rawOdd) || rawOdd === 1.50 || rawOdd === 0) {
-                rawOdd = fairOdd * 0.92; // Juice Simulado
+                rawOdd = fairOdd * 0.92; 
             }
             
             const finalOdd = Math.min(Math.max(rawOdd, 1.01), 10.0);
 
-            // FILTRO MODERNO: Não mata pernas sólidas (>42%) e limpa lixo irreal
+            // Permite pernas de até 42% (Odds de ~2.35) passarem para se fundirem no Builder
             if (rawProb < 0.42) continue; 
             if (finalOdd > 2.35) continue; 
             if (finalOdd < 1.18) continue; 
@@ -472,7 +449,7 @@ Retorne APENAS um JSON:
     }
 
     // ==========================================
-    // 💡 PASSO 3: O "SMART BUILDER" (Correlação Real de Syndicate)
+    // 💡 PASSO 3: O "SMART BUILDER" OPTIMIZER 
     // ==========================================
     let opportunities: any[] = [];
     
@@ -492,7 +469,7 @@ Retorne APENAS um JSON:
         }
     }
 
-    // Duplas (Bet Builders de Elite)
+    // Duplas (Modelagem de Cópula e Causalidade)
     for (let i = 0; i < allProcessedLegs.length; i++) {
         for (let j = i + 1; j < allProcessedLegs.length; j++) {
             const l1 = allProcessedLegs[i];
@@ -503,14 +480,17 @@ Retorne APENAS um JSON:
 
             let combProb = l1.rawProb * l2.rawProb;
 
-            // 🔥 A CORRELAÇÃO MATEMÁTICA (+18% Boost para Gols + Cantos/Race da Equipe)
+            // 🔥 APROXIMAÇÃO DA CÓPULA DE SYNDICATE
             if (isSameGame) {
+                // Gols da Equipe + Cantos/Race da mesma equipe = Correlação Positiva Dinâmica (Baseada no TPI)
                 if (l1.mktTarget === l2.mktTarget && l1.mktTarget !== 'match' && l1.mktType !== l2.mktType) {
-                    combProb = combProb * 1.18; // Super Correlação Positiva (Ataque -> Gol e Canto)
-                } else if (l1.mktTarget === 'match' && l2.mktTarget === 'match' && l1.mktType !== l2.mktType) {
-                    combProb = combProb * 1.05; // Correlação Leve (Jogo aberto -> Gols e Cantos gerais)
-                } else {
-                    combProb *= 0.95; // Taxa normal da casa (Same Game Tax)
+                    combProb = combProb * dynamicCorrelationBoost; 
+                } 
+                else if (l1.mktTarget === 'match' && l2.mktTarget === 'match' && l1.mktType !== l2.mktType) {
+                    combProb = combProb * (1 + (dynamicCorrelationBoost - 1) / 2); // Metade do boost para o jogo geral
+                }
+                else {
+                    combProb *= 0.95; // Taxa de construtor descorrelacionado
                 }
             }
             
@@ -521,9 +501,9 @@ Retorne APENAS um JSON:
             const ev = (combProb * combOdd) - 1;
 
             if (combOdd >= ODD_MIN && combOdd <= ODD_MAX && edge >= EDGE_MIN) {
-                // Multiplicador massivo para forçar o Bet Builder Causal pro Topo
                 const isSmartBuilder = isSameGame && l1.mktType !== l2.mktType;
-                const score = edge * entropyWeight(combProb) * (isSmartBuilder ? 3.0 : 0.8);
+                // Valoriza brutalmente o "Feeling do Apostador" (Gols + Race/Cantos)
+                const score = edge * entropyWeight(combProb) * (isSmartBuilder ? 3.5 : 0.8);
                 
                 opportunities.push({ 
                     type: isSameGame ? `Game Script: ${detectedGameScript}` : 'Dupla Cruzada', 
@@ -546,7 +526,7 @@ Retorne APENAS um JSON:
     const topOpportunities = opportunities.slice(0, 3);
 
     if (topOpportunities.length === 0) {
-        throw new Error(`NO BET: O Game Script (${detectedGameScript}) foi lido, mas as linhas disponíveis não geraram combinações de valor no range @1.60 - @2.20.`);
+        throw new Error(`NO BET: O Game Script (${detectedGameScript}) foi lido, mas as linhas filtradas não ofereceram segurança matemática suficiente (Min 42% Prob por perna) no range @1.60 - @2.20.`);
     }
 
     const bestOpp = topOpportunities[0];
@@ -561,22 +541,22 @@ Retorne APENAS um JSON:
     const fairOdd = Number((1 / bestOpp.prob).toFixed(2));
     const marketOdd = Number(bestOpp.odd.toFixed(2));
     const formattedEdge = (bestOpp.edge * 100) > 0 ? `+${(bestOpp.edge * 100).toFixed(1)}` : `${(bestOpp.edge * 100).toFixed(1)}`;
-    const riskLabel = bestOpp.prob < 0.45 ? "ALTO" : bestOpp.prob >= 0.60 ? "BAIXO" : "MÉDIO";
+    const riskLabel = bestOpp.prob < 0.52 ? "ALTO" : bestOpp.prob >= 0.65 ? "BAIXO" : "MÉDIO";
 
     // =====================================================
-    // ✍️ CAMADA 5: RELATÓRIO CAUSAL
+    // ✍️ CAMADA 5: RELATÓRIO INSTITUCIONAL
     // =====================================================
     const topPickDesc = bestOpp.legs.map((l:any) => `${l.market} (${l.match})`).join(" + ");
 
-    const generatedAnalysis = `O Motor identificou um padrão tático de [${detectedGameScript}] para este confronto. Baseado nisso, aplicamos a estratégia de Correlação Direta para montar o bilhete "${topPickDesc}". \n\nAtravés da matriz bivariada, calculamos que as pernas possuem correlação positiva real (A pressão gera Gols e Escanteios simultaneamente). Esta causalidade eleva a probabilidade matemática do bilhete para ${combinedProb}%, configurando uma operação de valor superior a apostas singulares cegas de alta odd.`;
+    const generatedAnalysis = `O TPI Engine (Team Pressure Index) classificou a dinâmica tática deste confronto como [${detectedGameScript}]. Baseado neste grau de pressão e na diferença técnica das equipes, modelamos o bilhete "${topPickDesc}". \n\nUtilizando Aproximação de Cópula para capturar a dependência não-linear dos eventos, identificamos uma correlação dinâmica de +${((dynamicCorrelationBoost - 1)*100).toFixed(1)}% entre as pernas (aumento da probabilidade conjunta). Esta correlação matemática valida a operação como superior a entradas descorrelacionadas de mesma odd.`;
 
     let generatedAlt = "";
     if (topOpportunities.length > 1) {
         const altOp = topOpportunities[1];
         const altDesc = altOp.legs.map((l:any) => `${l.market} (${l.match})`).join(" + ");
-        generatedAlt = `OPORTUNIDADE SECUNDÁRIA (${altOp.type}): ${altDesc} (Odd Simulada: @${altOp.odd.toFixed(2)}). Preservada como alternativa tática com correlação matemática positiva.`;
+        generatedAlt = `OPORTUNIDADE SECUNDÁRIA (${altOp.type}): ${altDesc} (Odd Simulada: @${altOp.odd.toFixed(2)}). Alternativa de valor retida no radar.`;
     } else {
-        generatedAlt = "O filtro de linhas bloqueou alternativas secundárias devido à falta de margem de segurança. Foco absoluto na aposta principal.";
+        generatedAlt = "Nenhum Bet Builder secundário sobreviveu ao filtro de probabilidade e correlação no range desejado.";
     }
 
     let generatedCons = "";
@@ -585,7 +565,7 @@ Retorne APENAS um JSON:
         const consDesc = consOp.legs.map((l:any) => `${l.market} (${l.match})`).join(" + ");
         generatedCons = `OPORTUNIDADE DE COBERTURA: ${consDesc} (Odd: @${consOp.odd.toFixed(2)}).`;
     } else {
-        generatedCons = `Aplique a gestão de banca respeitando o risco calculado de Nível ${riskLabel}.`;
+        generatedCons = `Gerencie o capital com rigor, respeitando o Risco ${riskLabel} apontado pela matriz.`;
     }
 
     return res.status(200).json({
