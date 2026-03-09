@@ -203,21 +203,24 @@ export default async function handler(req: any, res: any) {
     const imageParts = images.map((img: any) => ({ inlineData: { data: img.base64, mimeType: img.mimeType } }));
 
     // ==========================================
-    // 👁️ CAMADA 1: VISION OCR (The Scraper)
+    // 👁️ CAMADA 1: VISION OCR (The Scraper Blindado)
     // ==========================================
-    let finalValidJson = null; let attempts = 0;
+    let finalValidJson = null; 
+    let attempts = 0;
 
-    while (attempts < 2 && !finalValidJson) {
+    while (attempts < 3 && !finalValidJson) {
       attempts++;
-      const prompt = `Você é um Extrator de Dados de Sportsbook.
+      const prompt = `Aja como um Extrator de Dados de Sportsbook.
+Você deve extrair os dados das imagens e retornar ESTRITAMENTE um JSON válido. Não adicione textos antes ou depois.
+
 1. Agrupe por jogo em "matches".
-2. Extraia "matchOdds1x2" (home, draw, away) e "goalMarketLines" e "cornerMarketLines".
-3. Em "viablePicks", liste mercados (${selectedMarketsStr}) com ODD visível. 
-   - 🛑 IGNORE "Race", "Exato", "Par/Ímpar", "Primeiro a Marcar".
-   - "prob": Extraia a probabilidade histórica mostrada no site.
-   - "sampleSize": Tamanho da amostra visível (ex: 10).
-   - "extractedOdd": Odd da casa de apostas (decimal).
-   - "confidence": 0.1 a 1.0 (clareza da imagem).
+2. Extraia "matchOdds1x2" (home, draw, away), "goalMarketLines" e "cornerMarketLines".
+3. Em "viablePicks", liste os mercados (${selectedMarketsStr}) que possuem porcentagem estatística relevante.
+   - 🛑 IGNORE "Race", "Exato", "Par/Ímpar".
+   - "prob": Extraia a porcentagem (ex: 80).
+   - "sampleSize": Tamanho da amostra. Se não achar visível, use 10.
+   - "extractedOdd": Odd da casa de apostas. SE NÃO ACHAR NA IMAGEM, USE 1.50 (Isto é vital).
+   - "confidence": 0.8.
 4. "matchContext": Resumo tático do jogo.
 
 Formato JSON esperado:
@@ -237,11 +240,32 @@ Formato JSON esperado:
 }`;
       try {
         const result = await model.generateContent([{ text: prompt }, ...imageParts]);
-        finalValidJson = JSON.parse(result.response.text()); 
-      } catch (e: any) { continue; }
+        let textResult = result.response.text();
+        
+        // 🛡️ FAILSAFE 1: Limpeza de Markdown acidental gerado pelo Gemini
+        textResult = textResult.replace(/```json/gi, '').replace(/```/g, '').trim();
+        
+        const parsedData = JSON.parse(textResult);
+        
+        // 🛡️ FAILSAFE 2: Validação Estrutural
+        if (parsedData && parsedData.matches && parsedData.matches.length > 0) {
+            finalValidJson = parsedData;
+        } else {
+            throw new Error("JSON Retornado está vazio ou fora do formato.");
+        }
+        
+      } catch (e: any) { 
+          console.error(`Tentativa OCR ${attempts} falhou:`, e.message);
+          // 🛡️ FAILSAFE 3: Prevenção de Rate Limit (Servidor Sobrecarregado)
+          // Pausa de 2 segundos antes de enviar nova requisição ao Google
+          await new Promise(resolve => setTimeout(resolve, 2000));
+          continue; 
+      }
     }
 
-    if (!finalValidJson || !finalValidJson.matches) throw new Error("Abortado: O OCR não extraiu matriz de dados válida.");
+    if (!finalValidJson || !finalValidJson.matches) {
+        throw new Error("Abortado: O OCR não conseguiu extrair a matriz de dados válida após 3 tentativas.");
+    }
 
     // ==========================================
     // ⚙️ CAMADA 2: ON-THE-FLY MONTE CARLO ENGINE
