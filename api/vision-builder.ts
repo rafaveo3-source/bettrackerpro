@@ -3,7 +3,7 @@ import { GoogleGenerativeAI } from '@google/generative-ai';
 export const maxDuration = 60; // Limite Serverless Vercel
 
 // ==========================================
-// 🧠 1. MOTOR DE TEORIA DA INFORMAÇÃO E SRE
+// 🧠 1. MOTOR DE TEORIA DA INFORMAÇÃO 
 // ==========================================
 const shannonEntropy = (p: number) => {
     if (p <= 0 || p >= 1 || isNaN(p)) return 0;
@@ -35,7 +35,6 @@ const poissonCDF = (lambda: number, k: number) => {
 // ==========================================
 // 🎲 2. DISTRIBUIÇÕES ESTOCÁSTICAS
 // ==========================================
-
 const randomNormal = () => {
     let u = 0, v = 0;
     while(u === 0) u = Math.random();
@@ -70,7 +69,6 @@ const randomGamma = (shape: number, scale: number) => {
 
 const poissonSample = (lambda: number) => {
     if (isNaN(lambda) || lambda <= 0) return 0;
-    
     if (lambda > 15) {
         const val = Math.round(lambda + Math.sqrt(lambda) * randomNormal());
         return Math.max(0, val);
@@ -199,10 +197,10 @@ export default async function handler(req: any, res: any) {
         generationConfig: { temperature: 0.10, responseMimeType: "application/json" }
     });
 
-    const selectedMarketsStr = markets && markets.length > 0 ? markets.join(', ') : 'Gols, Escanteios, BTTS';
-    
-    // Limpeza de Payload Base64
-    const imageParts = images.map((img: any) => {
+    // ✅ FIX: Processar apenas 1 imagem (Reduz latência, custo e falhas do OCR)
+    // NOTA: Se futuramente implementar o "Tile OCR" no Frontend enviando 4 imagens (tiles), 
+    // altere o '[images[0]]' abaixo de volta para 'images'
+    const imageParts = [images[0]].map((img: any) => {
         const cleanBase64 = img.base64
             .replace(/^data:image\/\w+;base64,/, "")
             .replace(/\s/g, "");
@@ -216,44 +214,42 @@ export default async function handler(req: any, res: any) {
     });
 
     // ==========================================
-    // 👁️ CAMADA 1: VISION OCR (Com Rate Limit Protection)
+    // 👁️ CAMADA 1: VISION OCR (The Scraper Anti-429)
     // ==========================================
     let finalValidJson = null; 
     let attempts = 0;
 
-    while (attempts < 3 && !finalValidJson) {
+    // ✅ FIX: Reduzido para 2 tentativas máximas
+    while (attempts < 2 && !finalValidJson) {
       attempts++;
       
-      const prompt = `Extraia os dados estatísticos das imagens e retorne APENAS um arquivo JSON válido.
+      // ✅ FIX: Prompt Curto e Direto (Melhora a aderência estrutural do LLM)
+      const prompt = `Leia a imagem e extraia tabelas estatísticas.
 
-Instruções Vitais:
-- Leia APENAS números e porcentagens.
-- Ignore cores, ícones e gráficos.
-- Priorize tabelas com % de acerto e linhas de Over/Under (Gols e Cantos).
+Extraia apenas:
+- linhas de gols (over/under)
+- linhas de escanteios
+- porcentagens de acerto
 
-Instruções Rápidas:
-1. Agrupe os dados no array "matches".
-2. Extraia "matchOdds1x2" (home, draw, away).
-3. Na chave "viablePicks", coloque os mercados de Gols e Escanteios encontrados com suas probabilidades ("prob").
-4. Se a odd ("extractedOdd") não estiver visível na imagem, use o número 1.50 como padrão.
-5. Ignore mercados de Race, Handicap ou nomes de Jogadores.
+Retorne APENAS JSON.
 
-Exemplo de formato:
+Formato:
 {
-  "matches": [
-    {
-      "matchName": "Time A v Time B",
-      "matchContext": "Resumo...",
-      "matchOdds1x2": { "home": 1.80, "draw": 3.60, "away": 4.20 },
-      "goalMarketLines": [ {"line": 1.5, "prob": 70} ],
-      "cornerMarketLines": [ {"line": 8.5, "prob": 65} ],
-      "viablePicks": [
-        { "market": "Mais de 8.5 Escanteios", "prob": 67, "sampleSize": 10, "extractedOdd": 1.72 }
-      ]
-    }
-  ]
+ "matches":[
+  {
+   "matchName":"Team A v Team B",
+   "goalMarketLines":[{"line":2.5,"prob":65}],
+   "cornerMarketLines":[{"line":8.5,"prob":70}],
+   "viablePicks":[
+    {"market":"Mais de 8.5 Escanteios","prob":70,"sampleSize":10,"extractedOdd":1.50}
+   ]
+  }
+ ]
 }`;
       try {
+        // ✅ FIX: Delay preemptivo para estabilizar requisições e evitar disparo do Rate Limit
+        await new Promise(r => setTimeout(r, 1200));
+
         const result = await model.generateContent({
             contents: [{ role: "user", parts: [{ text: prompt }, ...imageParts] }]
         });
@@ -272,37 +268,38 @@ Exemplo de formato:
         } else if (parsedData && parsedData.matchName) {
             finalValidJson = { matches: [parsedData] };
         } else {
-            throw new Error("JSON não contém dados de jogos identificáveis.");
+            throw new Error("JSON não contém dados de jogos.");
         }
         
       } catch (e: any) { 
-          // ✅ FIX: Tratamento de Erro 429 e Backoff Exponencial
+          // ✅ FIX: Guilhotina de Rate Limit (Não tenta novamente se o Google mandou parar)
           const isRateLimit = e?.message?.includes("429") || e?.message?.includes("Too Many Requests") || e?.status === 429;
 
           if (isRateLimit) {
-              console.error("⚠️ GEMINI RATE LIMIT ATINGIDO (429). Acionando Backoff Exponencial...");
-          } else {
-              console.error("❌ Gemini OCR Error Attempt:", attempts);
-              console.error("Gemini raw response:", e?.response?.data || e?.response || e?.message || e);
+              console.error("🚨 GEMINI RATE LIMIT ATINGIDO");
+              throw new Error("⚠️ O motor atingiu o limite da API de leitura de imagens. Aguarde alguns segundos e tente novamente.");
           }
 
-          // Atraso progressivo: 2s na primeira falha, 4s na segunda, etc.
-          const delay = 2000 * attempts;
-          await new Promise(resolve => setTimeout(resolve, delay));
-          continue; 
+          console.error("❌ Gemini OCR Error Attempt:", attempts);
+          console.error("Gemini raw response:", e?.response?.data || e?.response || e?.message || e);
+          console.error("Full error object:", JSON.stringify(e, null, 2));
+
+          if (attempts >= 2) break;
       }
     }
 
     if (!finalValidJson || !finalValidJson.matches || finalValidJson.matches.length === 0) {
-        throw new Error("⚠️ A IA analisou as imagens, mas não conseguiu extrair a matriz numérica. Tente capturar Prints mais focados nas tabelas.");
+        throw new Error("⚠️ A IA analisou as imagens, mas não conseguiu extrair a matriz numérica com clareza. Tente capturar um Print mais focado.");
     }
 
     // ==========================================
     // ⚙️ CAMADA 2: ON-THE-FLY MONTE CARLO ENGINE
     // ==========================================
     let allProcessedLegs: any[] = [];
+    let globalContextArray: string[] = []; 
 
     for (let match of finalValidJson.matches) {
+        if (match.matchContext) globalContextArray.push(`${match.matchName}: ${match.matchContext}`);
         if (!match.viablePicks || match.viablePicks.length === 0) continue;
         
         let market_lt = 2.6; 
@@ -328,7 +325,7 @@ Exemplo de formato:
 
         const activeMarketsMap = new Map();
         for (let pick of match.viablePicks) {
-            const norm = normalizeMarket(pick.market || '', match.matchName);
+            const norm = normalizeMarket(pick.market || '', match.matchName || '');
             if (!norm) continue; 
             if (!activeMarketsMap.has(norm.hash)) {
                 activeMarketsMap.set(norm.hash, { norm, hits: 0, ref: pick });
@@ -390,7 +387,6 @@ Exemplo de formato:
             }
         }
 
-        // Pós-processamento dos Counters
         for (let mkt of activeMarkets) {
             const pick = mkt.ref;
             let realSample = Number(pick.sampleSize);
@@ -408,7 +404,6 @@ Exemplo de formato:
             const maxOddTolerance = rawProb > 0.65 ? 1.18 : 1.35;
             if (finalOdd > fairOdd * maxOddTolerance) continue; 
             
-            // Permite construção de apostas compostas com pernas de alta probabilidade
             if (finalOdd < 1.05) continue; 
 
             allProcessedLegs.push({
@@ -429,7 +424,7 @@ Exemplo de formato:
     let opportunities: any[] = [];
     const ODD_MIN = 1.50;
     const ODD_MAX = 2.20;
-    const EDGE_MIN = -0.02; // Aceita apostas lógicas para montagem de Bet Builders
+    const EDGE_MIN = -0.02; 
 
     for (let leg of allProcessedLegs) {
         const marketProb = 1 / leg.extractedOdd;
@@ -451,7 +446,7 @@ Exemplo de formato:
             if (isSameGame && l1.normHash.split('_')[0] === l2.normHash.split('_')[0]) continue;
 
             let combProb = l1.rawProb * l2.rawProb;
-            if (isSameGame) combProb *= 0.98; // Punição branda para respeitar seu estilo
+            if (isSameGame) combProb *= 0.98; 
             
             combProb = Math.max(0.01, Math.min(combProb, 0.98));
             const combOdd = l1.extractedOdd * l2.extractedOdd;
@@ -502,17 +497,13 @@ Exemplo de formato:
     const riskLabel = bestOpp.prob < 0.45 ? "ALTO" : bestOpp.legs.length > 1 ? "MÉDIO" : "BAIXO";
 
     // =====================================================
-    // ✍️ CAMADA 5: RELATÓRIO LOCAL ESTÁTICO (Zero API Calls para a IA)
+    // ✍️ CAMADA 5: RELATÓRIO LOCAL ESTÁTICO (Fim do consumo duplo de IA)
     // =====================================================
-    let generatedAnalysis = "";
-    let generatedAlt = "";
-    let generatedCons = "";
-
     const topPickDesc = bestOpp.legs.map((l:any) => `${l.market} (${l.match})`).join(" + ");
 
-    // ✅ FIX ESTRUTURAL: Geração de texto nativa, instantânea e sem gastar cota do Gemini.
-    generatedAnalysis = `A operação principal identificada pelo nosso Motor de Simulação Monte Carlo é a "${topPickDesc}". Após cruzarmos os cenários possíveis da partida em 25.000 iterações (Paths), cravamos uma probabilidade real de ${combinedProb}% para este desfecho, o que se traduz numa Odd Justa (Fair Odd) de @${fairOdd.toFixed(2)}.\n\nDiante da Odd de Mercado de @${marketOdd.toFixed(2)}, o radar detectou uma Edge (Vantagem sobre a Casa) de ${formattedEdge}%. Esta discrepância valida a entrada como uma operação estatística sólida.`;
+    const generatedAnalysis = `A operação principal identificada pelo nosso Motor de Simulação Monte Carlo é a "${topPickDesc}". Após cruzarmos os cenários possíveis da partida em 25.000 iterações (Paths), cravamos uma probabilidade real de ${combinedProb}% para este desfecho, o que se traduz numa Odd Justa (Fair Odd) de @${fairOdd.toFixed(2)}.\n\nDiante da Odd de Mercado parametrizada, o radar detectou uma Edge (Vantagem sobre a Casa) de ${formattedEdge}%. Esta discrepância valida a entrada como uma operação quantitativa sólida e independente de viés emocional.`;
 
+    let generatedAlt = "";
     if (topOpportunities.length > 1) {
         const altOp = topOpportunities[1];
         const altDesc = altOp.legs.map((l:any) => `${l.market} (${l.match})`).join(" + ");
@@ -521,12 +512,13 @@ Exemplo de formato:
         generatedAlt = "O scanner secundário varreu a grade e não detectou nenhuma alternativa paralela com forte Expectativa de Valor (EV+) dentro do range definido. O EV do jogo está concentrado na aposta principal.";
     }
 
+    let generatedCons = "";
     if (topOpportunities.length > 2) {
         const consOp = topOpportunities[2];
         const consDesc = consOp.legs.map((l:any) => `${l.market} (${l.match})`).join(" + ");
         generatedCons = `OPORTUNIDADE DE COBERTURA (${consOp.type}): ${consDesc} (Odd Mercado: @${consOp.odd.toFixed(2)} | EV: ${(consOp.ev*100).toFixed(1)}%).`;
     } else {
-        generatedCons = `Devido à ausência de variações de segurança viáveis, sugere-se uma gestão de banca rigorosa alinhada ao nível de Risco ${riskLabel} da operação primária.`;
+        generatedCons = `Devido à ausência de variações de segurança viáveis com valor matemático positivo, sugere-se uma gestão de banca rigorosa alinhada ao nível de Risco ${riskLabel} da operação primária.`;
     }
 
     return res.status(200).json({
