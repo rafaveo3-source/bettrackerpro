@@ -439,10 +439,10 @@ const dispersion = 4.5;
             
             const finalOdd = Math.min(Math.max(rawOdd, 1.01), 10.0);
 
-            // Permite pernas de até 42% (Odds de ~2.35) passarem para se fundirem no Builder
-            if (rawProb < 0.42) continue; 
-            if (finalOdd > 2.35) continue; 
-            if (finalOdd < 1.18) continue; 
+            // 🔥 Filtro de pernas otimizado para Bet Builder
+if (rawProb < 0.55) continue; 
+if (finalOdd > 2.35) continue;
+if (finalOdd < 1.22) continue;
 
             allProcessedLegs.push({
                 match: match.matchName,
@@ -463,21 +463,34 @@ const dispersion = 4.5;
     // ==========================================
     let opportunities: any[] = [];
     
-    const ODD_MIN = 1.55; 
-    const ODD_MAX = 2.20; 
+    const BUILDER_MIN = 1.55;
+const BUILDER_MAX = 2.20;
+const LEG_MIN = 1.22;
+const LEG_MAX = 1.45; 
     const EDGE_MIN = -0.05; 
 
-    // Singles
-    for (let leg of allProcessedLegs) {
-        const marketProb = 1 / leg.extractedOdd;
-        const edge = leg.rawProb - marketProb; 
-        const ev = (leg.rawProb * leg.extractedOdd) - 1; 
-        
-        if (leg.extractedOdd >= ODD_MIN && leg.extractedOdd <= ODD_MAX && edge >= EDGE_MIN) {
-            const score = edge * entropyWeight(leg.rawProb);
-            opportunities.push({ type: 'Simples', legs: [leg], prob: leg.rawProb, odd: leg.extractedOdd, ev, edge, score });
-        }
+    // Singles (apenas informativos — não prioridade)
+for (let leg of allProcessedLegs) {
+
+    const marketProb = 1 / leg.extractedOdd;
+    const edge = leg.rawProb - marketProb; 
+    const ev = (leg.rawProb * leg.extractedOdd) - 1; 
+
+    if (leg.extractedOdd >= BUILDER_MIN && leg.extractedOdd <= BUILDER_MAX && edge >= EDGE_MIN) {
+
+        const score = edge * entropyWeight(leg.rawProb) * 0.4;
+
+        opportunities.push({
+            type: 'Simples',
+            legs: [leg],
+            prob: leg.rawProb,
+            odd: leg.extractedOdd,
+            ev,
+            edge,
+            score
+        });
     }
+}
 
     // Duplas (Modelagem de Cópula e Causalidade)
     for (let i = 0; i < allProcessedLegs.length; i++) {
@@ -510,10 +523,13 @@ const dispersion = 4.5;
             const edge = combProb - marketProb;
             const ev = (combProb * combOdd) - 1;
 
-            if (combOdd >= ODD_MIN && combOdd <= ODD_MAX && edge >= EDGE_MIN) {
+            if (combOdd >= BUILDER_MIN && combOdd <= BUILDER_MAX && edge >= EDGE_MIN) {
                 const isSmartBuilder = isSameGame && l1.mktType !== l2.mktType;
                 // Valoriza brutalmente o "Feeling do Apostador" (Gols + Race/Cantos)
-                const score = edge * entropyWeight(combProb) * (isSmartBuilder ? 3.5 : 0.8);
+                const score =
+edge *
+entropyWeight(combProb) *
+(isSameGame ? 5.0 : 0.5);
                 
                 opportunities.push({ 
                     type: isSameGame ? `Game Script: ${detectedGameScript}` : 'Dupla Cruzada', 
