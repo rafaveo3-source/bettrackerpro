@@ -203,25 +203,26 @@ export default async function handler(req: any, res: any) {
     const imageParts = images.map((img: any) => ({ inlineData: { data: img.base64, mimeType: img.mimeType } }));
 
     // ==========================================
-    // 👁️ CAMADA 1: VISION OCR (The Scraper Blindado)
+    // 👁️ CAMADA 1: VISION OCR (The Scraper "Trator")
     // ==========================================
     let finalValidJson = null; 
     let attempts = 0;
 
     while (attempts < 3 && !finalValidJson) {
       attempts++;
-      const prompt = `Aja como um Extrator de Dados de Sportsbook.
-Você deve extrair os dados das imagens e retornar ESTRITAMENTE um JSON válido. Não adicione textos antes ou depois.
+      // Prompt simplificado: Força a IA a ser um digitador literal e parar de julgar os dados
+      const prompt = `Aja estritamente como um Extrator de Dados Literal.
+Sua única função é ler as tabelas da imagem e transcrever os números para JSON. NÃO julgue se os dados são bons ou ruins.
 
 1. Agrupe por jogo em "matches".
 2. Extraia "matchOdds1x2" (home, draw, away), "goalMarketLines" e "cornerMarketLines".
-3. Em "viablePicks", liste os mercados (${selectedMarketsStr}) que possuem porcentagem estatística relevante.
-   - 🛑 IGNORE "Race", "Exato", "Par/Ímpar".
-   - "prob": Extraia a porcentagem (ex: 80).
-   - "sampleSize": Tamanho da amostra. Se não achar visível, use 10.
-   - "extractedOdd": Odd da casa de apostas. SE NÃO ACHAR NA IMAGEM, USE 1.50 (Isto é vital).
-   - "confidence": 0.8.
-4. "matchContext": Resumo tático do jogo.
+3. Em "viablePicks", transcreva TODOS os mercados de Gols e Escanteios visíveis, com suas porcentagens.
+   - 🛑 IGNORE "Race", "Exato", "Par/Ímpar", "Primeiro a".
+   - "prob": A porcentagem de acerto na tela (ex: 80).
+   - "sampleSize": Use 10.
+   - "extractedOdd": SE NÃO ACHAR A ODD NA IMAGEM, COLOQUE 1.50 OBRIGATORIAMENTE.
+   - "confidence": 0.9.
+4. "matchContext": Uma linha curta sobre o jogo.
 
 Formato JSON esperado:
 {
@@ -242,29 +243,34 @@ Formato JSON esperado:
         const result = await model.generateContent([{ text: prompt }, ...imageParts]);
         let textResult = result.response.text();
         
-        // 🛡️ FAILSAFE 1: Limpeza de Markdown acidental gerado pelo Gemini
-        textResult = textResult.replace(/```json/gi, '').replace(/```/g, '').trim();
+        // 🛡️ EXTRATOR BRUTO: Ignora "Olá, aqui está o JSON" e puxa apenas a estrutura de chaves { }
+        const jsonMatch = textResult.match(/\{[\s\S]*\}/);
+        if (!jsonMatch) {
+            throw new Error("A IA não retornou nenhuma estrutura JSON legível.");
+        }
         
-        const parsedData = JSON.parse(textResult);
+        // Limpa possíveis marcações markdown restantes dentro do match
+        let cleanJsonStr = jsonMatch[0].replace(/```json/gi, '').replace(/```/g, '').trim();
         
-        // 🛡️ FAILSAFE 2: Validação Estrutural
-        if (parsedData && parsedData.matches && parsedData.matches.length > 0) {
+        const parsedData = JSON.parse(cleanJsonStr);
+        
+        // 🛡️ VALIDAÇÃO RELAXADA: Se veio a chave 'matches', aceita e passa a bola para o Monte Carlo
+        if (parsedData && Array.isArray(parsedData.matches)) {
             finalValidJson = parsedData;
         } else {
-            throw new Error("JSON Retornado está vazio ou fora do formato.");
+            throw new Error("A estrutura JSON não continha o array 'matches'.");
         }
         
       } catch (e: any) { 
           console.error(`Tentativa OCR ${attempts} falhou:`, e.message);
-          // 🛡️ FAILSAFE 3: Prevenção de Rate Limit (Servidor Sobrecarregado)
-          // Pausa de 2 segundos antes de enviar nova requisição ao Google
-          await new Promise(resolve => setTimeout(resolve, 2000));
+          // Pausa de 2.5 segundos para evitar bloqueio da API do Google
+          await new Promise(resolve => setTimeout(resolve, 2500));
           continue; 
       }
     }
 
     if (!finalValidJson || !finalValidJson.matches) {
-        throw new Error("Abortado: O OCR não conseguiu extrair a matriz de dados válida após 3 tentativas.");
+        throw new Error("Abortado: O Google Gemini não conseguiu ler a imagem com clareza. Tente focar o print nas tabelas numéricas.");
     }
 
     // ==========================================
