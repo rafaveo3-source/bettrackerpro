@@ -354,12 +354,33 @@ Formato:
         const l1 = Math.max(0.1, lh - l3);
         const l2 = Math.max(0.1, la - l3);
 
+        // 🔥 1. Adiciona o que o OCR encontrou
         const activeMarketsMap = new Map();
         for (let pick of match.viablePicks) {
             const norm = normalizeMarket(pick.market || '', match.matchName || '');
             if (!norm) continue; 
             if (!activeMarketsMap.has(norm.hash)) {
                 activeMarketsMap.set(norm.hash, { norm, hits: 0, ref: pick });
+            }
+        }
+
+        // 🔥 2. AUTO-INJETOR DO "FEELING DO APOSTADOR" 
+        // Garante que o motor sempre teste linhas seguras para construir o Bet Builder, mesmo que o OCR não as leia.
+        const standardBettorLines = [
+            "Mais de 0.5 Gols", "Mais de 1.5 Gols", "Mais de 2.5 Gols",
+            "Mais de 0.5 Gols HT",
+            "Mais de 3.5 Escanteios", "Mais de 4.5 Escanteios", "Mais de 5.5 Escanteios", 
+            "Mais de 6.5 Escanteios", "Mais de 7.5 Escanteios", "Mais de 8.5 Escanteios"
+        ];
+
+        for (let sm of standardBettorLines) {
+            const norm = normalizeMarket(sm, match.matchName || '');
+            if (norm && !activeMarketsMap.has(norm.hash)) {
+                activeMarketsMap.set(norm.hash, { 
+                    norm, 
+                    hits: 0, 
+                    ref: { market: sm, sampleSize: 10, extractedOdd: 0, confidence: 1.0 } // Odd 0 = Motor vai precificar sozinho
+                });
             }
         }
         
@@ -418,6 +439,7 @@ Formato:
             }
         }
 
+        // Pós-processamento dos Counters
         for (let mkt of activeMarkets) {
             const pick = mkt.ref;
             let realSample = Number(pick.sampleSize);
@@ -425,16 +447,22 @@ Formato:
 
             let rawProb = mkt.hits / ITERATIONS;
             rawProb = Math.max(0.01, Math.min(rawProb * (rawProb > 0.85 ? 0.96 : 1), 0.98));
-
-            const rawOdd = Number(pick.extractedOdd) || 1.50;
-            if (isNaN(rawOdd)) continue;
-            
-            const finalOdd = Math.min(Math.max(rawOdd, 1.01), 10.0);
             const fairOdd = 1 / rawProb;
 
-            const maxOddTolerance = rawProb > 0.65 ? 1.18 : 1.35;
+            // 🔥 PRECIFICADOR SINTÉTICO HFT
+            // Se o OCR não leu a Odd, ou se é uma linha injetada, o Motor simula a margem da Bet365 (8% de Juice)
+            let rawOdd = Number(pick.extractedOdd);
+            if (!rawOdd || isNaN(rawOdd) || rawOdd === 1.50 || rawOdd === 0) {
+                rawOdd = fairOdd * 0.92; 
+            }
+            
+            const finalOdd = Math.min(Math.max(rawOdd, 1.01), 10.0);
+
+            // Se for linha muito segura (ex: Over 0.5 gols), tolera distorção e permite passar
+            const maxOddTolerance = rawProb > 0.65 ? 1.25 : 1.40;
             if (finalOdd > fairOdd * maxOddTolerance) continue; 
             
+            // Aceita pernas ultra-seguras a partir de @1.05 para formar Bet Builders fortes
             if (finalOdd < 1.05) continue; 
 
             allProcessedLegs.push({
@@ -453,9 +481,11 @@ Formato:
     // 💡 PASSO 4: OPPORTUNITY FINDER 
     // ==========================================
     let opportunities: any[] = [];
-    const ODD_MIN = 1.50;
-    const ODD_MAX = 2.20;
-    const EDGE_MIN = -0.02; 
+    
+    // 🔥 RANGE LIBERADO PARA BET BUILDERS
+    const ODD_MIN = 1.40; 
+    const ODD_MAX = 3.00; 
+    const EDGE_MIN = -0.05; // Permite EV levemente negativo em apostas muito seguras e correlacionadas
 
     for (let leg of allProcessedLegs) {
         const marketProb = 1 / leg.extractedOdd;
@@ -488,7 +518,10 @@ Formato:
             if (combOdd >= ODD_MIN && combOdd <= ODD_MAX && edge >= EDGE_MIN) {
                 const avgConf = (l1.confidence + l2.confidence) / 2;
                 const avgSamplePen = (l1.samplePenalty + l2.samplePenalty) / 2;
-                const score = edge * entropyWeight(combProb) * avgConf * avgSamplePen;
+                
+                // 🔥 BET BUILDER BOOST: Dá 50% de prioridade para combinações do mesmo jogo (O Feeling do Apostador)
+                const score = edge * entropyWeight(combProb) * avgConf * avgSamplePen * (isSameGame ? 1.5 : 1.0);
+                
                 opportunities.push({ 
                     type: isSameGame ? 'Dupla Intragame (Bet Builder)' : 'Dupla Cruzada (Parlay)', 
                     legs: [l1, l2], prob: combProb, odd: combOdd, ev, edge, score 
