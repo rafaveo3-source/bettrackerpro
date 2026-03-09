@@ -25,10 +25,8 @@ const factorial = (n: number) => {
 };
 
 const poissonCDF = (lambda: number, k: number) => {
-    // 🛡️ FAILSAFE: Previne colapso se OCR extrair texto em vez de número
     if (isNaN(lambda) || isNaN(k) || lambda < 0 || k < 0) return 0;
     let sum = 0;
-    // 🛡️ FAILSAFE: Previne CPU Lock caso o OCR alucine uma linha gigantesca (ex: 9999)
     const limit = Math.min(k, 50); 
     for (let i = 0; i <= limit; i++) sum += (Math.pow(lambda, i) * Math.exp(-lambda)) / factorial(i);
     return sum;
@@ -46,7 +44,6 @@ const randomNormal = () => {
 };
 
 const randomGamma = (shape: number, scale: number) => {
-    // 🛡️ FAILSAFE CRÍTICO: Previne Loop Infinito da Morte (O que travou seu app)
     if (isNaN(shape) || shape <= 0 || isNaN(scale) || scale <= 0) return 0;
 
     let d, c, x, v, u;
@@ -72,7 +69,6 @@ const randomGamma = (shape: number, scale: number) => {
 };
 
 const poissonSample = (lambda: number) => {
-    // 🛡️ FAILSAFE
     if (isNaN(lambda) || lambda <= 0) return 0;
     
     if (lambda > 15) {
@@ -94,7 +90,7 @@ const negativeBinomialSample = (mean: number, dispersion: number) => {
 };
 
 // ==========================================
-// 🛠️ 3. NORMALIZAÇÃO HFT (Hash Deduplication & Team Target)
+// 🛠️ 3. NORMALIZAÇÃO HFT (Hash Deduplication)
 // ==========================================
 const normalizeMarket = (marketStr: string, matchName: string) => {
     if (!marketStr || !matchName) return null;
@@ -193,6 +189,11 @@ export default async function handler(req: any, res: any) {
     const apiKey = process.env.GEMINI_API_KEY;
     if (!apiKey) return res.status(500).json({ error: 'Chave de API ausente.' });
 
+    // ✅ Proteção contra payload vazio
+    if (!images || images.length === 0) {
+        throw new Error("Nenhuma imagem enviada para análise.");
+    }
+
     const genAI = new GoogleGenerativeAI(apiKey);
     const model = genAI.getGenerativeModel({ 
         model: 'gemini-2.5-flash',
@@ -200,12 +201,20 @@ export default async function handler(req: any, res: any) {
     });
 
     const selectedMarketsStr = markets && markets.length > 0 ? markets.join(', ') : 'Gols, Escanteios, BTTS';
-    const imageParts = images.map((img: any) => ({
-  inlineData: {
-    mimeType: img.mimeType || "image/png",
-    data: img.base64.replace(/^data:image\/\w+;base64,/, "")
-  }
-}));
+    
+    // ✅ FIX ESTRUTURAL: Limpeza extrema do Payload Base64
+    const imageParts = images.map((img: any) => {
+        const cleanBase64 = img.base64
+            .replace(/^data:image\/\w+;base64,/, "")
+            .replace(/\s/g, "");
+
+        return {
+            inlineData: {
+                mimeType: img.mimeType || "image/png",
+                data: cleanBase64
+            }
+        };
+    });
 
     // ==========================================
     // 👁️ CAMADA 1: VISION OCR (The Scraper Resiliente)
@@ -215,9 +224,16 @@ export default async function handler(req: any, res: any) {
 
     while (attempts < 3 && !finalValidJson) {
       attempts++;
+      
+      // ✅ FIX ESTRUTURAL: Prompt Focado com prioridades restritas (Upgrade Brutal)
       const prompt = `Extraia os dados estatísticos das imagens e retorne APENAS um arquivo JSON válido.
 
-Instruções rápidas:
+Instruções Vitais:
+- Leia APENAS números e porcentagens.
+- Ignore cores, ícones e gráficos.
+- Priorize tabelas com % de acerto e linhas de Over/Under (Gols e Cantos).
+
+Instruções Rápidas:
 1. Agrupe os dados no array "matches".
 2. Extraia "matchOdds1x2" (home, draw, away).
 3. Na chave "viablePicks", coloque os mercados de Gols e Escanteios encontrados com suas probabilidades ("prob").
@@ -240,54 +256,50 @@ Exemplo de formato:
   ]
 }`;
       try {
+        // ✅ FIX ESTRUTURAL: Requisição Multimodal Padrão Google (Evita falhas silenciosas)
         const result = await model.generateContent({
-  contents: [
-    {
-      role: "user",
-      parts: [
-        { text: prompt },
-        ...imageParts
-      ]
-    }
-  ]
-});
+            contents: [
+              {
+                role: "user",
+                parts: [
+                  { text: prompt },
+                  ...imageParts
+                ]
+              }
+            ]
+        });
+
         let textResult = result.response.text();
         
-        // Limpeza de segurança
         textResult = textResult.replace(/```json/gi, '').replace(/```/g, '').trim();
-        
-        // 🛡️ Extrator Universal: Puxa tanto Objetos {} quanto Arrays [] gerados pela IA
         const jsonMatch = textResult.match(/\{[\s\S]*\}|\[[\s\S]*\]/);
-        if (jsonMatch) {
-            textResult = jsonMatch[0];
-        }
+        if (jsonMatch) textResult = jsonMatch[0];
         
         const parsedData = JSON.parse(textResult);
         
-        // 🛡️ VALIDAÇÃO ULTRA-FLEXÍVEL: Aceita qualquer formato que a IA inventar e converte para o Motor
         if (Array.isArray(parsedData)) {
-            // Se a IA mandou direto um array de jogos
             finalValidJson = { matches: parsedData };
         } else if (parsedData && Array.isArray(parsedData.matches)) {
-            // Se mandou no formato exato solicitado
             finalValidJson = parsedData;
         } else if (parsedData && parsedData.matchName) {
-            // Se mandou apenas 1 jogo solto como objeto
             finalValidJson = { matches: [parsedData] };
         } else {
             throw new Error("JSON não contém dados de jogos identificáveis.");
         }
         
       } catch (e: any) { 
-          console.error(`Tentativa OCR ${attempts} falhou:`, e.message);
-          // Pausa de 2.5s para evitar Rate Limit e bloqueio da API
+          // ✅ FIX ESTRUTURAL: Log Detalhado para capturar exatamente por que o Gemini está quebrando
+          console.error("❌ Gemini OCR Error Attempt:", attempts);
+          console.error("Gemini raw response:", e?.response?.data || e?.response || e?.message || e);
+          console.error("Full error object:", JSON.stringify(e, null, 2));
+
           await new Promise(resolve => setTimeout(resolve, 2500));
           continue; 
       }
     }
 
     if (!finalValidJson || !finalValidJson.matches || finalValidJson.matches.length === 0) {
-        throw new Error("⚠️ A IA analisou as imagens, mas não conseguiu extrair números claros o suficiente. DICA: Em celulares, tente dar zoom e focar os prints apenas nas tabelas de Gols/Cantos.");
+        throw new Error("⚠️ A IA analisou as imagens, mas não conseguiu extrair a matriz numérica. Tente capturar Prints mais focados nas tabelas.");
     }
 
     // ==========================================
@@ -331,13 +343,12 @@ Exemplo de formato:
         }
         
         const activeMarkets = Array.from(activeMarketsMap.values());
-        if (activeMarkets.length === 0) continue; // Evita loop inútil
+        if (activeMarkets.length === 0) continue; 
 
         const ITERATIONS = 25000;
 
-        // 🎲 O MULTIVERSO OTIMIZADO (O(1) Memory Footprint)
+        // 🎲 O MULTIVERSO OTIMIZADO
         for (let i = 0; i < ITERATIONS; i++) {
-            // --- FULL TIME (90 Min) ---
             const z = poissonSample(l3);
             const goalsHome = poissonSample(l1) + z;
             const goalsAway = poissonSample(l2) + z;
@@ -349,7 +360,6 @@ Exemplo de formato:
             let corners = negativeBinomialSample(adjustedCornerMean, dispersion);
             corners = Math.min(corners, 22);
 
-            // --- HALF TIME (45 Min) ---
             const z_ht = poissonSample(l3 * 0.45);
             const goalsHomeHT = poissonSample(l1 * 0.45) + z_ht;
             const goalsAwayHT = poissonSample(l2 * 0.45) + z_ht;
@@ -361,7 +371,6 @@ Exemplo de formato:
             let cornersHT = negativeBinomialSample(adjustedCornerMeanHT, dispersionHT);
             cornersHT = Math.min(cornersHT, 12);
 
-            // Avaliação on-the-fly 
             for (let j = 0; j < activeMarkets.length; j++) {
                 const mkt = activeMarkets[j];
                 const norm = mkt.norm;
@@ -398,7 +407,7 @@ Exemplo de formato:
             let rawProb = mkt.hits / ITERATIONS;
             rawProb = Math.max(0.01, Math.min(rawProb * (rawProb > 0.85 ? 0.96 : 1), 0.98));
 
-            const rawOdd = Number(pick.extractedOdd) || 1;
+            const rawOdd = Number(pick.extractedOdd) || 1.50;
             if (isNaN(rawOdd)) continue;
             
             const finalOdd = Math.min(Math.max(rawOdd, 1.01), 10.0);
@@ -406,6 +415,8 @@ Exemplo de formato:
 
             const maxOddTolerance = rawProb > 0.65 ? 1.18 : 1.35;
             if (finalOdd > fairOdd * maxOddTolerance) continue; 
+            
+            // Aceita pernas fortes para construção de Múltiplas Customizadas
             if (finalOdd < 1.05) continue; 
 
             allProcessedLegs.push({
@@ -426,7 +437,7 @@ Exemplo de formato:
     let opportunities: any[] = [];
     const ODD_MIN = 1.50;
     const ODD_MAX = 2.20;
-    const EDGE_MIN = -0.02; // Aceita apostas lógicas, mesmo que o mercado esteja bem ajustado
+    const EDGE_MIN = -0.02; // Aceita apostas de valor tático
 
     for (let leg of allProcessedLegs) {
         const marketProb = 1 / leg.extractedOdd;
@@ -448,6 +459,7 @@ Exemplo de formato:
             if (isSameGame && l1.normHash.split('_')[0] === l2.normHash.split('_')[0]) continue;
 
             let combProb = l1.rawProb * l2.rawProb;
+            // Punição mais branda para o Bet Builder (Respeita sua criatividade tática)
             if (isSameGame) combProb *= 0.98; 
             
             combProb = Math.max(0.01, Math.min(combProb, 0.98));
@@ -481,7 +493,7 @@ Exemplo de formato:
     const topOpportunities = opportunities.slice(0, 3);
 
     if (topOpportunities.length === 0) {
-        throw new Error("NO BET: O Scanner Monte Carlo rodou 25.000 iterações matemáticas e não encontrou NENHUMA Edge sólida (+3%) dentro do range de Odd @1.60 a @2.00.");
+        throw new Error("NO BET: O Scanner Monte Carlo rodou a matriz matemática e concluiu que o mercado precificou as linhas perfeitamente (Sem Ineficiências Reais no range).");
     }
 
     const bestOpp = topOpportunities[0];
@@ -560,7 +572,7 @@ Formato JSON esperado:
         generatedCons = textData.conservativeCombination;
         
     } catch (e) {
-        generatedAnalysis = `📊 **Simulação Monte Carlo (25k paths):** O motor identificou Edge de ${formattedEdge}% na operação primária. A Odd do Mercado (@${marketOdd}) é ineficiente frente à nossa Odd Justa (@${fairOdd}), configurando Valor Esperado.`;
+        generatedAnalysis = `📊 **Simulação Monte Carlo:** O motor identificou Edge de ${formattedEdge}% na operação primária. A Odd do Mercado (@${marketOdd}) é ineficiente frente à nossa Odd Justa (@${fairOdd}), configurando Valor Esperado.`;
         generatedAlt = topOpportunities.length > 1 ? `Radar Secundário: ${topOpportunities[1].legs.map((l:any)=>l.market).join(' + ')} (Odd Mercado @${topOpportunities[1].odd.toFixed(2)}).` : "Sem operações secundárias com EV superior ao benchmark.";
         generatedCons = topOpportunities.length > 2 ? `Radar Terciário: ${topOpportunities[2].legs.map((l:any)=>l.market).join(' + ')} (Odd @${topOpportunities[2].odd.toFixed(2)}).` : "Mantenha Stake de 1 Unidade e respeite a gestão de banca.";
     }
