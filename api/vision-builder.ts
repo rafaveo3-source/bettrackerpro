@@ -609,6 +609,14 @@ opportunities.sort((a, b) => {
     
     const topOpportunities = opportunities.slice(0, 3);
 
+    // 🔥 BLOQUEIO DE SINGLE FORA DO BUILDER
+
+const builderOps = opportunities.filter(o => o.legs.length > 1);
+
+if (builderOps.length > 0) {
+    opportunities = builderOps;
+}
+
     if (topOpportunities.length === 0) {
         throw new Error(`NO BET: O Game Script (${detectedGameScript}) foi lido, mas as linhas filtradas não ofereceram segurança matemática suficiente (Min 42% Prob por perna) no range @1.60 - @2.20.`);
     }
