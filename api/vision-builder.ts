@@ -33,7 +33,7 @@ const poissonCDF = (lambda: number, k: number) => {
 };
 
 // ==========================================
-// 🎲 2. DISTRIBUIÇÕES ESTOCÁSTICAS (HFT SAMPLING)
+// 🎲 2. DISTRIBUIÇÕES ESTOCÁSTICAS
 // ==========================================
 
 const randomNormal = () => {
@@ -90,7 +90,7 @@ const negativeBinomialSample = (mean: number, dispersion: number) => {
 };
 
 // ==========================================
-// 🛠️ 3. NORMALIZAÇÃO HFT (Hash Deduplication)
+// 🛠️ 3. NORMALIZAÇÃO HFT
 // ==========================================
 const normalizeMarket = (marketStr: string, matchName: string) => {
     if (!marketStr || !matchName) return null;
@@ -189,7 +189,6 @@ export default async function handler(req: any, res: any) {
     const apiKey = process.env.GEMINI_API_KEY;
     if (!apiKey) return res.status(500).json({ error: 'Chave de API ausente.' });
 
-    // ✅ Proteção contra payload vazio
     if (!images || images.length === 0) {
         throw new Error("Nenhuma imagem enviada para análise.");
     }
@@ -202,7 +201,7 @@ export default async function handler(req: any, res: any) {
 
     const selectedMarketsStr = markets && markets.length > 0 ? markets.join(', ') : 'Gols, Escanteios, BTTS';
     
-    // ✅ FIX ESTRUTURAL: Limpeza extrema do Payload Base64
+    // Limpeza de Payload Base64
     const imageParts = images.map((img: any) => {
         const cleanBase64 = img.base64
             .replace(/^data:image\/\w+;base64,/, "")
@@ -217,7 +216,7 @@ export default async function handler(req: any, res: any) {
     });
 
     // ==========================================
-    // 👁️ CAMADA 1: VISION OCR (The Scraper Resiliente)
+    // 👁️ CAMADA 1: VISION OCR (Com Rate Limit Protection)
     // ==========================================
     let finalValidJson = null; 
     let attempts = 0;
@@ -225,7 +224,6 @@ export default async function handler(req: any, res: any) {
     while (attempts < 3 && !finalValidJson) {
       attempts++;
       
-      // ✅ FIX ESTRUTURAL: Prompt Focado com prioridades restritas (Upgrade Brutal)
       const prompt = `Extraia os dados estatísticos das imagens e retorne APENAS um arquivo JSON válido.
 
 Instruções Vitais:
@@ -256,21 +254,11 @@ Exemplo de formato:
   ]
 }`;
       try {
-        // ✅ FIX ESTRUTURAL: Requisição Multimodal Padrão Google (Evita falhas silenciosas)
         const result = await model.generateContent({
-            contents: [
-              {
-                role: "user",
-                parts: [
-                  { text: prompt },
-                  ...imageParts
-                ]
-              }
-            ]
+            contents: [{ role: "user", parts: [{ text: prompt }, ...imageParts] }]
         });
 
         let textResult = result.response.text();
-        
         textResult = textResult.replace(/```json/gi, '').replace(/```/g, '').trim();
         const jsonMatch = textResult.match(/\{[\s\S]*\}|\[[\s\S]*\]/);
         if (jsonMatch) textResult = jsonMatch[0];
@@ -288,12 +276,19 @@ Exemplo de formato:
         }
         
       } catch (e: any) { 
-          // ✅ FIX ESTRUTURAL: Log Detalhado para capturar exatamente por que o Gemini está quebrando
-          console.error("❌ Gemini OCR Error Attempt:", attempts);
-          console.error("Gemini raw response:", e?.response?.data || e?.response || e?.message || e);
-          console.error("Full error object:", JSON.stringify(e, null, 2));
+          // ✅ FIX: Tratamento de Erro 429 e Backoff Exponencial
+          const isRateLimit = e?.message?.includes("429") || e?.message?.includes("Too Many Requests") || e?.status === 429;
 
-          await new Promise(resolve => setTimeout(resolve, 2500));
+          if (isRateLimit) {
+              console.error("⚠️ GEMINI RATE LIMIT ATINGIDO (429). Acionando Backoff Exponencial...");
+          } else {
+              console.error("❌ Gemini OCR Error Attempt:", attempts);
+              console.error("Gemini raw response:", e?.response?.data || e?.response || e?.message || e);
+          }
+
+          // Atraso progressivo: 2s na primeira falha, 4s na segunda, etc.
+          const delay = 2000 * attempts;
+          await new Promise(resolve => setTimeout(resolve, delay));
           continue; 
       }
     }
@@ -306,10 +301,8 @@ Exemplo de formato:
     // ⚙️ CAMADA 2: ON-THE-FLY MONTE CARLO ENGINE
     // ==========================================
     let allProcessedLegs: any[] = [];
-    let globalContextArray: string[] = []; 
 
     for (let match of finalValidJson.matches) {
-        if (match.matchContext) globalContextArray.push(`${match.matchName}: ${match.matchContext}`);
         if (!match.viablePicks || match.viablePicks.length === 0) continue;
         
         let market_lt = 2.6; 
@@ -347,7 +340,6 @@ Exemplo de formato:
 
         const ITERATIONS = 25000;
 
-        // 🎲 O MULTIVERSO OTIMIZADO
         for (let i = 0; i < ITERATIONS; i++) {
             const z = poissonSample(l3);
             const goalsHome = poissonSample(l1) + z;
@@ -416,7 +408,7 @@ Exemplo de formato:
             const maxOddTolerance = rawProb > 0.65 ? 1.18 : 1.35;
             if (finalOdd > fairOdd * maxOddTolerance) continue; 
             
-            // Aceita pernas fortes para construção de Múltiplas Customizadas
+            // Permite construção de apostas compostas com pernas de alta probabilidade
             if (finalOdd < 1.05) continue; 
 
             allProcessedLegs.push({
@@ -437,7 +429,7 @@ Exemplo de formato:
     let opportunities: any[] = [];
     const ODD_MIN = 1.50;
     const ODD_MAX = 2.20;
-    const EDGE_MIN = -0.02; // Aceita apostas de valor tático
+    const EDGE_MIN = -0.02; // Aceita apostas lógicas para montagem de Bet Builders
 
     for (let leg of allProcessedLegs) {
         const marketProb = 1 / leg.extractedOdd;
@@ -459,8 +451,7 @@ Exemplo de formato:
             if (isSameGame && l1.normHash.split('_')[0] === l2.normHash.split('_')[0]) continue;
 
             let combProb = l1.rawProb * l2.rawProb;
-            // Punição mais branda para o Bet Builder (Respeita sua criatividade tática)
-            if (isSameGame) combProb *= 0.98; 
+            if (isSameGame) combProb *= 0.98; // Punição branda para respeitar seu estilo
             
             combProb = Math.max(0.01, Math.min(combProb, 0.98));
             const combOdd = l1.extractedOdd * l2.extractedOdd;
@@ -511,70 +502,31 @@ Exemplo de formato:
     const riskLabel = bestOpp.prob < 0.45 ? "ALTO" : bestOpp.legs.length > 1 ? "MÉDIO" : "BAIXO";
 
     // =====================================================
-    // ✍️ CAMADA 5: NARRATIVE AI 
+    // ✍️ CAMADA 5: RELATÓRIO LOCAL ESTÁTICO (Zero API Calls para a IA)
     // =====================================================
     let generatedAnalysis = "";
     let generatedAlt = "";
     let generatedCons = "";
 
-    try {
-        const allContexts = globalContextArray.join(" | ");
-        const topPickDesc = bestOpp.legs.map((l:any) => `${l.market} (${l.match})`).join(" + ");
-        
-        let altPickDesc = "Nenhuma alternativa com EV forte detectada no range.";
-        let consPickDesc = "Nenhuma variação secundária detectada.";
+    const topPickDesc = bestOpp.legs.map((l:any) => `${l.market} (${l.match})`).join(" + ");
 
-        if (topOpportunities.length > 1) {
-            altPickDesc = `OPORTUNIDADE 2 (${topOpportunities[1].type}): ${topOpportunities[1].legs.map((l:any) => `${l.market} (${l.match})`).join(" + ")} (Odd: @${topOpportunities[1].odd.toFixed(2)} | EV: ${(topOpportunities[1].ev*100).toFixed(1)}%)`;
-        }
-        if (topOpportunities.length > 2) {
-            consPickDesc = `OPORTUNIDADE 3 (${topOpportunities[2].type}): ${topOpportunities[2].legs.map((l:any) => `${l.market} (${l.match})`).join(" + ")} (Odd: @${topOpportunities[2].odd.toFixed(2)} | EV: ${(topOpportunities[2].ev*100).toFixed(1)}%)`;
-        }
+    // ✅ FIX ESTRUTURAL: Geração de texto nativa, instantânea e sem gastar cota do Gemini.
+    generatedAnalysis = `A operação principal identificada pelo nosso Motor de Simulação Monte Carlo é a "${topPickDesc}". Após cruzarmos os cenários possíveis da partida em 25.000 iterações (Paths), cravamos uma probabilidade real de ${combinedProb}% para este desfecho, o que se traduz numa Odd Justa (Fair Odd) de @${fairOdd.toFixed(2)}.\n\nDiante da Odd de Mercado de @${marketOdd.toFixed(2)}, o radar detectou uma Edge (Vantagem sobre a Casa) de ${formattedEdge}%. Esta discrepância valida a entrada como uma operação estatística sólida.`;
 
-        const narrativeModel = genAI.getGenerativeModel({ 
-            model: 'gemini-2.5-flash',
-            generationConfig: { responseMimeType: "application/json" }
-        });
+    if (topOpportunities.length > 1) {
+        const altOp = topOpportunities[1];
+        const altDesc = altOp.legs.map((l:any) => `${l.market} (${l.match})`).join(" + ");
+        generatedAlt = `OPORTUNIDADE SECUNDÁRIA (${altOp.type}): ${altDesc} (Odd Mercado: @${altOp.odd.toFixed(2)} | EV: ${(altOp.ev*100).toFixed(1)}%). O motor preservou esta opção no radar caso a liquidez da primária seja alterada.`;
+    } else {
+        generatedAlt = "O scanner secundário varreu a grade e não detectou nenhuma alternativa paralela com forte Expectativa de Valor (EV+) dentro do range definido. O EV do jogo está concentrado na aposta principal.";
+    }
 
-        const narrativePrompt = `Aja como um Analista de Hedge Fund Esportivo.
-Nosso Motor de Simulação Monte Carlo (25k iterações) mapeou a grade e extraiu o Top 3 Operações de Valor (EV+).
-
-⚽ GAME SCRIPT LIDO NA TELA: "${allContexts}"
-
-🎯 OPERAÇÃO PRINCIPAL (Para a chave 'analysis'):
-Aposta: ${topPickDesc}
-- Odd do Mercado: @${marketOdd.toFixed(2)}
-- Probabilidade Simulada: ${combinedProb}% (Odd Justa: @${fairOdd.toFixed(2)})
-- Vantagem sobre o Mercado (Edge): ${formattedEdge}%
-
-🔄 OPERAÇÃO 2 (Para a chave 'alternativeCombination'):
-${altPickDesc}
-
-🛡️ OPERAÇÃO 3 (Para a chave 'conservativeCombination'):
-${consPickDesc}
-
-Sua tarefa: Traduzir os dados em um relatório coeso.
-
-Formato JSON esperado:
-{
-  "analysis": "Fale APENAS da Operação Principal. 2 parágrafos justificando como o cenário do jogo valida a Edge de ${formattedEdge}%.",
-  "alternativeCombination": "Descreva a Operação 2 como oportunidade detectada no scanner secundário. Se for 'Nenhuma', explique que a Edge secou e valide a postura conservadora do motor.",
-  "conservativeCombination": "Descreva a Operação 3. Caso não exista, sugira uma gestão de stake moderada baseada no risco."
-}`;
-
-        const textResult = await narrativeModel.generateContent(narrativePrompt);
-        const textData = JSON.parse(textResult.response.text());
-        
-        if (!textData || !textData.analysis || !textData.alternativeCombination || !textData.conservativeCombination) throw new Error();
-
-        generatedAnalysis = textData.analysis;
-        generatedAlt = textData.alternativeCombination;
-        generatedCons = textData.conservativeCombination;
-        
-    } catch (e) {
-        generatedAnalysis = `📊 **Simulação Monte Carlo:** O motor identificou Edge de ${formattedEdge}% na operação primária. A Odd do Mercado (@${marketOdd}) é ineficiente frente à nossa Odd Justa (@${fairOdd}), configurando Valor Esperado.`;
-        generatedAlt = topOpportunities.length > 1 ? `Radar Secundário: ${topOpportunities[1].legs.map((l:any)=>l.market).join(' + ')} (Odd Mercado @${topOpportunities[1].odd.toFixed(2)}).` : "Sem operações secundárias com EV superior ao benchmark.";
-        generatedCons = topOpportunities.length > 2 ? `Radar Terciário: ${topOpportunities[2].legs.map((l:any)=>l.market).join(' + ')} (Odd @${topOpportunities[2].odd.toFixed(2)}).` : "Mantenha Stake de 1 Unidade e respeite a gestão de banca.";
+    if (topOpportunities.length > 2) {
+        const consOp = topOpportunities[2];
+        const consDesc = consOp.legs.map((l:any) => `${l.market} (${l.match})`).join(" + ");
+        generatedCons = `OPORTUNIDADE DE COBERTURA (${consOp.type}): ${consDesc} (Odd Mercado: @${consOp.odd.toFixed(2)} | EV: ${(consOp.ev*100).toFixed(1)}%).`;
+    } else {
+        generatedCons = `Devido à ausência de variações de segurança viáveis, sugere-se uma gestão de banca rigorosa alinhada ao nível de Risco ${riskLabel} da operação primária.`;
     }
 
     return res.status(200).json({
