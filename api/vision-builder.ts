@@ -1,9 +1,10 @@
 import { GoogleGenerativeAI } from '@google/generative-ai';
+import OpenAI from 'openai';
 
-export const maxDuration = 60; // Limite Serverless Vercel
+export const maxDuration = 60;
 
 // ==========================================
-// 🧠 1. MOTOR DE TEORIA DA INFORMAÇÃO 
+// 🧠 1. MOTOR DE TEORIA DA INFORMAÇÃO E SRE
 // ==========================================
 const shannonEntropy = (p: number) => {
     if (p <= 0 || p >= 1 || isNaN(p)) return 0;
@@ -44,14 +45,11 @@ const randomNormal = () => {
 
 const randomGamma = (shape: number, scale: number) => {
     if (isNaN(shape) || shape <= 0 || isNaN(scale) || scale <= 0) return 0;
-
     let d, c, x, v, u;
     let actualShape = shape;
     if (shape < 1) actualShape = shape + 1;
-    
     d = actualShape - 1 / 3;
     c = 1 / Math.sqrt(9 * d);
-    
     while (true) {
         x = randomNormal();
         v = 1 + c * x;
@@ -184,55 +182,45 @@ export default async function handler(req: any, res: any) {
     if (process.env.NODE_ENV === 'production' && (!origin || !origin.includes('bettrackerpro.com.br'))) return res.status(403).json({ error: 'Acesso negado.' });
 
     const { images, email, markets } = req.body; 
-    const apiKey = process.env.GEMINI_API_KEY;
-    if (!apiKey) return res.status(500).json({ error: 'Chave de API ausente.' });
+    
+    const geminiKey = process.env.GEMINI_API_KEY;
+    const openaiKey = process.env.OPENAI_API_KEY;
+    
+    if (!geminiKey) return res.status(500).json({ error: 'Chave Gemini ausente.' });
 
     if (!images || images.length === 0) {
         throw new Error("Nenhuma imagem enviada para análise.");
     }
 
-    const genAI = new GoogleGenerativeAI(apiKey);
-    const model = genAI.getGenerativeModel({ 
+    const genAI = new GoogleGenerativeAI(geminiKey);
+    const geminiModel = genAI.getGenerativeModel({ 
         model: 'gemini-2.5-flash',
         generationConfig: { temperature: 0.10, responseMimeType: "application/json" }
     });
 
-    // ✅ FIX: Processar apenas 1 imagem (Reduz latência, custo e falhas do OCR)
-    // NOTA: Se futuramente implementar o "Tile OCR" no Frontend enviando 4 imagens (tiles), 
-    // altere o '[images[0]]' abaixo de volta para 'images'
-    const imageParts = [images[0]].map((img: any) => {
-        const cleanBase64 = img.base64
-            .replace(/^data:image\/\w+;base64,/, "")
-            .replace(/\s/g, "");
+    const openai = openaiKey ? new OpenAI({ apiKey: openaiKey }) : null;
 
+    const imageParts = [images[0]].map((img: any) => {
+        const cleanBase64 = img.base64.replace(/^data:image\/\w+;base64,/, "").replace(/\s/g, "");
         return {
-            inlineData: {
-                mimeType: img.mimeType || "image/png",
-                data: cleanBase64
-            }
+            mimeType: img.mimeType || "image/jpeg",
+            data: cleanBase64
         };
     });
 
     // ==========================================
-    // 👁️ CAMADA 1: VISION OCR (The Scraper Anti-429)
+    // 👁️ CAMADA 1: DUAL-ENGINE OCR (Gemini -> Fallback -> GPT-4o)
     // ==========================================
     let finalValidJson = null; 
     let attempts = 0;
 
-    // ✅ FIX: Reduzido para 2 tentativas máximas
-    while (attempts < 2 && !finalValidJson) {
-      attempts++;
-      
-      // ✅ FIX: Prompt Curto e Direto (Melhora a aderência estrutural do LLM)
-      const prompt = `Leia a imagem e extraia tabelas estatísticas.
-
+    const prompt = `Leia a imagem e extraia tabelas estatísticas.
 Extraia apenas:
 - linhas de gols (over/under)
 - linhas de escanteios
 - porcentagens de acerto
 
 Retorne APENAS JSON.
-
 Formato:
 {
  "matches":[
@@ -246,44 +234,87 @@ Formato:
   }
  ]
 }`;
-      try {
-        // ✅ FIX: Delay preemptivo para estabilizar requisições e evitar disparo do Rate Limit
-        await new Promise(r => setTimeout(r, 1200));
 
-        const result = await model.generateContent({
-            contents: [{ role: "user", parts: [{ text: prompt }, ...imageParts] }]
+    while (attempts < 2 && !finalValidJson) {
+      attempts++;
+      let textResult = "";
+      
+      try {
+        // TENTA GEMINI PRIMEIRO
+        await new Promise(r => setTimeout(r, 1200));
+        
+        const geminiFormatParts = imageParts.map(part => ({
+            inlineData: { mimeType: part.mimeType, data: part.data }
+        }));
+
+        const result = await geminiModel.generateContent({
+            contents: [{ role: "user", parts: [{ text: prompt }, ...geminiFormatParts] }]
         });
 
-        let textResult = result.response.text();
-        textResult = textResult.replace(/```json/gi, '').replace(/```/g, '').trim();
-        const jsonMatch = textResult.match(/\{[\s\S]*\}|\[[\s\S]*\]/);
-        if (jsonMatch) textResult = jsonMatch[0];
-        
-        const parsedData = JSON.parse(textResult);
-        
-        if (Array.isArray(parsedData)) {
-            finalValidJson = { matches: parsedData };
-        } else if (parsedData && Array.isArray(parsedData.matches)) {
-            finalValidJson = parsedData;
-        } else if (parsedData && parsedData.matchName) {
-            finalValidJson = { matches: [parsedData] };
-        } else {
-            throw new Error("JSON não contém dados de jogos.");
-        }
-        
-      } catch (e: any) { 
-          // ✅ FIX: Guilhotina de Rate Limit (Não tenta novamente se o Google mandou parar)
-          const isRateLimit = e?.message?.includes("429") || e?.message?.includes("Too Many Requests") || e?.status === 429;
+        textResult = result.response.text();
 
-          if (isRateLimit) {
-              console.error("🚨 GEMINI RATE LIMIT ATINGIDO");
-              throw new Error("⚠️ O motor atingiu o limite da API de leitura de imagens. Aguarde alguns segundos e tente novamente.");
+      } catch (geminiError: any) { 
+          console.error("❌ Gemini Falhou:", geminiError.message);
+          
+          // SE GEMINI FALHAR, ACIONA OPENAI IMEDIATAMENTE (FALLBACK)
+          if (openai) {
+              console.log("🔄 Acionando fallback para OpenAI (GPT-4o-mini)...");
+              try {
+                  const openaiImages = imageParts.map(part => ({
+                      type: "image_url",
+                      image_url: { url: `data:${part.mimeType};base64,${part.data}` }
+                  }));
+
+                  // Usando gpt-4o-mini pois é incrivelmente rápido e barato para OCR
+                  const response = await openai.chat.completions.create({
+                      model: "gpt-4o-mini",
+                      messages: [
+                          {
+                              role: "user",
+                              // @ts-ignore
+                              content: [{ type: "text", text: prompt }, ...openaiImages]
+                          }
+                      ],
+                      temperature: 0.1,
+                      response_format: { type: "json_object" }
+                  });
+
+                  textResult = response.choices[0].message?.content || "";
+                  console.log("✅ OpenAI concluiu OCR com sucesso.");
+              } catch (openaiError: any) {
+                  console.error("❌ OpenAI também falhou:", openaiError.message);
+                  throw new Error("⚠️ Ambas as APIs (Gemini e OpenAI) falharam ou atingiram limite. Tente novamente mais tarde.");
+              }
+          } else {
+              // Se não tiver chave da OpenAI configurada, faz o tratamento padrão do Gemini
+              const isRateLimit = geminiError?.message?.includes("429") || geminiError?.status === 429;
+              if (isRateLimit) {
+                  throw new Error("⚠️ O motor atingiu o limite da API de leitura. Aguarde alguns segundos ou configure o backup OpenAI.");
+              }
+              if (attempts >= 2) break;
+              continue;
           }
+      }
 
-          console.error("❌ Gemini OCR Error Attempt:", attempts);
-          console.error("Gemini raw response:", e?.response?.data || e?.response || e?.message || e);
-          console.error("Full error object:", JSON.stringify(e, null, 2));
-
+      // Processamento do JSON (Independente de qual IA gerou)
+      try {
+          textResult = textResult.replace(/```json/gi, '').replace(/```/g, '').trim();
+          const jsonMatch = textResult.match(/\{[\s\S]*\}|\[[\s\S]*\]/);
+          if (jsonMatch) textResult = jsonMatch[0];
+          
+          const parsedData = JSON.parse(textResult);
+          
+          if (Array.isArray(parsedData)) {
+              finalValidJson = { matches: parsedData };
+          } else if (parsedData && Array.isArray(parsedData.matches)) {
+              finalValidJson = parsedData;
+          } else if (parsedData && parsedData.matchName) {
+              finalValidJson = { matches: [parsedData] };
+          } else {
+              throw new Error("JSON Inválido.");
+          }
+      } catch(parseError) {
+          console.error("Erro no Parse do JSON:", parseError);
           if (attempts >= 2) break;
       }
     }
@@ -497,7 +528,7 @@ Formato:
     const riskLabel = bestOpp.prob < 0.45 ? "ALTO" : bestOpp.legs.length > 1 ? "MÉDIO" : "BAIXO";
 
     // =====================================================
-    // ✍️ CAMADA 5: RELATÓRIO LOCAL ESTÁTICO (Fim do consumo duplo de IA)
+    // ✍️ CAMADA 5: RELATÓRIO LOCAL ESTÁTICO 
     // =====================================================
     const topPickDesc = bestOpp.legs.map((l:any) => `${l.market} (${l.match})`).join(" + ");
 
