@@ -469,27 +469,30 @@ const LEG_MIN = 1.22;
 const LEG_MAX = 1.45; 
     const EDGE_MIN = -0.05; 
 
-    // Singles (apenas informativos — não prioridade)
+    // Singles permitidos SOMENTE dentro do range final
 for (let leg of allProcessedLegs) {
 
-    const marketProb = 1 / leg.extractedOdd;
-    const edge = leg.rawProb - marketProb; 
-    const ev = (leg.rawProb * leg.extractedOdd) - 1; 
-
-    if (leg.extractedOdd >= BUILDER_MIN && leg.extractedOdd <= BUILDER_MAX && edge >= EDGE_MIN) {
-
-        const score = edge * entropyWeight(leg.rawProb) * 0.4;
-
-        opportunities.push({
-            type: 'Simples',
-            legs: [leg],
-            prob: leg.rawProb,
-            odd: leg.extractedOdd,
-            ev,
-            edge,
-            score
-        });
+    if (leg.extractedOdd < BUILDER_MIN || leg.extractedOdd > BUILDER_MAX) {
+        continue;
     }
+
+    const marketProb = 1 / leg.extractedOdd;
+    const edge = leg.rawProb - marketProb;
+    const ev = (leg.rawProb * leg.extractedOdd) - 1;
+
+    if (edge < EDGE_MIN) continue;
+
+    const score = edge * entropyWeight(leg.rawProb) * 0.2;
+
+    opportunities.push({
+        type: 'Simples',
+        legs: [leg],
+        prob: leg.rawProb,
+        odd: leg.extractedOdd,
+        ev,
+        edge,
+        score
+    });
 }
 
     // Duplas (Modelagem de Cópula e Causalidade)
@@ -539,6 +542,51 @@ entropyWeight(combProb) *
         }
     }
 
+    // 🔥 TRIPLAS (builder avançado)
+
+for (let i = 0; i < allProcessedLegs.length; i++) {
+for (let j = i + 1; j < allProcessedLegs.length; j++) {
+for (let k = j + 1; k < allProcessedLegs.length; k++) {
+
+const l1 = allProcessedLegs[i];
+const l2 = allProcessedLegs[j];
+const l3 = allProcessedLegs[k];
+
+if (l1.match !== l2.match || l1.match !== l3.match) continue;
+
+let combProb = l1.rawProb * l2.rawProb * l3.rawProb;
+
+combProb = Math.max(0.01, Math.min(combProb, 0.98));
+
+const combOdd =
+l1.extractedOdd *
+l2.extractedOdd *
+l3.extractedOdd;
+
+const marketProb = 1 / combOdd;
+
+const edge = combProb - marketProb;
+
+if (combOdd < BUILDER_MIN || combOdd > BUILDER_MAX) continue;
+if (edge < EDGE_MIN) continue;
+
+const score =
+edge *
+entropyWeight(combProb) *
+6.0;
+
+opportunities.push({
+type: `Builder Triplo`,
+legs: [l1,l2,l3],
+prob: combProb,
+odd: combOdd,
+ev: (combProb * combOdd) - 1,
+edge,
+score
+});
+
+}}}
+
     const uniqueOps = new Map();
     for (let op of opportunities) {
         const opKey = op.legs.map((l:any) => l.normHash).sort().join("|");
@@ -547,7 +595,17 @@ entropyWeight(combProb) *
         }
     }
     opportunities = Array.from(uniqueOps.values());
-    opportunities.sort((a, b) => b.score - a.score);
+    // 🔥 Prioriza Bet Builders
+opportunities.sort((a, b) => {
+
+    const aBuilder = a.legs.length > 1;
+    const bBuilder = b.legs.length > 1;
+
+    if (aBuilder && !bBuilder) return -1;
+    if (!aBuilder && bBuilder) return 1;
+
+    return b.score - a.score;
+});
     
     const topOpportunities = opportunities.slice(0, 3);
 
