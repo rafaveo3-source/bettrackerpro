@@ -200,7 +200,12 @@ export default async function handler(req: any, res: any) {
     });
 
     const selectedMarketsStr = markets && markets.length > 0 ? markets.join(', ') : 'Gols, Escanteios, BTTS';
-    const imageParts = images.map((img: any) => ({ inlineData: { data: img.base64, mimeType: img.mimeType } }));
+    const imageParts = images.map((img: any) => ({
+  inlineData: {
+    mimeType: img.mimeType || "image/png",
+    data: img.base64.replace(/^data:image\/\w+;base64,/, "")
+  }
+}));
 
     // ==========================================
     // 👁️ CAMADA 1: VISION OCR (The Scraper Resiliente)
@@ -235,7 +240,17 @@ Exemplo de formato:
   ]
 }`;
       try {
-        const result = await model.generateContent([{ text: prompt }, ...imageParts]);
+        const result = await model.generateContent({
+  contents: [
+    {
+      role: "user",
+      parts: [
+        { text: prompt },
+        ...imageParts
+      ]
+    }
+  ]
+});
         let textResult = result.response.text();
         
         // Limpeza de segurança
