@@ -359,7 +359,7 @@ Formato JSON esperado:
 
             const maxOddTolerance = rawProb > 0.65 ? 1.18 : 1.35;
             if (finalOdd > fairOdd * maxOddTolerance) continue; 
-            if (finalOdd < 1.25) continue; 
+            if (finalOdd < 1.05) continue; 
 
             allProcessedLegs.push({
                 match: match.matchName,
@@ -377,9 +377,9 @@ Formato JSON esperado:
     // 💡 PASSO 4: OPPORTUNITY FINDER 
     // ==========================================
     let opportunities: any[] = [];
-    const ODD_MIN = 1.60;
-    const ODD_MAX = 2.00;
-    const EDGE_MIN = 0.03; 
+    const ODD_MIN = 1.50;
+    const ODD_MAX = 2.20;
+    const EDGE_MIN = -0.02; // Aceita apostas lógicas, mesmo que o mercado esteja bem ajustado
 
     for (let leg of allProcessedLegs) {
         const marketProb = 1 / leg.extractedOdd;
@@ -401,7 +401,7 @@ Formato JSON esperado:
             if (isSameGame && l1.normHash.split('_')[0] === l2.normHash.split('_')[0]) continue;
 
             let combProb = l1.rawProb * l2.rawProb;
-            if (isSameGame) combProb *= 0.95; 
+            if (isSameGame) combProb *= 0.98; 
             
             combProb = Math.max(0.01, Math.min(combProb, 0.98));
             const combOdd = l1.extractedOdd * l2.extractedOdd;
