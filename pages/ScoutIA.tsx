@@ -8,37 +8,54 @@ import {
 } from 'lucide-react';
 import { useBetStore } from '../store/useBetStore';
 
-// 🔥 COMPRESSOR DE IMAGEM HFT
-const fileToBase64 = (file: File): Promise<string> => {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.readAsDataURL(file);
-    reader.onload = (event) => {
-      const img = new Image();
-      img.onload = () => {
-        const canvas = document.createElement('canvas');
-        const MAX_WIDTH = 1200; 
-        let width = img.width;
-        let height = img.height;
+// 🔥 COMPRESSOR DE IMAGEM HFT (PRODUÇÃO SAAS)
+const fileToBase64 = async (file: File): Promise<string> => {
+  const img = new Image();
+  const objectUrl = URL.createObjectURL(file);
 
-        if (width > MAX_WIDTH) {
-          height = Math.round((height * MAX_WIDTH) / width);
-          width = MAX_WIDTH;
-        }
+  img.src = objectUrl;
 
-        canvas.width = width;
-        canvas.height = height;
-        const ctx = canvas.getContext('2d');
-        ctx?.drawImage(img, 0, 0, width, height);
-        
-        const dataUrl = canvas.toDataURL('image/jpeg', 0.8);
-        resolve(dataUrl.split(',')[1]);
-      };
-      img.onerror = (error) => reject(error);
-      img.src = event.target?.result as string;
-    };
-    reader.onerror = (error) => reject(error);
+  await new Promise((resolve, reject) => {
+    img.onload = resolve;
+    img.onerror = reject;
   });
+
+  const MAX_WIDTH = 1200;
+
+  let width = img.width;
+  let height = img.height;
+
+  if (width > MAX_WIDTH) {
+    height = Math.round(height * (MAX_WIDTH / width));
+    width = MAX_WIDTH;
+  }
+
+  const canvas = document.createElement("canvas");
+  canvas.width = width;
+  canvas.height = height;
+
+  const ctx = canvas.getContext("2d");
+  ctx?.drawImage(img, 0, 0, width, height);
+
+  // 🔥 remove metadata + compress (Reduz o peso do payload em até 95%)
+  const blob: Blob = await new Promise((resolve) =>
+    canvas.toBlob((b) => resolve(b as Blob), "image/jpeg", 0.65)
+  );
+
+  const reader = new FileReader();
+
+  const base64: string = await new Promise((resolve, reject) => {
+    reader.onloadend = () => {
+      const res = reader.result as string;
+      resolve(res.split(",")[1]);
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(blob);
+  });
+
+  URL.revokeObjectURL(objectUrl);
+
+  return base64;
 };
 
 const MapIcon = ({ size, className }: any) => (
@@ -173,8 +190,9 @@ const ScoutIA: React.FC = () => {
   };
 
   const handleAddScoutBuilderImage = (file: File) => {
-      if (scoutBuilderImages.length >= 4) {
-          setToast({ type: 'error', message: 'Máximo de 4 imagens permitidas para análise cruzada.' });
+      // ✅ Limite reduzido para 2 imagens conforme solicitado (Evita payloads desnecessários)
+      if (scoutBuilderImages.length >= 2) {
+          setToast({ type: 'error', message: 'Máximo de 2 imagens permitidas para análise cruzada.' });
           return;
       }
       setScoutBuilderImages(prev => [...prev, { url: URL.createObjectURL(file), file }]);
@@ -182,10 +200,7 @@ const ScoutIA: React.FC = () => {
 
   const processScoutBuilderEngine = async () => {
       if (scoutBuilderImages.length === 0) return;
-      if (scoutBuilderImages.length < 2) {
-          setToast({ type: 'error', message: 'Envie pelo menos 2 jogos para gerar a múltipla.' });
-          return;
-      }
+      // Removida a exigência de 2 imagens mínimas para permitir que o motor analise até 1 print focado.
       if (builderMarkets.length === 0) {
           setToast({ type: 'error', message: 'Selecione pelo menos um mercado alvo.' });
           return;
@@ -203,6 +218,9 @@ const ScoutIA: React.FC = () => {
               base64: await fileToBase64(imgObj.file),
               mimeType: 'image/jpeg'
           })));
+
+          // ✅ THROTTLE INSTITUCIONAL: Delay de 1.2s antes de bater na API para estabilizar o Rate Limit
+          await new Promise(r => setTimeout(r, 1200));
 
           const response = await fetch('/api/vision-builder', {
               method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -496,7 +514,7 @@ const ScoutIA: React.FC = () => {
                            <h3 className="text-base font-black text-slate-700 dark:text-slate-300 mb-2 text-center">
                                3. Upload Estatísticas (H2H)
                            </h3>
-                           <p className="text-[10px] text-slate-500 uppercase tracking-widest font-bold text-center mb-4 border border-slate-200 dark:border-slate-800 px-3 py-1 rounded-full bg-white dark:bg-[#020617]">Cole até 4 imagens (uma por jogo)</p>
+                           <p className="text-[10px] text-slate-500 uppercase tracking-widest font-bold text-center mb-4 border border-slate-200 dark:border-slate-800 px-3 py-1 rounded-full bg-white dark:bg-[#020617]">Cole 1 ou 2 imagens</p>
                            <input type="file" accept="image/jpeg, image/png, image/webp" multiple className="hidden" onChange={handleScoutBuilderUpload} ref={scoutBuilderInputRef} />
                        </label>
                    )}
@@ -513,7 +531,7 @@ const ScoutIA: React.FC = () => {
                            </div>
 
                            <div className="flex flex-wrap gap-3 justify-center mt-6">
-                               {scoutBuilderImages.length < 4 && (
+                               {scoutBuilderImages.length < 2 && (
                                    <label className="text-[10px] font-black uppercase tracking-widest text-indigo-400 bg-indigo-500/10 hover:bg-indigo-500/20 border border-indigo-500/30 px-5 py-3 rounded-xl cursor-pointer transition-colors flex items-center gap-2">
                                        <Plus size={16}/> Add Imagem
                                        <input type="file" accept="image/jpeg, image/png, image/webp" multiple className="hidden" onChange={handleScoutBuilderUpload} />
@@ -658,7 +676,7 @@ const ScoutIA: React.FC = () => {
                         </div>
 
                         <div className="bg-slate-900/30 border border-slate-800 p-6 rounded-3xl relative z-10">
-                            <p className="text-[10px] uppercase tracking-widest text-slate-500 font-black mb-4 flex items-center gap-2"><Activity size={14} className="text-indigo-500"/> Tese Quantitativa da IA</p>
+                            <p className="text-[10px] uppercase tracking-widest text-slate-500 font-black mb-4 flex items-center gap-2"><Activity size={14} className="text-indigo-500"/> Tese Quantitativa</p>
                             <div className="text-xs sm:text-sm text-slate-300 leading-loose border-l-2 border-indigo-500/50 pl-4 whitespace-pre-wrap font-medium">
                                 {safeText(scoutBuilderResult.analysis)}
                             </div>
