@@ -342,7 +342,10 @@ Retorne APENAS um JSON:
         const ITERATIONS = 25000;
         
         // Probabilidade de chegada de cantos (Pesa para o dominante)
-        let homeCornerShare = tpiHome / (tpiHome + tpiAway);
+        // distribuição de cantos baseada em histórico + pressão
+let homeCornerShare =
+(statsH.corners / (statsH.corners + statsA.corners)) * 0.6 +
+(tpiHome / (tpiHome + tpiAway)) * 0.4;
 
         // 🔥 2.3 CONDITIONAL MONTE CARLO (Game Kill Factor)
         for (let i = 0; i < ITERATIONS; i++) {
@@ -353,16 +356,23 @@ Retorne APENAS um JSON:
 
             // Game Kill Factor: Se um time abre larga vantagem, a pressão (e cantos) cai
             let gameKillFactor = 1.0;
-            if (Math.abs(goalsHome - goalsAway) >= 2) gameKillFactor = 0.75; 
+            // 🔥 Game Kill Factor mais realista
+if (Math.abs(goalsHome - goalsAway) >= 2) gameKillFactor = 0.92; 
 
             const pressure = totalGoals * gameKillFactor;
             
-            // Cantos Condicionais baseados nos Shots (TPI)
-            const baseCornerRate = (statsH.corners + statsA.corners) * 0.4;
-            const shotPressure = ((statsH.shots + statsA.shots) / 20) * 0.6;
-            const adjustedCornerMean = (baseCornerRate + shotPressure * market_lc) * gameKillFactor;
+            // 🔥 Modelo realista de lambda de cantos (bookmaker style)
+const baseCornerRate = statsH.corners + statsA.corners;
+
+// ritmo de jogo baseado em volume ofensivo
+const paceFactor = (statsH.shots + statsA.shots) / 24;
+
+// ajuste suave de intensidade ofensiva
+const adjustedCornerMean =
+baseCornerRate * (0.9 + paceFactor * 0.2) * gameKillFactor;
             
-            const dispersion = 2.0 + (Math.sqrt(adjustedCornerMean) * 0.8); 
+            // 🔥 Overdispersion realista para cantos
+const dispersion = 4.5; 
             let corners = negativeBinomialSample(adjustedCornerMean, dispersion);
             corners = Math.min(corners, 22);
 
