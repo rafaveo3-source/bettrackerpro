@@ -83,8 +83,22 @@ const negativeBinomialSample = (mean: number, dispersion: number) => {
 };
 
 // ==========================================
-// 🛠️ 3. NORMALIZAÇÃO HFT (Limpa e Focada)
+// 🛠️ 3. SPORTSBOOK MAPPING (Validador Realista)
 // ==========================================
+const VALID_LINES = {
+    goals: [0.5, 1.5, 2.5, 3.5, 4.5, 5.5],
+    corners: [6.5, 7.5, 8.5, 9.5, 10.5, 11.5, 12.5],
+    team_corners: [2.5, 3.5, 4.5, 5.5, 6.5, 7.5]
+};
+
+const validateMarketLine = (type: string, line: number, target: string) => {
+    if (type === "goals") return VALID_LINES.goals.includes(line);
+    if (type === "corners" && target === "match") return VALID_LINES.corners.includes(line);
+    if (type === "corners" && target !== "match") return VALID_LINES.team_corners.includes(line);
+    if (type === "btts") return true; 
+    return false;
+};
+
 const normalizeMarket = (marketStr: string, matchName: string) => {
     if (!marketStr || !matchName) return null;
     const m = marketStr.toLowerCase();
@@ -118,6 +132,9 @@ const normalizeMarket = (marketStr: string, matchName: string) => {
     else if (awayTeam && m.includes(awayTeam.toLowerCase())) target = 'away';
     else if (m.includes('casa')) target = 'home';
     else if (m.includes('visitante')) target = 'away';
+
+    // 🔥 BLOQUEIO DE MERCADOS TRIVIAIS / RIDÍCULOS
+    if (type === 'corners' && target === 'match' && line < 6.5) return null;
 
     const condition = type === 'btts' ? 'yes' : isOver ? 'over' : 'under';
     const hash = `${type}_${target}_${condition}_${line}_${isHT ? 'ht' : 'ft'}`;
@@ -157,7 +174,7 @@ export default async function handler(req: any, res: any) {
     const openai = openaiKey ? new OpenAI({ apiKey: openaiKey }) : null;
 
     // ==========================================
-    // 👁️ CAMADA 1: NLP EXTRACTOR (SEM RACES)
+    // 👁️ CAMADA 1: NLP EXTRACTOR
     // ==========================================
     let finalValidJson = null; 
 
@@ -247,7 +264,6 @@ Retorne APENAS JSON:
         const statsH = match.teamStats?.home || { goals: 1.2, corners: 4.5, shots: 10.0 };
         const statsA = match.teamStats?.away || { goals: 1.2, corners: 4.5, shots: 10.0 };
 
-        // 🔥 XG PROXY & TPI ENGINE 
         const xG_H = statsH.shots * 0.095;
         const xG_A = statsA.shots * 0.095;
         
@@ -293,23 +309,23 @@ Retorne APENAS JSON:
         if (match.viablePicks) {
             for (let pick of match.viablePicks) {
                 const norm = normalizeMarket(pick.market || '', match.matchName || '');
-                if (!norm) continue; 
+                // 🔥 VALIDAÇÃO CONTRA MERCADOS REAIS
+                if (!norm || !validateMarketLine(norm.type, norm.line, norm.target)) continue; 
                 if (!activeMarketsMap.has(norm.hash)) activeMarketsMap.set(norm.hash, { norm, hits: 0, ref: pick });
             }
         }
 
-        // 🔥 TEMPLATES CAUSAIS (Sem Races)
         let smartLines: string[] = [];
         
         if (detectedGameScript === "HOME_PRESSURE") {
             smartLines = [
-                `${homeTeam} Mais de 0.5 Gols`, `${homeTeam} Mais de 1.5 Gols`, "Mais de 1.5 Gols", 
+                `${homeTeam} Mais de 0.5 Gols`, `${homeTeam} Mais de 1.5 Gols`, "Mais de 1.5 Gols", "Ambas Marcam Sim",
                 `${homeTeam} Mais de 2.5 Escanteios`, `${homeTeam} Mais de 3.5 Escanteios`, `${homeTeam} Mais de 4.5 Escanteios`,
                 "Mais de 7.5 Escanteios", "Mais de 8.5 Escanteios", "Mais de 0.5 Gols HT"
             ];
         } else if (detectedGameScript === "AWAY_PRESSURE") {
             smartLines = [
-                `${awayTeam} Mais de 0.5 Gols`, `${awayTeam} Mais de 1.5 Gols`, "Mais de 1.5 Gols", 
+                `${awayTeam} Mais de 0.5 Gols`, `${awayTeam} Mais de 1.5 Gols`, "Mais de 1.5 Gols", "Ambas Marcam Sim",
                 `${awayTeam} Mais de 2.5 Escanteios`, `${awayTeam} Mais de 3.5 Escanteios`, `${awayTeam} Mais de 4.5 Escanteios`,
                 "Mais de 7.5 Escanteios", "Mais de 8.5 Escanteios", "Mais de 0.5 Gols HT"
             ];
@@ -328,7 +344,8 @@ Retorne APENAS JSON:
 
         for (let sm of smartLines) {
             const norm = normalizeMarket(sm, match.matchName || '');
-            if (norm && !activeMarketsMap.has(norm.hash)) {
+            // 🔥 VALIDAÇÃO CONTRA MERCADOS REAIS
+            if (norm && validateMarketLine(norm.type, norm.line, norm.target) && !activeMarketsMap.has(norm.hash)) {
                 activeMarketsMap.set(norm.hash, { norm, hits: 0, ref: { market: sm, sampleSize: 10, extractedOdd: 0, confidence: 1.0 } });
             }
         }
@@ -340,13 +357,11 @@ Retorne APENAS JSON:
         let homeCornerShare = tpiHome / (tpiHome + tpiAway);
 
         for (let i = 0; i < ITERATIONS; i++) {
-            // HT Simulação (44% dos gols no 1º tempo)
             const z_ht = poissonSample(l3 * 0.44);
             const goalsHomeHT = poissonSample(l1 * 0.44) + z_ht;
             const goalsAwayHT = poissonSample(l2 * 0.44) + z_ht;
             const totalGoalsHT = goalsHomeHT + goalsAwayHT;
 
-            // FT Simulação
             const z = poissonSample(l3);
             const goalsHome = poissonSample(l1) + z;
             const goalsAway = poissonSample(l2) + z;
@@ -359,7 +374,6 @@ Retorne APENAS JSON:
             const shotPressure = ((statsH.shots + statsA.shots) / 20) * 0.6;
             const adjustedCornerMean = (baseCornerRate + shotPressure * market_lc) * gameKillFactor;
             
-            // 🔥 VARIÂNCIA REAL DE ESCANTEIOS
             const dispersion = 1.2 + (adjustedCornerMean * 0.25); 
             let corners = negativeBinomialSample(adjustedCornerMean, dispersion);
             corners = Math.min(corners, 22);
@@ -396,6 +410,7 @@ Retorne APENAS JSON:
             }
         }
 
+        // 🔥 O FILTRO DE EFICIÊNCIA (ZONA DE CONFORTO)
         for (let mkt of activeMarkets) {
             const pick = mkt.ref;
             let rawProb = mkt.hits / ITERATIONS;
@@ -403,20 +418,19 @@ Retorne APENAS JSON:
             let rawOdd = Number(pick.extractedOdd);
             let finalProb = rawProb;
 
-            // 🔥 MARKET ANCHORING (Bayesian Shrinkage)
-            // Se a odd real foi extraída, mesclamos 70% Modelo e 30% Mercado para evitar overfitting
             if (rawOdd && !isNaN(rawOdd) && rawOdd !== 1.50 && rawOdd !== 0) {
                 const impliedMarketProb = 1 / rawOdd;
                 finalProb = (0.70 * rawProb) + (0.30 * impliedMarketProb); 
             } else {
-                rawOdd = (1 / rawProb) * 0.92; // Gera juice sintético se não tiver odd
+                rawOdd = (1 / rawProb) * 0.92; 
             }
 
-            // Normalização final de segurança
             rawProb = Math.max(0.01, Math.min(finalProb * (finalProb > 0.85 ? 0.96 : 1), 0.98));
             const finalOdd = Math.min(Math.max(rawOdd, 1.01), 10.0);
 
-            if (rawProb < 0.40) continue; 
+            // 🔥 A MÁGICA: Corta pernas irrealistas (baixa prob) e extremamente óbvias/inúteis (> 90%)
+            // Isso força o motor a trabalhar apenas com o miolo tático do jogo.
+            if (rawProb < 0.55 || rawProb > 0.90) continue; 
             if (finalOdd > 2.50) continue; 
             if (finalOdd < 1.05) continue; 
 
@@ -443,7 +457,6 @@ Retorne APENAS JSON:
     const BUILDER_MAX = 2.30; 
     const EDGE_MIN = -0.05; 
 
-    // SINGLES 
     for (let leg of allProcessedLegs) {
         if (leg.extractedOdd < BUILDER_MIN || leg.extractedOdd > BUILDER_MAX) continue;
 
@@ -452,14 +465,12 @@ Retorne APENAS JSON:
         const ev = (leg.rawProb * leg.extractedOdd) - 1; 
         
         if (edge >= EDGE_MIN) {
-            // Foca Singles premium apenas em Gols ou Cantos. (BTTS perdeu o boost)
             const isPremiumSingle = leg.mktType === 'goals' || leg.mktType === 'corners';
             const score = edge * entropyWeight(leg.rawProb) * (isPremiumSingle ? 1.5 : 1.0); 
             opportunities.push({ type: 'Simples', legs: [leg], prob: leg.rawProb, odd: leg.extractedOdd, ev, edge, score });
         }
     }
 
-    // DUPLAS COM CÓPULA CAPADA
     for (let i = 0; i < allProcessedLegs.length; i++) {
         for (let j = i + 1; j < allProcessedLegs.length; j++) {
             const l1 = allProcessedLegs[i];
@@ -473,15 +484,12 @@ Retorne APENAS JSON:
             let p2 = l2.rawProb;
             let combProb = p1 * p2;
 
-            // 🔥 CORRELAÇÃO DE CÓPULA LIMITADA (Máximo Histórico 0.25)
             if (isSameGame) {
                 if (l1.mktTarget === l2.mktTarget && l1.mktTarget !== 'match' && l1.mktType !== l2.mktType) {
-                    // Limite máximo de Rho = 0.25 (Team Goal + Team Corners)
                     let rho = 0.15 + Math.min(tpiDiffGlobal * 0.05, 0.10); 
                     combProb = (p1 * p2) + rho * Math.sqrt(p1 * (1 - p1) * p2 * (1 - p2));
                 } 
                 else if (l1.mktTarget !== l2.mktTarget && l1.mktType !== l2.mktType) {
-                    // Limite máximo de Rho = 0.15 (Match Goals + Corners)
                     let rho = 0.08 + Math.min(tpiDiffGlobal * 0.02, 0.07);
                     combProb = (p1 * p2) + rho * Math.sqrt(p1 * (1 - p1) * p2 * (1 - p2));
                 }
@@ -521,7 +529,7 @@ Retorne APENAS JSON:
     const topOpportunities = opportunities.slice(0, 3);
 
     if (topOpportunities.length === 0) {
-        throw new Error(`NO BET: O Game Script não ofereceu Valor Esperado (EV+) consolidado com o Mercado (Ancoragem) no range de Odd @1.55 - @2.30.`);
+        throw new Error(`NO BET: O Game Script não ofereceu Valor Esperado (EV+) realista no range de Odd @1.55 - @2.30.`);
     }
 
     const bestOpp = topOpportunities[0];
@@ -543,13 +551,13 @@ Retorne APENAS JSON:
     // =====================================================
     const topPickDesc = bestOpp.legs.map((l:any) => `${l.market}`).join(" + ");
 
-    const generatedAnalysis = `Classificação Tática: [${detectedGameScript}]. O algoritmo identificou a operação "${topPickDesc}" como o ápice de Valor Esperado (EV+) ajustado.\n\nAtravés da extração de xG Proxy (Remates e Média Global), aplicamos o Market Anchoring (30% Shrinkage) para proteger o bilhete contra Overfitting em amostras pequenas. Adicionalmente, limitamos a variância excluindo linhas especulativas (Races) e aplicamos uma Cópula Gaussiana restrita a \u03C1=0.25 para precificar a Odd Justa exata em @${fairOdd.toFixed(2)}.`;
+    const generatedAnalysis = `Classificação Tática: [${detectedGameScript}]. Através do mapeamento de linhas reais de Sportsbook (Bet365 Valid Lines), o algoritmo isolou a operação "${topPickDesc}" como o ápice de Valor Esperado (EV+) no range alvo.\n\nUtilizando a aproximação de Cópula Gaussiana combinada à Zona de Eficiência Probabilística (55% a 90%), forçamos a exclusão de mercados com ruído estatístico. A dependência não-linear dos eventos elevou a Probabilidade Combinada para ${combinedProb}% (Odd Justa @${fairOdd.toFixed(2)}), blindando a stake contra pernas supervalorizadas.`;
 
     let generatedAlt = "";
     if (topOpportunities.length > 1) {
         const altOp = topOpportunities[1];
         const altDesc = altOp.legs.map((l:any) => `${l.market}`).join(" + ");
-        generatedAlt = `OPORTUNIDADE 2 (${altOp.type}): ${altDesc} (Odd Simulada: @${altOp.odd.toFixed(2)}).`;
+        generatedAlt = `OPORTUNIDADE 2 (${altOp.type}): ${altDesc} (Odd Simulada: @${altOp.odd.toFixed(2)}). Alternativa retida pela aderência ao xG Model.`;
     } else {
         generatedAlt = "O filtro Bayesiano eliminou opções secundárias para garantir a proteção de banca.";
     }
