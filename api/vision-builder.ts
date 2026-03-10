@@ -4,7 +4,7 @@ import OpenAI from 'openai';
 export const maxDuration = 60;
 
 // ==========================================
-// 🧠 1. MOTOR DE TEORIA DA INFORMAÇÃO E SRE
+// 🧠 1. MOTOR DE TEORIA DA INFORMAÇÃO 
 // ==========================================
 const shannonEntropy = (p: number) => {
     if (p <= 0 || p >= 1 || isNaN(p)) return 0;
@@ -140,7 +140,6 @@ const normalizeMarket = (marketStr: string, matchName: string) => {
     else if (m.includes('casa')) target = 'home';
     else if (m.includes('visitante')) target = 'away';
 
-    // Bloqueia mercados triviais globais
     if (type === 'corners' && target === 'match' && line < 6.5) return null;
 
     const condition = type === 'btts' ? 'yes' : type === 'race' ? 'first_to' : isOver ? 'over' : 'under';
@@ -359,7 +358,6 @@ Retorne APENAS JSON:
             }
         }
         
-        // 🔥 CORREÇÃO 3: FALLBACK DE MERCADOS SE O NLP FALHAR LIXO
         if (activeMarketsMap.size === 0) {
             const fallbackLines = [
                 "Mais de 1.5 Gols", "Mais de 7.5 Escanteios", "Ambas Marcam Sim", 
@@ -452,7 +450,6 @@ Retorne APENAS JSON:
             }
         }
 
-        // 🔥 CORREÇÃO 1 e 2: O NOVO FILTRO (Mais Largo e Inteligente)
         for (let mkt of activeMarkets) {
             const pick = mkt.ref;
             let rawProb = mkt.hits / ITERATIONS;
@@ -470,11 +467,8 @@ Retorne APENAS JSON:
             rawProb = Math.max(0.01, Math.min(finalProb * (finalProb > 0.85 ? 0.96 : 1), 0.98));
             const finalOdd = Math.min(Math.max(rawOdd, 1.01), 10.0);
 
-            // A MÁGICA: Permite Anchor Legs de altíssima segurança passarem para o Builder
-            // Range expandido para: 45% a 95% de chance
             if (rawProb < 0.45 || rawProb > 0.95) continue; 
             if (finalOdd > 2.50) continue; 
-            // Odd mínima cravada em 1.10 (Permite que o 'Over 0.5 Gols' e similares sobrevivam)
             if (finalOdd < 1.10) continue; 
 
             allProcessedLegs.push({
@@ -522,8 +516,22 @@ Retorne APENAS JSON:
             const l2 = allProcessedLegs[j];
             const isSameGame = l1.match === l2.match;
 
-            if (isSameGame && l1.mktType === l2.mktType && l1.mktTarget === l2.mktTarget) continue;
-            if (isSameGame && l1.mktType === 'goals' && l2.mktType === 'goals' && (l1.mktTarget === 'match' || l2.mktTarget === 'match')) continue;
+            // 🔥 A GUILHOTINA DE CONFLITOS REAIS DA CASA DE APOSTA
+            if (isSameGame) {
+                // Mesma Categoria e Mesmo Alvo = Conflito (Ex: Over 0.5 Gols Home + Over 1.5 Gols Home)
+                if (l1.mktType === l2.mktType && l1.mktTarget === l2.mktTarget) continue;
+                
+                // Conflito Gols Específicos x Gols Globais (Ex: Over 0.5 Gols Home + Over 1.5 Gols Match)
+                if (l1.mktType === 'goals' && l2.mktType === 'goals' && (l1.mktTarget === 'match' || l2.mktTarget === 'match')) continue;
+                
+                // Conflito de Contingências Relacionadas: BTTS vs Qualquer linha de GOLS 
+                if ((l1.mktType === 'btts' && l2.mktType === 'goals') || (l2.mktType === 'btts' && l1.mktType === 'goals')) continue;
+                
+                // Conflito de Cantos: Race + Corner Lines
+                const isL1CornerOrRace = l1.mktType === 'corners' || l1.mktType === 'race';
+                const isL2CornerOrRace = l2.mktType === 'corners' || l2.mktType === 'race';
+                if (isL1CornerOrRace && isL2CornerOrRace) continue;
+            }
 
             let p1 = l1.rawProb;
             let p2 = l2.rawProb;
@@ -570,7 +578,13 @@ Retorne APENAS JSON:
                 const l3 = allProcessedLegs[k];
                 if (l1.match !== l2.match || l1.match !== l3.match) continue;
 
+                // Bloqueio de Conflito Básico em Triplas
                 if (l1.mktType === l2.mktType || l2.mktType === l3.mktType || l1.mktType === l3.mktType) continue;
+
+                // Bloqueio Avançado em Triplas (Impede BTTS + Gols de se misturarem)
+                const hasBtts = l1.mktType === 'btts' || l2.mktType === 'btts' || l3.mktType === 'btts';
+                const hasGoals = l1.mktType === 'goals' || l2.mktType === 'goals' || l3.mktType === 'goals';
+                if (hasBtts && hasGoals) continue;
 
                 let combProb = l1.rawProb * l2.rawProb * l3.rawProb * (1 + (tpiDiffGlobal * 0.02));
                 combProb = Math.max(0.01, Math.min(combProb, 0.98));
@@ -630,7 +644,7 @@ Retorne APENAS JSON:
     // =====================================================
     const topPickDesc = bestOpp.legs.map((l:any) => `${l.market}`).join(" + ");
 
-    const generatedAnalysis = `Classificação Tática: [${detectedGameScript}]. Através do mapeamento de linhas reais de Sportsbook (Bet365 Valid Lines), o algoritmo isolou a operação "${topPickDesc}" como o ápice de Valor Esperado (EV+) no range alvo.\n\nUtilizando a aproximação de Cópula Gaussiana combinada à Zona de Eficiência Probabilística (45% a 95%), forçamos a exclusão de mercados com ruído estatístico. A dependência não-linear dos eventos elevou a Probabilidade Combinada para ${combinedProb}% (Odd Justa @${fairOdd.toFixed(2)}), blindando a stake contra pernas supervalorizadas.`;
+    const generatedAnalysis = `Classificação Tática: [${detectedGameScript}]. Através do mapeamento de linhas reais de Sportsbook (Bet365 Valid Lines), o algoritmo isolou a operação "${topPickDesc}" como o ápice de Valor Esperado (EV+) no range alvo.\n\nUtilizando a aproximação de Cópula Gaussiana combinada à Zona de Eficiência Probabilística (45% a 95%), forçamos a exclusão de mercados com ruído estatístico. A dependência não-linear dos eventos elevou a Probabilidade Combinada para ${combinedProb}% (Odd Justa @${fairOdd.toFixed(2)}), blindando a stake contra pernas supervalorizadas e bloqueando contingências conflitantes nas casas de apostas.`;
 
     let generatedAlt = "";
     if (topOpportunities.length > 1) {
