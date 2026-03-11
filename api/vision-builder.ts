@@ -639,29 +639,36 @@ Retorne APENAS JSON:
     const formattedEdge = (bestOpp.edge * 100) > 0 ? `+${(bestOpp.edge * 100).toFixed(1)}` : `${(bestOpp.edge * 100).toFixed(1)}`;
     const riskLabel = bestOpp.prob < 0.45 ? "ALTO" : bestOpp.prob >= 0.60 ? "BAIXO" : "MÉDIO";
 
-    // =====================================================
-    // ✍️ CAMADA 5: RELATÓRIO SHARP
+// =====================================================
+    // ✍️ CAMADA 5: RELATÓRIO DO APOSTADOR (Linguagem Real)
     // =====================================================
     const topPickDesc = bestOpp.legs.map((l:any) => `${l.market}`).join(" + ");
 
-    const generatedAnalysis = `Classificação Tática: [${detectedGameScript}]. Através do mapeamento de linhas reais de Sportsbook (Bet365 Valid Lines), o algoritmo isolou a operação "${topPickDesc}" como o ápice de Valor Esperado (EV+) no range alvo.\n\nUtilizando a aproximação de Cópula Gaussiana combinada à Zona de Eficiência Probabilística (45% a 95%), forçamos a exclusão de mercados com ruído estatístico. A dependência não-linear dos eventos elevou a Probabilidade Combinada para ${combinedProb}% (Odd Justa @${fairOdd.toFixed(2)}), blindando a stake contra pernas supervalorizadas e bloqueando contingências conflitantes nas casas de apostas.`;
+    // Traduz o Game Script do robô para a linguagem humana
+    let scriptTraduzido = "";
+    if (detectedGameScript === "HOME_PRESSURE") scriptTraduzido = "Pressão do Mandante (Amasso)";
+    else if (detectedGameScript === "AWAY_PRESSURE") scriptTraduzido = "Pressão do Visitante (Amasso)";
+    else if (detectedGameScript === "LOW_TEMPO") scriptTraduzido = "Jogo Truncado / Under";
+    else scriptTraduzido = "Jogo Aberto (Lá e Cá)";
+
+    const generatedAnalysis = `🎯 LEITURA DE JOGO: [${scriptTraduzido}]. Analisando as linhas disponíveis na Bet365, o nosso motor encontrou a melhor oportunidade (EV+) em montar a aposta: "${topPickDesc}".\n\nAqui o cenário tático fala mais alto: como a equipe pressiona muito e gera um alto volume de finalizações (xG), os Gols e os Escanteios tendem a sair juntos. Ao explorar essa correlação positiva no Criar Aposta, a probabilidade real desse bilhete bater é de ${combinedProb}% (Odd Justa de @${fairOdd.toFixed(2)}). É uma entrada limpa, que foge das linhas amassadas pela casa e tem alto potencial de green.`;
 
     let generatedAlt = "";
     if (topOpportunities.length > 1) {
         const altOp = topOpportunities[1];
         const altDesc = altOp.legs.map((l:any) => `${l.market}`).join(" + ");
-        generatedAlt = `OPORTUNIDADE 2 (${altOp.type}): ${altDesc} (Odd Simulada: @${altOp.odd.toFixed(2)}). Alternativa retida pela aderência ao xG Model.`;
+        generatedAlt = `💡 OPÇÃO SECUNDÁRIA: ${altDesc} (Odd Justa: @${altOp.odd.toFixed(2)}). Excelente leitura de backup baseada no volume de jogo e tendência tática.`;
     } else {
-        generatedAlt = "O filtro Bayesiano eliminou opções secundárias para garantir a proteção de banca.";
+        generatedAlt = "O filtro de segurança eliminou opções secundárias para garantir que você foque apenas na aposta de maior valor.";
     }
 
     let generatedCons = "";
     if (topOpportunities.length > 2) {
         const consOp = topOpportunities[2];
         const consDesc = consOp.legs.map((l:any) => `${l.market}`).join(" + ");
-        generatedCons = `OPORTUNIDADE 3: ${consDesc} (Odd Simulada: @${consOp.odd.toFixed(2)}).`;
+        generatedCons = `🛡️ PROTEÇÃO / REDUÇÃO DE RISCO: ${consDesc} (Odd Justa: @${consOp.odd.toFixed(2)}).`;
     } else {
-        generatedCons = `Mantenha a stake fixa (Flat Stake) respeitando a volatilidade real de Nível ${riskLabel}.`;
+        generatedCons = `⚠️ Mantenha sua gestão de banca com Stake Padrão (Flat Stake), pois o cenário atual aponta para um Risco ${riskLabel}.`;
     }
 
     return res.status(200).json({
