@@ -51,7 +51,7 @@ const Calculators: React.FC = () => {
       }
   };
 
-  // 🔥 MOTOR NLP (DUPLO CÉREBRO)
+  // 🔥 MOTOR NLP
   const processNLPEngine = async () => {
     if (!isPro) { setToast({ type: 'error', message: 'Exclusivo PRO.' }); return; }
     if (!checkAiLimit()) { setToast({ type: 'error', message: 'Limite de Scans atingido.' }); return; }
@@ -91,7 +91,7 @@ const Calculators: React.FC = () => {
     } finally { setIsScanning(false); }
   };
 
-  // 🔥 MOTOR DE AUTO-DISCOVERY
+  // 🔥 MOTOR DE AUTO-DISCOVERY E RECOMENDAÇÕES
   const runAutoDiscoveryHFT = () => {
       if (!liveContext) return null;
 
@@ -188,17 +188,30 @@ const Calculators: React.FC = () => {
       if (bestScenario.type === 'corner' && appm > 0.9) reasons.push(`Chuva de ataques: ${appm.toFixed(2)} ataques perigosos/min`);
       if (odd > 0 && ev > 5) reasons.push(`Odd de muito Valor (+${ev.toFixed(1)}% EV encontrado)`);
 
+      // 🔥 VISÃO DE FUTURO E AVISOS DE RISCO
       let projection = "";
+      let smartWarning = "";
+
       if (isHT) {
-          if (bestScenario.type === 'corner') projection = `Se esse amasso continuar no 2º tempo, a linha de Mais de ${currCorners + 4.5} Cantos FT vai abrir com muito valor.`;
-          else projection = `Jogo extremamente aberto. O mercado de Mais de ${currGoals + 1.5} Gols FT será a principal rota de lucro na segunda etapa.`;
+          if (bestScenario.type === 'corner') {
+              projection = `Se esse amasso continuar no 2º tempo, a linha de Mais de ${currCorners + 4.5} Cantos FT vai abrir com muito valor. Fique de olho na volta do intervalo.`;
+              smartWarning = `Se o ritmo do jogo cair bruscamente nos próximos 5 minutos ou o time favorito fizer um gol, ABORTE imediatamente a operação HT.`;
+          } else {
+              projection = `Jogo extremamente aberto. O mercado de Mais de ${currGoals + 1.5} Gols FT será a principal rota de lucro na segunda etapa se mantiverem o ritmo.`;
+              smartWarning = `Cuidado com contra-ataques! Se o time dominado achar um gol isolado, o jogo pode truncar. Proteja sua stake se a temperatura cair.`;
+          }
       } else {
-          if (m < 85) projection = `Se o placar não mudar até os 86', a entrada no 'Canto Zóio' (Canto Limite Final) será obrigatória.`;
-          else projection = `Reta finalíssima. Defesas expostas. Padrão claro para buscar o último suspiro (Zóio) se a odd bater @1.80+.`;
+          if (m < 85) {
+             projection = `Se o placar não mudar até os 86', a entrada no 'Canto Zóio' (Canto Limite Final) será muito clara por causa desse nível de abafa.`;
+             if (bestScenario.type === 'corner') smartWarning = `Se a odd asiática não bater @1.80 a tempo, pule fora. Não compre odds esmagadas na reta final.`;
+          } else {
+             projection = `Reta finalíssima. Defesas expostas. Padrão puro de Kamikaze para buscar o último suspiro (Zóio) com odd estourada.`;
+             smartWarning = `Regra de Ouro: Entradas no 'Canto Zóio' ou 'Gol no Apagar das Luzes' exigem gestão rigorosa (Use no máximo 0.5% a 1% da banca). É cara ou coroa tático.`;
+          }
       }
 
       return { 
-          ...bestScenario, appm, fieldTilt, ev, fairOdd, label, color, reasons, projection, actionMessage 
+          ...bestScenario, appm, fieldTilt, ev, fairOdd, label, color, reasons, projection, smartWarning, actionMessage 
       };
   };
 
@@ -292,7 +305,7 @@ const Calculators: React.FC = () => {
         {tabs.map(tab => (
           <button
             key={tab.id}
-            onClick={() => { setActiveTab(tab.id as any); setLiveContext(null); setGridContext(null); setLiveTextData(''); }}
+            onClick={() => { setActiveTab(tab.id as any); setLiveContext(null); setGridContext(null); setLiveTextData(''); setLiveCurrentOdd(''); }}
             className={`relative flex-1 min-w-[90px] flex items-center justify-center px-2 py-3 rounded-xl font-bold text-[10px] uppercase tracking-wider transition-all gap-1 ${
               activeTab === tab.id
                 ? (tab.id === 'live_hft' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/20' : 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/20')
@@ -497,10 +510,10 @@ const Calculators: React.FC = () => {
 
                    {/* TOGGLE INTERNO (GRADE vs RAIO-X) */}
                    <div className="flex bg-slate-100 dark:bg-[#09090b] p-1.5 rounded-2xl border border-slate-200 dark:border-slate-800 mb-6 shadow-inner">
-                      <button onClick={() => { setHftMode('grid'); setLiveTextData(''); setGridContext(null); }} className={`flex-1 py-3 text-[10px] sm:text-xs font-black uppercase tracking-widest rounded-xl transition-all ${hftMode === 'grid' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/20 scale-[1.02]' : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'}`}>
+                      <button onClick={() => { setHftMode('grid'); setLiveTextData(''); setGridContext(null); setLiveCurrentOdd(''); }} className={`flex-1 py-3 text-[10px] sm:text-xs font-black uppercase tracking-widest rounded-xl transition-all ${hftMode === 'grid' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/20 scale-[1.02]' : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'}`}>
                           1. Minerador de Grade
                       </button>
-                      <button onClick={() => { setHftMode('single'); setLiveTextData(''); setLiveContext(null); }} className={`flex-1 py-3 text-[10px] sm:text-xs font-black uppercase tracking-widest rounded-xl transition-all ${hftMode === 'single' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/20 scale-[1.02]' : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'}`}>
+                      <button onClick={() => { setHftMode('single'); setLiveTextData(''); setLiveContext(null); setLiveCurrentOdd(''); }} className={`flex-1 py-3 text-[10px] sm:text-xs font-black uppercase tracking-widest rounded-xl transition-all ${hftMode === 'single' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/20 scale-[1.02]' : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'}`}>
                           2. Raio-X (Entrada)
                       </button>
                    </div>
@@ -518,7 +531,7 @@ const Calculators: React.FC = () => {
                              <div className="border px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest flex items-center gap-1 shadow-sm bg-indigo-100 dark:bg-indigo-500/10 border-indigo-200 dark:border-indigo-500/20 text-indigo-600 dark:text-indigo-400 shrink-0">
                                  <Zap size={10} fill="currentColor" /> {Math.max(0, 10 - (aiScansUsedToday||0))} Scans
                              </div>
-                             <button onClick={() => { setLiveTextData(''); setLiveContext(null); setGridContext(null); }} className="text-slate-400 hover:text-red-500 transition-colors p-1 bg-white dark:bg-transparent rounded-md border border-transparent hover:border-red-100 dark:hover:border-transparent shrink-0">
+                             <button onClick={() => { setLiveTextData(''); setLiveContext(null); setGridContext(null); setLiveCurrentOdd(''); }} className="text-slate-400 hover:text-red-500 transition-colors p-1 bg-white dark:bg-transparent rounded-md border border-transparent hover:border-red-100 dark:hover:border-transparent shrink-0">
                                  <Eraser size={16}/>
                              </button>
                          </div>
@@ -601,7 +614,7 @@ const Calculators: React.FC = () => {
                                     <div className="relative">
                                         <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 font-mono font-bold">@</span>
                                         <input 
-                                            type="number" step="0.01" placeholder="Ex: 1.83 (Opcional)" 
+                                            type="number" step="0.01" min="1.00" placeholder="Ex: 1.83 (Opcional)" 
                                             value={liveCurrentOdd} 
                                             onChange={e => {
                                                 let val = e.target.value.replace(/[^0-9.]/g, '');
@@ -629,7 +642,6 @@ const Calculators: React.FC = () => {
                                  <div className="flex-shrink-0 flex flex-col items-center justify-center p-4 bg-white dark:bg-slate-900/80 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm dark:shadow-none min-w-[150px]">
                                     <p className="text-[9px] uppercase tracking-widest text-slate-500 font-bold mb-4 text-center">Índice de Confiança</p>
                                     
-                                    {/* Gráfico Redondo Corrigido (Proporção Exata do SVG) */}
                                     <div className="relative w-20 h-20 flex items-center justify-center">
                                        <svg className="absolute inset-0 w-full h-full -rotate-90" viewBox="0 0 72 72">
                                          <circle cx="36" cy="36" r="32" fill="transparent" stroke="currentColor" strokeWidth="6" strokeDasharray={`${(autoResult.finalScore / 100) * 201} 201`} className={autoResult.color === 'green' ? 'text-emerald-500' : autoResult.color === 'yellow' ? 'text-yellow-500' : 'text-red-500'} />
@@ -662,13 +674,21 @@ const Calculators: React.FC = () => {
                                  </div>
                              </div>
 
-                             {/* PROJEÇÃO FUTURA (FORWARD LOOKING) */}
-                             {autoResult.projection && (
-                                 <div className="mb-6 bg-blue-50 dark:bg-blue-500/10 border border-blue-200 dark:border-blue-500/20 text-blue-700 dark:text-blue-400 p-4 rounded-2xl text-[11px] sm:text-xs font-medium flex items-start gap-3 shadow-sm dark:shadow-inner relative z-10">
-                                     <Eye size={18} className="shrink-0 mt-0.5 text-blue-500 dark:text-blue-400" /> 
-                                     <span className="leading-relaxed"><strong>Visão de Futuro:</strong> {autoResult.projection}</span>
-                                 </div>
-                             )}
+                             {/* PROJEÇÃO FUTURA E AVISO TÁTICO */}
+                             <div className="space-y-3 mb-6 relative z-10">
+                                 {autoResult.projection && (
+                                     <div className="bg-blue-50 dark:bg-blue-500/10 border border-blue-200 dark:border-blue-500/20 text-blue-700 dark:text-blue-400 p-4 rounded-2xl text-[11px] sm:text-xs font-medium flex items-start gap-3 shadow-sm dark:shadow-inner">
+                                         <Eye size={18} className="shrink-0 mt-0.5 text-blue-500 dark:text-blue-400" /> 
+                                         <span className="leading-relaxed"><strong>Visão de Futuro:</strong> {autoResult.projection}</span>
+                                     </div>
+                                 )}
+                                 {autoResult.smartWarning && (
+                                     <div className="bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/20 text-amber-700 dark:text-amber-400 p-4 rounded-2xl text-[11px] sm:text-xs font-medium flex items-start gap-3 shadow-sm dark:shadow-inner">
+                                         <ShieldAlert size={18} className="shrink-0 mt-0.5 text-amber-500 dark:text-amber-400" /> 
+                                         <span className="leading-relaxed"><strong>Alerta Tático:</strong> {autoResult.smartWarning}</span>
+                                     </div>
+                                 )}
+                             </div>
 
                              {/* SINAL RADIOATIVO */}
                              <div className="relative z-20 mt-4">
