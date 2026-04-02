@@ -28,15 +28,12 @@ export default async function handler(req: any, res: any) {
 
     let prompt = "";
 
-    // ==========================================
-    // CÉREBRO 1: RADAR DE GRADE (MINERADOR DE OURO)
-    // ==========================================
     if (mode === 'grid') {
         prompt = `Atue como um Scanner HFT de Apostas. O usuário colou uma GRADE inteira de jogos ao vivo.
-Sua missão é filtrar o ruído e encontrar APENAS os 3 a 5 melhores jogos com potencial de "Amasso".
+Sua missão é filtrar o ruído e encontrar APENAS os 3 a 5 melhores jogos com potencial de "Amasso" (Volume ofensivo alto).
 
 REGRAS DE TEMPO (CRÍTICO):
-1. IGNORE SUMARIAMENTE jogos com 88 minutos ou mais (ex: 88', 89', 90+1', FT). Não há tempo hábil para apostar.
+1. IGNORE SUMARIAMENTE jogos com 88 minutos ou mais (ex: 88', 89', 90+1', FT, Fim de Jogo).
 2. Jogos entre 80' e 87' SÓ podem ser recomendados para "Escanteios".
 3. Recomendações de "Gols" exigem que o jogo esteja, no máximo, aos 75'-80'.
 
@@ -57,28 +54,24 @@ Retorne ESTRITAMENTE este JSON (array de objetos):
     }
   ]
 }`;
-    } 
-    // ==========================================
-    // CÉREBRO 2: RAIO-X IN-PLAY (JOGO ÚNICO)
-    // ==========================================
-    else {
+    } else {
         prompt = `Atue como um Extrator Quantitativo de Dados Ao Vivo (In-Play) para modelos HFT.
-O usuário copiou a página de um único jogo (CornerPro, RoboTip, SofaScore ou Flashscore). 
+O usuário copiou a página de um único jogo de um site de estatísticas. Extraia os dados cruciais.
 
 TEXTO BRUTO:
 """
 ${textData}
 """
 
-REGRAS UNIVERSAIS DE EXTRAÇÃO:
-1. TIMES E PLACAR (homeTeam, awayTeam, score): Encontre o nome dos dois times e o placar exato do momento (Ex: "1-0", "0-2").
+REGRAS DE EXTRAÇÃO E BLINDAGEM:
+1. TIMES E PLACAR: Encontre o nome dos dois times e o placar exato (Ex: "1-0").
 2. MINUTO ATUAL (min): Procure por relógios. Se "INTERVALO" ou "HT", retorne 45. Caso contrário, retorne apenas o número (Ex: 33).
-3. GOLS TOTAIS (totalGoals): Soma dos gols do placar (Ex: 1-0 = 1).
-4. CANTOS TOTAIS (totalCorners): Soma dos escanteios/cantos das duas equipes. Se não achar, assuma 0.
-5. PRESSÃO (apPress / apDef): Procure por "Ataques Perigosos" ou "Ataques". 'apPress' é o MAIOR número. 'apDef' é o MENOR. 
-6. LETALIDADE (sot / sofft): Pegue os "Chutes no Alvo" (sot) e "Chutes para Fora" (sofft) APENAS do time que tem o MAIOR apPress (o time que está atacando).
+3. GOLS TOTAIS: Soma dos gols do placar (Ex: 1-0 = 1).
+4. CANTOS TOTAIS: Soma dos escanteios/cantos das duas equipes. Se não achar, assuma 0.
+5. PRESSÃO (apPress / apDef): Procure por "Ataques Perigosos" ou "Ataques". 'apPress' é o MAIOR número absoluto. 'apDef' é o MENOR número absoluto. Se o site não fornecer, ESTIME multiplicando as Finalizações Totais do time por 5.
+6. LETALIDADE (sot / sofft): Pegue os "Chutes no Alvo" (sot) e "Chutes para Fora" (sofft) APENAS do time que tem o MAIOR apPress.
 7. CONTEXTO: 
-   - redCard: Se o time que ataca tomou vermelho retorne "pressing". Se o time que defende tomou retorne "defending". Caso contrário "none".
+   - redCard: Se o time que ataca tomou vermelho retorne "pressing". Se o que defende tomou retorne "defending". Caso contrário "none".
    - pressureTrend: "increasing", "stable" ou "decreasing".
    - matchTemperature: "intense" (jogo movimentado/aberto) ou "calm" (morno).
    - needsGoal: true se o time com MAIOR apPress está empatando ou perdendo pela diferença de 1 gol.
@@ -120,10 +113,10 @@ RETORNE ESTE JSON ESTRITAMENTE:
                 });
                 textResult = response.choices[0].message?.content || "";
             } catch (openaiError: any) {
-                throw new Error("Ambas as IAs falharam.");
+                throw new Error("Ambas as APIs de IA falharam.");
             }
         } else {
-            throw new Error("Erro na IA (Gemini).");
+            throw new Error("Falha na extração de dados via IA.");
         }
     }
 
@@ -134,20 +127,23 @@ RETORNE ESTE JSON ESTRITAMENTE:
         
         const json = JSON.parse(textResult);
 
+        // Blindagem contra valores null ou undefined
         if (mode !== 'grid') {
-            if (!json.homeTeam) json.homeTeam = "Time Casa";
-            if (!json.awayTeam) json.awayTeam = "Time Fora";
-            if (!json.score) json.score = "-";
-            if (!json.redCard || !["none", "pressing", "defending"].includes(json.redCard)) json.redCard = "none";
-            if (!json.pressureTrend || !["increasing", "stable", "decreasing"].includes(json.pressureTrend)) json.pressureTrend = "stable";
-            if (!json.matchTemperature || !["intense", "calm"].includes(json.matchTemperature)) json.matchTemperature = "calm";
-            if (json.min === undefined || json.min === null) json.min = 0;
+            json.homeTeam = json.homeTeam || "Time Casa";
+            json.awayTeam = json.awayTeam || "Time Fora";
+            json.score = json.score || "-";
+            json.redCard = ["pressing", "defending"].includes(json.redCard) ? json.redCard : "none";
+            json.pressureTrend = ["increasing", "stable", "decreasing"].includes(json.pressureTrend) ? json.pressureTrend : "stable";
+            json.matchTemperature = ["intense", "calm"].includes(json.matchTemperature) ? json.matchTemperature : "calm";
+            json.min = json.min || 0;
+            json.apPress = json.apPress || 0;
+            json.apDef = json.apDef || 0;
         }
 
         return res.status(200).json(json);
 
     } catch(e) {
-        throw new Error("Não foi possível extrair dados estatísticos do texto.");
+        throw new Error("Não foi possível extrair estatísticas viáveis deste texto.");
     }
 
   } catch (error: any) {

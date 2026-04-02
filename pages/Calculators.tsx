@@ -4,7 +4,7 @@ import {
   Sparkles, Plus, Scale, Percent, ArrowRightLeft, 
   Target, TrendingUp, AlertTriangle, Lock, Crown, Radar, 
   Activity, Crosshair, BarChart4, Zap, DollarSign, Goal, Lightbulb,
-  Clock, Flag, ShieldAlert, FileText, Eraser, Eye, Search, Flame, Info
+  Clock, Flag, ShieldAlert, FileText, Eraser, Eye, Search, Flame
 } from 'lucide-react';
 import { useBetStore } from '../store/useBetStore';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -51,7 +51,7 @@ const Calculators: React.FC = () => {
       }
   };
 
-  // 🔥 MOTOR NLP (DUPLO CÉREBRO)
+  // 🔥 MOTOR NLP (IA API)
   const processNLPEngine = async () => {
     if (!isPro) { setToast({ type: 'error', message: 'Exclusivo PRO.' }); return; }
     if (!checkAiLimit()) { setToast({ type: 'error', message: 'Limite de Scans atingido.' }); return; }
@@ -91,7 +91,7 @@ const Calculators: React.FC = () => {
     } finally { setIsScanning(false); }
   };
 
-  // 🔥 MOTOR DE AUTO-DISCOVERY COM DICAS DE TIPSTER
+  // 🔥 MOTOR DE AUTO-DISCOVERY (Matemática Pura - Reativo à ODD)
   const runAutoDiscoveryHFT = () => {
       if (!liveContext) return null;
 
@@ -113,15 +113,15 @@ const Calculators: React.FC = () => {
       const fieldTilt = totalAP > 0 ? (apP / totalAP) * 100 : 0; 
       const appm = apP / m;
 
-      // PROBABILIDADE DE CANTOS
+      // Poisson Cantos
       let cornerRateOld = ((apP * 0.06) + (sT * 0.25) + (sOff * 0.20)) / m; 
       let cornerLambda = cornerRateOld * remainingTime;
       if (needsGoal) cornerLambda *= 1.25;
 
-      // PROBABILIDADE DE GOLS (Calibrada para Letalidade)
+      // Poisson Gols
       let goalRateOld = ((sT * 0.16) + (sOff * 0.05) + (apP * 0.005)) / m;
       let goalLambda = goalRateOld * remainingTime;
-      if (sT >= 2 && sOff >= 3) goalLambda *= 1.3; // Bônus de Letalidade: Chutando muito de todo lado
+      if (sT >= 2 && sOff >= 3) goalLambda *= 1.3; 
       if (apD > (apP * 0.5)) goalLambda *= 1.1; 
       if (needsGoal) goalLambda *= 1.15;
 
@@ -139,7 +139,7 @@ const Calculators: React.FC = () => {
           return { error: `O relógio (${m}') está numa zona morta (sem EV+ claro). Aguarde a janela de HT (20-42') ou FT (60-88').` };
       }
 
-      let bestScenario = null;
+      let bestScenario: any = null;
       let maxScore = -1;
 
       scenarios.forEach(scen => {
@@ -148,9 +148,8 @@ const Calculators: React.FC = () => {
           
           let cScore = probBater;
           
-          // Bônus Táticos Ajustados
           if (scen.type === 'corner' && appm > 1.0 && sT <= 2) cScore += 15; 
-          if (scen.type === 'goal' && sT >= 2 && fieldTilt > 55) cScore += 20; // Bônus forte para gols se tiver mira
+          if (scen.type === 'goal' && sT >= 2 && fieldTilt > 55) cScore += 20; 
 
           if (pressureTrend === 'increasing') cScore += 10;
           if (needsGoal) cScore += 8;
@@ -185,36 +184,35 @@ const Calculators: React.FC = () => {
       if (fieldTilt >= 65) reasons.push(`Amasso territorial (Controle de ${fieldTilt.toFixed(0)}% das ações)`);
       if (pressureTrend === 'increasing') reasons.push('Blitz ligada: Time acelerou o ritmo no Radar recente');
       if (needsGoal) reasons.push('Modo desespero: Precisa do resultado (Padrão Kamikaze ativado)');
-      if (bestScenario.type === 'goal' && sT >= 2) reasons.push(`Mira calibrada: ${sT} chutes no alvo gerando muito xG (Expectativa de Gol)`);
+      if (bestScenario.type === 'goal' && sT >= 2) reasons.push(`Mira calibrada: ${sT} chutes no alvo gerando muito xG`);
       if (bestScenario.type === 'corner' && appm > 0.9) reasons.push(`Chuva de ataques: ${appm.toFixed(2)} ataques perigosos/min`);
       if (odd > 0 && ev > 5) reasons.push(`Odd de muito Valor (+${ev.toFixed(1)}% EV encontrado)`);
 
-      // 🔥 VISÃO DE FUTURO E AVISOS DE RISCO
       let projection = "";
       let smartWarning = "";
       let tipsterAdvice = "";
 
       if (bestScenario.type === 'corner') {
-          tipsterAdvice = `DICA DE OURO: A casa de apostas sempre tenta te forçar a pegar uma linha alta (+${currCorners + 1.5}). Tenha paciência! Aguarde o relógio andar, a linha cair para o Asiático (+${currCorners + 1.0}) ou Limite (+${currCorners + 0.5}) e pegue quando a odd bater @1.75+.`;
+          tipsterAdvice = `DICA DE OURO: A casa de apostas sempre tenta forçar uma linha alta (+${currCorners + 1.5}). Tenha paciência! Aguarde o relógio andar, a linha cair para o Asiático (+${currCorners + 1.0}) ou Limite (+${currCorners + 0.5}) e pegue quando a odd bater @1.75+.`;
       } else if (bestScenario.type === 'goal') {
-          tipsterAdvice = `DICA DE OURO: Nunca compre odds esmagadas em gols. Se a odd oferecida estiver muito abaixo da Odd Justa (@${fairOdd.toFixed(2)}), espere o tempo passar. O gol pode sair a qualquer momento com esse volume.`;
+          tipsterAdvice = `DICA DE OURO: Nunca compre odds esmagadas em gols. Se a odd estiver muito abaixo da Odd Justa (@${fairOdd.toFixed(2)}), espere o tempo passar. O gol pode sair a qualquer momento com esse volume.`;
       }
 
       if (isHT) {
           if (bestScenario.type === 'corner') {
-              projection = `Se esse amasso continuar no 2º tempo, a linha de Mais de ${currCorners + 4.5} Cantos FT vai abrir com muito valor. Fique de olho na volta do intervalo.`;
-              smartWarning = `Se o ritmo do jogo cair bruscamente nos próximos 5 minutos ou o time favorito fizer um gol, ABORTE imediatamente a operação HT.`;
+              projection = `Se esse amasso continuar no 2º tempo, a linha de Mais de ${currCorners + 4.5} Cantos FT vai abrir com muito valor. Fique de olho na volta.`;
+              smartWarning = `Se o ritmo cair bruscamente nos próximos 5 min ou o time favorito fizer um gol, ABORTE imediatamente a operação HT.`;
           } else {
-              projection = `Jogo extremamente aberto e vertical. O mercado de Mais de ${currGoals + 1.5} Gols FT será a principal rota de lucro na segunda etapa se mantiverem o ritmo.`;
-              smartWarning = `Cuidado com contra-ataques! Se o time dominado achar um gol isolado, o jogo pode truncar. Proteja sua stake se a temperatura cair.`;
+              projection = `Jogo aberto e vertical. O mercado de Mais de ${currGoals + 1.5} Gols FT será a principal rota de lucro na segunda etapa.`;
+              smartWarning = `Cuidado com contra-ataques! Se o time dominado achar um gol isolado, o jogo pode truncar. Proteja sua stake.`;
           }
       } else {
           if (m < 85) {
-             projection = `Se o placar não mudar até os 86', a entrada no 'Canto Zóio' (Canto Limite Final) será muito clara por causa desse nível de abafa.`;
+             projection = `Se o placar não mudar até os 86', a entrada no 'Canto Zóio' (Canto Limite Final) será muito clara pelo nível de abafa.`;
              if (bestScenario.type === 'corner') smartWarning = `Se a odd asiática não bater @1.80 a tempo, pule fora. Não compre odds esmagadas na reta final.`;
           } else {
              projection = `Reta finalíssima. Defesas expostas. Padrão puro de Kamikaze para buscar o último suspiro (Zóio) com odd estourada.`;
-             smartWarning = `Regra de Ouro: Entradas no 'Canto Zóio' ou 'Gol no Apagar das Luzes' exigem gestão rigorosa (Use no máximo 0.5% a 1% da banca). É cara ou coroa tático.`;
+             smartWarning = `Regra de Ouro: Entradas no 'Apagar das Luzes' exigem gestão rigorosa (Máx 0.5% a 1% da banca). É cara ou coroa tático.`;
           }
       }
 
@@ -223,6 +221,7 @@ const Calculators: React.FC = () => {
       };
   };
 
+  // Variável computada a cada re-render (Reatividade pura!)
   const autoResult = runAutoDiscoveryHFT();
 
   const ProLockScreen = () => (
@@ -276,15 +275,9 @@ const Calculators: React.FC = () => {
 
   const sidebarInfo = (() => {
     switch(activeTab) {
-      case 'dutching': return { title: 'Gestão de Risco', text: 'O Dutching divide a sua exposição entre múltiplas seleções, diluindo o risco do investimento em um único evento.' };
-      case 'kelly': return { title: 'Cálculo de Exposição', text: 'O Critério de Kelly ajusta matematicamente a stake ideal com base na probabilidade e na odd apresentada.' };
-      case 'value': return { title: 'Análise de EV+', text: 'O conceito de Value Bet compara a cotação oferecida pelo mercado com a probabilidade real.' };
-      case 'arb': return { title: 'Arbitragem Matemática', text: 'Calcula o volume exato a ser distribuído em duas vias para anular o risco direcional.' };
-      case 'stake': return { title: 'Gestão Fixa', text: 'O cálculo de stake fixa percentual ajuda a manter o controle do drawdown em fases de oscilação.' };
-      case 'odds': return { title: 'Leitura Global', text: 'Conversão automática de formatos de cotações utilizados em bolsas esportivas.' };
-      case 'breakeven': return { title: 'Ponto de Equilíbrio', text: 'A taxa de acerto (Hit-Rate) necessária para manter a estabilidade do capital com a odd informada.' };
-      case 'live_hft': return { title: 'Live HFT Engine', text: 'Motor Quantitativo Ao Vivo. Minerador de Ouro varre a grade inteira. O Raio-X cruza Field Tilt, Momentum e Relógio para te dar a calada exata.' };
-      default: return { title: 'Ferramentas Analíticas', text: 'Tome decisões baseadas em dados.' };
+      case 'dutching': return { title: 'Gestão de Risco', text: 'O Dutching divide a sua exposição entre múltiplas seleções, diluindo o risco do investimento.' };
+      case 'live_hft': return { title: 'Live HFT Engine', text: 'Motor Quantitativo Ao Vivo. Cole as estatísticas da partida e o robô cruzará Field Tilt, Momentum e Relógio para te dar a calada exata de Gols ou Cantos.' };
+      default: return { title: 'Ferramentas Analíticas', text: 'Tome decisões baseadas em matemática e fuja do feeling.' };
     }
   })();
 
@@ -516,7 +509,6 @@ const Calculators: React.FC = () => {
                       </span>
                    </div>
 
-                   {/* TOGGLE INTERNO (GRADE vs RAIO-X) */}
                    <div className="flex bg-slate-100 dark:bg-[#09090b] p-1.5 rounded-2xl border border-slate-200 dark:border-slate-800 mb-6 shadow-inner">
                       <button onClick={() => { setHftMode('grid'); setLiveTextData(''); setGridContext(null); setLiveCurrentOdd(''); }} className={`flex-1 py-3 text-[10px] sm:text-xs font-black uppercase tracking-widest rounded-xl transition-all ${hftMode === 'grid' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/20 scale-[1.02]' : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'}`}>
                           1. Minerador de Grade
@@ -526,7 +518,6 @@ const Calculators: React.FC = () => {
                       </button>
                    </div>
 
-                   {/* CAIXA DE TEXTO NLP */}
                    <div className="relative group overflow-hidden rounded-[2rem] border border-indigo-200 dark:border-indigo-500/20 focus-within:border-indigo-400 dark:focus-within:border-indigo-500 transition-all p-1 flex flex-col shadow-sm dark:shadow-inner bg-indigo-50/30 dark:bg-[#09090b] mb-6">
                       <div className="flex flex-col sm:flex-row sm:items-center justify-between p-4 border-b border-slate-200 dark:border-slate-800 gap-4">
                          <div className="flex items-center gap-2 text-slate-500 dark:text-slate-400">
@@ -573,7 +564,7 @@ const Calculators: React.FC = () => {
                    
                    <AnimatePresence>
                      {/* ========================================================
-                         RESULTADO: MINERADOR DE GRADE (OURO)
+                         RESULTADO: MINERADOR DE GRADE
                          ======================================================== */}
                      {hftMode === 'grid' && gridContext && gridContext.length > 0 && (
                          <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-4 mt-8">
@@ -636,23 +627,23 @@ const Calculators: React.FC = () => {
                              </div>
                          </div>
 
-                         {autoResult() && !autoResult()?.error ? (
+                         {autoResult && !autoResult.error ? (
                          <div className="bg-slate-50 dark:bg-[#020617] rounded-[2rem] border border-slate-200 dark:border-slate-800 p-4 sm:p-6 overflow-hidden relative shadow-md dark:shadow-2xl mt-4">
                              <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-[0.05] dark:opacity-[0.03]"></div>
                              
                              <div className={`absolute top-0 right-0 w-64 h-64 rounded-full blur-[60px] dark:blur-[80px] -mr-20 -mt-20 pointer-events-none transition-colors duration-1000 ${
-                                autoResult()!.color === 'green' ? 'bg-emerald-500/10 dark:bg-emerald-500/20' : 
-                                autoResult()!.color === 'yellow' ? 'bg-yellow-500/10' : 'bg-red-500/5 dark:bg-red-500/10'
+                                autoResult.color === 'green' ? 'bg-emerald-500/10 dark:bg-emerald-500/20' : 
+                                autoResult.color === 'yellow' ? 'bg-yellow-500/10' : 'bg-red-500/5 dark:bg-red-500/10'
                              }`}></div>
 
-                             {/* BANNER DO JOGO (TIME A X TIME B) */}
+                             {/* BANNER DO JOGO */}
                              <div className="relative z-10 bg-white dark:bg-slate-900/80 p-4 rounded-xl mb-6 flex flex-col sm:flex-row justify-between items-center border border-slate-200 dark:border-slate-800 shadow-sm dark:shadow-none gap-3">
                                  <div className="flex items-center gap-3 w-full sm:w-auto justify-center sm:justify-start">
-                                    <span className="font-bold text-slate-800 dark:text-white uppercase text-xs sm:text-sm text-right flex-1 sm:flex-auto truncate">{autoResult()!.homeTeam}</span>
-                                    <span className="bg-indigo-500 text-white px-3 py-1 rounded-lg font-black shrink-0">{autoResult()!.score}</span>
-                                    <span className="font-bold text-slate-800 dark:text-white uppercase text-xs sm:text-sm flex-1 sm:flex-auto truncate">{autoResult()!.awayTeam}</span>
+                                    <span className="font-bold text-slate-800 dark:text-white uppercase text-xs sm:text-sm text-right flex-1 sm:flex-auto truncate">{autoResult.homeTeam}</span>
+                                    <span className="bg-indigo-500 text-white px-3 py-1 rounded-lg font-black shrink-0">{autoResult.score}</span>
+                                    <span className="font-bold text-slate-800 dark:text-white uppercase text-xs sm:text-sm flex-1 sm:flex-auto truncate">{autoResult.awayTeam}</span>
                                  </div>
-                                 <span className="text-indigo-600 dark:text-indigo-400 font-mono font-black flex items-center gap-1.5 shrink-0 bg-indigo-50 dark:bg-indigo-500/10 px-3 py-1 rounded-md border border-indigo-200 dark:border-indigo-500/20"><Clock size={14}/> {autoResult()!.min}'</span>
+                                 <span className="text-indigo-600 dark:text-indigo-400 font-mono font-black flex items-center gap-1.5 shrink-0 bg-indigo-50 dark:bg-indigo-500/10 px-3 py-1 rounded-md border border-indigo-200 dark:border-indigo-500/20"><Clock size={14}/> {autoResult.min}'</span>
                              </div>
 
                              {/* TOPO: APOSTA SUGERIDA */}
@@ -662,13 +653,13 @@ const Calculators: React.FC = () => {
                                     
                                     <div className="relative w-20 h-20 flex items-center justify-center">
                                        <svg className="absolute inset-0 w-full h-full -rotate-90" viewBox="0 0 72 72">
-                                         <circle cx="36" cy="36" r="32" fill="transparent" stroke="currentColor" strokeWidth="6" strokeDasharray={`${(autoResult()!.finalScore / 100) * 201} 201`} className={autoResult()!.color === 'green' ? 'text-emerald-500' : autoResult()!.color === 'yellow' ? 'text-yellow-500' : 'text-red-500'} />
+                                         <circle cx="36" cy="36" r="32" fill="transparent" stroke="currentColor" strokeWidth="6" strokeDasharray={`${(autoResult.finalScore / 100) * 201} 201`} className={autoResult.color === 'green' ? 'text-emerald-500' : autoResult.color === 'yellow' ? 'text-yellow-500' : 'text-red-500'} />
                                        </svg>
-                                       <span className="text-2xl font-black text-slate-800 dark:text-white z-10">{autoResult()!.finalScore.toFixed(0)}</span>
+                                       <span className="text-2xl font-black text-slate-800 dark:text-white z-10">{autoResult.finalScore.toFixed(0)}</span>
                                     </div>
 
-                                    <span className={`mt-4 text-[9px] font-black uppercase tracking-widest px-3 py-1.5 rounded text-center w-full ${autoResult()!.color === 'green' ? 'bg-emerald-100 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400' : autoResult()!.color === 'yellow' ? 'bg-yellow-100 dark:bg-yellow-500/20 text-yellow-600 dark:text-yellow-400' : 'bg-red-100 dark:bg-red-500/20 text-red-600 dark:text-red-400'}`}>
-                                        {autoResult()!.label}
+                                    <span className={`mt-4 text-[9px] font-black uppercase tracking-widest px-3 py-1.5 rounded text-center w-full ${autoResult.color === 'green' ? 'bg-emerald-100 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400' : autoResult.color === 'yellow' ? 'bg-yellow-100 dark:bg-yellow-500/20 text-yellow-600 dark:text-yellow-400' : 'bg-red-100 dark:bg-red-500/20 text-red-600 dark:text-red-400'}`}>
+                                        {autoResult.label}
                                     </span>
                                  </div>
 
@@ -676,14 +667,14 @@ const Calculators: React.FC = () => {
                                      <p className="text-[10px] uppercase tracking-widest text-slate-500 font-bold mb-3 flex items-center gap-2"><Target size={14} className="text-indigo-500"/> Recomendação do Robô</p>
                                      <div className="bg-indigo-50 dark:bg-indigo-500/10 border border-indigo-200 dark:border-indigo-500/30 p-4 rounded-xl mb-4 shadow-sm dark:shadow-none">
                                          <h3 className="text-sm sm:text-lg font-black text-indigo-600 dark:text-indigo-400 uppercase tracking-widest mb-2 flex items-center gap-2 leading-tight">
-                                             {autoResult()!.type === 'corner' ? <Flag size={18} className="shrink-0"/> : <Goal size={18} className="shrink-0"/>} {autoResult()!.name}
+                                             {autoResult.type === 'corner' ? <Flag size={18} className="shrink-0"/> : <Goal size={18} className="shrink-0"/>} {autoResult.name}
                                          </h3>
                                          <p className="text-[11px] sm:text-xs font-medium text-slate-600 dark:text-slate-400">
-                                            Probabilidade Real: <strong className="text-slate-800 dark:text-white">{autoResult()!.probReal.toFixed(1)}%</strong> | Odd Justa: <strong className="text-indigo-600 dark:text-indigo-400">@{autoResult()!.fairOdd.toFixed(2)}</strong>
+                                            Probabilidade Real: <strong className="text-slate-800 dark:text-white">{autoResult.probReal.toFixed(1)}%</strong> | Odd Justa: <strong className="text-indigo-600 dark:text-indigo-400">@{autoResult.fairOdd.toFixed(2)}</strong>
                                          </p>
                                      </div>
                                      <ul className="space-y-2">
-                                         {autoResult()!.reasons.map((r: string, i: number) => (
+                                         {autoResult.reasons.map((r: string, i: number) => (
                                              <li key={`pos-${i}`} className="text-[11px] sm:text-xs text-slate-600 dark:text-slate-300 flex items-start gap-2 bg-emerald-50 dark:bg-slate-900/50 p-2.5 rounded-lg border border-emerald-100 dark:border-slate-800/50 leading-relaxed font-medium">
                                                  <span className="text-emerald-500 dark:text-emerald-400 shrink-0 mt-0.5">✔</span> {r}
                                              </li>
@@ -692,46 +683,46 @@ const Calculators: React.FC = () => {
                                  </div>
                              </div>
 
-                             {/* PROJEÇÃO FUTURA, AVISO TÁTICO E DICA DE OURO */}
+                             {/* PROJEÇÃO E ALERTAS TÁTICOS */}
                              <div className="space-y-3 mb-6 relative z-10">
-                                 {autoResult()!.tipsterAdvice && (
+                                 {autoResult.tipsterAdvice && (
                                      <div className="bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-200 dark:border-emerald-500/30 text-emerald-700 dark:text-emerald-400 p-4 rounded-2xl text-[11px] sm:text-xs font-medium flex items-start gap-3 shadow-sm dark:shadow-inner">
                                          <Crown size={18} className="shrink-0 mt-0.5 text-emerald-500 dark:text-emerald-400" /> 
-                                         <span className="leading-relaxed">{autoResult()!.tipsterAdvice}</span>
+                                         <span className="leading-relaxed">{autoResult.tipsterAdvice}</span>
                                      </div>
                                  )}
-                                 {autoResult()!.projection && (
+                                 {autoResult.projection && (
                                      <div className="bg-blue-50 dark:bg-blue-500/10 border border-blue-200 dark:border-blue-500/20 text-blue-700 dark:text-blue-400 p-4 rounded-2xl text-[11px] sm:text-xs font-medium flex items-start gap-3 shadow-sm dark:shadow-inner">
                                          <Eye size={18} className="shrink-0 mt-0.5 text-blue-500 dark:text-blue-400" /> 
-                                         <span className="leading-relaxed"><strong>Visão de Futuro:</strong> {autoResult()!.projection}</span>
+                                         <span className="leading-relaxed"><strong>Visão de Futuro:</strong> {autoResult.projection}</span>
                                      </div>
                                  )}
-                                 {autoResult()!.smartWarning && (
+                                 {autoResult.smartWarning && (
                                      <div className="bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/20 text-amber-700 dark:text-amber-400 p-4 rounded-2xl text-[11px] sm:text-xs font-medium flex items-start gap-3 shadow-sm dark:shadow-inner">
                                          <ShieldAlert size={18} className="shrink-0 mt-0.5 text-amber-500 dark:text-amber-400" /> 
-                                         <span className="leading-relaxed"><strong>Alerta Tático:</strong> {autoResult()!.smartWarning}</span>
+                                         <span className="leading-relaxed"><strong>Alerta Tático:</strong> {autoResult.smartWarning}</span>
                                      </div>
                                  )}
                              </div>
 
                              {/* SINAL RADIOATIVO */}
                              <div className="relative z-20 mt-4">
-                               {autoResult()!.color === 'green' && (
+                               {autoResult.color === 'green' && (
                                   <motion.div initial={{ scale: 0.95 }} animate={{ scale: 1 }} className="relative group cursor-pointer">
                                       <div className="absolute -inset-0.5 rounded-2xl blur opacity-30 dark:opacity-40 group-hover:opacity-50 dark:group-hover:opacity-60 transition animate-pulse bg-gradient-to-r from-emerald-500 to-teal-400"></div>
                                       <div className="relative w-full py-4 rounded-2xl font-black text-[10px] sm:text-xs md:text-sm tracking-widest uppercase text-center flex items-center justify-center gap-2 shadow-sm dark:shadow-none bg-emerald-500 text-white dark:text-slate-950">
-                                         <Zap fill="currentColor" size={18} className="animate-bounce shrink-0"/> {autoResult()!.actionMessage}
+                                         <Zap fill="currentColor" size={18} className="animate-bounce shrink-0"/> {autoResult.actionMessage}
                                       </div>
                                   </motion.div>
                                )}
-                               {autoResult()!.color === 'yellow' && (
+                               {autoResult.color === 'yellow' && (
                                   <div className="bg-yellow-500 text-white dark:text-slate-950 w-full py-4 rounded-2xl font-black text-[10px] sm:text-xs uppercase text-center flex justify-center items-center gap-2 shadow-sm dark:shadow-none">
-                                    <AlertTriangle size={16} className="shrink-0"/> {autoResult()!.actionMessage}
+                                    <AlertTriangle size={16} className="shrink-0"/> {autoResult.actionMessage}
                                   </div>
                                )}
-                               {autoResult()!.color === 'red' && (
+                               {autoResult.color === 'red' && (
                                   <div className="bg-white dark:bg-[#09090b] border border-red-200 dark:border-red-500/30 text-red-500 dark:text-red-400 w-full py-4 rounded-2xl font-black text-[10px] sm:text-xs tracking-widest uppercase text-center flex items-center justify-center gap-2 shadow-sm dark:shadow-inner">
-                                     <AlertTriangle size={16} className="shrink-0 text-red-500"/> {autoResult()!.actionMessage}
+                                     <AlertTriangle size={16} className="shrink-0 text-red-500"/> {autoResult.actionMessage}
                                   </div>
                                )}
                              </div>
@@ -740,9 +731,9 @@ const Calculators: React.FC = () => {
                                ⚠️ Atenção: Projeção baseada em estatística. Não constitui recomendação financeira.
                              </p>
                          </div>
-                         ) : autoResult()?.error ? (
+                         ) : autoResult?.error ? (
                              <div className="bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/30 text-amber-600 dark:text-amber-400 p-6 rounded-2xl text-xs sm:text-sm font-bold flex items-center justify-center gap-3 shadow-sm dark:shadow-inner mt-4 text-center">
-                                <Clock size={20} className="shrink-0" /> {autoResult()!.error}
+                                <Clock size={20} className="shrink-0" /> {autoResult.error}
                              </div>
                          ) : null}
                        </motion.div>
