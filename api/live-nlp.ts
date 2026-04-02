@@ -33,11 +33,11 @@ export default async function handler(req: any, res: any) {
     // ==========================================
     if (mode === 'grid') {
         prompt = `Atue como um Scanner HFT de Apostas. O usuário colou uma GRADE inteira de jogos ao vivo.
-Sua missão é filtrar o ruído e encontrar APENAS os 3 a 5 melhores jogos com potencial de "Amasso" (Volume ofensivo alto).
+Sua missão é filtrar o ruído e encontrar APENAS os 3 a 5 melhores jogos com potencial de "Amasso".
 
 REGRAS DE TEMPO (CRÍTICO):
-1. IGNORE SUMARIAMENTE jogos com 88 minutos ou mais (ex: 88', 89', 90+1', FT, Fim de Jogo). Não há tempo hábil para apostar.
-2. Jogos entre 80' e 87' SÓ podem ser recomendados para "Escanteios", NUNCA para Gols.
+1. IGNORE SUMARIAMENTE jogos com 88 minutos ou mais (ex: 88', 89', 90+1', FT). Não há tempo hábil para apostar.
+2. Jogos entre 80' e 87' SÓ podem ser recomendados para "Escanteios".
 3. Recomendações de "Gols" exigem que o jogo esteja, no máximo, aos 75'-80'.
 
 TEXTO BRUTO:
@@ -63,7 +63,7 @@ Retorne ESTRITAMENTE este JSON (array de objetos):
     // ==========================================
     else {
         prompt = `Atue como um Extrator Quantitativo de Dados Ao Vivo (In-Play) para modelos HFT.
-O usuário copiou a página de um único jogo de um site de estatísticas (CornerPro, RoboTip, SofaScore ou Flashscore). 
+O usuário copiou a página de um único jogo (CornerPro, RoboTip, SofaScore ou Flashscore). 
 
 TEXTO BRUTO:
 """
@@ -71,26 +71,30 @@ ${textData}
 """
 
 REGRAS UNIVERSAIS DE EXTRAÇÃO:
-1. MINUTO ATUAL (min): Procure por relógios. Se estiver escrito "INTERVALO" ou "HT", retorne 45. Caso contrário, retorne apenas o número atual (Ex: 36).
-2. GOLS TOTAIS (totalGoals): Soma dos gols do placar (Ex: 1-2 = 3).
-3. CANTOS TOTAIS (totalCorners): Soma dos escanteios/cantos das duas equipes.
-4. PRESSÃO (apPress / apDef): Procure por "Ataques Perigosos" ou "Ataques". 'apPress' é o MAIOR número. 'apDef' é o MENOR. Se o site não fornecer Ataques Perigosos, ESTIME O VALOR multiplicando as Finalizações Totais do time por 5.
-5. LETALIDADE (sot / sofft): Pegue os "Chutes no Alvo" (sot) e "Chutes para Fora" (sofft) APENAS do time que tem o MAIOR apPress (o time que está atacando).
-6. CONTEXTO: 
+1. TIMES E PLACAR (homeTeam, awayTeam, score): Encontre o nome dos dois times e o placar exato do momento (Ex: "1-0", "0-2").
+2. MINUTO ATUAL (min): Procure por relógios. Se "INTERVALO" ou "HT", retorne 45. Caso contrário, retorne apenas o número (Ex: 33).
+3. GOLS TOTAIS (totalGoals): Soma dos gols do placar (Ex: 1-0 = 1).
+4. CANTOS TOTAIS (totalCorners): Soma dos escanteios/cantos das duas equipes. Se não achar, assuma 0.
+5. PRESSÃO (apPress / apDef): Procure por "Ataques Perigosos" ou "Ataques". 'apPress' é o MAIOR número. 'apDef' é o MENOR. 
+6. LETALIDADE (sot / sofft): Pegue os "Chutes no Alvo" (sot) e "Chutes para Fora" (sofft) APENAS do time que tem o MAIOR apPress (o time que está atacando).
+7. CONTEXTO: 
    - redCard: Se o time que ataca tomou vermelho retorne "pressing". Se o time que defende tomou retorne "defending". Caso contrário "none".
-   - pressureTrend: "increasing", "stable" ou "decreasing" baseado no volume de finalizações/ataques e comentários do site.
+   - pressureTrend: "increasing", "stable" ou "decreasing".
    - matchTemperature: "intense" (jogo movimentado/aberto) ou "calm" (morno).
    - needsGoal: true se o time com MAIOR apPress está empatando ou perdendo pela diferença de 1 gol.
 
 RETORNE ESTE JSON ESTRITAMENTE:
 {
-  "min": 45,
+  "homeTeam": "Leganés",
+  "awayTeam": "Real Zaragoza",
+  "score": "1-0",
+  "min": 33,
   "totalGoals": 1,
-  "totalCorners": 8,
-  "apPress": 65,
-  "apDef": 25,
-  "sot": 5,
-  "sofft": 4,
+  "totalCorners": 6,
+  "apPress": 19,
+  "apDef": 10,
+  "sot": 2,
+  "sofft": 6,
   "recentShots": 2,
   "recentCorners": 1,
   "pressureTrend": "increasing",
@@ -131,6 +135,9 @@ RETORNE ESTE JSON ESTRITAMENTE:
         const json = JSON.parse(textResult);
 
         if (mode !== 'grid') {
+            if (!json.homeTeam) json.homeTeam = "Time Casa";
+            if (!json.awayTeam) json.awayTeam = "Time Fora";
+            if (!json.score) json.score = "-";
             if (!json.redCard || !["none", "pressing", "defending"].includes(json.redCard)) json.redCard = "none";
             if (!json.pressureTrend || !["increasing", "stable", "decreasing"].includes(json.pressureTrend)) json.pressureTrend = "stable";
             if (!json.matchTemperature || !["intense", "calm"].includes(json.matchTemperature)) json.matchTemperature = "calm";
