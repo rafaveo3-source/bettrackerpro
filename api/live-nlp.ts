@@ -10,7 +10,7 @@ export default async function handler(req: any, res: any) {
     const origin = req.headers.origin || req.headers.referer || '';
     if (process.env.NODE_ENV === 'production' && (!origin || !origin.includes('bettrackerpro.com.br'))) return res.status(403).json({ error: 'Acesso negado.' });
 
-    const { textData, email, mode } = req.body; // mode: 'grid' ou 'single'
+    const { textData, email, mode } = req.body; 
     
     const geminiKey = process.env.GEMINI_API_KEY;
     const openaiKey = process.env.OPENAI_API_KEY;
@@ -32,8 +32,13 @@ export default async function handler(req: any, res: any) {
     // CÉREBRO 1: RADAR DE GRADE (MINERADOR DE OURO)
     // ==========================================
     if (mode === 'grid') {
-        prompt = `Atue como um Scanner HFT de Apostas. O usuário colou uma GRADE inteira de jogos ao vivo (SofaScore, CornerPro, etc.).
-Sua missão é filtrar o ruído e encontrar APENAS os 3 a 5 melhores jogos com potencial de "Amasso" (Volume ofensivo alto, muitos ataques, chutes, ou times precisando do resultado no fim).
+        prompt = `Atue como um Scanner HFT de Apostas. O usuário colou uma GRADE inteira de jogos ao vivo.
+Sua missão é filtrar o ruído e encontrar APENAS os 3 a 5 melhores jogos com potencial de "Amasso".
+
+REGRAS DE TEMPO (CRÍTICO - CUMPRA ESTRITAMENTE):
+1. IGNORE SUMARIAMENTE jogos com 88 minutos ou mais (ex: 88', 89', 90+1', FT). Não há tempo hábil para apostar.
+2. Jogos entre 80' e 87' SÓ podem ser recomendados para o mercado de "Escanteios" (pressão final), NUNCA para Gols.
+3. Recomendações do mercado de "Gols" exigem que o jogo esteja, no máximo, aos 75'-80'.
 
 TEXTO BRUTO:
 """
@@ -48,7 +53,7 @@ Retorne ESTRITAMENTE este JSON (um array de objetos):
       "match": "Time A vs Time B",
       "score": "0-1",
       "market": "Gols ou Cantos",
-      "reason": "Time A com muita posse, perdendo em casa e gerando muitos ataques por minuto."
+      "reason": "Time A perdendo, posse alta e gerando xG."
     }
   ]
 }`;
@@ -58,8 +63,7 @@ Retorne ESTRITAMENTE este JSON (um array de objetos):
     // ==========================================
     else {
         prompt = `Atue como um Extrator Quantitativo de Dados Ao Vivo (In-Play) para modelos HFT.
-O usuário copiou a página de um único jogo (SofaScore, Flashscore, CornerPro). 
-Extraia a radiografia global da partida para o motor calcular oportunidades de GOLS e ESCANTEIOS.
+O usuário copiou a página de um único jogo. Extraia a radiografia global da partida.
 
 TEXTO BRUTO:
 """
@@ -126,7 +130,6 @@ RETORNE ESTE JSON ESTRITAMENTE:
         
         const json = JSON.parse(textResult);
 
-        // Ajustes de segurança para o modo Single
         if (mode !== 'grid') {
             if (!json.redCard || !["none", "pressing", "defending"].includes(json.redCard)) json.redCard = "none";
             if (!json.pressureTrend || !["increasing", "stable", "decreasing"].includes(json.pressureTrend)) json.pressureTrend = "stable";

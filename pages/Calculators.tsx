@@ -32,13 +32,13 @@ const Calculators: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'dutching'|'kelly'|'value'|'arb'|'stake'|'odds'|'breakeven'|'live_hft'>('dutching');
 
   // ESTADOS DO LIVE HFT
-  const [hftMode, setHftMode] = useState<'grid' | 'single'>('grid'); // Novo Toggle Interno
+  const [hftMode, setHftMode] = useState<'grid' | 'single'>('grid');
   const [liveTextData, setLiveTextData] = useState<string>('');
   const [isScanning, setIsScanning] = useState(false);
   
   const [liveCurrentOdd, setLiveCurrentOdd] = useState('');
-  const [liveContext, setLiveContext] = useState<any>(null); // Dados do Single Match
-  const [gridContext, setGridContext] = useState<any[] | null>(null); // Dados da Grade
+  const [liveContext, setLiveContext] = useState<any>(null); 
+  const [gridContext, setGridContext] = useState<any[] | null>(null); 
 
   const checkAiLimit = () => {
      if (userEmail === "rafaelancelmo.castro@gmail.com") return true;
@@ -51,7 +51,7 @@ const Calculators: React.FC = () => {
       }
   };
 
-  // 🔥 MOTOR NLP (DUPLO CÉREBRO: GRID OU SINGLE)
+  // 🔥 MOTOR NLP (DUPLO CÉREBRO)
   const processNLPEngine = async () => {
     if (!isPro) { setToast({ type: 'error', message: 'Exclusivo PRO.' }); return; }
     if (!checkAiLimit()) { setToast({ type: 'error', message: 'Limite de Scans atingido.' }); return; }
@@ -91,7 +91,7 @@ const Calculators: React.FC = () => {
     } finally { setIsScanning(false); }
   };
 
-  // 🔥 MOTOR DE AUTO-DISCOVERY (Descobre a entrada principal e projeta o futuro)
+  // 🔥 MOTOR DE AUTO-DISCOVERY
   const runAutoDiscoveryHFT = () => {
       if (!liveContext) return null;
 
@@ -117,15 +117,13 @@ const Calculators: React.FC = () => {
       if (pressureTrend === 'increasing') { wOld = 0.35; wRecent = 0.65; } 
       else if (pressureTrend === 'decreasing') { wOld = 0.75; wRecent = 0.25; }
 
-      // PROBABILIDADE DE CANTOS
       const cornerRateOld = ((apP * 0.06) + (sT * 0.25) + (sOff * 0.20)) / m; 
       let cornerLambda = cornerRateOld * remainingTime;
       if (needsGoal) cornerLambda *= 1.25;
 
-      // PROBABILIDADE DE GOLS
       const goalRateOld = ((sT * 0.14) + (sOff * 0.04) + (apP * 0.005)) / m;
       let goalLambda = goalRateOld * remainingTime;
-      if (apD > (apP * 0.5)) goalLambda *= 1.1; // Contra-ataque
+      if (apD > (apP * 0.5)) goalLambda *= 1.1; 
       if (needsGoal) goalLambda *= 1.15;
 
       let scenarios = [];
@@ -150,8 +148,8 @@ const Calculators: React.FC = () => {
           const probBater = (1 - p0) * 100;
           
           let score = probBater;
-          if (scen.type === 'corner' && appm > 1.0 && sT <= 2) score += 15; // Amasso sem precisão = Chove Canto
-          if (scen.type === 'goal' && sT >= 3 && fieldTilt > 60) score += 15; // Amasso com finalização = Cheiro de Gol
+          if (scen.type === 'corner' && appm > 1.0 && sT <= 2) score += 15; 
+          if (scen.type === 'goal' && sT >= 3 && fieldTilt > 60) score += 15; 
 
           if (pressureTrend === 'increasing') score += 10;
           if (needsGoal) score += 8;
@@ -168,7 +166,6 @@ const Calculators: React.FC = () => {
       const fairOdd = bestScenario.probReal > 0 ? 100 / bestScenario.probReal : 0;
       const ev = odd > 0 ? ((bestScenario.probReal / 100) * odd - 1) * 100 : 0; 
 
-      // Classificação do Robô (Agora depende de a odd ter sido digitada ou não)
       let label = '🔴 FUJA DESSE JOGO'; let color = 'red';
       let actionMessage = 'MODELO REJEITA A ENTRADA';
 
@@ -279,7 +276,6 @@ const Calculators: React.FC = () => {
 
   return (
     <div className="space-y-6 pb-20 w-full overflow-x-hidden">
-        {/* HEADER */}
         <div className="flex flex-col gap-2 px-4 md:px-0">
           <div className="flex items-center gap-2 text-emerald-500 text-[9px] font-mono font-bold uppercase tracking-widest">
             <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse shadow-[0_0_8px_#10b981]"></span>
@@ -292,7 +288,6 @@ const Calculators: React.FC = () => {
         </div>
       </div>
       
-      {/* TABS GRID */}
       <div className="flex flex-wrap md:grid md:grid-cols-4 xl:grid-cols-8 gap-2 mb-6 px-4 md:px-0">
         {tabs.map(tab => (
           <button
@@ -510,7 +505,7 @@ const Calculators: React.FC = () => {
                       </button>
                    </div>
 
-                   {/* CAIXA DE TEXTO NLP & ODD INPUT JUNTOS */}
+                   {/* CAIXA DE TEXTO NLP */}
                    <div className="relative group overflow-hidden rounded-[2rem] border border-indigo-200 dark:border-indigo-500/20 focus-within:border-indigo-400 dark:focus-within:border-indigo-500 transition-all p-1 flex flex-col shadow-sm dark:shadow-inner bg-indigo-50/30 dark:bg-[#09090b] mb-6">
                       <div className="flex flex-col sm:flex-row sm:items-center justify-between p-4 border-b border-slate-200 dark:border-slate-800 gap-4">
                          <div className="flex items-center gap-2 text-slate-500 dark:text-slate-400">
@@ -606,7 +601,7 @@ const Calculators: React.FC = () => {
                                     <div className="relative">
                                         <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 font-mono font-bold">@</span>
                                         <input 
-                                            type="number" step="0.01" placeholder="Ex: 1.83" 
+                                            type="number" step="0.01" placeholder="Ex: 1.83 (Opcional)" 
                                             value={liveCurrentOdd} 
                                             onChange={e => {
                                                 let val = e.target.value.replace(/[^0-9.]/g, '');
@@ -620,13 +615,13 @@ const Calculators: React.FC = () => {
                              </div>
                          </div>
 
-                         {autoResult() && !autoResult().error ? (
+                         {autoResult && !autoResult.error ? (
                          <div className="bg-slate-50 dark:bg-[#020617] rounded-[2rem] border border-slate-200 dark:border-slate-800 p-4 sm:p-6 overflow-hidden relative shadow-md dark:shadow-2xl mt-4">
                              <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-[0.05] dark:opacity-[0.03]"></div>
                              
                              <div className={`absolute top-0 right-0 w-64 h-64 rounded-full blur-[60px] dark:blur-[80px] -mr-20 -mt-20 pointer-events-none transition-colors duration-1000 ${
-                                autoResult().color === 'green' ? 'bg-emerald-500/10 dark:bg-emerald-500/20' : 
-                                autoResult().color === 'yellow' ? 'bg-yellow-500/10' : 'bg-red-500/5 dark:bg-red-500/10'
+                                autoResult.color === 'green' ? 'bg-emerald-500/10 dark:bg-emerald-500/20' : 
+                                autoResult.color === 'yellow' ? 'bg-yellow-500/10' : 'bg-red-500/5 dark:bg-red-500/10'
                              }`}></div>
 
                              {/* TOPO: APOSTA SUGERIDA */}
@@ -634,16 +629,16 @@ const Calculators: React.FC = () => {
                                  <div className="flex-shrink-0 flex flex-col items-center justify-center p-4 bg-white dark:bg-slate-900/80 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm dark:shadow-none min-w-[150px]">
                                     <p className="text-[9px] uppercase tracking-widest text-slate-500 font-bold mb-4 text-center">Índice de Confiança</p>
                                     
-                                    {/* Gráfico Redondo Corrigido */}
+                                    {/* Gráfico Redondo Corrigido (Proporção Exata do SVG) */}
                                     <div className="relative w-20 h-20 flex items-center justify-center">
                                        <svg className="absolute inset-0 w-full h-full -rotate-90" viewBox="0 0 72 72">
-                                         <circle cx="36" cy="36" r="32" fill="transparent" stroke="currentColor" strokeWidth="6" strokeDasharray={`${(autoResult().finalScore / 100) * 201} 201`} className={autoResult().color === 'green' ? 'text-emerald-500' : autoResult().color === 'yellow' ? 'text-yellow-500' : 'text-red-500'} />
+                                         <circle cx="36" cy="36" r="32" fill="transparent" stroke="currentColor" strokeWidth="6" strokeDasharray={`${(autoResult.finalScore / 100) * 201} 201`} className={autoResult.color === 'green' ? 'text-emerald-500' : autoResult.color === 'yellow' ? 'text-yellow-500' : 'text-red-500'} />
                                        </svg>
-                                       <span className="text-2xl font-black text-slate-800 dark:text-white z-10">{autoResult().finalScore.toFixed(0)}</span>
+                                       <span className="text-2xl font-black text-slate-800 dark:text-white z-10">{autoResult.finalScore.toFixed(0)}</span>
                                     </div>
 
-                                    <span className={`mt-4 text-[9px] font-black uppercase tracking-widest px-3 py-1.5 rounded text-center w-full ${autoResult().color === 'green' ? 'bg-emerald-100 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400' : autoResult().color === 'yellow' ? 'bg-yellow-100 dark:bg-yellow-500/20 text-yellow-600 dark:text-yellow-400' : 'bg-red-100 dark:bg-red-500/20 text-red-600 dark:text-red-400'}`}>
-                                        {autoResult().label}
+                                    <span className={`mt-4 text-[9px] font-black uppercase tracking-widest px-3 py-1.5 rounded text-center w-full ${autoResult.color === 'green' ? 'bg-emerald-100 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400' : autoResult.color === 'yellow' ? 'bg-yellow-100 dark:bg-yellow-500/20 text-yellow-600 dark:text-yellow-400' : 'bg-red-100 dark:bg-red-500/20 text-red-600 dark:text-red-400'}`}>
+                                        {autoResult.label}
                                     </span>
                                  </div>
 
@@ -651,14 +646,14 @@ const Calculators: React.FC = () => {
                                      <p className="text-[10px] uppercase tracking-widest text-slate-500 font-bold mb-3 flex items-center gap-2"><Target size={14} className="text-indigo-500"/> Recomendação do Robô</p>
                                      <div className="bg-indigo-50 dark:bg-indigo-500/10 border border-indigo-200 dark:border-indigo-500/30 p-4 rounded-xl mb-4 shadow-sm dark:shadow-none">
                                          <h3 className="text-sm sm:text-lg font-black text-indigo-600 dark:text-indigo-400 uppercase tracking-widest mb-2 flex items-center gap-2 leading-tight">
-                                             {autoResult().type === 'corner' ? <Flag size={18} className="shrink-0"/> : <Goal size={18} className="shrink-0"/>} {autoResult().name}
+                                             {autoResult.type === 'corner' ? <Flag size={18} className="shrink-0"/> : <Goal size={18} className="shrink-0"/>} {autoResult.name}
                                          </h3>
                                          <p className="text-[11px] sm:text-xs font-medium text-slate-600 dark:text-slate-400">
-                                            Probabilidade Real: <strong className="text-slate-800 dark:text-white">{autoResult().probReal.toFixed(1)}%</strong> | Odd Justa: <strong className="text-indigo-600 dark:text-indigo-400">@{autoResult().fairOdd.toFixed(2)}</strong>
+                                            Probabilidade Real: <strong className="text-slate-800 dark:text-white">{autoResult.probReal.toFixed(1)}%</strong> | Odd Justa: <strong className="text-indigo-600 dark:text-indigo-400">@{autoResult.fairOdd.toFixed(2)}</strong>
                                          </p>
                                      </div>
                                      <ul className="space-y-2">
-                                         {autoResult().reasons.map((r: string, i: number) => (
+                                         {autoResult.reasons.map((r: string, i: number) => (
                                              <li key={`pos-${i}`} className="text-[11px] sm:text-xs text-slate-600 dark:text-slate-300 flex items-start gap-2 bg-emerald-50 dark:bg-slate-900/50 p-2.5 rounded-lg border border-emerald-100 dark:border-slate-800/50 leading-relaxed font-medium">
                                                  <span className="text-emerald-500 dark:text-emerald-400 shrink-0 mt-0.5">✔</span> {r}
                                              </li>
@@ -668,31 +663,31 @@ const Calculators: React.FC = () => {
                              </div>
 
                              {/* PROJEÇÃO FUTURA (FORWARD LOOKING) */}
-                             {autoResult().projection && (
+                             {autoResult.projection && (
                                  <div className="mb-6 bg-blue-50 dark:bg-blue-500/10 border border-blue-200 dark:border-blue-500/20 text-blue-700 dark:text-blue-400 p-4 rounded-2xl text-[11px] sm:text-xs font-medium flex items-start gap-3 shadow-sm dark:shadow-inner relative z-10">
                                      <Eye size={18} className="shrink-0 mt-0.5 text-blue-500 dark:text-blue-400" /> 
-                                     <span className="leading-relaxed"><strong>Visão de Futuro:</strong> {autoResult().projection}</span>
+                                     <span className="leading-relaxed"><strong>Visão de Futuro:</strong> {autoResult.projection}</span>
                                  </div>
                              )}
 
                              {/* SINAL RADIOATIVO */}
                              <div className="relative z-20 mt-4">
-                               {autoResult().color === 'green' && (
+                               {autoResult.color === 'green' && (
                                   <motion.div initial={{ scale: 0.95 }} animate={{ scale: 1 }} className="relative group cursor-pointer">
                                       <div className="absolute -inset-0.5 rounded-2xl blur opacity-30 dark:opacity-40 group-hover:opacity-50 dark:group-hover:opacity-60 transition animate-pulse bg-gradient-to-r from-emerald-500 to-teal-400"></div>
                                       <div className="relative w-full py-4 rounded-2xl font-black text-[10px] sm:text-xs md:text-sm tracking-widest uppercase text-center flex items-center justify-center gap-2 shadow-sm dark:shadow-none bg-emerald-500 text-white dark:text-slate-950">
-                                         <Zap fill="currentColor" size={18} className="animate-bounce shrink-0"/> {autoResult().actionMessage}
+                                         <Zap fill="currentColor" size={18} className="animate-bounce shrink-0"/> {autoResult.actionMessage}
                                       </div>
                                   </motion.div>
                                )}
-                               {autoResult().color === 'yellow' && (
+                               {autoResult.color === 'yellow' && (
                                   <div className="bg-yellow-500 text-white dark:text-slate-950 w-full py-4 rounded-2xl font-black text-[10px] sm:text-xs uppercase text-center flex justify-center items-center gap-2 shadow-sm dark:shadow-none">
-                                    <AlertTriangle size={16} className="shrink-0"/> {autoResult().actionMessage}
+                                    <AlertTriangle size={16} className="shrink-0"/> {autoResult.actionMessage}
                                   </div>
                                )}
-                               {autoResult().color === 'red' && (
+                               {autoResult.color === 'red' && (
                                   <div className="bg-white dark:bg-[#09090b] border border-red-200 dark:border-red-500/30 text-red-500 dark:text-red-400 w-full py-4 rounded-2xl font-black text-[10px] sm:text-xs tracking-widest uppercase text-center flex items-center justify-center gap-2 shadow-sm dark:shadow-inner">
-                                     <AlertTriangle size={16} className="shrink-0 text-red-500"/> {autoResult().actionMessage}
+                                     <AlertTriangle size={16} className="shrink-0 text-red-500"/> {autoResult.actionMessage}
                                   </div>
                                )}
                              </div>
@@ -701,9 +696,9 @@ const Calculators: React.FC = () => {
                                ⚠️ Atenção: Projeção baseada em estatística. Não constitui recomendação financeira.
                              </p>
                          </div>
-                         ) : autoResult()?.error ? (
+                         ) : autoResult?.error ? (
                              <div className="bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/30 text-amber-600 dark:text-amber-400 p-6 rounded-2xl text-xs sm:text-sm font-bold flex items-center justify-center gap-3 shadow-sm dark:shadow-inner mt-4 text-center">
-                                <Clock size={20} className="shrink-0" /> {autoResult().error}
+                                <Clock size={20} className="shrink-0" /> {autoResult.error}
                              </div>
                          ) : null}
                        </motion.div>
