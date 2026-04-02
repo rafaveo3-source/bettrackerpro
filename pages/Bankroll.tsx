@@ -34,7 +34,8 @@ const Bankroll: React.FC = () => {
   const [txNote, setTxNote] = useState('');
 
   const [bankrollToDelete, setBankrollToDelete] = useState<string | null>(null);
-  const [confirmInput, setConfirmInput] = useState('');
+  // Substituímos o input de texto por um state booleano (Checkbox)
+  const [isDeleteConfirmed, setIsDeleteConfirmed] = useState(false);
 
   const activeBR = bankrolls.find(b => b.id === activeBankrollId);
   const selectedBR = bankrolls.find(b => b.id === bankrollToDelete);
@@ -80,11 +81,11 @@ const Bankroll: React.FC = () => {
 
   const confirmDelete = async () => {
     if (!selectedBR) return;
-    if (confirmInput !== selectedBR.name) return;
+    if (!isDeleteConfirmed) return; // Nova validação via Checkbox
 
     await removeBankroll(selectedBR.id);
     setBankrollToDelete(null);
-    setConfirmInput('');
+    setIsDeleteConfirmed(false); // Reseta o state de segurança
   };
 
   return (
@@ -371,6 +372,7 @@ const Bankroll: React.FC = () => {
               onClick={(e) => {
                 e.stopPropagation();
                 setBankrollToDelete(br.id);
+                setIsDeleteConfirmed(false); // Reseta a segurança ao abrir o modal
               }}
               className="absolute bottom-6 right-6 p-2 text-slate-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity bg-slate-50 dark:bg-slate-900 rounded-lg"
             >
@@ -442,11 +444,11 @@ const Bankroll: React.FC = () => {
         </AnimatePresence>
       </div>
 
-      {/* 🔥 DANGER MODAL */}
+      {/* 🔥 DANGER MODAL (Refeito com Checkbox) */}
       <AnimatePresence>
         {bankrollToDelete && selectedBR && (
           <motion.div
-            className="fixed inset-0 bg-black/60 backdrop-blur-md flex items-center justify-center z-50"
+            className="fixed inset-0 bg-black/60 backdrop-blur-md flex items-center justify-center z-50 p-4"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
@@ -472,28 +474,26 @@ const Bankroll: React.FC = () => {
                 {selectedBR.name}
               </p>
 
-              <p className="text-xs mb-4 text-slate-500">
-                Isso apagará TODOS os registros de operações, metas e fluxo de caixa atrelados a este portfólio.
-                Essa ação de limpeza de dados não pode ser desfeita.
-              </p>
-
-              <input
-                type="text"
-                placeholder="Confirme o nome para excluir"
-                value={confirmInput}
-                onChange={(e) => setConfirmInput(e.target.value)}
-                className="w-full bg-slate-50 dark:bg-slate-900 border border-red-300 dark:border-red-500/30 rounded-xl px-4 py-3 mb-4 outline-none focus:border-red-500 transition-colors text-sm font-bold text-slate-900 dark:text-white"
-              />
-
-              <p className="text-[10px] text-red-500 font-bold uppercase tracking-widest mb-4">
-                Assinatura exigida: {selectedBR.name}
-              </p>
+              {/* O novo Checkbox de Confirmação */}
+              <label className="flex items-start gap-3 cursor-pointer mb-6 group p-4 border border-red-200 dark:border-red-900/30 rounded-xl bg-red-50 dark:bg-red-900/10 hover:bg-red-100 dark:hover:bg-red-900/20 transition-colors">
+                <div className="mt-0.5">
+                  <input
+                    type="checkbox"
+                    checked={isDeleteConfirmed}
+                    onChange={(e) => setIsDeleteConfirmed(e.target.checked)}
+                    className="w-5 h-5 rounded border-red-300 dark:border-red-700 text-red-600 focus:ring-red-500 dark:bg-slate-900 cursor-pointer accent-red-600"
+                  />
+                </div>
+                <span className="text-xs font-bold text-red-700 dark:text-red-400 select-none">
+                  Sim, entendo que vou perder todo o histórico de operações, fluxo de caixa e relatórios e não há como reverter.
+                </span>
+              </label>
 
               <div className="flex gap-4">
                 <button
                   onClick={() => {
                     setBankrollToDelete(null);
-                    setConfirmInput('');
+                    setIsDeleteConfirmed(false); // Sempre resetamos a chave de segurança
                   }}
                   className="flex-1 py-3 rounded-xl bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-bold uppercase text-xs tracking-widest hover:bg-slate-300 dark:hover:bg-slate-700 transition"
                 >
@@ -501,10 +501,10 @@ const Bankroll: React.FC = () => {
                 </button>
 
                 <button
-                  disabled={confirmInput !== selectedBR.name}
+                  disabled={!isDeleteConfirmed}
                   onClick={confirmDelete}
                   className={`flex-1 py-3 rounded-xl font-black text-white text-xs uppercase tracking-widest transition ${
-                    confirmInput === selectedBR.name
+                    isDeleteConfirmed
                       ? 'bg-red-600 hover:bg-red-500 shadow-lg shadow-red-500/20'
                       : 'bg-red-300 dark:bg-red-900/50 cursor-not-allowed text-red-100/50'
                   }`}
