@@ -1,10 +1,10 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
   Info, ChevronDown, Sparkles, Trash2, Plus, Scale, Percent, ArrowRightLeft, 
   Target, TrendingUp, AlertTriangle, Lock, Crown, Radar, CheckSquare, 
   Square, Activity, Crosshair, BarChart4, Zap, DollarSign, Goal, Lightbulb,
-  Clock, Flag, ShieldAlert, Swords, Thermometer, RectangleHorizontal, Scan
+  Clock, Flag, ShieldAlert, Swords, Thermometer, RectangleHorizontal, FileText, Eraser
 } from 'lucide-react';
 import { useBetStore } from '../store/useBetStore';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -14,17 +14,17 @@ import { motion, AnimatePresence } from 'framer-motion';
 // ==========================================
 const PodInput = ({ label, value, onChange, icon: Icon, placeholder, colorClass, highlight, type = 'number' }: any) => (
   <div className="relative group">
-      <label className={`text-[9px] font-black uppercase tracking-widest block mb-1.5 transition-colors ${highlight ? colorClass : 'text-slate-500'}`}>
+      <label className={`text-[9px] font-black uppercase tracking-widest block mb-1.5 transition-colors ${highlight ? colorClass : 'text-slate-500 dark:text-slate-400'}`}>
          {label}
       </label>
       <div className="relative">
           <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
-              <Icon size={14} className={highlight ? colorClass : 'text-slate-400 group-hover:text-slate-300 transition-colors'} />
+              <Icon size={14} className={highlight ? colorClass : 'text-slate-400 dark:text-slate-500 group-hover:text-slate-500 dark:group-hover:text-slate-400 transition-colors'} />
           </div>
           <input 
               type={type} value={value} onChange={onChange} placeholder={placeholder}
-              className={`w-full bg-slate-950 border rounded-xl pl-10 pr-3 py-3 font-mono font-bold text-sm outline-none transition-all
-              ${highlight ? `border-slate-600 focus:border-slate-400 ${colorClass} shadow-[inset_0_0_10px_rgba(0,0,0,0.2)]` : 'border-slate-800 text-white focus:border-slate-600 focus:bg-[#09090b]'}`}              
+              className={`w-full bg-white dark:bg-slate-950 border rounded-xl pl-10 pr-3 py-3 font-mono font-bold text-sm outline-none transition-all
+              ${highlight ? `border-slate-300 dark:border-slate-700 focus:border-slate-400 dark:focus:border-slate-500 ${colorClass} shadow-sm dark:shadow-[inset_0_0_10px_rgba(0,0,0,0.2)]` : 'border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white focus:border-slate-400 dark:focus:border-slate-600 focus:bg-slate-50 dark:focus:bg-[#09090b] shadow-sm dark:shadow-none'}`}              
           />
       </div>
   </div>
@@ -32,12 +32,12 @@ const PodInput = ({ label, value, onChange, icon: Icon, placeholder, colorClass,
 
 const PodSelect = ({ label, value, onChange, icon: Icon, options, colorClass }: any) => (
   <div className="relative group">
-      <label className={`text-[9px] font-black uppercase tracking-widest block mb-1.5 transition-colors text-slate-500`}>{label}</label>
+      <label className={`text-[9px] font-black uppercase tracking-widest block mb-1.5 transition-colors text-slate-500 dark:text-slate-400`}>{label}</label>
       <div className="relative">
           <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
-              <Icon size={14} className="text-slate-400 group-hover:text-slate-300 transition-colors" />
+              <Icon size={14} className="text-slate-400 dark:text-slate-500 group-hover:text-slate-500 dark:group-hover:text-slate-400 transition-colors" />
           </div>
-          <select value={value} onChange={onChange} className={`w-full bg-slate-950 border border-slate-800 text-white rounded-xl pl-10 pr-3 py-3 font-mono font-bold text-[11px] sm:text-xs outline-none focus:border-slate-600 focus:bg-[#09090b] appearance-none cursor-pointer`}>
+          <select value={value} onChange={onChange} className={`w-full bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white rounded-xl pl-10 pr-3 py-3 font-mono font-bold text-[11px] sm:text-xs outline-none focus:border-slate-400 dark:focus:border-slate-600 focus:bg-slate-50 dark:focus:bg-[#09090b] appearance-none cursor-pointer shadow-sm dark:shadow-none`}>
               {options.map((opt:any) => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
           </select>
       </div>
@@ -52,30 +52,6 @@ const MapIcon = ({ size, className }: any) => (
   </svg>
 );
 
-const fileToBase64 = (file: File): Promise<string> => {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.readAsDataURL(file);
-    reader.onload = (event) => {
-      const img = new Image();
-      img.onload = () => {
-        const canvas = document.createElement('canvas');
-        const MAX_WIDTH = 1200; 
-        let width = img.width;
-        let height = img.height;
-        if (width > MAX_WIDTH) { height = Math.round((height * MAX_WIDTH) / width); width = MAX_WIDTH; }
-        canvas.width = width; canvas.height = height;
-        const ctx = canvas.getContext('2d');
-        ctx?.drawImage(img, 0, 0, width, height);
-        resolve(canvas.toDataURL('image/jpeg', 0.8).split(',')[1]);
-      };
-      img.onerror = (error) => reject(error);
-      img.src = event.target?.result as string;
-    };
-    reader.onerror = (error) => reject(error);
-  });
-};
-
 const factorial = (n: number): number => {
   if (n < 0) return 0;
   if (n === 0 || n === 1) return 1;
@@ -89,17 +65,18 @@ const poissonExact = (k: number, lambda: number): number => {
 };
 
 const Calculators: React.FC = () => {
-  const userEmail = "rafaelancelmo.castro@gmail.com"; 
-
-  const { currentBankrollBalance, isPro, aiScansUsedToday, canUseAiScan, incrementAiScan, setToast } = useBetStore();
+  const { user, currentBankrollBalance, isPro, aiScansUsedToday, canUseAiScan, incrementAiScan, setToast } = useBetStore();
+  const userEmail = user?.email || "rafaelancelmo.castro@gmail.com"; 
   const navigate = useNavigate();
 
-  // 🔥 ESTADO INICIAL CORRIGIDO PARA 'dutching'
   const [activeTab, setActiveTab] = useState<'dutching'|'kelly'|'value'|'arb'|'stake'|'odds'|'breakeven'|'exc'|'exg'>('dutching');
 
   // ==========================================
   // ESTADOS COMPARTILHADOS (ExC / ExG)
   // ==========================================
+  const [liveTextData, setLiveTextData] = useState<string>('');
+  const [isScanning, setIsScanning] = useState(false);
+
   const [liveMin, setLiveMin] = useState('');
   const [liveCorners, setLiveCorners] = useState(''); 
   const [liveGoals, setLiveGoals] = useState('');     
@@ -118,12 +95,6 @@ const Calculators: React.FC = () => {
   const [needsGoal, setNeedsGoal] = useState('false'); 
   const [recentGoal, setRecentGoal] = useState('false'); 
 
-  const [scannedImage, setScannedImage] = useState<string | null>(null);
-  const [isScanning, setIsScanning] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
-
-  const VALID_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
-
   const checkAiLimit = () => {
      if (userEmail === "rafaelancelmo.castro@gmail.com") return true;
      return canUseAiScan ? canUseAiScan() : false;
@@ -135,46 +106,23 @@ const Calculators: React.FC = () => {
       }
   };
 
-  useEffect(() => {
-    const handleGlobalPaste = (e: ClipboardEvent) => {
-      if (activeTab !== 'exc' && activeTab !== 'exg') return;
-      const items = e.clipboardData?.items;
-      if (!items) return;
-
-      for (let i = 0; i < items.length; i++) {
-        if (items[i].type.indexOf('image') !== -1) {
-          const blob = items[i].getAsFile();
-          if (blob) {
-             if (!VALID_IMAGE_TYPES.includes(blob.type)) {
-                 setToast({ type: 'error', message: '⚠️ Formato inválido! Cole apenas imagens PNG, JPG ou WEBP.' });
-                 return;
-             }
-             processVisionAI(blob);
-          }
-        }
-      }
-    };
-    window.addEventListener('paste', handleGlobalPaste);
-    return () => window.removeEventListener('paste', handleGlobalPaste);
-  }, [activeTab]);
-
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file && VALID_IMAGE_TYPES.includes(file.type)) processVisionAI(file);
-  };
-
-  const processVisionAI = async (file: File) => {
+  // 🔥 O NOVO MOTOR NLP IN-PLAY
+  const processNLPEngine = async () => {
     if (!isPro) { setToast({ type: 'error', message: 'Exclusivo PRO.' }); return; }
     if (!checkAiLimit()) { setToast({ type: 'error', message: 'Limite atingido.' }); return; }
+    if (!liveTextData || liveTextData.trim().length < 20) { setToast({ type: 'error', message: 'Cole os dados da página do jogo primeiro.' }); return; }
 
-    setScannedImage(URL.createObjectURL(file));
     setIsScanning(true);
 
     try {
-        const base64Data = await fileToBase64(file);
-        const response = await fetch('/api/vision', {
+        const response = await fetch('/api/live-nlp', {
             method: 'POST', headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ image: base64Data, mimeType: 'image/jpeg', mode: activeTab, email: userEmail, scenario: activeTab === 'exc' ? excScenario : exgScenario })
+            body: JSON.stringify({ 
+                textData: liveTextData, 
+                mode: activeTab, 
+                email: userEmail, 
+                scenario: activeTab === 'exc' ? excScenario : exgScenario 
+            })
         });
 
         const data = await response.json();
@@ -190,26 +138,26 @@ const Calculators: React.FC = () => {
 
            if (data.recentShots !== undefined) setRecentShots(cln(data.recentShots));
            if (data.recentCorners !== undefined) setRecentCorners(cln(data.recentCorners));
-           setPressureTrend(["increasing", "stable", "decreasing"].includes(data.pressureTrend) ? data.pressureTrend : "stable");
-           setMatchTemp(["intense", "calm"].includes(data.matchTemperature) ? data.matchTemperature : "calm");
-           setRedCard(["none", "pressing", "defending"].includes(data.redCard) ? data.redCard : "none");
+           if (data.pressureTrend) setPressureTrend(["increasing", "stable", "decreasing"].includes(data.pressureTrend) ? data.pressureTrend : "stable");
+           if (data.matchTemperature) setMatchTemp(["intense", "calm"].includes(data.matchTemperature) ? data.matchTemperature : "calm");
+           if (data.redCard) setRedCard(["none", "pressing", "defending"].includes(data.redCard) ? data.redCard : "none");
            if (data.needsGoal !== undefined) setNeedsGoal(String(data.needsGoal));
            if (data.recentGoal !== undefined) setRecentGoal(String(data.recentGoal));
            
            handleIncrementScan();
-           setToast({ type: 'success', message: 'Contexto Extraído com IA!' });
+           setToast({ type: 'success', message: 'Contexto In-Play Extraído com IA!' });
         }
     } catch (e: any) {
         if (e.message?.includes('429') || e.message?.includes('quota')) {
             setToast({ type: 'error', message: '⚠️ Servidor da IA sobrecarregado (Limite de Cota). Aguarde um instante.' });
         } else {
-            setToast({ type: 'error', message: e.message || 'Erro na leitura visual.' });
+            setToast({ type: 'error', message: e.message || 'Erro na leitura do texto ao vivo.' });
         }
     } finally { setIsScanning(false); }
   };
 
   const resetScanner = () => {
-      setScannedImage(null); setLiveMin(''); setLiveCorners(''); setLiveGoals(''); 
+      setLiveTextData(''); setLiveMin(''); setLiveCorners(''); setLiveGoals(''); 
       setLiveAP_Def(''); setLiveAP_Press(''); setLiveSoT(''); setLiveSoffT(''); setLiveAP_5m('');
       setRecentShots(''); setRecentCorners(''); setPressureTrend('stable');
       setMatchTemp('calm'); setRedCard('none'); setNeedsGoal('false'); setRecentGoal('false');
@@ -343,8 +291,8 @@ const Calculators: React.FC = () => {
       if (appm < 0.7) paceMsg = "Letárgico";
 
       return { 
-         appm, fieldTilt, probCons, probNeut, probAggr, mainProb, targetKey, ev, fairOdd, 
-         finalScore, label, color, positiveReasons, negativeReasons, crossCheckMsg, paceMsg, baseLambda, momentumScore 
+          appm, fieldTilt, probCons, probNeut, probAggr, mainProb, targetKey, ev, fairOdd, 
+          finalScore, label, color, positiveReasons, negativeReasons, crossCheckMsg, paceMsg, baseLambda, momentumScore 
       };
   };
 
@@ -353,7 +301,7 @@ const Calculators: React.FC = () => {
   const ProLockScreen = () => (
       <div className="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-[2rem] p-8 text-center flex flex-col items-center justify-center min-h-[300px] relative overflow-hidden shadow-sm">
           <div className="absolute inset-0 bg-gradient-to-br from-purple-500/5 to-blue-500/5 dark:from-purple-500/10 dark:to-blue-500/10 opacity-50" />
-          <div className="bg-white dark:bg-slate-800 p-4 rounded-full mb-4 relative z-10 shadow-sm">
+          <div className="bg-white dark:bg-slate-800 p-4 rounded-full mb-4 relative z-10 shadow-sm border border-slate-200 dark:border-slate-700">
               <Crown size={32} className="text-amber-500 dark:text-amber-400" />
           </div>
           <h2 className="text-2xl font-black text-slate-900 dark:text-white uppercase italic tracking-tighter mb-2 relative z-10">
@@ -362,7 +310,7 @@ const Calculators: React.FC = () => {
           <p className="text-slate-600 dark:text-slate-400 max-w-md mx-auto mb-6 text-sm relative z-10">
               Esta calculadora matemática avançada é exclusiva para membros PRO. Desbloqueie todo o potencial da sua gestão.
           </p>
-          <button onClick={() => navigate('/pro')} className="bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 text-slate-900 font-black py-3 px-8 rounded-xl shadow-lg shadow-amber-500/20 transition-all active:scale-95 relative z-10">
+          <button onClick={() => navigate('/pro')} className="bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 text-slate-900 font-black py-3 px-8 rounded-xl shadow-lg shadow-amber-500/20 transition-all active:scale-95 relative z-10 uppercase tracking-widest text-xs">
               Quero ser PRO
           </button>
       </div>
@@ -408,8 +356,8 @@ const Calculators: React.FC = () => {
       case 'stake': return { title: 'Gestão Fixa', text: 'O cálculo de stake fixa percentual ajuda a manter o controle do drawdown em fases de oscilação.' };
       case 'odds': return { title: 'Leitura Global', text: 'Conversão automática de formatos de cotações utilizados em bolsas esportivas.' };
       case 'breakeven': return { title: 'Ponto de Equilíbrio', text: 'A taxa de acerto (Hit-Rate) necessária para manter a estabilidade do capital com a odd informada.' };
-      case 'exc': return { title: 'ExC Analytics (Cantos)', text: 'Motor HFT que cruza Domínio (Field Tilt), Momentum e Poisson para achar EV+ em escanteios. Suporta leitura via IA.' };
-      case 'exg': return { title: 'ExG Analytics (Gols)', text: 'Calcula a letalidade do time (SoT) e a abertura tática para precificar a Odd Justa de Gols em tempo real.' };
+      case 'exc': return { title: 'ExC Analytics (Cantos In-Play)', text: 'Terminal HFT que cruza Momentum (Time Decay) e Field Tilt para achar EV+ em escanteios ao vivo. Suporta leitura via NLP (Texto).' };
+      case 'exg': return { title: 'ExG Analytics (Gols In-Play)', text: 'Calcula a letalidade do time (SoT) cruzada com a redução temporal de Poisson para precificar a Odd Justa de Gols em tempo real.' };
       default: return { title: 'Ferramentas Analíticas', text: 'Tome decisões baseadas em dados.' };
     }
   })();
@@ -468,13 +416,13 @@ const Calculators: React.FC = () => {
                     </div>
                     <div className="space-y-3">
                         {dutchSelections.map((sel, idx) => (
-                            <div key={sel.id} className="bg-slate-50 dark:bg-slate-900/50 p-4 rounded-xl border border-slate-200 dark:border-slate-800/50 grid grid-cols-12 gap-2 items-center">
+                            <div key={sel.id} className="bg-white dark:bg-slate-900/50 p-4 rounded-xl border border-slate-200 dark:border-slate-800/50 grid grid-cols-12 gap-2 items-center shadow-sm dark:shadow-none">
                                 <div className="col-span-1 text-xs font-bold text-slate-400">{String.fromCharCode(65 + idx)}</div>
                                 <div className="col-span-5"><input type="text" value={sel.name} onChange={e => { const n = [...dutchSelections]; n[idx].name = e.target.value; setDutchSelections(n); }} className="w-full bg-transparent outline-none text-sm font-bold text-slate-700 dark:text-slate-200" /></div>
-                                <div className="col-span-3"><input type="number" value={sel.odds} onChange={e => { const n = [...dutchSelections]; n[idx].odds = e.target.value; setDutchSelections(n); }} className="w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded px-2 py-1 text-sm font-mono text-center text-slate-900 dark:text-white" placeholder="Odds" /></div>
+                                <div className="col-span-3"><input type="number" value={sel.odds} onChange={e => { const n = [...dutchSelections]; n[idx].odds = e.target.value; setDutchSelections(n); }} className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded px-2 py-1 text-sm font-mono text-center text-slate-900 dark:text-white" placeholder="Odds" /></div>
                                 <div className="col-span-3 text-right">
                                     <p className="text-emerald-600 dark:text-emerald-400 font-bold text-xs">R$ {sel.stake.toFixed(2)}</p>
-                                    <button onClick={() => removeDutchSelection(sel.id)} className="text-[9px] text-red-500 dark:text-red-400 hover:underline">Remover</button>
+                                    <button onClick={() => removeDutchSelection(sel.id)} className="text-[9px] text-red-500 dark:text-red-400 hover:underline mt-1">Remover</button>
                                 </div>
                             </div>
                         ))}
@@ -512,9 +460,9 @@ const Calculators: React.FC = () => {
                         </div>
                     </div>
                     <div className="bg-purple-50 dark:bg-purple-900/10 p-6 rounded-2xl text-center border border-purple-200 dark:border-purple-500/20">
-                        <p className="text-xs font-bold text-purple-500 dark:text-purple-400 uppercase tracking-widest mb-1">Stake Recomendada</p>
+                        <p className="text-xs font-bold text-purple-600 dark:text-purple-400 uppercase tracking-widest mb-1">Stake Recomendada</p>
                         <h3 className="text-4xl font-black text-purple-600 dark:text-purple-400">{parseFloat(kellyResult) > 0 ? kellyResult : '0.00'}%</h3>
-                        <p className="text-sm font-mono text-purple-800 dark:text-purple-300 mt-2 bg-purple-200 dark:bg-purple-500/20 inline-block px-3 py-1 rounded font-bold">R$ {parseFloat(kellyResult) > 0 ? kellyMoney.toFixed(2) : '0.00'}</p>
+                        <p className="text-sm font-mono text-purple-800 dark:text-purple-300 mt-2 bg-purple-100 dark:bg-purple-500/20 inline-block px-3 py-1 rounded font-bold">R$ {parseFloat(kellyResult) > 0 ? kellyMoney.toFixed(2) : '0.00'}</p>
                     </div>
                 </div>
             )}
@@ -535,10 +483,10 @@ const Calculators: React.FC = () => {
                    </div>
                    <div className={`p-6 rounded-2xl border text-center ${valEV > 0 ? 'bg-emerald-50 dark:bg-emerald-900/10 border-emerald-200 dark:border-emerald-500/20' : 'bg-red-50 dark:bg-red-900/10 border-red-200 dark:border-red-500/20'}`}>
                       <p className="text-xs font-bold uppercase tracking-widest mb-1 opacity-70 text-slate-700 dark:text-slate-300">Valor Esperado (EV)</p>
-                      <h3 className={`text-4xl font-black ${valEV > 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-500'}`}>
+                      <h3 className={`text-4xl font-black ${valEV > 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-500'}`}>
                         {valEV > 0 ? '+' : ''}{valEVPercent.toFixed(2)}%
                       </h3>
-                      <p className={`text-xs mt-2 font-bold ${valEV > 0 ? 'text-emerald-700 dark:text-emerald-300' : 'text-red-600 dark:text-red-400'}`}>
+                      <p className={`text-xs mt-2 font-bold ${valEV > 0 ? 'text-emerald-700 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'}`}>
                           {valEV > 0 ? '✅ Aposta de Valor Encontrada' : '❌ Odds sem valor estatístico'}
                       </p>
                    </div>
@@ -571,7 +519,7 @@ const Calculators: React.FC = () => {
                           </div>
                       </div>
                    </div>
-                   <div className={`p-4 rounded-xl flex justify-between items-center ${arbRoi > 0 ? 'bg-emerald-500 text-white' : 'bg-slate-100 dark:bg-slate-800 text-slate-500'}`}>
+                   <div className={`p-4 rounded-xl flex justify-between items-center ${arbRoi > 0 ? 'bg-emerald-500 text-white' : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400'}`}>
                       <span className="font-bold uppercase text-xs tracking-widest">Lucro Garantido (ROI)</span>
                       <span className="font-black text-xl">{arbRoi.toFixed(2)}%</span>
                    </div>
@@ -622,70 +570,80 @@ const Calculators: React.FC = () => {
                       <label className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase block mb-2">Odd Média</label>
                       <input type="number" value={beOdds} onChange={e => setBeOdds(e.target.value)} className="w-full p-4 bg-slate-50 dark:bg-slate-900 rounded-xl font-mono font-black text-3xl outline-none border border-slate-200 dark:border-slate-800 text-center text-pink-500" />
                    </div>
-                   <div className="p-6 rounded-2xl bg-slate-900 dark:bg-slate-950 text-white text-center shadow-lg shadow-slate-900/20">
-                      <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Win Rate Necessária</p>
-                      <h3 className="text-4xl font-black text-white">{beWinRate.toFixed(2)}%</h3>
+                   <div className="p-6 rounded-2xl bg-slate-100 dark:bg-slate-950 text-slate-900 dark:text-white text-center shadow-sm dark:shadow-lg dark:shadow-slate-900/20 border border-slate-200 dark:border-transparent">
+                      <p className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-1">Win Rate Necessária</p>
+                      <h3 className="text-4xl font-black text-slate-900 dark:text-white">{beWinRate.toFixed(2)}%</h3>
                       <p className="text-xs text-slate-500 mt-2">Para ficar no zero a zero (sem prejuízo)</p>
                    </div>
                 </div>
             )}
 
             {/* =========================================
-                EXPECTATIVA DE CANTOS E GOLS (ExC / ExG)
+                EXPECTATIVA DE CANTOS E GOLS (ExC / ExG) IN-PLAY
             ========================================= */}
             {(activeTab === 'exc' || activeTab === 'exg') && !isPro && <ProLockScreen />}
             {(activeTab === 'exc' || activeTab === 'exg') && isPro && (
                 <div className="bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-800 rounded-[2.5rem] p-6 sm:p-8 shadow-sm relative overflow-hidden">
                    <div className="flex justify-between items-start mb-6">
                       <h2 className={`text-2xl font-black uppercase tracking-tighter italic flex items-center gap-2 ${activeTab === 'exc' ? 'text-emerald-500' : 'text-orange-500'}`}>
-                        {activeTab === 'exc' ? <Radar size={24}/> : <Goal size={24}/>} {activeTab === 'exc' ? 'ExC Analytics' : 'ExG Analytics'}
+                        {activeTab === 'exc' ? <Radar size={24}/> : <Goal size={24}/>} {activeTab === 'exc' ? 'ExC In-Play' : 'ExG In-Play'}
                       </h2>
-                      <span className={`border px-3 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest flex items-center gap-1.5 ${activeTab==='exc' ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20' : 'bg-orange-500/10 text-orange-500 border-orange-500/20'}`}>
-                         <Zap size={12} /> TDF Engine 2.0
+                      <span className={`border px-3 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest flex items-center gap-1.5 shadow-sm dark:shadow-none ${activeTab==='exc' ? 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-500 border-emerald-200 dark:border-emerald-500/20' : 'bg-orange-50 dark:bg-orange-500/10 text-orange-600 dark:text-orange-500 border-orange-200 dark:border-orange-500/20'}`}>
+                         <Zap size={12} /> TDF Engine 3.0
                       </span>
                    </div>
 
-                   {/* MÓDULO SCANNER VISION IA */}
-                   <div className={`mb-6 relative group overflow-hidden rounded-[1.5rem] border-2 border-dashed bg-slate-50 dark:bg-[#09090b] transition-all ${activeTab==='exc' ? 'border-emerald-500/20 hover:border-emerald-500/50' : 'border-orange-500/20 hover:border-orange-500/50'}`}>
-                       {!scannedImage && !isScanning && (
-                           <label className="flex flex-col items-center justify-center p-8 cursor-pointer w-full h-full">
-                               <div className={`w-12 h-12 rounded-full bg-slate-200 dark:bg-slate-800 flex items-center justify-center mb-4 text-slate-500 group-hover:scale-110 duration-300 ${activeTab==='exc' ? 'group-hover:text-emerald-500' : 'group-hover:text-orange-500'}`}>
-                                   <Scan size={24} />
-                               </div>
-                               <h3 className="text-sm font-black text-slate-700 dark:text-slate-300 mb-1">Upload ou Cole (Ctrl+V)</h3>
-                               <p className="text-[10px] text-slate-500 uppercase tracking-widest font-bold text-center mb-3">Print do Radar para auto-preenchimento via IA.</p>
-                               <div className={`border px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest flex items-center gap-1 shadow-sm ${activeTab==='exc' ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-500' : 'bg-orange-500/10 border-orange-500/20 text-orange-500'}`}>
-                                  <Zap size={10} fill="currentColor" /> {Math.max(0, 10 - (aiScansUsedToday||0))} Scans Restantes
-                               </div>
-                               <input type="file" accept="image/jpeg, image/png, image/webp" className="hidden" onChange={handleFileUpload} ref={fileInputRef} />
-                           </label>
-                       )}
-                       {isScanning && scannedImage && (
-                           <div className="relative w-full h-40 bg-black flex items-center justify-center overflow-hidden">
-                               <img src={scannedImage} className="object-cover opacity-30 w-full h-full blur-sm" />
-                               <motion.div initial={{ top: '0%' }} animate={{ top: '100%' }} transition={{ repeat: Infinity, duration: 1.5 }} className={`absolute left-0 right-0 h-1 z-10 ${activeTab==='exc'?'bg-emerald-500 shadow-[0_0_20px_#10b981]':'bg-orange-500 shadow-[0_0_20px_#f97316]'}`} />
-                               <p className={`absolute z-20 font-mono font-bold text-xs uppercase tracking-widest animate-pulse ${activeTab==='exc'?'text-emerald-400':'text-orange-400'}`}>Análise Contextual Ativa...</p>
-                           </div>
-                       )}
-                       {!isScanning && scannedImage && (
-                           <div className="relative w-full h-40 bg-black group/preview">
-                               <img src={scannedImage} className="object-cover opacity-50 w-full h-full" />
-                               <div className="absolute bottom-4 right-4"><button onClick={resetScanner} className="text-[10px] font-black uppercase tracking-widest text-white bg-red-500 hover:bg-red-600 px-3 py-1.5 rounded-lg shadow-lg">Limpar</button></div>
-                           </div>
-                       )}
+                   {/* 🔥 NOVO MÓDULO NLP TEXT INPUT (Substitui Imagem) */}
+                   <div className={`relative group overflow-hidden rounded-[2rem] border focus-within:border-indigo-400 dark:focus-within:border-indigo-500 transition-all p-1 flex flex-col shadow-sm dark:shadow-inner mb-6 ${activeTab === 'exc' ? 'bg-emerald-50/30 dark:bg-[#09090b] border-emerald-200 dark:border-emerald-500/20' : 'bg-orange-50/30 dark:bg-[#09090b] border-orange-200 dark:border-orange-500/20'}`}>
+                      <div className="flex items-center justify-between p-4 border-b border-slate-200 dark:border-slate-800">
+                         <div className="flex items-center gap-2 text-slate-500 dark:text-slate-400">
+                             <FileText size={18} className={activeTab === 'exc' ? 'text-emerald-500' : 'text-orange-500'}/>
+                             <span className="text-[11px] font-black uppercase tracking-widest text-slate-600 dark:text-slate-400">Upload ou Cole (Ctrl+V)</span>
+                         </div>
+                         <div className="flex items-center gap-3">
+                             <div className={`border px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest flex items-center gap-1 shadow-sm ${activeTab==='exc' ? 'bg-emerald-100 dark:bg-emerald-500/10 border-emerald-200 dark:border-emerald-500/20 text-emerald-600 dark:text-emerald-500' : 'bg-orange-100 dark:bg-orange-500/10 border-orange-200 dark:border-orange-500/20 text-orange-600 dark:text-orange-500'}`}>
+                                 <Zap size={10} fill="currentColor" /> {Math.max(0, 10 - (aiScansUsedToday||0))} Scans Restantes
+                             </div>
+                             <button onClick={resetScanner} className="text-slate-400 hover:text-red-500 transition-colors p-1 bg-white dark:bg-transparent rounded-md border border-transparent hover:border-red-100 dark:hover:border-transparent" title="Limpar Tudo">
+                                 <Eraser size={16}/>
+                             </button>
+                         </div>
+                      </div>
+
+                      <textarea
+                          value={liveTextData}
+                          onChange={(e) => setLiveTextData(e.target.value)}
+                          placeholder="Vá no site do jogo ao vivo (CornerPro, SofaScore, Flashscore, etc), aperte Ctrl+A para selecionar a página toda, copie e cole aqui..."
+                          className="w-full bg-transparent text-slate-700 dark:text-slate-300 placeholder:text-slate-400 dark:placeholder:text-slate-600 p-6 min-h-[160px] outline-none resize-none font-mono text-xs leading-relaxed"
+                          disabled={isScanning}
+                      />
+
+                      {isScanning && (
+                          <div className="absolute inset-0 bg-white/90 dark:bg-[#09090b]/90 backdrop-blur-sm flex flex-col items-center justify-center z-20">
+                              <motion.div initial={{ width: '0%' }} animate={{ width: '100%' }} transition={{ repeat: Infinity, duration: 2 }} className={`absolute bottom-0 left-0 h-1.5 shadow-[0_0_30px_currentColor] ${activeTab === 'exc' ? 'bg-emerald-500 text-emerald-500' : 'bg-orange-500 text-orange-500'}`} />
+                              <Sparkles size={40} className={`mb-4 animate-pulse ${activeTab === 'exc' ? 'text-emerald-500' : 'text-orange-500'}`} />
+                              <p className={`font-mono font-bold text-xs uppercase tracking-widest text-center px-4 mt-2 ${activeTab === 'exc' ? 'text-emerald-600 dark:text-emerald-400' : 'text-orange-600 dark:text-orange-400'}`}>Extraindo matrizes ao vivo via NLP...</p>
+                          </div>
+                      )}
+                   </div>
+
+                   <div className="flex justify-end gap-3 mb-6">
+                       <button onClick={processNLPEngine} disabled={isScanning || !liveTextData} className={`text-[11px] font-black uppercase tracking-widest text-white px-8 py-3.5 rounded-xl shadow-md transition-transform active:scale-95 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed ${activeTab === 'exc' ? 'bg-emerald-600 hover:bg-emerald-500 dark:shadow-[0_0_20px_rgba(16,185,129,0.4)]' : 'bg-orange-600 hover:bg-orange-500 dark:shadow-[0_0_20px_rgba(249,115,22,0.4)]'}`}>
+                           <Zap size={16} fill="currentColor" /> Processar Dados (IA)
+                       </button>
                    </div>
                    
                    {/* GATEKEEPER */}
                    <div className="mb-8 bg-slate-50 dark:bg-slate-900/50 p-1 rounded-[1.5rem] border border-slate-200 dark:border-slate-800 relative z-10">
                       <div className="p-4 border-b border-slate-200 dark:border-slate-800">
                         <label className="text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase block mb-2 tracking-widest">1. Selecione o Cenário</label>
-                        <select value={activeTab === 'exc' ? excScenario : exgScenario} onChange={e => activeTab==='exc'?setExcScenario(e.target.value):setExgScenario(e.target.value)} className={`w-full bg-white dark:bg-[#09090b] border border-slate-200 dark:border-slate-700 p-3.5 rounded-xl font-bold text-sm outline-none text-slate-900 dark:text-white focus:ring-2 cursor-pointer ${activeTab === 'exc' ? 'focus:ring-emerald-500/50' : 'focus:ring-orange-500/50'}`}>
+                        <select value={activeTab === 'exc' ? excScenario : exgScenario} onChange={e => activeTab==='exc'?setExcScenario(e.target.value):setExgScenario(e.target.value)} className={`w-full bg-white dark:bg-[#09090b] border border-slate-200 dark:border-slate-700 p-3.5 rounded-xl font-bold text-sm outline-none text-slate-900 dark:text-white focus:ring-2 cursor-pointer shadow-sm dark:shadow-none ${activeTab === 'exc' ? 'focus:ring-emerald-500/50' : 'focus:ring-orange-500/50'}`}>
                            {activeTab === 'exc' ? Object.entries(excScenariosData).map(([key, data]) => <option key={key} value={key}>{data.title}</option>) : Object.entries(exgScenariosData).map(([key, data]) => <option key={key} value={key}>{data.title}</option>)}
                         </select>
                       </div>
                       <div className="p-5">
                         <p className={`text-[9px] font-black uppercase tracking-[0.2em] mb-4 flex items-center gap-2 ${activeTab === 'exc' ? 'text-slate-400' : 'text-slate-400'}`}>
-                           <Lock size={12} className={ (activeTab === 'exc' ? excUnlocked : exgUnlocked) ? (activeTab === 'exc' ? 'text-emerald-500' : 'text-orange-500') : 'text-slate-500'}/> Guardião de Padrão
+                           <Lock size={12} className={ (activeTab === 'exc' ? excUnlocked : exgUnlocked) ? (activeTab === 'exc' ? 'text-emerald-500' : 'text-orange-500') : 'text-slate-400 dark:text-slate-500'}/> Guardião de Padrão
                         </p>
                         <div className="space-y-2">
                            {(activeTab === 'exc' ? excScenariosData[excScenario].checks : exgScenariosData[exgScenario].checks).map((check, idx) => {
@@ -696,7 +654,7 @@ const Calculators: React.FC = () => {
 
                               return (
                                   <button key={idx} onClick={handleCheck} className={`w-full flex items-center gap-3 p-3.5 rounded-xl border transition-all text-left group ${isChecked ? checkedColor : 'bg-white dark:bg-[#020617] border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 text-slate-600 dark:text-slate-400'}`}>
-                                     <div className={`shrink-0 transition-transform ${isChecked ? `${iconColor} scale-110` : 'text-slate-400 group-hover:text-slate-300'}`}>{isChecked ? <CheckSquare size={18} /> : <Square size={18} />}</div>
+                                     <div className={`shrink-0 transition-transform ${isChecked ? `${iconColor} scale-110` : 'text-slate-400 group-hover:text-slate-500 dark:group-hover:text-slate-300'}`}>{isChecked ? <CheckSquare size={18} /> : <Square size={18} />}</div>
                                      <span className="text-[11px] sm:text-xs font-bold leading-tight">{check}</span>
                                   </button>
                               )
@@ -710,8 +668,8 @@ const Calculators: React.FC = () => {
                        <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} className="relative z-10 overflow-hidden">
                          
                          {/* GRID DE CONTEXTO TÁTICO HFT */}
-                         <div className="bg-slate-900 border border-slate-800 rounded-[2rem] p-6 mb-6 shadow-inner">
-                            <h3 className="text-[10px] font-black text-indigo-400 uppercase tracking-widest mb-4 border-b border-slate-800 pb-2">🧠 Matrix de Contexto Tático (IA / Manual)</h3>
+                         <div className="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-[2rem] p-6 mb-6 shadow-sm dark:shadow-inner">
+                            <h3 className="text-[10px] font-black text-indigo-600 dark:text-indigo-400 uppercase tracking-widest mb-4 border-b border-slate-200 dark:border-slate-800 pb-2">🧠 Matrix de Contexto Tático (IA / Manual)</h3>
                             <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                                 <PodSelect label="Pressão (TDF)" value={pressureTrend} onChange={(e:any)=>setPressureTrend(e.target.value)} icon={TrendingUp} options={[{value:'increasing',label:'Acelerando'},{value:'stable',label:'Estável'},{value:'decreasing',label:'Caindo'}]} />
                                 <PodSelect label="Temperatura" value={matchTemp} onChange={(e:any)=>setMatchTemp(e.target.value)} icon={Thermometer} options={[{value:'intense',label:'Intenso (Aberto)'},{value:'calm',label:'Morno (Estudado)'}]} />
@@ -721,16 +679,16 @@ const Calculators: React.FC = () => {
                          </div>
 
                          {/* INPUTS AVANÇADOS COM ÍCONES */}
-                         <div className="bg-slate-900 rounded-[2rem] p-6 mb-6 border border-slate-800 shadow-inner">
-                            <h3 className={`text-[10px] font-black uppercase tracking-widest mb-5 flex items-center gap-2 ${activeTab === 'exc' ? 'text-emerald-500' : 'text-orange-500'}`}><Activity size={14}/> Global Match Data</h3>
+                         <div className="bg-slate-50 dark:bg-slate-900 rounded-[2rem] p-6 mb-6 border border-slate-200 dark:border-slate-800 shadow-sm dark:shadow-inner">
+                            <h3 className={`text-[10px] font-black uppercase tracking-widest mb-5 flex items-center gap-2 ${activeTab === 'exc' ? 'text-emerald-600 dark:text-emerald-500' : 'text-orange-600 dark:text-orange-500'}`}><Activity size={14}/> Global Match Data</h3>
                             <div className="grid grid-cols-3 gap-3 mb-6">
                                <PodInput label="Minuto" value={liveMin} onChange={(e:any) => setLiveMin(e.target.value)} icon={Clock} placeholder="00" colorClass="text-slate-500" />
                                <PodInput label={activeTab==='exc'?"Cantos":"Gols"} value={activeTab==='exc'?liveCorners:liveGoals} onChange={(e:any) => activeTab==='exc'?setLiveCorners(e.target.value):setLiveGoals(e.target.value)} icon={activeTab==='exc'?Flag:Goal} placeholder="0" colorClass="text-slate-500" />
                                <PodInput label="AP (Defesa)" value={liveAP_Def} onChange={(e:any) => setLiveAP_Def(e.target.value)} icon={ShieldAlert} placeholder="0" colorClass="text-slate-500" />
                             </div>
                             
-                            <div className="border-t border-slate-800/80 pt-5">
-                                <h3 className={`text-[10px] font-black uppercase tracking-widest mb-4 flex items-center gap-2 ${activeTab === 'exc' ? 'text-emerald-500' : 'text-orange-500'}`}><Crosshair size={14} /> {activeTab === 'exc' ? 'Attacking Team (Pressão)' : 'Lethality Metrics'}</h3>
+                            <div className="border-t border-slate-200 dark:border-slate-800/80 pt-5">
+                                <h3 className={`text-[10px] font-black uppercase tracking-widest mb-4 flex items-center gap-2 ${activeTab === 'exc' ? 'text-emerald-600 dark:text-emerald-500' : 'text-orange-600 dark:text-orange-500'}`}><Crosshair size={14} /> {activeTab === 'exc' ? 'Attacking Team (Pressão)' : 'Lethality Metrics'}</h3>
                                 <div className="grid grid-cols-2 gap-3">
                                    <PodInput label="Ataques P. Atual" value={liveAP_Press} onChange={(e:any) => setLiveAP_Press(e.target.value)} icon={Swords} placeholder="00" highlight colorClass={activeTab==='exc'?"text-emerald-500":"text-orange-500"} />
                                    <PodInput label="AP (Há 5 min)" value={liveAP_5m} onChange={(e:any) => setLiveAP_5m(e.target.value)} icon={TrendingUp} placeholder="Opcional" highlight colorClass={activeTab==='exc'?"text-emerald-500":"text-orange-500"} />
@@ -741,48 +699,48 @@ const Calculators: React.FC = () => {
                          </div>
 
                          {/* ENTRADA DE ODD COM GLASSMORPHISM */}
-                         <div className="mb-6 relative overflow-hidden rounded-2xl group">
-                             <div className={`absolute inset-0 bg-gradient-to-r opacity-20 group-hover:opacity-30 transition-opacity ${activeTab==='exc'?'from-emerald-500 to-teal-500':'from-orange-500 to-amber-500'}`}></div>
-                             <div className={`bg-[#09090b]/80 backdrop-blur-sm p-5 border relative flex items-center gap-4 ${activeTab==='exc'?'border-emerald-500/20':'border-orange-500/20'}`}>
-                                 <div className={`p-3.5 rounded-xl shrink-0 border shadow-[0_0_15px_rgba(0,0,0,0.2)] ${activeTab==='exc'?'bg-emerald-500/10 border-emerald-500/20 text-emerald-400 shadow-emerald-500/20':'bg-orange-500/10 border-orange-500/20 text-orange-400 shadow-orange-500/20'}`}>
+                         <div className="mb-6 relative overflow-hidden rounded-2xl group border border-transparent dark:border-slate-800">
+                             <div className={`absolute inset-0 bg-gradient-to-r opacity-10 dark:opacity-20 group-hover:opacity-20 dark:group-hover:opacity-30 transition-opacity ${activeTab==='exc'?'from-emerald-500 to-teal-500':'from-orange-500 to-amber-500'}`}></div>
+                             <div className={`bg-white/80 dark:bg-[#09090b]/80 backdrop-blur-sm p-5 border relative flex items-center gap-4 shadow-sm dark:shadow-none ${activeTab==='exc'?'border-emerald-500/20':'border-orange-500/20'}`}>
+                                 <div className={`p-3.5 rounded-xl shrink-0 border shadow-sm dark:shadow-[0_0_15px_rgba(0,0,0,0.2)] ${activeTab==='exc'?'bg-emerald-50 dark:bg-emerald-500/10 border-emerald-200 dark:border-emerald-500/20 text-emerald-500 dark:text-emerald-400 dark:shadow-emerald-500/20':'bg-orange-50 dark:bg-orange-500/10 border-orange-200 dark:border-orange-500/20 text-orange-500 dark:text-orange-400 dark:shadow-orange-500/20'}`}>
                                     <DollarSign size={24} />
                                  </div>
                                  <div className="flex-1">
-                                    <label className={`text-[9px] font-black text-emerald-500 uppercase tracking-[0.2em] block mb-1 ${activeTab==='exc'?'text-emerald-500':'text-orange-500'}`}>Odd Oferecida (Scanner EV%)</label>
-                                    <input type="number" step="0.01" placeholder="Ex: 1.83" value={liveCurrentOdd} onChange={e => setLiveCurrentOdd(e.target.value)} className="w-full bg-transparent text-2xl font-mono font-black text-white outline-none placeholder:text-slate-700" />
+                                    <label className={`text-[9px] font-black uppercase tracking-[0.2em] block mb-1 ${activeTab==='exc'?'text-emerald-600 dark:text-emerald-500':'text-orange-600 dark:text-orange-500'}`}>Odd Oferecida (Scanner EV%)</label>
+                                    <input type="number" step="0.01" placeholder="Ex: 1.83" value={liveCurrentOdd} onChange={e => setLiveCurrentOdd(e.target.value)} className="w-full bg-transparent text-2xl font-mono font-black text-slate-900 dark:text-white outline-none placeholder:text-slate-400 dark:placeholder:text-slate-700" />
                                  </div>
                              </div>
                          </div>
 
                          {engineRes && engineRes.crossCheckMsg && (
-                            <div className="mb-6 bg-blue-500/10 border border-blue-500/20 text-blue-400 p-4 rounded-2xl text-xs font-bold flex items-start gap-3 shadow-inner">
-                               <Lightbulb size={18} className="shrink-0 mt-0.5 text-blue-400" /> 
+                            <div className="mb-6 bg-blue-50 dark:bg-blue-500/10 border border-blue-200 dark:border-blue-500/20 text-blue-700 dark:text-blue-400 p-4 rounded-2xl text-xs font-bold flex items-start gap-3 shadow-sm dark:shadow-inner">
+                               <Lightbulb size={18} className="shrink-0 mt-0.5 text-blue-500 dark:text-blue-400" /> 
                                <span className="leading-relaxed">{engineRes.crossCheckMsg}</span>
                             </div>
                          )}
 
                          {/* BLOOMBERG TERMINAL UI DEFINITIVO */}
                          {engineRes && (
-                         <div className="bg-[#020617] rounded-[2rem] border border-slate-800 p-6 overflow-hidden relative shadow-2xl mt-4">
-                             <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-[0.03]"></div>
+                         <div className="bg-slate-50 dark:bg-[#020617] rounded-[2rem] border border-slate-200 dark:border-slate-800 p-6 overflow-hidden relative shadow-md dark:shadow-2xl mt-4">
+                             <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-[0.05] dark:opacity-[0.03]"></div>
                              
                              {/* Brilho Dinâmico Radial Baseado no Resultado */}
-                             <div className={`absolute top-0 right-0 w-64 h-64 rounded-full blur-[80px] -mr-20 -mt-20 pointer-events-none transition-colors duration-1000 ${
-                                engineRes.color === 'green' ? (activeTab==='exc' ? 'bg-emerald-500/20' : 'bg-orange-500/20') : 
-                                engineRes.color === 'yellow' ? 'bg-yellow-500/10' : 'bg-red-500/10'
+                             <div className={`absolute top-0 right-0 w-64 h-64 rounded-full blur-[60px] dark:blur-[80px] -mr-20 -mt-20 pointer-events-none transition-colors duration-1000 ${
+                                engineRes.color === 'green' ? (activeTab==='exc' ? 'bg-emerald-500/10 dark:bg-emerald-500/20' : 'bg-orange-500/10 dark:bg-orange-500/20') : 
+                                engineRes.color === 'yellow' ? 'bg-yellow-500/10' : 'bg-red-500/5 dark:bg-red-500/10'
                              }`}></div>
 
                              {/* TOPO: SCORE DE CONFIANÇA */}
-                             <div className="relative z-10 flex flex-col md:flex-row gap-6 mb-6 pb-6 border-b border-slate-800">
-                                 <div className="flex-shrink-0 flex flex-col items-center justify-center p-4 bg-slate-900/80 rounded-2xl border border-slate-700">
+                             <div className="relative z-10 flex flex-col md:flex-row gap-6 mb-6 pb-6 border-b border-slate-200 dark:border-slate-800">
+                                 <div className="flex-shrink-0 flex flex-col items-center justify-center p-4 bg-white dark:bg-slate-900/80 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm dark:shadow-none">
                                     <p className="text-[9px] uppercase tracking-widest text-slate-500 font-bold mb-2">Confidence Score</p>
-                                    <div className="relative w-20 h-20 flex items-center justify-center rounded-full border-4 border-slate-800">
+                                    <div className="relative w-20 h-20 flex items-center justify-center rounded-full border-4 border-slate-100 dark:border-slate-800">
                                        <svg className="absolute inset-0 w-full h-full -rotate-90">
                                          <circle cx="36" cy="36" r="36" fill="transparent" stroke="currentColor" strokeWidth="8" strokeDasharray={`${(engineRes.finalScore / 100) * 226} 226`} className={engineRes.color === 'green' ? (activeTab==='exc' ? 'text-emerald-500' : 'text-orange-500') : engineRes.color === 'yellow' ? 'text-yellow-500' : 'text-red-500'} />
                                        </svg>
-                                       <span className="text-2xl font-black text-white z-10">{engineRes.finalScore.toFixed(0)}</span>
+                                       <span className="text-2xl font-black text-slate-800 dark:text-white z-10">{engineRes.finalScore.toFixed(0)}</span>
                                     </div>
-                                    <span className={`mt-3 text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded ${engineRes.color === 'green' ? (activeTab==='exc' ? 'bg-emerald-500/20 text-emerald-400' : 'bg-orange-500/20 text-orange-400') : engineRes.color === 'yellow' ? 'bg-yellow-500/20 text-yellow-400' : 'bg-red-500/20 text-red-400'}`}>
+                                    <span className={`mt-3 text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded ${engineRes.color === 'green' ? (activeTab==='exc' ? 'bg-emerald-100 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400' : 'bg-orange-100 dark:bg-orange-500/20 text-orange-600 dark:text-orange-400') : engineRes.color === 'yellow' ? 'bg-yellow-100 dark:bg-yellow-500/20 text-yellow-600 dark:text-yellow-400' : 'bg-red-100 dark:bg-red-500/20 text-red-600 dark:text-red-400'}`}>
                                         {engineRes.label}
                                     </span>
                                  </div>
@@ -792,13 +750,13 @@ const Calculators: React.FC = () => {
                                      <ul className="space-y-2">
                                          {/* GREEN FLAGS */}
                                          {engineRes.positiveReasons.map((r: string, i: number) => (
-                                             <li key={`pos-${i}`} className="text-[11px] sm:text-xs text-slate-300 flex items-start gap-2 bg-slate-900/50 p-2 rounded-lg border border-slate-800/50">
-                                                 <span className="text-emerald-400 shrink-0 mt-0.5">✔</span> {r}
+                                             <li key={`pos-${i}`} className="text-[11px] sm:text-xs text-slate-600 dark:text-slate-300 flex items-start gap-2 bg-emerald-50 dark:bg-slate-900/50 p-2 rounded-lg border border-emerald-100 dark:border-slate-800/50">
+                                                 <span className="text-emerald-500 dark:text-emerald-400 shrink-0 mt-0.5">✔</span> {r}
                                              </li>
                                          ))}
                                          {/* RED FLAGS */}
                                          {engineRes.negativeReasons.map((r: string, i: number) => (
-                                             <li key={`neg-${i}`} className="text-[11px] sm:text-xs text-red-200 flex items-start gap-2 bg-red-950/30 p-2 rounded-lg border border-red-900/30">
+                                             <li key={`neg-${i}`} className="text-[11px] sm:text-xs text-red-700 dark:text-red-200 flex items-start gap-2 bg-red-50 dark:bg-red-950/30 p-2 rounded-lg border border-red-200 dark:border-red-900/30">
                                                  <span className="text-red-500 shrink-0 mt-0.5">❌</span> {r}
                                              </li>
                                          ))}
@@ -813,44 +771,44 @@ const Calculators: React.FC = () => {
                              <div className="relative z-10 flex flex-col md:flex-row justify-between mb-8 gap-8">
                                 {/* Cápsulas de Métricas */}
                                 <div className="space-y-4 flex-1">
-                                    <div className="bg-slate-900/80 p-4 rounded-2xl border border-slate-800 flex justify-between items-center">
+                                    <div className="bg-white dark:bg-slate-900/80 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 flex justify-between items-center shadow-sm dark:shadow-none">
                                        <span className="text-[10px] uppercase tracking-widest text-slate-500 font-bold flex items-center gap-2"><Activity size={14}/> {activeTab==='exc' ? 'Pressão (APPM)' : 'xG Criado'}</span>
-                                       <span className={`text-xl font-black font-mono ${engineRes.appm >= 1.05 ? (activeTab==='exc' ? 'text-emerald-400 drop-shadow-[0_0_8px_rgba(52,211,153,0.4)]' : 'text-orange-400 drop-shadow-[0_0_8px_rgba(251,146,60,0.4)]') : 'text-slate-400'}`}>
+                                       <span className={`text-xl font-black font-mono ${engineRes.appm >= 1.05 ? (activeTab==='exc' ? 'text-emerald-500 dark:text-emerald-400 dark:drop-shadow-[0_0_8px_rgba(52,211,153,0.4)]' : 'text-orange-500 dark:text-orange-400 dark:drop-shadow-[0_0_8px_rgba(251,146,60,0.4)]') : 'text-slate-400 dark:text-slate-500'}`}>
                                            {activeTab==='exc' ? engineRes.appm.toFixed(2) : ((parseFloat(liveSoT||'0')*0.14) + (parseFloat(liveSoffT||'0')*0.04)).toFixed(2)}
                                        </span>
                                     </div>
-                                    <div className="bg-slate-900/80 p-4 rounded-2xl border border-slate-800 flex justify-between items-center">
+                                    <div className="bg-white dark:bg-slate-900/80 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 flex justify-between items-center shadow-sm dark:shadow-none">
                                        <span className="text-[10px] uppercase tracking-widest text-slate-500 font-bold flex items-center gap-2"><MapIcon size={14}/> Field Tilt</span>
-                                       <span className={`text-xl font-black font-mono ${engineRes.fieldTilt >= 65 ? 'text-blue-400 drop-shadow-[0_0_8px_rgba(96,165,250,0.4)]' : 'text-slate-400'}`}>{engineRes.fieldTilt.toFixed(0)}%</span>
+                                       <span className={`text-xl font-black font-mono ${engineRes.fieldTilt >= 65 ? 'text-blue-500 dark:text-blue-400 dark:drop-shadow-[0_0_8px_rgba(96,165,250,0.4)]' : 'text-slate-400 dark:text-slate-500'}`}>{engineRes.fieldTilt.toFixed(0)}%</span>
                                     </div>
-                                    <div className="bg-slate-900/80 p-4 rounded-2xl border border-slate-800 flex justify-between items-center">
+                                    <div className="bg-white dark:bg-slate-900/80 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 flex justify-between items-center shadow-sm dark:shadow-none">
                                        <span className="text-[10px] uppercase tracking-widest text-slate-500 font-bold flex items-center gap-2"><Zap size={14}/> Momentum</span>
-                                       <span className={`text-xs font-black uppercase tracking-widest ${engineRes.momentumScore >= 15 ? 'text-indigo-400' : 'text-slate-400'}`}>{engineRes.paceMsg}</span>
+                                       <span className={`text-xs font-black uppercase tracking-widest ${engineRes.momentumScore >= 15 ? 'text-indigo-600 dark:text-indigo-400' : 'text-slate-400 dark:text-slate-500'}`}>{engineRes.paceMsg}</span>
                                     </div>
                                 </div>
 
                                 {/* Gráfico Poisson - 3 Cenários TDF */}
-                                <div className="flex-[1.5] bg-slate-900/80 border border-slate-800 p-5 rounded-2xl shadow-inner flex flex-col justify-center">
-                                    <h4 className="text-[10px] text-slate-400 uppercase tracking-widest font-black mb-5 flex justify-between items-center">
+                                <div className="flex-[1.5] bg-white dark:bg-slate-900/80 border border-slate-200 dark:border-slate-800 p-5 rounded-2xl shadow-sm dark:shadow-inner flex flex-col justify-center">
+                                    <h4 className="text-[10px] text-slate-500 dark:text-slate-400 uppercase tracking-widest font-black mb-5 flex justify-between items-center">
                                        <span className="flex items-center gap-1.5"><BarChart4 size={14} className={activeTab==='exc' ? 'text-emerald-500' : 'text-orange-500'}/> Projeção TDF (Poisson)</span>
                                     </h4>
                                     
                                     <div className="space-y-4">
                                         {/* Agressivo */}
-                                        <div className="bg-[#09090b] p-3 rounded-xl border border-slate-800 flex justify-between items-center">
-                                            <div className="flex flex-col"><span className="text-[9px] font-black text-slate-500 uppercase tracking-widest flex items-center gap-1"><Flame size={10} className="text-orange-500"/> Agressivo</span><span className="text-[10px] text-slate-400">Variância Alta</span></div>
-                                            <div className="text-right"><span className="text-sm font-black font-mono text-white">{(engineRes.probAggr as any)[engineRes.targetKey].toFixed(1)}%</span></div>
+                                        <div className="bg-slate-50 dark:bg-[#09090b] p-3 rounded-xl border border-slate-200 dark:border-slate-800 flex justify-between items-center">
+                                            <div className="flex flex-col"><span className="text-[9px] font-black text-slate-600 dark:text-slate-500 uppercase tracking-widest flex items-center gap-1"><Activity size={10} className="text-orange-500"/> Agressivo</span><span className="text-[10px] text-slate-400">Variância Alta</span></div>
+                                            <div className="text-right"><span className="text-sm font-black font-mono text-slate-800 dark:text-white">{(engineRes.probAggr as any)[engineRes.targetKey].toFixed(1)}%</span></div>
                                         </div>
                                         {/* Neutro */}
-                                        <div className="bg-slate-950 p-3 rounded-xl border border-slate-700 flex justify-between items-center relative overflow-hidden">
+                                        <div className="bg-slate-100 dark:bg-slate-950 p-3 rounded-xl border border-slate-300 dark:border-slate-700 flex justify-between items-center relative overflow-hidden shadow-sm dark:shadow-none">
                                             <div className={`absolute left-0 top-0 bottom-0 w-1 ${activeTab==='exc' ? 'bg-emerald-500' : 'bg-orange-500'}`}></div>
-                                            <div className="flex flex-col pl-3"><span className="text-[9px] font-black text-white uppercase tracking-widest flex items-center gap-1"><Scale size={10}/> Neutro (Base)</span><span className="text-[10px] text-slate-400">Odd Justa: <strong className={activeTab==='exc' ? 'text-emerald-400' : 'text-orange-400'}>@{engineRes.fairOdd.toFixed(2)}</strong></span></div>
-                                            <div className="text-right"><span className={`text-lg font-black font-mono ${activeTab==='exc' ? 'text-emerald-400' : 'text-orange-400'}`}>{(engineRes.probNeut as any)[engineRes.targetKey].toFixed(1)}%</span></div>
+                                            <div className="flex flex-col pl-3"><span className="text-[9px] font-black text-slate-800 dark:text-white uppercase tracking-widest flex items-center gap-1"><Scale size={10}/> Neutro (Base)</span><span className="text-[10px] text-slate-500 dark:text-slate-400">Odd Justa: <strong className={activeTab==='exc' ? 'text-emerald-600 dark:text-emerald-400' : 'text-orange-600 dark:text-orange-400'}>@{engineRes.fairOdd.toFixed(2)}</strong></span></div>
+                                            <div className="text-right"><span className={`text-lg font-black font-mono ${activeTab==='exc' ? 'text-emerald-600 dark:text-emerald-400' : 'text-orange-600 dark:text-orange-400'}`}>{(engineRes.probNeut as any)[engineRes.targetKey].toFixed(1)}%</span></div>
                                         </div>
                                         {/* Conservador */}
-                                        <div className="bg-[#09090b] p-3 rounded-xl border border-slate-800 flex justify-between items-center">
-                                            <div className="flex flex-col"><span className="text-[9px] font-black text-slate-500 uppercase tracking-widest flex items-center gap-1"><ShieldAlert size={10} className="text-blue-500"/> Conservador</span><span className="text-[10px] text-slate-400">Queda de Ritmo</span></div>
-                                            <div className="text-right"><span className="text-sm font-black font-mono text-white">{(engineRes.probCons as any)[engineRes.targetKey].toFixed(1)}%</span></div>
+                                        <div className="bg-slate-50 dark:bg-[#09090b] p-3 rounded-xl border border-slate-200 dark:border-slate-800 flex justify-between items-center">
+                                            <div className="flex flex-col"><span className="text-[9px] font-black text-slate-600 dark:text-slate-500 uppercase tracking-widest flex items-center gap-1"><ShieldAlert size={10} className="text-blue-500"/> Conservador</span><span className="text-[10px] text-slate-400">Queda de Ritmo</span></div>
+                                            <div className="text-right"><span className="text-sm font-black font-mono text-slate-800 dark:text-white">{(engineRes.probCons as any)[engineRes.targetKey].toFixed(1)}%</span></div>
                                         </div>
                                     </div>
                                 </div>
@@ -860,26 +818,26 @@ const Calculators: React.FC = () => {
                              <div className="relative z-20 mt-4">
                                {engineRes.color === 'green' && (
                                   <motion.div initial={{ scale: 0.95 }} animate={{ scale: 1 }} className="relative group cursor-pointer">
-                                      <div className={`absolute -inset-0.5 rounded-2xl blur opacity-40 group-hover:opacity-60 transition animate-pulse ${activeTab==='exc' ? 'bg-gradient-to-r from-emerald-600 to-teal-400' : 'bg-gradient-to-r from-orange-600 to-amber-400'}`}></div>
-                                      <div className={`relative w-full py-4 rounded-2xl font-black text-xs sm:text-sm tracking-widest uppercase text-center text-slate-950 flex items-center justify-center gap-2 ${activeTab==='exc' ? 'bg-emerald-500' : 'bg-orange-500'}`}>
+                                      <div className={`absolute -inset-0.5 rounded-2xl blur opacity-30 dark:opacity-40 group-hover:opacity-50 dark:group-hover:opacity-60 transition animate-pulse ${activeTab==='exc' ? 'bg-gradient-to-r from-emerald-500 to-teal-400' : 'bg-gradient-to-r from-orange-500 to-amber-400'}`}></div>
+                                      <div className={`relative w-full py-4 rounded-2xl font-black text-xs sm:text-sm tracking-widest uppercase text-center flex items-center justify-center gap-2 shadow-sm dark:shadow-none ${activeTab==='exc' ? 'bg-emerald-500 text-white dark:text-slate-950' : 'bg-orange-500 text-white dark:text-slate-950'}`}>
                                          {activeTab==='exc' ? <Zap fill="currentColor" size={18} className="animate-bounce"/> : <Target fill="currentColor" size={18} className="animate-bounce"/>} ENTRADA APROVADA {engineRes.ev > 0 ? `(EV +${engineRes.ev.toFixed(1)}%)` : ''}
                                       </div>
                                   </motion.div>
                                )}
                                {engineRes.color === 'yellow' && (
-                                  <div className="bg-yellow-500 text-slate-950 w-full py-4 rounded-2xl font-black text-xs uppercase text-center flex justify-center items-center gap-2">
+                                  <div className="bg-yellow-500 text-white dark:text-slate-950 w-full py-4 rounded-2xl font-black text-xs uppercase text-center flex justify-center items-center gap-2 shadow-sm dark:shadow-none">
                                     <AlertTriangle size={16}/> Risco Moderado. Monitore as Odds.
                                   </div>
                                )}
                                {engineRes.color === 'red' && (
-                                  <div className="bg-[#09090b] border border-red-500/30 text-red-400 w-full py-4 rounded-2xl font-black text-[10px] sm:text-xs tracking-widest uppercase text-center flex items-center justify-center gap-2 shadow-inner">
+                                  <div className="bg-white dark:bg-[#09090b] border border-red-200 dark:border-red-500/30 text-red-500 dark:text-red-400 w-full py-4 rounded-2xl font-black text-[10px] sm:text-xs tracking-widest uppercase text-center flex items-center justify-center gap-2 shadow-sm dark:shadow-inner">
                                      <AlertTriangle size={16} className="shrink-0 text-red-500"/> {engineRes.msg || 'MODELO REJEITA A ENTRADA'}
                                   </div>
                                )}
                              </div>
                              
                              {/* DISCLAIMER DE RESPONSABILIDADE */}
-                             <p className="text-center text-[8px] sm:text-[9px] text-slate-500/70 font-bold uppercase tracking-[0.2em] mt-6">
+                             <p className="text-center text-[8px] sm:text-[9px] text-slate-400 dark:text-slate-500/70 font-bold uppercase tracking-[0.2em] mt-6">
                                ⚠️ Atenção: Esta é uma projeção baseada em probabilidade estatística e não constitui recomendação de aposta ou dica financeira.
                              </p>
                          </div>
