@@ -275,24 +275,24 @@ const ScoutIA: React.FC = () => {
     <div className="space-y-6 pb-20 w-full overflow-x-hidden px-4 md:px-0">
         
         <div className="flex flex-col gap-2">
-          <div className="flex items-center gap-2 text-indigo-500 text-[9px] font-mono font-bold uppercase tracking-widest">
-            <span className="w-1.5 h-1.5 bg-indigo-500 rounded-full animate-pulse shadow-[0_0_8px_#6366f1]"></span>
+          <div className="flex items-center gap-2 text-indigo-500 dark:text-indigo-400 text-[9px] font-mono font-bold uppercase tracking-widest">
+            <span className="w-1.5 h-1.5 bg-indigo-500 dark:bg-indigo-400 rounded-full animate-pulse shadow-[0_0_8px_#6366f1]"></span>
             HFT ENGINE ATIVO
           </div>
           <div>
             <h1 className="text-3xl font-black text-slate-900 dark:text-white tracking-tighter uppercase italic flex items-center gap-3">
-              <Sparkles size={28} className="text-indigo-500"/> Scout IA <span className="text-slate-400 dark:text-slate-700 text-lg">///</span>
+              <Sparkles size={28} className="text-indigo-500 dark:text-indigo-400"/> Scout IA <span className="text-slate-300 dark:text-slate-700 text-lg">///</span>
             </h1>
           </div>
         </div>
 
         <div className="bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-800 rounded-[2.5rem] p-4 sm:p-8 shadow-sm relative overflow-hidden">
             
-           <div className="flex bg-[#09090b] p-1.5 rounded-2xl border border-slate-800 mb-6 shadow-inner">
-              <button onClick={() => setScoutMode('grid')} className={`flex-1 py-3 text-[10px] sm:text-xs font-black uppercase tracking-widest rounded-xl transition-all ${scoutMode === 'grid' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/20 scale-[1.02]' : 'text-slate-500 hover:text-slate-300 hover:bg-slate-800/50'}`}>
+           <div className="flex bg-slate-100 dark:bg-[#09090b] p-1.5 rounded-2xl border border-slate-200 dark:border-slate-800 mb-6 shadow-inner">
+              <button onClick={() => setScoutMode('grid')} className={`flex-1 py-3 text-[10px] sm:text-xs font-black uppercase tracking-widest rounded-xl transition-all ${scoutMode === 'grid' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/20 scale-[1.02]' : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 hover:bg-white dark:hover:bg-slate-800/50'}`}>
                   1. Radar de Grade (Imagem)
               </button>
-              <button onClick={() => setScoutMode('builder')} className={`flex-1 py-3 text-[10px] sm:text-xs font-black uppercase tracking-widest rounded-xl transition-all ${scoutMode === 'builder' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/20 scale-[1.02]' : 'text-slate-500 hover:text-slate-300 hover:bg-slate-800/50'}`}>
+              <button onClick={() => setScoutMode('builder')} className={`flex-1 py-3 text-[10px] sm:text-xs font-black uppercase tracking-widest rounded-xl transition-all ${scoutMode === 'builder' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/20 scale-[1.02]' : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 hover:bg-white dark:hover:bg-slate-800/50'}`}>
                   2. Construtor HFT (Texto)
               </button>
            </div>
@@ -301,16 +301,16 @@ const ScoutIA: React.FC = () => {
                key={scoutMode}
                initial={{ opacity: 0, y: -5 }}
                animate={{ opacity: 1, y: 0 }}
-               className="mb-8 bg-indigo-50 dark:bg-indigo-500/5 border border-indigo-100 dark:border-indigo-500/10 p-5 rounded-2xl flex gap-4 items-start shadow-sm"
+               className="mb-8 bg-indigo-50/50 dark:bg-indigo-500/5 border border-indigo-100 dark:border-indigo-500/10 p-5 rounded-2xl flex gap-4 items-start shadow-sm"
            >
-               <div className="mt-0.5 text-indigo-500 bg-indigo-100 dark:bg-indigo-500/20 p-2 rounded-lg shrink-0">
+               <div className="mt-0.5 text-indigo-500 dark:text-indigo-400 bg-white dark:bg-indigo-500/20 p-2 rounded-lg shrink-0 shadow-sm dark:shadow-none border border-indigo-50 dark:border-transparent">
                    <Info size={20} />
                </div>
                <div>
                    <h4 className="text-xs font-black uppercase tracking-widest text-indigo-700 dark:text-indigo-400 mb-3">
                        {scoutMode === 'grid' ? 'Como usar o Radar Visual?' : 'Como usar o Motor de Texto NLP?'}
                    </h4>
-                   <ul className="text-[11px] sm:text-xs text-slate-700 dark:text-slate-300 space-y-2.5 font-medium">
+                   <ul className="text-[11px] sm:text-xs text-slate-600 dark:text-slate-300 space-y-2.5 font-medium">
                        {scoutMode === 'grid' ? (
                            <>
                                <li><strong className="text-indigo-600 dark:text-indigo-300">Passo 1:</strong> Acesse uma lista de jogos do dia (Ex: Flashscore, Sofascore ou a própria Bet365).</li>
@@ -333,10 +333,10 @@ const ScoutIA: React.FC = () => {
            {/* ========================================================= */}
            {scoutMode === 'grid' && (
              <>
-             <div className="mb-6 relative group overflow-hidden rounded-[1.5rem] border-2 border-dashed border-indigo-500/20 hover:border-indigo-500/50 bg-slate-50 dark:bg-[#09090b] transition-all p-6 min-h-[250px] flex flex-col items-center justify-center">
+             <div className="mb-6 relative group overflow-hidden rounded-[1.5rem] border-2 border-dashed border-indigo-300 dark:border-indigo-500/20 hover:border-indigo-400 dark:hover:border-indigo-500/50 bg-slate-50/50 dark:bg-[#09090b] transition-all p-6 min-h-[250px] flex flex-col items-center justify-center">
                  {!scoutGridImage && !isScanningScout && (
                      <label className="flex flex-col items-center justify-center cursor-pointer w-full h-full">
-                         <div className="w-14 h-14 rounded-full bg-slate-200 dark:bg-slate-800 flex items-center justify-center mb-4 text-slate-500 group-hover:text-indigo-500 transition-colors group-hover:scale-110 duration-300 shadow-inner">
+                         <div className="w-14 h-14 rounded-full bg-white dark:bg-slate-800 flex items-center justify-center mb-4 text-slate-400 dark:text-slate-500 group-hover:text-indigo-500 dark:group-hover:text-indigo-400 transition-colors group-hover:scale-110 duration-300 shadow-sm dark:shadow-inner border border-slate-100 dark:border-transparent">
                              <Scan size={28} />
                          </div>
                          <h3 className="text-base font-black text-slate-700 dark:text-slate-300 mb-2 text-center">Upload da Grade de Jogos</h3>
@@ -346,18 +346,18 @@ const ScoutIA: React.FC = () => {
                  )}
 
                  {isScanningScout && scoutGridImage && (
-                     <div className="relative w-full h-48 bg-black flex items-center justify-center overflow-hidden rounded-xl border border-indigo-500/30">
+                     <div className="relative w-full h-48 bg-slate-900 dark:bg-black flex items-center justify-center overflow-hidden rounded-xl border border-indigo-500/30">
                          <img src={scoutGridImage} className="object-cover opacity-30 w-full h-full blur-md" />
                          <motion.div initial={{ top: '0%' }} animate={{ top: '100%' }} transition={{ repeat: Infinity, duration: 1.5, ease: "linear" }} className="absolute left-0 right-0 h-1 bg-indigo-500 shadow-[0_0_30px_#6366f1] z-10" />
                          <div className="absolute inset-0 flex flex-col items-center justify-center z-20">
-                            <Sparkles size={32} className="text-indigo-400 mb-2 animate-pulse" />
-                            <p className="text-indigo-400 font-mono font-bold text-xs uppercase tracking-widest mt-2">Escaneando a grade visualmente...</p>
+                            <Sparkles size={32} className="text-indigo-300 dark:text-indigo-400 mb-2 animate-pulse" />
+                            <p className="text-indigo-300 dark:text-indigo-400 font-mono font-bold text-xs uppercase tracking-widest mt-2">Escaneando a grade visualmente...</p>
                          </div>
                      </div>
                  )}
 
                  {!isScanningScout && scoutGridImage && (
-                     <div className="relative w-full h-40 bg-black group/preview rounded-xl overflow-hidden border border-slate-800">
+                     <div className="relative w-full h-40 bg-slate-900 dark:bg-black group/preview rounded-xl overflow-hidden border border-slate-300 dark:border-slate-800">
                          <img src={scoutGridImage} className="object-cover opacity-50 w-full h-full" />
                          <div className="absolute inset-0 bg-gradient-to-t from-black/90 to-transparent"></div>
                          <div className="absolute bottom-4 right-4 flex gap-2">
@@ -370,27 +370,27 @@ const ScoutIA: React.FC = () => {
              {scoutGridResult && (
                  <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-8 mt-10">
                      {scoutGridResult.filter((m:any) => m.market === 'GOLS').length > 0 && (
-                     <div className="bg-slate-900/40 border border-slate-800/60 rounded-[2rem] p-4 sm:p-8 shadow-inner">
-                         <h3 className="text-xs font-black text-orange-500 uppercase tracking-widest mb-6 flex items-center gap-2 border-b border-slate-800/80 pb-4">
-                             <div className="p-1.5 bg-orange-500/10 rounded-md"><Goal size={16} className="text-orange-500" /></div>
+                     <div className="bg-slate-50 dark:bg-slate-900/40 border border-slate-200 dark:border-slate-800/60 rounded-[2rem] p-4 sm:p-8 shadow-sm dark:shadow-inner">
+                         <h3 className="text-xs font-black text-orange-500 uppercase tracking-widest mb-6 flex items-center gap-2 border-b border-slate-200 dark:border-slate-800/80 pb-4">
+                             <div className="p-1.5 bg-orange-100 dark:bg-orange-500/10 rounded-md"><Goal size={16} className="text-orange-500" /></div>
                              Foco em Gols (Overs / Ambas)
                          </h3>
                          <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 items-stretch">
                              {scoutGridResult.filter((m: any) => m.market === 'GOLS').map((match: any, index: number) => {
                                  const isSelected = selectedMatchesForBuilder.includes(match.teams);
                                  return (
-                                     <div key={`gols-${index}`} onClick={() => toggleMatchSelection(match.teams)} className={`relative h-full overflow-hidden bg-[#020617] rounded-2xl p-4 sm:p-5 flex items-center gap-3 sm:gap-4 cursor-pointer transition-all duration-300 group ${isSelected ? 'border-2 border-orange-500 shadow-[0_0_20px_rgba(249,115,22,0.15)] scale-[1.01]' : 'border border-slate-800 hover:border-slate-600 hover:bg-[#0b101e]'}`}>
+                                     <div key={`gols-${index}`} onClick={() => toggleMatchSelection(match.teams)} className={`relative h-full overflow-hidden bg-white dark:bg-[#020617] rounded-2xl p-4 sm:p-5 flex items-center gap-3 sm:gap-4 cursor-pointer transition-all duration-300 group ${isSelected ? 'border-2 border-orange-500 shadow-[0_0_20px_rgba(249,115,22,0.15)] scale-[1.01]' : 'border border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-600 hover:bg-slate-50 dark:hover:bg-[#0b101e]'}`}>
                                          {isSelected && <div className="absolute top-0 left-0 w-1 h-full bg-orange-500 shadow-[0_0_10px_#f97316]"></div>}
                                          <div className="flex-1 min-w-0 pl-1 sm:pl-2">
                                              <div className="flex flex-wrap items-center gap-2 sm:gap-3 mb-2.5">
-                                                <span className="bg-slate-900 text-slate-400 border border-slate-700 px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-md text-[9px] sm:text-[10px] font-mono font-bold flex items-center gap-1.5 shrink-0"><Clock size={12} className="text-orange-500"/> {safeText(match.time)}</span>
-                                                <span className="bg-orange-500/10 text-orange-400 border border-orange-500/20 px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-md text-[8px] sm:text-[9px] font-black uppercase tracking-widest flex items-center gap-1 shrink-0"><Zap size={10}/> Radar Ativo</span>
+                                                <span className="bg-slate-100 dark:bg-slate-900 text-slate-500 dark:text-slate-400 border border-slate-200 dark:border-slate-700 px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-md text-[9px] sm:text-[10px] font-mono font-bold flex items-center gap-1.5 shrink-0"><Clock size={12} className="text-orange-500"/> {safeText(match.time)}</span>
+                                                <span className="bg-orange-50 dark:bg-orange-500/10 text-orange-500 dark:text-orange-400 border border-orange-200 dark:border-orange-500/20 px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-md text-[8px] sm:text-[9px] font-black uppercase tracking-widest flex items-center gap-1 shrink-0"><Zap size={10}/> Radar Ativo</span>
                                              </div>
-                                             <h4 className="text-sm sm:text-base font-black text-white tracking-tight mb-1.5 line-clamp-2 break-words leading-snug">{safeText(match.teams)}</h4>
-                                             <p className="text-[10px] sm:text-xs text-slate-400 leading-relaxed flex items-start gap-1.5"><Target size={14} className="text-slate-500 shrink-0 mt-0.5"/> <span className="line-clamp-2">{safeText(match.reason)}</span></p>
+                                             <h4 className="text-sm sm:text-base font-black text-slate-800 dark:text-white tracking-tight mb-1.5 line-clamp-2 break-words leading-snug">{safeText(match.teams)}</h4>
+                                             <p className="text-[10px] sm:text-xs text-slate-500 dark:text-slate-400 leading-relaxed flex items-start gap-1.5"><Target size={14} className="text-slate-400 dark:text-slate-500 shrink-0 mt-0.5"/> <span className="line-clamp-2">{safeText(match.reason)}</span></p>
                                          </div>
                                          <div className="shrink-0 pr-1">
-                                             {isSelected ? <CheckCircle2 size={26} className="text-orange-500 drop-shadow-[0_0_8px_rgba(249,115,22,0.4)]" /> : <Square size={26} className="text-slate-700 group-hover:text-slate-500 transition-colors" />}
+                                             {isSelected ? <CheckCircle2 size={26} className="text-orange-500 drop-shadow-[0_0_8px_rgba(249,115,22,0.4)]" /> : <Square size={26} className="text-slate-300 dark:text-slate-700 group-hover:text-slate-400 dark:group-hover:text-slate-500 transition-colors" />}
                                          </div>
                                      </div>
                                  );
@@ -400,27 +400,27 @@ const ScoutIA: React.FC = () => {
                      )}
 
                      {scoutGridResult.filter((m:any) => m.market === 'CANTOS').length > 0 && (
-                     <div className="bg-slate-900/40 border border-slate-800/60 rounded-[2rem] p-4 sm:p-8 shadow-inner">
-                         <h3 className="text-xs font-black text-emerald-500 uppercase tracking-widest mb-6 flex items-center gap-2 border-b border-slate-800/80 pb-4 mt-2">
-                             <div className="p-1.5 bg-emerald-500/10 rounded-md"><Flag size={16} className="text-emerald-500" /></div>
+                     <div className="bg-slate-50 dark:bg-slate-900/40 border border-slate-200 dark:border-slate-800/60 rounded-[2rem] p-4 sm:p-8 shadow-sm dark:shadow-inner">
+                         <h3 className="text-xs font-black text-emerald-500 uppercase tracking-widest mb-6 flex items-center gap-2 border-b border-slate-200 dark:border-slate-800/80 pb-4 mt-2">
+                             <div className="p-1.5 bg-emerald-100 dark:bg-emerald-500/10 rounded-md"><Flag size={16} className="text-emerald-500" /></div>
                              Foco em Escanteios (Volume / Pressão)
                          </h3>
                          <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 items-stretch">
                              {scoutGridResult.filter((m: any) => m.market === 'CANTOS').map((match: any, index: number) => {
                                  const isSelected = selectedMatchesForBuilder.includes(match.teams);
                                  return (
-                                     <div key={`cantos-${index}`} onClick={() => toggleMatchSelection(match.teams)} className={`relative h-full overflow-hidden bg-[#020617] rounded-2xl p-4 sm:p-5 flex items-center gap-3 sm:gap-4 cursor-pointer transition-all duration-300 group ${isSelected ? 'border-2 border-emerald-500 shadow-[0_0_20px_rgba(16,185,129,0.15)] scale-[1.01]' : 'border border-slate-800 hover:border-slate-600 hover:bg-[#0b101e]'}`}>
+                                     <div key={`cantos-${index}`} onClick={() => toggleMatchSelection(match.teams)} className={`relative h-full overflow-hidden bg-white dark:bg-[#020617] rounded-2xl p-4 sm:p-5 flex items-center gap-3 sm:gap-4 cursor-pointer transition-all duration-300 group ${isSelected ? 'border-2 border-emerald-500 shadow-[0_0_20px_rgba(16,185,129,0.15)] scale-[1.01]' : 'border border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-600 hover:bg-slate-50 dark:hover:bg-[#0b101e]'}`}>
                                          {isSelected && <div className="absolute top-0 left-0 w-1 h-full bg-emerald-500 shadow-[0_0_10px_#10b981]"></div>}
                                          <div className="flex-1 min-w-0 pl-1 sm:pl-2">
                                              <div className="flex flex-wrap items-center gap-2 sm:gap-3 mb-2.5">
-                                                <span className="bg-slate-900 text-slate-400 border border-slate-700 px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-md text-[9px] sm:text-[10px] font-mono font-bold flex items-center gap-1.5 shrink-0"><Clock size={12} className="text-emerald-500"/> {safeText(match.time)}</span>
-                                                <span className="bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-md text-[8px] sm:text-[9px] font-black uppercase tracking-widest flex items-center gap-1 shrink-0"><Activity size={10}/> Radar Ativo</span>
+                                                <span className="bg-slate-100 dark:bg-slate-900 text-slate-500 dark:text-slate-400 border border-slate-200 dark:border-slate-700 px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-md text-[9px] sm:text-[10px] font-mono font-bold flex items-center gap-1.5 shrink-0"><Clock size={12} className="text-emerald-500"/> {safeText(match.time)}</span>
+                                                <span className="bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-500/20 px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-md text-[8px] sm:text-[9px] font-black uppercase tracking-widest flex items-center gap-1 shrink-0"><Activity size={10}/> Radar Ativo</span>
                                              </div>
-                                             <h4 className="text-sm sm:text-base font-black text-white tracking-tight mb-1.5 line-clamp-2 break-words leading-snug">{safeText(match.teams)}</h4>
-                                             <p className="text-[10px] sm:text-xs text-slate-400 leading-relaxed flex items-start gap-1.5"><MapIcon size={14} className="text-slate-500 shrink-0 mt-0.5"/> <span className="line-clamp-2">{safeText(match.reason)}</span></p>
+                                             <h4 className="text-sm sm:text-base font-black text-slate-800 dark:text-white tracking-tight mb-1.5 line-clamp-2 break-words leading-snug">{safeText(match.teams)}</h4>
+                                             <p className="text-[10px] sm:text-xs text-slate-500 dark:text-slate-400 leading-relaxed flex items-start gap-1.5"><MapIcon size={14} className="text-slate-400 dark:text-slate-500 shrink-0 mt-0.5"/> <span className="line-clamp-2">{safeText(match.reason)}</span></p>
                                          </div>
                                          <div className="shrink-0 pr-1">
-                                             {isSelected ? <CheckCircle2 size={26} className="text-emerald-500 drop-shadow-[0_0_8px_rgba(16,185,129,0.4)]" /> : <Square size={26} className="text-slate-700 group-hover:text-slate-500 transition-colors" />}
+                                             {isSelected ? <CheckCircle2 size={26} className="text-emerald-500 drop-shadow-[0_0_8px_rgba(16,185,129,0.4)]" /> : <Square size={26} className="text-slate-300 dark:text-slate-700 group-hover:text-slate-400 dark:group-hover:text-slate-500 transition-colors" />}
                                          </div>
                                      </div>
                                  );
@@ -448,23 +448,23 @@ const ScoutIA: React.FC = () => {
              <div className="space-y-6">
                 
                 {selectedMatchesForBuilder.length > 0 && (
-                    <div className="bg-indigo-500/5 border border-indigo-500/20 p-5 rounded-[1.5rem]">
-                        <h4 className="text-[10px] font-black text-indigo-400 uppercase tracking-widest mb-3 flex items-center gap-2"><Target size={14}/> 1. Jogos em Análise</h4>
+                    <div className="bg-indigo-50 dark:bg-indigo-500/5 border border-indigo-100 dark:border-indigo-500/20 p-5 rounded-[1.5rem]">
+                        <h4 className="text-[10px] font-black text-indigo-500 dark:text-indigo-400 uppercase tracking-widest mb-3 flex items-center gap-2"><Target size={14}/> 1. Jogos em Análise</h4>
                         <div className="flex flex-wrap gap-2">
                             {selectedMatchesForBuilder.map((match, i) => (
-                                <span key={i} className="text-[10px] font-bold text-slate-300 bg-slate-900 px-3 py-1.5 rounded-lg border border-slate-800">{match}</span>
+                                <span key={i} className="text-[10px] font-bold text-slate-600 dark:text-slate-300 bg-white dark:bg-slate-900 px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-800 shadow-sm dark:shadow-none">{match}</span>
                             ))}
                         </div>
                     </div>
                 )}
 
-                <div className="bg-slate-900/50 border border-slate-800 p-5 rounded-[1.5rem]">
-                    <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4 flex items-center gap-2"><Layers size={14}/> 2. Filtro de Mercados Permitidos</h4>
+                <div className="bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 p-5 rounded-[1.5rem]">
+                    <h4 className="text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-4 flex items-center gap-2"><Layers size={14}/> 2. Filtro de Mercados Permitidos</h4>
                     <div className="flex flex-wrap gap-2">
                         {AVAILABLE_MARKETS.map(m => {
                             const isActive = builderMarkets.includes(m);
                             return (
-                                <button key={m} onClick={() => toggleMarket(m)} className={`text-[10px] font-black uppercase tracking-widest px-4 py-2 rounded-lg border transition-all ${isActive ? 'bg-indigo-600 border-indigo-500 text-white' : 'bg-[#020617] border-slate-800 text-slate-500 hover:text-slate-300'}`}>
+                                <button key={m} onClick={() => toggleMarket(m)} className={`text-[10px] font-black uppercase tracking-widest px-4 py-2 rounded-lg border transition-all ${isActive ? 'bg-indigo-600 border-indigo-500 text-white shadow-sm' : 'bg-white dark:bg-[#020617] border-slate-200 dark:border-slate-800 text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800/50'}`}>
                                     {m}
                                 </button>
                             );
@@ -472,14 +472,14 @@ const ScoutIA: React.FC = () => {
                     </div>
                 </div>
 
-                <div className="relative group overflow-hidden rounded-[2rem] border border-slate-700 focus-within:border-indigo-500 bg-slate-50 dark:bg-[#09090b] transition-all p-1 flex flex-col shadow-inner">
+                <div className="relative group overflow-hidden rounded-[2rem] border border-slate-200 dark:border-slate-700 focus-within:border-indigo-400 dark:focus-within:border-indigo-500 bg-white dark:bg-[#09090b] transition-all p-1 flex flex-col shadow-sm dark:shadow-inner">
                    
-                   <div className="flex items-center justify-between p-4 border-b border-slate-800">
-                      <div className="flex items-center gap-2 text-slate-400">
-                          <FileText size={18} className="text-indigo-500"/>
-                          <span className="text-[11px] font-black uppercase tracking-widest">3. Input de Dados (Ctrl+C / Ctrl+V)</span>
+                   <div className="flex items-center justify-between p-4 border-b border-slate-100 dark:border-slate-800">
+                      <div className="flex items-center gap-2 text-slate-500 dark:text-slate-400">
+                          <FileText size={18} className="text-indigo-500 dark:text-indigo-400"/>
+                          <span className="text-[11px] font-black uppercase tracking-widest text-slate-600 dark:text-slate-400">3. Input de Dados (Ctrl+C / Ctrl+V)</span>
                       </div>
-                      <button onClick={() => setScoutTextData('')} className="text-slate-500 hover:text-red-400 transition-colors p-1" title="Limpar Texto">
+                      <button onClick={() => setScoutTextData('')} className="text-slate-400 dark:text-slate-500 hover:text-red-500 dark:hover:text-red-400 transition-colors p-1 bg-slate-50 dark:bg-transparent rounded-md border border-transparent hover:border-red-100 dark:hover:border-transparent" title="Limpar Texto">
                           <Eraser size={16}/>
                       </button>
                    </div>
@@ -488,50 +488,50 @@ const ScoutIA: React.FC = () => {
                        value={scoutTextData}
                        onChange={(e) => setScoutTextData(e.target.value)}
                        placeholder="Vá no site do jogo (CornerPro, Flashscore, etc), aperte Ctrl+A para selecionar toda a página, copie e cole aqui..."
-                       className="w-full bg-transparent text-slate-300 placeholder:text-slate-600 p-6 min-h-[220px] outline-none resize-none font-mono text-xs leading-relaxed"
+                       className="w-full bg-transparent text-slate-700 dark:text-slate-300 placeholder:text-slate-400 dark:placeholder:text-slate-600 p-6 min-h-[220px] outline-none resize-none font-mono text-xs leading-relaxed"
                        disabled={isScanningScout}
                    />
 
                    {isScanningScout && (
-                       <div className="absolute inset-0 bg-[#09090b]/90 backdrop-blur-sm flex flex-col items-center justify-center z-20">
+                       <div className="absolute inset-0 bg-white/90 dark:bg-[#09090b]/90 backdrop-blur-sm flex flex-col items-center justify-center z-20">
                            <motion.div initial={{ width: '0%' }} animate={{ width: '100%' }} transition={{ repeat: Infinity, duration: 2 }} className="absolute bottom-0 left-0 h-1.5 bg-indigo-500 shadow-[0_0_30px_#6366f1]" />
-                           <Sparkles size={40} className="text-indigo-400 mb-4 animate-pulse" />
-                           <p className="text-indigo-400 font-mono font-bold text-xs uppercase tracking-widest text-center px-4 mt-2">Extraindo matrizes via NLP e processando simulação HFT...</p>
+                           <Sparkles size={40} className="text-indigo-500 dark:text-indigo-400 mb-4 animate-pulse" />
+                           <p className="text-indigo-600 dark:text-indigo-400 font-mono font-bold text-xs uppercase tracking-widest text-center px-4 mt-2">Extraindo matrizes via NLP e processando simulação HFT...</p>
                        </div>
                    )}
                 </div>
 
                 <div className="flex justify-end gap-3 mt-4">
-                    <button onClick={clearBuilder} className="text-[11px] font-black uppercase tracking-widest text-slate-400 hover:text-white bg-slate-800 hover:bg-slate-700 px-6 py-3.5 rounded-xl transition-colors">
+                    <button onClick={clearBuilder} className="text-[11px] font-black uppercase tracking-widest text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-white bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 px-6 py-3.5 rounded-xl transition-colors">
                         Zerar Motor
                     </button>
-                    <button onClick={processNLPEngine} disabled={isScanningScout || !scoutTextData} className="text-[11px] font-black uppercase tracking-widest text-white bg-indigo-600 hover:bg-indigo-500 px-8 py-3.5 rounded-xl shadow-[0_0_20px_rgba(99,102,241,0.4)] transition-transform active:scale-95 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed">
+                    <button onClick={processNLPEngine} disabled={isScanningScout || !scoutTextData} className="text-[11px] font-black uppercase tracking-widest text-white bg-indigo-600 hover:bg-indigo-500 px-8 py-3.5 rounded-xl shadow-md dark:shadow-[0_0_20px_rgba(99,102,241,0.4)] transition-transform active:scale-95 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed">
                         <Sparkles size={16}/> Rodar Algoritmo
                     </button>
                 </div>
 
                 {/* RESULTADO GERADO PELO MOTOR NLP */}
                 {scoutBuilderResult && scoutBuilderResult.selections && (
-                    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="bg-[#020617] border border-indigo-500/20 rounded-[2.5rem] p-6 sm:p-10 shadow-[0_0_40px_rgba(99,102,241,0.1)] relative overflow-hidden mt-10">
-                        <div className="absolute top-0 right-0 w-80 h-80 bg-indigo-500/10 rounded-full blur-[100px] -mr-20 -mt-20 pointer-events-none"></div>
+                    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="bg-slate-50 dark:bg-[#020617] border border-indigo-100 dark:border-indigo-500/20 rounded-[2.5rem] p-6 sm:p-10 shadow-sm dark:shadow-[0_0_40px_rgba(99,102,241,0.1)] relative overflow-hidden mt-10">
+                        <div className="absolute top-0 right-0 w-80 h-80 bg-indigo-500/5 dark:bg-indigo-500/10 rounded-full blur-[80px] dark:blur-[100px] -mr-20 -mt-20 pointer-events-none"></div>
                         
-                        <h3 className="text-xs font-black text-indigo-400 uppercase tracking-widest mb-8 flex items-center gap-3 border-b border-indigo-500/10 pb-4"><Target size={18}/> Aposta Sugerida (EV+)</h3>
+                        <h3 className="text-xs font-black text-indigo-600 dark:text-indigo-400 uppercase tracking-widest mb-8 flex items-center gap-3 border-b border-indigo-100 dark:border-indigo-500/10 pb-4"><Target size={18}/> Aposta Sugerida (EV+)</h3>
                         
                         <div className="space-y-3 mb-8 relative z-10">
                             {scoutBuilderResult.selections.map((sel: any, idx: number) => (
                                 <React.Fragment key={idx}>
-                                    <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-5 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 hover:border-slate-700 transition-colors">
+                                    <div className="bg-white dark:bg-slate-900/80 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 hover:border-slate-300 dark:hover:border-slate-700 transition-colors shadow-sm dark:shadow-none">
                                         <div>
-                                            <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1.5">{safeText(sel.match)}</p>
-                                            <span className="text-base font-bold text-white flex items-center gap-2"><span className="w-2 h-2 bg-indigo-500 rounded-full shadow-[0_0_8px_#6366f1]"></span> {safeText(sel.market)}</span>
+                                            <p className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-1.5">{safeText(sel.match)}</p>
+                                            <span className="text-base font-bold text-slate-800 dark:text-white flex items-center gap-2"><span className="w-2 h-2 bg-indigo-500 rounded-full shadow-[0_0_8px_#6366f1]"></span> {safeText(sel.market)}</span>
                                         </div>
                                         <div className="flex items-center gap-3 self-start sm:self-auto">
-                                            <span className="text-[10px] font-bold text-slate-500 border border-slate-800 px-2 py-1 rounded bg-[#020617] uppercase tracking-widest">Via NLP Extractor</span>
-                                            <span className="text-sm font-mono font-black text-indigo-400 bg-indigo-500/10 border border-indigo-500/20 px-3 py-1.5 rounded-lg">{safeText(sel.prob)}% Prob.</span>
+                                            <span className="text-[10px] font-bold text-slate-500 border border-slate-200 dark:border-slate-800 px-2 py-1 rounded bg-slate-50 dark:bg-[#020617] uppercase tracking-widest">Via NLP Extractor</span>
+                                            <span className="text-sm font-mono font-black text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-500/10 border border-indigo-100 dark:border-indigo-500/20 px-3 py-1.5 rounded-lg">{safeText(sel.prob)}% Prob.</span>
                                         </div>
                                     </div>
                                     {idx < scoutBuilderResult.selections.length - 1 && (
-                                        <div className="flex justify-center -my-2 relative z-20"><Plus size={16} className="text-indigo-500 bg-[#020617] rounded-full p-1 border border-slate-800" /></div>
+                                        <div className="flex justify-center -my-2 relative z-20"><Plus size={16} className="text-indigo-500 bg-white dark:bg-[#020617] rounded-full p-1 border border-slate-200 dark:border-slate-800" /></div>
                                     )}
                                 </React.Fragment>
                             ))}
@@ -540,15 +540,15 @@ const ScoutIA: React.FC = () => {
                         {/* ======================================================== */}
                         {/* 🔥 AUDITORIA DINÂMICA DE EV% COM INTERVALO DE CONFIANÇA  */}
                         {/* ======================================================== */}
-                        <div className="bg-[#0b101e] border border-indigo-500/30 p-6 rounded-3xl mb-8 relative z-10 shadow-inner">
-                            <h4 className="text-[11px] font-black text-indigo-400 uppercase tracking-widest mb-5 flex items-center gap-2">
+                        <div className="bg-slate-100 dark:bg-[#0b101e] border border-indigo-100 dark:border-indigo-500/30 p-6 rounded-3xl mb-8 relative z-10 shadow-sm dark:shadow-inner">
+                            <h4 className="text-[11px] font-black text-indigo-600 dark:text-indigo-400 uppercase tracking-widest mb-5 flex items-center gap-2">
                                 <Calculator size={16} /> Comparador vs Mercado (EV%)
                             </h4>
                             <div className="flex flex-col md:flex-row items-center gap-6">
                                 <div className="w-full md:w-1/3">
-                                    <p className="text-[10px] text-slate-400 uppercase tracking-widest font-bold mb-2 ml-1">Odd Oferecida na Bet365</p>
+                                    <p className="text-[10px] text-slate-500 dark:text-slate-400 uppercase tracking-widest font-bold mb-2 ml-1">Odd Oferecida na Bet365</p>
                                     <div className="relative">
-                                        <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 font-mono font-bold">@</span>
+                                        <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500 font-mono font-bold">@</span>
                                         <input
                                             type="text"
                                             placeholder="Ex: 1.85"
@@ -558,30 +558,30 @@ const ScoutIA: React.FC = () => {
                                                 if ((val.match(/\./g) || []).length > 1) val = val.replace(/\.(?=[^.]*$)/, '');
                                                 setUserOdd(val);
                                             }}
-                                            className="w-full bg-[#020617] border border-slate-700 focus:border-indigo-500 text-white text-left font-mono text-lg py-3 pl-10 pr-4 rounded-xl outline-none transition-colors shadow-inner placeholder:text-slate-700"
+                                            className="w-full bg-white dark:bg-[#020617] border border-slate-300 dark:border-slate-700 focus:border-indigo-400 dark:focus:border-indigo-500 text-slate-900 dark:text-white text-left font-mono text-lg py-3 pl-10 pr-4 rounded-xl outline-none transition-colors shadow-sm dark:shadow-inner placeholder:text-slate-400 dark:placeholder:text-slate-700"
                                         />
                                     </div>
                                 </div>
 
-                                <div className="hidden md:block w-px h-12 bg-slate-800"></div>
+                                <div className="hidden md:block w-px h-12 bg-slate-200 dark:bg-slate-800"></div>
 
                                 <div className="flex-1 w-full grid grid-cols-1 md:grid-cols-3 gap-3">
-                                    <div className="bg-slate-900/50 border border-slate-800 rounded-xl p-3 sm:p-4 text-center flex flex-col justify-center">
+                                    <div className="bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 rounded-xl p-3 sm:p-4 text-center flex flex-col justify-center shadow-sm dark:shadow-none">
                                         <p className="text-[8px] sm:text-[9px] uppercase tracking-widest text-slate-500 font-bold mb-1 sm:mb-2">Espectro Real</p>
-                                        <p className="text-xl sm:text-xl font-black text-white whitespace-nowrap">
-                                            {safeText(scoutBuilderResult.minProb)}% <span className="text-slate-600 text-sm font-medium mx-1">a</span> {safeText(scoutBuilderResult.maxProb)}%
+                                        <p className="text-xl sm:text-xl font-black text-slate-800 dark:text-white whitespace-nowrap">
+                                            {safeText(scoutBuilderResult.minProb)}% <span className="text-slate-400 dark:text-slate-600 text-sm font-medium mx-1">a</span> {safeText(scoutBuilderResult.maxProb)}%
                                         </p>
                                     </div>
-                                    <div className="bg-indigo-500/10 border border-indigo-500/20 rounded-xl p-3 sm:p-4 text-center shadow-inner flex flex-col justify-center">
-                                        <p className="text-[8px] sm:text-[9px] uppercase tracking-widest text-indigo-400 font-bold mb-1 sm:mb-2">Odd Justa Sugerida</p>
-                                        <p className="text-xl sm:text-2xl font-black text-indigo-400 font-mono">@{safeText(scoutBuilderResult.fairOdd)}</p>
+                                    <div className="bg-indigo-50 dark:bg-indigo-500/10 border border-indigo-100 dark:border-indigo-500/20 rounded-xl p-3 sm:p-4 text-center shadow-sm dark:shadow-inner flex flex-col justify-center">
+                                        <p className="text-[8px] sm:text-[9px] uppercase tracking-widest text-indigo-600 dark:text-indigo-400 font-bold mb-1 sm:mb-2">Odd Justa Sugerida</p>
+                                        <p className="text-xl sm:text-2xl font-black text-indigo-600 dark:text-indigo-400 font-mono">@{safeText(scoutBuilderResult.fairOdd)}</p>
                                     </div>
                                     
-                                    <div className={`border rounded-xl p-3 sm:p-4 text-center flex flex-col justify-center shadow-inner transition-colors ${
-                                        evStatus === null ? 'bg-slate-900/50 border-slate-800 text-slate-500' :
-                                        evStatus === 'positive' ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400 shadow-[0_0_15px_rgba(16,185,129,0.1)]' :
-                                        evStatus === 'negative' ? 'bg-red-500/10 border-red-500/30 text-red-400 shadow-[0_0_15px_rgba(239,68,68,0.1)]' :
-                                        'bg-amber-500/10 border-amber-500/30 text-amber-400 shadow-[0_0_15px_rgba(245,158,11,0.1)]'
+                                    <div className={`border rounded-xl p-3 sm:p-4 text-center flex flex-col justify-center transition-colors shadow-sm dark:shadow-inner ${
+                                        evStatus === null ? 'bg-white dark:bg-slate-900/50 border-slate-200 dark:border-slate-800 text-slate-400 dark:text-slate-500' :
+                                        evStatus === 'positive' ? 'bg-emerald-50 dark:bg-emerald-500/10 border-emerald-200 dark:border-emerald-500/30 text-emerald-600 dark:text-emerald-400 dark:shadow-[0_0_15px_rgba(16,185,129,0.1)]' :
+                                        evStatus === 'negative' ? 'bg-red-50 dark:bg-red-500/10 border-red-200 dark:border-red-500/30 text-red-600 dark:text-red-400 dark:shadow-[0_0_15px_rgba(239,68,68,0.1)]' :
+                                        'bg-amber-50 dark:bg-amber-500/10 border-amber-200 dark:border-amber-500/30 text-amber-600 dark:text-amber-400 dark:shadow-[0_0_15px_rgba(245,158,11,0.1)]'
                                     }`}>
                                         <p className="text-[8px] sm:text-[9px] uppercase tracking-widest font-bold mb-1 sm:mb-2 flex items-center justify-center gap-1">
                                             {evStatus === null ? <Minus size={10}/> : evStatus === 'positive' ? <TrendingUp size={10}/> : evStatus === 'negative' ? <TrendingDown size={10}/> : <Minus size={10}/>}
@@ -600,25 +600,25 @@ const ScoutIA: React.FC = () => {
                         </div>
 
                         <div className="grid grid-cols-1 sm:grid-cols-3 gap-5 mb-8 relative z-10">
-                            <div className={`border rounded-2xl p-5 text-center flex flex-col justify-center shadow-inner ${
-                                scoutBuilderResult.riskLevel === 'ALTO' ? 'bg-red-500/10 border-red-500/20 text-red-400' :
-                                scoutBuilderResult.riskLevel === 'MÉDIO' ? 'bg-amber-500/10 border-amber-500/20 text-amber-400' :
-                                'bg-emerald-500/10 border-emerald-500/20 text-emerald-400'
+                            <div className={`border rounded-2xl p-5 text-center flex flex-col justify-center shadow-sm dark:shadow-inner ${
+                                scoutBuilderResult.riskLevel === 'ALTO' ? 'bg-red-50 dark:bg-red-500/10 border-red-200 dark:border-red-500/20 text-red-600 dark:text-red-400' :
+                                scoutBuilderResult.riskLevel === 'MÉDIO' ? 'bg-amber-50 dark:bg-amber-500/10 border-amber-200 dark:border-amber-500/20 text-amber-600 dark:text-amber-400' :
+                                'bg-emerald-50 dark:bg-emerald-500/10 border-emerald-200 dark:border-emerald-500/20 text-emerald-600 dark:text-emerald-400'
                             }`}>
-                                <p className="text-[9px] uppercase tracking-widest font-bold mb-2 opacity-80">Risco Estrutural</p>
+                                <p className="text-[9px] uppercase tracking-widest font-bold mb-2 opacity-80 text-slate-600 dark:text-inherit">Risco Estrutural</p>
                                 <p className="text-lg sm:text-xl font-black uppercase tracking-widest flex items-center justify-center gap-2">
                                     <ShieldAlert size={20} /> {safeText(scoutBuilderResult.riskLevel)}
                                 </p>
                             </div>
-                            <div className="bg-slate-900/40 border border-slate-800 p-5 rounded-2xl col-span-2 flex flex-col justify-center">
-                                <p className="text-[10px] uppercase tracking-widest text-slate-400 font-bold mb-3 flex items-center gap-1.5 border-b border-slate-800 pb-2"><ArrowRightLeft size={14}/> Alternativa Tática</p>
-                                <p className="text-sm text-slate-300 leading-relaxed font-medium">{safeText(scoutBuilderResult.alternativeCombination)}</p>
+                            <div className="bg-white dark:bg-slate-900/40 border border-slate-200 dark:border-slate-800 p-5 rounded-2xl col-span-2 flex flex-col justify-center shadow-sm dark:shadow-none">
+                                <p className="text-[10px] uppercase tracking-widest text-slate-500 dark:text-slate-400 font-bold mb-3 flex items-center gap-1.5 border-b border-slate-100 dark:border-slate-800 pb-2"><ArrowRightLeft size={14}/> Alternativa Tática</p>
+                                <p className="text-sm text-slate-700 dark:text-slate-300 leading-relaxed font-medium">{safeText(scoutBuilderResult.alternativeCombination)}</p>
                             </div>
                         </div>
 
-                        <div className="bg-slate-900/30 border border-slate-800 p-6 rounded-3xl relative z-10">
-                            <p className="text-[10px] uppercase tracking-widest text-slate-500 font-black mb-4 flex items-center gap-2"><Activity size={14} className="text-indigo-500"/> Relatório do Motor</p>
-                            <div className="text-xs sm:text-sm text-slate-300 leading-loose border-l-2 border-indigo-500/50 pl-4 whitespace-pre-wrap font-medium">
+                        <div className="bg-white dark:bg-slate-900/30 border border-slate-200 dark:border-slate-800 p-6 rounded-3xl relative z-10 shadow-sm dark:shadow-none">
+                            <p className="text-[10px] uppercase tracking-widest text-slate-500 font-black mb-4 flex items-center gap-2"><Activity size={14} className="text-indigo-500 dark:text-indigo-400"/> Relatório do Motor</p>
+                            <div className="text-xs sm:text-sm text-slate-700 dark:text-slate-300 leading-loose border-l-2 border-indigo-500/30 dark:border-indigo-500/50 pl-4 whitespace-pre-wrap font-medium">
                                 {safeText(scoutBuilderResult.analysis)}
                             </div>
                         </div>
