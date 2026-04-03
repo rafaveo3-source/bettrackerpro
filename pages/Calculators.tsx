@@ -8,21 +8,7 @@ import {
 } from 'lucide-react';
 import { useBetStore } from '../store/useBetStore';
 import { motion, AnimatePresence } from 'framer-motion';
-
-// ==========================================
-// MÓDULOS MATEMÁTICOS BASE
-// ==========================================
-const factorial = (n: number): number => {
-  if (n < 0) return 0;
-  if (n === 0 || n === 1) return 1;
-  let result = 1; for (let i = 2; i <= n; i++) result *= i;
-  return result;
-};
-
-const poissonExact = (k: number, lambda: number): number => {
-  if (lambda <= 0) return k === 0 ? 1 : 0;
-  return (Math.pow(lambda, k) * Math.exp(-lambda)) / factorial(k);
-};
+import { runMonteCarloV9 } from '../lib/montecarlo-v9'; // 🔥 IMPORT DA ENGINE V9
 
 const Calculators: React.FC = () => {
   const { user, currentBankrollBalance, isPro, aiScansUsedToday, canUseAiScan, incrementAiScan, setToast } = useBetStore();
@@ -31,7 +17,6 @@ const Calculators: React.FC = () => {
 
   const [activeTab, setActiveTab] = useState<'dutching'|'kelly'|'value'|'arb'|'stake'|'odds'|'breakeven'|'live_hft'>('dutching');
 
-  // ESTADOS DO LIVE HFT
   const [hftMode, setHftMode] = useState<'grid' | 'single'>('grid');
   const [liveTextData, setLiveTextData] = useState<string>('');
   const [isScanning, setIsScanning] = useState(false);
@@ -77,7 +62,7 @@ const Calculators: React.FC = () => {
                 throw new Error('Nenhum jogo com padrão claro encontrado na grade.');
             }
         } else {
-            if (data && data.min > 0) {
+            if (data && data.min >= 1) { // ✅ AJUSTE ANTI-QUEBRA AQUI
                setLiveContext(data);
                handleIncrementScan();
                setToast({ type: 'success', message: 'Leitura de jogo concluída!' });
@@ -90,95 +75,61 @@ const Calculators: React.FC = () => {
     } finally { setIsScanning(false); }
   };
 
-  // 🔥 MOTOR DE AUTO-DISCOVERY (Market Timing Intelligence)
+  // 🔥 MOTOR AUTO-DISCOVERY + MONTE CARLO V9
   const runAutoDiscoveryHFT = () => {
       if (!liveContext) return null;
 
-      const { homeTeam, awayTeam, score, min, totalGoals, totalCorners, apPress, apDef, sot, sofft, pressureTrend, matchTemperature, needsGoal } = liveContext;
+      const { homeTeam, awayTeam, score, min, totalGoals, totalCorners, apPress, apDef, sot, pressureTrend, matchTemperature, needsGoal } = liveContext;
       const odd = parseFloat(liveCurrentOdd) || 0;
 
-      const apP = parseFloat(apPress) || 0;
-      const apD = parseFloat(apDef) || 0;
-      const sT = parseFloat(sot) || 0; 
-      const sOff = parseFloat(sofft) || 0;
-      const m = parseFloat(min) || 1;
-      const currCorners = parseFloat(totalCorners) || 0;
-      const currGoals = parseFloat(totalGoals) || 0;
+      const mRaw = parseFloat(min) || 1;
+      const safeMinute = Math.max(1, Math.min(95, mRaw)); // ✅ EXTRA ANTI-QUEBRA
+      const m = safeMinute;
 
-      if (m >= 89) {
-          return { error: `Jogo aos ${m}'. Operações matemáticas suspensas. O mercado já esmagou a liquidez.`, color: 'red' };
+      // ✅ CORREÇÃO: Suspende apenas jogos aos 92'+
+      if (m >= 92) {
+          return { error: `Jogo aos ${m}'. Operações matemáticas suspensas por falta de liquidez no mercado final.`, color: 'red' };
       }
 
       const isHT = m <= 45;
-      const remainingTime = Math.max(1, ((isHT ? 45 : 90) + (isHT ? 3 : 6)) - m);
+      
+      const apP = parseFloat(apPress) || 0;
+      const apD = parseFloat(apDef) || 0;
+      const sT = parseFloat(sot) || 0; 
+      const currCorners = parseFloat(totalCorners) || 0;
+      const currGoals = parseFloat(totalGoals) || 0;
       
       const totalAP = apP + apD; 
       const fieldTilt = totalAP > 0 ? (apP / totalAP) * 100 : 0; 
       const appm = apP / m;
 
-      // 1. POISSON CANTOS
-      const cornerRateOld = ((apP * 0.06) + (sT * 0.15) + (sOff * 0.20)) / m; 
-      let cornerLambda = cornerRateOld * remainingTime;
-      if (needsGoal) cornerLambda *= 1.25;
-
-      // 2. POISSON GOLS (Peso maior para chutes totais)
-      const goalRateOld = ((sT * 0.16) + (sOff * 0.04) + (apP * 0.007)) / m; 
-      let goalLambda = goalRateOld * remainingTime;
-      if (sT >= 5) goalLambda *= 1.3; 
-      if (apD > (apP * 0.5)) goalLambda *= 1.1; 
-      if (needsGoal) goalLambda *= 1.15;
-
-      // Probabilidades
-      const p0_corner = poissonExact(0, cornerLambda);
-      const p1_corner = poissonExact(1, cornerLambda);
-      
-      const probLimit = (1 - p0_corner) * 100; // Chance de sair 1 ou mais
-      const probAsian = (1 - p0_corner - p1_corner) * 100; // Chance de sair 2 ou mais
-      const probGoal = (1 - poissonExact(0, goalLambda)) * 100;
-
       let scenarios = [];
 
-      // ==========================================
-      // INTELIGÊNCIA DE MERCADO (TIMING DAS LINHAS)
-      // ==========================================
-      if (isHT) {
-          if (m >= 20 && m <= 35) {
-              scenarios.push({ id: 'ht_corner_15', market: 'Escanteios HT', name: `Mais de ${currCorners + 1.5} Cantos HT`, probReal: probAsian, type: 'corner', targetAdd: 1.5 });
-          } else if (m >= 36 && m <= 40) {
-              scenarios.push({ id: 'ht_corner_asi', market: 'Escanteios HT', name: `Canto Asiático HT (+ de ${currCorners + 1.0})`, probReal: probAsian, type: 'corner', targetAdd: 1.0 });
-          } else if (m >= 41 && m <= 43) {
-              scenarios.push({ id: 'ht_corner_lim', market: 'Escanteios HT', name: `Canto Limite HT (+ de ${currCorners + 0.5})`, probReal: probLimit, type: 'corner', targetAdd: 0.5 });
-          }
-          
-          if (sT >= 2 || appm >= 1.2) {
-              scenarios.push({ id: 'ht_goal', market: 'Gols HT', name: `Mais de ${currGoals + 0.5} Gols HT`, probReal: probGoal, type: 'goal', targetAdd: 0.5 });
-          }
-      } else { // FT
-          if (m >= 60 && m <= 75) {
-              scenarios.push({ id: 'ft_corner_15', market: 'Escanteios FT', name: `Mais de ${currCorners + 1.5} Cantos FT`, probReal: probAsian, type: 'corner', targetAdd: 1.5 });
-          } else if (m >= 76 && m <= 84) {
-              scenarios.push({ id: 'ft_corner_asi', market: 'Escanteios FT', name: `Canto Asiático FT (+ de ${currCorners + 1.0})`, probReal: probAsian, type: 'corner', targetAdd: 1.0 });
-          } else if (m >= 85 && m <= 88) {
-              scenarios.push({ id: 'ft_corner_lim', market: 'Escanteios FT', name: `Canto Limite FT (+ de ${currCorners + 0.5})`, probReal: probLimit, type: 'corner', targetAdd: 0.5 });
-          }
-          
-          if (sT >= 4 || (appm >= 1.0 && fieldTilt > 60)) {
-              scenarios.push({ id: 'ft_goal', market: 'Gols FT', name: `Mais de ${currGoals + 0.5} Gols FT`, probReal: probGoal, type: 'goal', targetAdd: 0.5 });
-          }
+      if (isHT && m >= 20 && m <= 43) {
+          scenarios.push({ id: 'ht_corner_asi', market: 'Escanteios HT', name: `Canto Asiático HT (+ de ${currCorners + 1.0})`, type: 'corner', targetAdd: 1.0 });
+          scenarios.push({ id: 'ht_corner_lim', market: 'Escanteios HT', name: `Canto Limite HT (+ de ${currCorners + 0.5})`, type: 'corner', targetAdd: 0.5 });
+          if (sT >= 2 || appm >= 1.2) scenarios.push({ id: 'ht_goal', market: 'Gols HT', name: `Mais de ${currGoals + 0.5} Gols HT`, type: 'goal', targetAdd: 0.5 });
+      } else if (!isHT && m >= 60 && m <= 88) {
+          scenarios.push({ id: 'ft_corner_asi', market: 'Escanteios FT', name: `Canto Asiático FT (+ de ${currCorners + 1.0})`, type: 'corner', targetAdd: 1.0 });
+          scenarios.push({ id: 'ft_corner_lim', market: 'Escanteios FT', name: `Canto Limite FT (+ de ${currCorners + 0.5})`, type: 'corner', targetAdd: 0.5 });
+          if (sT >= 4 || (appm >= 1.0 && fieldTilt > 55)) scenarios.push({ id: 'ft_goal', market: 'Gols FT', name: `Mais de ${currGoals + 0.5} Gols FT`, type: 'goal', targetAdd: 0.5 });
       }
 
       if (scenarios.length === 0) {
-          return { error: `Relógio aos ${m}'. O jogo está numa zona morta temporal ou falta letalidade (Chutes: ${sT}). Aguarde as janelas de HT (20-42') ou FT (60-88').`, color: 'yellow' };
+          return { error: `Relógio aos ${m}'. O jogo está numa zona morta ou com finalizações insuficientes. Aguarde a janela de HT (20-42') ou FT (60-88').`, color: 'yellow' };
       }
 
       let bestScenario: any = null;
       let maxScore = -1;
 
       scenarios.forEach(scen => {
-          let cScore = scen.probReal;
+          // 🔥 RODA A SIMULAÇÃO DE MONTE CARLO V9 PARA CADA CENÁRIO
+          const mcResult = runMonteCarloV9(liveContext, scen.type as 'corner'|'goal', scen.targetAdd);
           
-          if (scen.type === 'corner' && appm >= 0.8 && sT <= 3) cScore += 15; 
-          if (scen.type === 'goal' && sT >= 6) cScore += 20; 
+          let cScore = mcResult.probReal;
+          
+          if (scen.type === 'corner' && appm > 1.0 && sT <= 2) cScore += 15; 
+          if (scen.type === 'goal' && sT >= 4 && fieldTilt > 55) cScore += 20; 
 
           if (pressureTrend === 'increasing') cScore += 10;
           if (needsGoal) cScore += 8;
@@ -186,44 +137,42 @@ const Calculators: React.FC = () => {
 
           if (cScore > maxScore) {
               maxScore = cScore;
-              bestScenario = { ...scen, finalScore: Math.min(100, cScore) };
+              bestScenario = { ...scen, probReal: mcResult.probReal, fairOdd: mcResult.fairOdd, finalScore: Math.min(100, cScore) };
           }
       });
 
       if (!bestScenario) return null;
 
-      const fairOdd = bestScenario.probReal > 0 ? 100 / bestScenario.probReal : 0;
       const ev = odd > 0 ? ((bestScenario.probReal / 100) * odd - 1) * 100 : 0; 
 
       let label = '🔴 FUJA DESSE JOGO'; let color = 'red';
       let actionMessage = 'MODELO REJEITA A ENTRADA';
 
       if (bestScenario.finalScore >= 70) {
-          if (odd === 0) { label = '🔒 ALTO VALOR (AGUARDANDO ODD)'; color = 'green'; actionMessage = `BUSQUE ODD ACIMA DE @${fairOdd.toFixed(2)}`; }
+          if (odd === 0) { label = '🔒 ALTO VALOR (AGUARDANDO ODD)'; color = 'green'; actionMessage = `BUSQUE ODD ACIMA DE @${bestScenario.fairOdd.toFixed(2)}`; }
           else if (ev > 2) { label = '🔒 ENTRADA APROVADA (EV+)'; color = 'green'; actionMessage = `ENTRADA APROVADA (EV +${ev.toFixed(1)}%)`; }
-          else { label = '🟡 AGUARDE A ODD VALORIZAR'; color = 'yellow'; actionMessage = `ODD ESMAGADA. ESPERE BATER @${fairOdd.toFixed(2)}`; }
+          else { label = '🟡 AGUARDE A ODD VALORIZAR'; color = 'yellow'; actionMessage = `ODD ESMAGADA. ESPERE BATER @${bestScenario.fairOdd.toFixed(2)}`; }
       }
       else if (bestScenario.finalScore >= 50) {
-          if (odd === 0) { label = '🟢 LEITURA POSITIVA'; color = 'green'; actionMessage = `BUSQUE ODD ACIMA DE @${fairOdd.toFixed(2)}`; }
+          if (odd === 0) { label = '🟢 LEITURA POSITIVA'; color = 'green'; actionMessage = `BUSQUE ODD ACIMA DE @${bestScenario.fairOdd.toFixed(2)}`; }
           else if (ev > 0) { label = '🟢 ENTRADA APROVADA'; color = 'green'; actionMessage = `ENTRADA APROVADA (EV +${ev.toFixed(1)}%)`; }
-          else { label = '⚠️ ODD SEM VALOR'; color = 'yellow'; actionMessage = `ESPERE A ODD VALORIZAR PARA @${fairOdd.toFixed(2)}`; }
+          else { label = '⚠️ ODD SEM VALOR'; color = 'yellow'; actionMessage = `ESPERE A ODD VALORIZAR PARA @${bestScenario.fairOdd.toFixed(2)}`; }
       }
 
       let reasons = [];
       if (fieldTilt >= 60) reasons.push(`Amasso territorial (Controle de ${fieldTilt.toFixed(0)}% das ações)`);
       if (pressureTrend === 'increasing') reasons.push('Blitz ligada: Time acelerou o ritmo no Radar recente');
       if (needsGoal) reasons.push('Modo desespero: Precisa do resultado (Padrão Kamikaze ativado)');
-      if (bestScenario.type === 'goal' && sT >= 4) reasons.push(`Mira calibrada: Jogo aberto com ${sT} chutes no alvo totais (Alto xG)`);
+      if (bestScenario.type === 'goal' && sT >= 3) reasons.push(`Mira calibrada: Jogo aberto com ${sT} chutes no alvo totais (Alto xG)`);
       if (bestScenario.type === 'corner' && appm >= 0.8) reasons.push(`Volume alto: ${appm.toFixed(2)} ataques perigosos/min`);
       if (odd > 0 && ev > 5) reasons.push(`Odd de muito Valor (+${ev.toFixed(1)}% EV encontrado)`);
 
       let tipsterAdvice = "";
       if (bestScenario.type === 'corner') {
-          if (bestScenario.targetAdd === 1.5) tipsterAdvice = `DICA DE OURO: Aos ${m}', a linha segura é +1.5 Cantos. Se a casa estiver forçando +2.5, espere a linha cair.`;
-          else if (bestScenario.targetAdd === 1.0) tipsterAdvice = `DICA DE OURO: Aos ${m}', você deve buscar a linha ASIÁTICA (+1.0). Se a casa só ofercer +1.5, não seja ansioso, deixe o relógio rodar.`;
+          if (bestScenario.targetAdd >= 1.0) tipsterAdvice = `DICA DE OURO: A casa sempre tenta forçar uma linha alta (+${currCorners + 1.5}). Tenha paciência. Aguarde a linha cair para o Asiático (+${currCorners + 1.0}) e pegue quando a odd bater @1.70+.`;
           else tipsterAdvice = `DICA DE OURO: Reta final (${m}'). Apenas entre no Canto Limite (+0.5) se a odd bater @1.65+.`;
       } else if (bestScenario.type === 'goal') {
-          tipsterAdvice = `DICA DE OURO: Nunca compre odds esmagadas em gols. Se a odd estiver abaixo da Odd Justa (@${fairOdd.toFixed(2)}), não entre! Deixe a odd valorizar.`;
+          tipsterAdvice = `DICA DE OURO: Nunca compre odds esmagadas em gols. Se a odd estiver muito abaixo da Odd Justa (@${bestScenario.fairOdd.toFixed(2)}), não entre! Deixe a odd valorizar.`;
       }
 
       let projection = "";
@@ -234,7 +183,7 @@ const Calculators: React.FC = () => {
               projection = `Se esse amasso continuar no 2º tempo, o mercado de cantos FT vai abrir com muito valor. Fique de olho.`;
               smartWarning = `Se o ritmo cair bruscamente ou o time favorito fizer um gol, ABORTE imediatamente a operação HT.`;
           } else {
-              projection = `Jogo aberto. O mercado de Mais de ${currGoals + 1.5} Gols FT será a rota principal de lucro na segunda etapa.`;
+              projection = `Jogo aberto. O mercado de Mais de ${currGoals + 1.5} Gols FT será a principal rota de lucro na segunda etapa.`;
               smartWarning = `Cuidado com contra-ataques! Se o time dominado achar um gol isolado, o jogo esfria.`;
           }
       } else {
@@ -249,7 +198,7 @@ const Calculators: React.FC = () => {
 
       return { 
           ...bestScenario, 
-          homeTeam, awayTeam, score, min: m, appm, fieldTilt, ev, fairOdd, label, color, reasons, projection, smartWarning, tipsterAdvice, actionMessage,
+          homeTeam, awayTeam, score, min: m, appm, fieldTilt, ev, label, color, reasons, projection, smartWarning, tipsterAdvice, actionMessage,
           cornersTotal: currCorners, sotTotal: sT, apMax: apP 
       };
   };
@@ -307,8 +256,8 @@ const Calculators: React.FC = () => {
 
   const sidebarInfo = (() => {
     switch(activeTab) {
-      case 'dutching': return { title: 'Gestão de Risco', text: 'O Dutching divide a sua exposição entre múltiplas seleções, diluindo o risco do investimento.' };
-      case 'live_hft': return { title: 'Live HFT Engine', text: 'Motor Quantitativo Ao Vivo. Minerador de Ouro varre a grade inteira. O Raio-X cruza Field Tilt, Momentum e Relógio para te dar a calada exata de Gols ou Cantos.' };
+      case 'dutching': return { title: 'Gestão de Risco', text: 'O Dutching divide a sua exposição entre múltiplas seleções, diluindo o risco do investimento em um único evento.' };
+      case 'live_hft': return { title: 'Live HFT Engine', text: 'Motor Quantitativo Ao Vivo com Simulação Monte Carlo. Minerador de Ouro varre a grade inteira. O Raio-X cruza Field Tilt, Momentum e Relógio para te dar a calada exata.' };
       default: return { title: 'Ferramentas Analíticas', text: 'Tome decisões baseadas em dados matemáticos.' };
     }
   })();
@@ -355,7 +304,7 @@ const Calculators: React.FC = () => {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 px-4 md:px-0">
         <div className="lg:col-span-2 space-y-6 min-w-0 w-full">
             
-            {/* CÓDIGO DAS CALCULADORAS ANTIGAS */}
+            {/* OMITIDO AQUI MAS MANTIDO NO ARQUIVO AS CALCULADORAS ANTIGAS PARA NÃO GASTAR ESPAÇO NO CHAT */}
             {activeTab === 'dutching' && (
                 <div className="bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-800 rounded-[2rem] p-6 shadow-sm w-full overflow-hidden">
                     <h2 className="text-lg font-black text-slate-900 dark:text-white uppercase tracking-tighter italic mb-4">Calculadora Dutching</h2>
@@ -680,7 +629,7 @@ const Calculators: React.FC = () => {
                                         <span className="font-bold text-slate-800 dark:text-white uppercase text-xs sm:text-sm flex-1 sm:flex-auto truncate">{autoResult.awayTeam}</span>
                                         <span className="text-indigo-600 dark:text-indigo-400 font-mono font-black flex items-center gap-1.5 shrink-0 bg-indigo-50 dark:bg-indigo-500/10 px-2 py-1 rounded-md border border-indigo-200 dark:border-indigo-500/20"><Clock size={14}/> {autoResult.min}'</span>
                                      </div>
-                                     {/* FITA DE AUDITORIA (Resolve o problema da "Alucinação" da IA) */}
+                                     {/* FITA DE AUDITORIA */}
                                      <div className="flex flex-wrap gap-2 border-t border-slate-200 dark:border-slate-800 pt-3">
                                          <span className="bg-slate-100 dark:bg-slate-950 text-slate-600 dark:text-slate-400 px-2 py-1 rounded-md text-[10px] font-mono border border-slate-200 dark:border-slate-800 flex items-center gap-1"><LayoutList size={10}/> Dados lidos pela IA:</span>
                                          <span className="bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 px-2 py-1 rounded-md text-[10px] font-mono font-bold border border-slate-200 dark:border-slate-700">Cantos: {autoResult.cornersTotal}</span>
