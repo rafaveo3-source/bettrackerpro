@@ -4,7 +4,7 @@ import {
   Sparkles, Plus, Scale, Percent, ArrowRightLeft, 
   Target, TrendingUp, AlertTriangle, Lock, Crown, Radar, 
   Activity, Crosshair, BarChart4, Zap, DollarSign, Goal, Lightbulb,
-  Clock, Flag, ShieldAlert, FileText, Eraser, Eye, Search, Flame
+  Clock, Flag, ShieldAlert, FileText, Eraser, Eye, Search, Flame, LayoutList
 } from 'lucide-react';
 import { useBetStore } from '../store/useBetStore';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -90,7 +90,7 @@ const Calculators: React.FC = () => {
     } finally { setIsScanning(false); }
   };
 
-  // 🔥 MOTOR DE AUTO-DISCOVERY E RECOMENDAÇÕES
+  // 🔥 MOTOR DE AUTO-DISCOVERY (Market Timing Intelligence)
   const runAutoDiscoveryHFT = () => {
       if (!liveContext) return null;
 
@@ -99,15 +99,14 @@ const Calculators: React.FC = () => {
 
       const apP = parseFloat(apPress) || 0;
       const apD = parseFloat(apDef) || 0;
-      const sT = parseFloat(sot) || 0;
+      const sT = parseFloat(sot) || 0; 
       const sOff = parseFloat(sofft) || 0;
       const m = parseFloat(min) || 1;
       const currCorners = parseFloat(totalCorners) || 0;
       const currGoals = parseFloat(totalGoals) || 0;
 
-      // TRAVA DE SEGURANÇA TEMPORAL (Jogos finalizados)
       if (m >= 89) {
-          return { error: `Jogo aos ${m}'. Operações matemáticas suspensas por falta de liquidez no mercado final.`, color: 'red' };
+          return { error: `Jogo aos ${m}'. Operações matemáticas suspensas. O mercado já esmagou a liquidez.`, color: 'red' };
       }
 
       const isHT = m <= 45;
@@ -117,65 +116,77 @@ const Calculators: React.FC = () => {
       const fieldTilt = totalAP > 0 ? (apP / totalAP) * 100 : 0; 
       const appm = apP / m;
 
-      // 1. POISSON PARA CANTOS
-      const actualCornerRate = m > 0 ? currCorners / m : 0;
-      const calcCornerRate = ((apP * 0.06) + (sT * 0.25) + (sOff * 0.15)) / m;
-      let blendedCornerRate = (actualCornerRate * 0.4) + (calcCornerRate * 0.6);
-      let cornerLambda = blendedCornerRate * remainingTime;
+      // 1. POISSON CANTOS
+      const cornerRateOld = ((apP * 0.06) + (sT * 0.15) + (sOff * 0.20)) / m; 
+      let cornerLambda = cornerRateOld * remainingTime;
       if (needsGoal) cornerLambda *= 1.25;
 
-      // 2. POISSON PARA GOLS (Agora mais suscetível a Volume)
-      const actualGoalRate = m > 0 ? currGoals / m : 0;
-      const calcGoalRate = ((sT * 0.16) + (sOff * 0.05) + (apP * 0.008)) / m; // APs ganharam mais peso para gols
-      let blendedGoalRate = (actualGoalRate * 0.3) + (calcGoalRate * 0.7);
-      let goalLambda = blendedGoalRate * remainingTime;
-      if (sT >= 2 && sOff >= 3) goalLambda *= 1.3; 
+      // 2. POISSON GOLS (Peso maior para chutes totais)
+      const goalRateOld = ((sT * 0.16) + (sOff * 0.04) + (apP * 0.007)) / m; 
+      let goalLambda = goalRateOld * remainingTime;
+      if (sT >= 5) goalLambda *= 1.3; 
       if (apD > (apP * 0.5)) goalLambda *= 1.1; 
-      if (needsGoal) goalLambda *= 1.20;
+      if (needsGoal) goalLambda *= 1.15;
+
+      // Probabilidades
+      const p0_corner = poissonExact(0, cornerLambda);
+      const p1_corner = poissonExact(1, cornerLambda);
+      
+      const probLimit = (1 - p0_corner) * 100; // Chance de sair 1 ou mais
+      const probAsian = (1 - p0_corner - p1_corner) * 100; // Chance de sair 2 ou mais
+      const probGoal = (1 - poissonExact(0, goalLambda)) * 100;
 
       let scenarios = [];
 
-      const prob1MoreCorner = (1 - poissonExact(0, cornerLambda)) * 100;
-      const prob2MoreCorners = (1 - poissonExact(0, cornerLambda) - poissonExact(1, cornerLambda)) * 100;
-      const prob1MoreGoal = (1 - poissonExact(0, goalLambda)) * 100;
-
-      if (isHT && m >= 20 && m <= 43) {
-          scenarios.push({ id: 'ht_corner_asi', market: 'Escanteios HT', name: `Canto Asiático HT (Meta: +${currCorners + 1.0})`, probReal: prob2MoreCorners, type: 'corner', targetAdd: 1.0 });
-          scenarios.push({ id: 'ht_corner_lim', market: 'Escanteios HT', name: `Canto Limite HT (+ de ${currCorners + 0.5})`, probReal: prob1MoreCorner, type: 'corner', targetAdd: 0.5 });
-          
-          // Entra na lista de gols se houver pelo menos 1 chute no alvo ou o amasso for violento (>1.2 appm)
-          if (sT >= 1 || appm >= 1.2) {
-              scenarios.push({ id: 'ht_goal', market: 'Gols HT', name: `Mais de ${currGoals + 0.5} Gols HT`, probReal: prob1MoreGoal, type: 'goal', targetAdd: 0.5 });
+      // ==========================================
+      // INTELIGÊNCIA DE MERCADO (TIMING DAS LINHAS)
+      // ==========================================
+      if (isHT) {
+          if (m >= 20 && m <= 35) {
+              scenarios.push({ id: 'ht_corner_15', market: 'Escanteios HT', name: `Mais de ${currCorners + 1.5} Cantos HT`, probReal: probAsian, type: 'corner', targetAdd: 1.5 });
+          } else if (m >= 36 && m <= 40) {
+              scenarios.push({ id: 'ht_corner_asi', market: 'Escanteios HT', name: `Canto Asiático HT (+ de ${currCorners + 1.0})`, probReal: probAsian, type: 'corner', targetAdd: 1.0 });
+          } else if (m >= 41 && m <= 43) {
+              scenarios.push({ id: 'ht_corner_lim', market: 'Escanteios HT', name: `Canto Limite HT (+ de ${currCorners + 0.5})`, probReal: probLimit, type: 'corner', targetAdd: 0.5 });
           }
-      } else if (!isHT && m >= 60 && m <= 88) {
-          scenarios.push({ id: 'ft_corner_asi', market: 'Escanteios FT', name: `Canto Asiático FT (Meta: +${currCorners + 1.0})`, probReal: prob2MoreCorners, type: 'corner', targetAdd: 1.0 });
-          scenarios.push({ id: 'ft_corner_lim', market: 'Escanteios FT', name: `Canto Limite FT (+ de ${currCorners + 0.5})`, probReal: prob1MoreCorner, type: 'corner', targetAdd: 0.5 });
           
-          if (sT >= 2 || (appm >= 1.0 && fieldTilt > 60)) {
-              scenarios.push({ id: 'ft_goal', market: 'Gols FT', name: `Mais de ${currGoals + 0.5} Gols FT`, probReal: prob1MoreGoal, type: 'goal', targetAdd: 0.5 });
+          if (sT >= 2 || appm >= 1.2) {
+              scenarios.push({ id: 'ht_goal', market: 'Gols HT', name: `Mais de ${currGoals + 0.5} Gols HT`, probReal: probGoal, type: 'goal', targetAdd: 0.5 });
+          }
+      } else { // FT
+          if (m >= 60 && m <= 75) {
+              scenarios.push({ id: 'ft_corner_15', market: 'Escanteios FT', name: `Mais de ${currCorners + 1.5} Cantos FT`, probReal: probAsian, type: 'corner', targetAdd: 1.5 });
+          } else if (m >= 76 && m <= 84) {
+              scenarios.push({ id: 'ft_corner_asi', market: 'Escanteios FT', name: `Canto Asiático FT (+ de ${currCorners + 1.0})`, probReal: probAsian, type: 'corner', targetAdd: 1.0 });
+          } else if (m >= 85 && m <= 88) {
+              scenarios.push({ id: 'ft_corner_lim', market: 'Escanteios FT', name: `Canto Limite FT (+ de ${currCorners + 0.5})`, probReal: probLimit, type: 'corner', targetAdd: 0.5 });
+          }
+          
+          if (sT >= 4 || (appm >= 1.0 && fieldTilt > 60)) {
+              scenarios.push({ id: 'ft_goal', market: 'Gols FT', name: `Mais de ${currGoals + 0.5} Gols FT`, probReal: probGoal, type: 'goal', targetAdd: 0.5 });
           }
       }
 
       if (scenarios.length === 0) {
-          return { error: `Relógio aos ${m}'. O jogo está numa zona morta (sem EV+ claro) ou com baixíssima letalidade. Aguarde a janela de HT (20-42') ou FT (60-88').`, color: 'yellow' };
+          return { error: `Relógio aos ${m}'. O jogo está numa zona morta temporal ou falta letalidade (Chutes: ${sT}). Aguarde as janelas de HT (20-42') ou FT (60-88').`, color: 'yellow' };
       }
 
       let bestScenario: any = null;
       let maxScore = -1;
 
       scenarios.forEach(scen => {
-          let score = scen.probReal;
+          let cScore = scen.probReal;
           
-          if (scen.type === 'corner' && appm > 1.0 && sT <= 2) score += 15; 
-          if (scen.type === 'goal' && sT >= 2 && fieldTilt > 55) score += 20; 
+          if (scen.type === 'corner' && appm >= 0.8 && sT <= 3) cScore += 15; 
+          if (scen.type === 'goal' && sT >= 6) cScore += 20; 
 
-          if (pressureTrend === 'increasing') score += 10;
-          if (needsGoal) score += 8;
-          if (matchTemperature === 'intense') score += 5;
+          if (pressureTrend === 'increasing') cScore += 10;
+          if (needsGoal) cScore += 8;
+          if (matchTemperature === 'intense') cScore += 5;
 
-          if (score > maxScore) {
-              maxScore = score;
-              bestScenario = { ...scen, finalScore: Math.min(100, score) };
+          if (cScore > maxScore) {
+              maxScore = cScore;
+              bestScenario = { ...scen, finalScore: Math.min(100, cScore) };
           }
       });
 
@@ -202,17 +213,17 @@ const Calculators: React.FC = () => {
       if (fieldTilt >= 60) reasons.push(`Amasso territorial (Controle de ${fieldTilt.toFixed(0)}% das ações)`);
       if (pressureTrend === 'increasing') reasons.push('Blitz ligada: Time acelerou o ritmo no Radar recente');
       if (needsGoal) reasons.push('Modo desespero: Precisa do resultado (Padrão Kamikaze ativado)');
-      if (bestScenario.type === 'goal' && sT >= 2) reasons.push(`Mira calibrada: ${sT} chutes no alvo gerando muito xG`);
-      if (bestScenario.type === 'corner' && appm >= 0.8) reasons.push(`Volume bom: ${appm.toFixed(2)} ataques perigosos/min`);
+      if (bestScenario.type === 'goal' && sT >= 4) reasons.push(`Mira calibrada: Jogo aberto com ${sT} chutes no alvo totais (Alto xG)`);
+      if (bestScenario.type === 'corner' && appm >= 0.8) reasons.push(`Volume alto: ${appm.toFixed(2)} ataques perigosos/min`);
       if (odd > 0 && ev > 5) reasons.push(`Odd de muito Valor (+${ev.toFixed(1)}% EV encontrado)`);
 
       let tipsterAdvice = "";
-      if (bestScenario.type === 'corner' && bestScenario.targetAdd === 1.0) {
-          tipsterAdvice = `DICA DE OURO: A casa sempre tenta forçar uma linha alta (ex: +${currCorners + 1.5}). Tenha paciência. Aguarde a linha cair para o Asiático (+${currCorners + 1.0}) e pegue quando a odd bater @1.70+.`;
-      } else if (bestScenario.type === 'corner' && bestScenario.targetAdd === 0.5) {
-          tipsterAdvice = `DICA DE OURO: Estamos buscando o Canto Limite (+${currCorners + 0.5}). Aguarde a odd bater no mínimo @1.60 e dispare.`;
+      if (bestScenario.type === 'corner') {
+          if (bestScenario.targetAdd === 1.5) tipsterAdvice = `DICA DE OURO: Aos ${m}', a linha segura é +1.5 Cantos. Se a casa estiver forçando +2.5, espere a linha cair.`;
+          else if (bestScenario.targetAdd === 1.0) tipsterAdvice = `DICA DE OURO: Aos ${m}', você deve buscar a linha ASIÁTICA (+1.0). Se a casa só ofercer +1.5, não seja ansioso, deixe o relógio rodar.`;
+          else tipsterAdvice = `DICA DE OURO: Reta final (${m}'). Apenas entre no Canto Limite (+0.5) se a odd bater @1.65+.`;
       } else if (bestScenario.type === 'goal') {
-          tipsterAdvice = `DICA DE OURO: Nunca compre odds esmagadas em gols. Se a odd estiver muito abaixo da Odd Justa (@${fairOdd.toFixed(2)}), não entre! O gol pode sair a qualquer momento, deixe a odd valorizar.`;
+          tipsterAdvice = `DICA DE OURO: Nunca compre odds esmagadas em gols. Se a odd estiver abaixo da Odd Justa (@${fairOdd.toFixed(2)}), não entre! Deixe a odd valorizar.`;
       }
 
       let projection = "";
@@ -220,16 +231,16 @@ const Calculators: React.FC = () => {
 
       if (isHT) {
           if (bestScenario.type === 'corner') {
-              projection = `Se esse amasso continuar no 2º tempo, a linha de Mais de ${currCorners + 4.5} Cantos FT vai abrir com muito valor. Fique de olho.`;
-              smartWarning = `Se o ritmo cair bruscamente nos próximos 5 min ou o time favorito fizer um gol, ABORTE imediatamente a operação HT.`;
+              projection = `Se esse amasso continuar no 2º tempo, o mercado de cantos FT vai abrir com muito valor. Fique de olho.`;
+              smartWarning = `Se o ritmo cair bruscamente ou o time favorito fizer um gol, ABORTE imediatamente a operação HT.`;
           } else {
-              projection = `Jogo aberto e vertical. O mercado de Mais de ${currGoals + 1.5} Gols FT será a principal rota de lucro na segunda etapa.`;
-              smartWarning = `Cuidado com contra-ataques! Se o time dominado achar um gol isolado, o jogo pode truncar e esfriar.`;
+              projection = `Jogo aberto. O mercado de Mais de ${currGoals + 1.5} Gols FT será a rota principal de lucro na segunda etapa.`;
+              smartWarning = `Cuidado com contra-ataques! Se o time dominado achar um gol isolado, o jogo esfria.`;
           }
       } else {
           if (m < 85) {
-             projection = `Se o placar não mudar até os 86', a entrada no 'Canto Zóio' (Limite Final) será obrigatória pela pressão.`;
-             if (bestScenario.type === 'corner') smartWarning = `Se a linha não cair para (+${currCorners + 0.5}) a tempo, pule fora. Não force entradas ruins na reta final.`;
+             projection = `Se o placar não mudar até os 86', a entrada no 'Canto Zóio' (Limite Final) será clara pela pressão.`;
+             if (bestScenario.type === 'corner') smartWarning = `Se a linha demorar muito para cair para a meta calculada, pule fora. Não force entradas na reta final.`;
           } else {
              projection = `Reta finalíssima. Defesas expostas. Padrão puro de Kamikaze para buscar o último suspiro.`;
              smartWarning = `Regra de Ouro: Entradas no 'Apagar das Luzes' exigem gestão rigorosa (Máx 0.5% a 1% da banca). É cara ou coroa tático.`;
@@ -237,7 +248,9 @@ const Calculators: React.FC = () => {
       }
 
       return { 
-          ...bestScenario, homeTeam, awayTeam, score, min: m, appm, fieldTilt, ev, fairOdd, label, color, reasons, projection, smartWarning, tipsterAdvice, actionMessage 
+          ...bestScenario, 
+          homeTeam, awayTeam, score, min: m, appm, fieldTilt, ev, fairOdd, label, color, reasons, projection, smartWarning, tipsterAdvice, actionMessage,
+          cornersTotal: currCorners, sotTotal: sT, apMax: apP 
       };
   };
 
@@ -294,8 +307,8 @@ const Calculators: React.FC = () => {
 
   const sidebarInfo = (() => {
     switch(activeTab) {
-      case 'dutching': return { title: 'Gestão de Risco', text: 'O Dutching divide a sua exposição entre múltiplas seleções, diluindo o risco do investimento em um único evento.' };
-      case 'live_hft': return { title: 'Live HFT Engine', text: 'Motor Quantitativo Ao Vivo. Minerador de Ouro varre a grade inteira. O Raio-X cruza Field Tilt, Momentum e Relógio para te dar a calada exata.' };
+      case 'dutching': return { title: 'Gestão de Risco', text: 'O Dutching divide a sua exposição entre múltiplas seleções, diluindo o risco do investimento.' };
+      case 'live_hft': return { title: 'Live HFT Engine', text: 'Motor Quantitativo Ao Vivo. Minerador de Ouro varre a grade inteira. O Raio-X cruza Field Tilt, Momentum e Relógio para te dar a calada exata de Gols ou Cantos.' };
       default: return { title: 'Ferramentas Analíticas', text: 'Tome decisões baseadas em dados matemáticos.' };
     }
   })();
@@ -658,14 +671,23 @@ const Calculators: React.FC = () => {
                                 autoResult.color === 'yellow' ? 'bg-yellow-500/10' : 'bg-red-500/5 dark:bg-red-500/10'
                              }`}></div>
 
-                             {/* BANNER DO JOGO */}
+                             {/* BANNER DO JOGO + AUDITORIA DA IA */}
                              <div className="relative z-10 bg-white dark:bg-slate-900/80 p-4 rounded-xl mb-6 flex flex-col sm:flex-row justify-between items-center border border-slate-200 dark:border-slate-800 shadow-sm dark:shadow-none gap-3">
-                                 <div className="flex items-center gap-3 w-full sm:w-auto justify-center sm:justify-start">
-                                    <span className="font-bold text-slate-800 dark:text-white uppercase text-xs sm:text-sm text-right flex-1 sm:flex-auto truncate">{autoResult.homeTeam}</span>
-                                    <span className="bg-indigo-500 text-white px-3 py-1 rounded-lg font-black shrink-0">{autoResult.score}</span>
-                                    <span className="font-bold text-slate-800 dark:text-white uppercase text-xs sm:text-sm flex-1 sm:flex-auto truncate">{autoResult.awayTeam}</span>
+                                 <div className="w-full flex flex-col gap-3">
+                                     <div className="flex items-center gap-3 w-full justify-between sm:justify-start">
+                                        <span className="font-bold text-slate-800 dark:text-white uppercase text-xs sm:text-sm text-right flex-1 sm:flex-auto truncate">{autoResult.homeTeam}</span>
+                                        <span className="bg-indigo-500 text-white px-3 py-1 rounded-lg font-black shrink-0">{autoResult.score}</span>
+                                        <span className="font-bold text-slate-800 dark:text-white uppercase text-xs sm:text-sm flex-1 sm:flex-auto truncate">{autoResult.awayTeam}</span>
+                                        <span className="text-indigo-600 dark:text-indigo-400 font-mono font-black flex items-center gap-1.5 shrink-0 bg-indigo-50 dark:bg-indigo-500/10 px-2 py-1 rounded-md border border-indigo-200 dark:border-indigo-500/20"><Clock size={14}/> {autoResult.min}'</span>
+                                     </div>
+                                     {/* FITA DE AUDITORIA (Resolve o problema da "Alucinação" da IA) */}
+                                     <div className="flex flex-wrap gap-2 border-t border-slate-200 dark:border-slate-800 pt-3">
+                                         <span className="bg-slate-100 dark:bg-slate-950 text-slate-600 dark:text-slate-400 px-2 py-1 rounded-md text-[10px] font-mono border border-slate-200 dark:border-slate-800 flex items-center gap-1"><LayoutList size={10}/> Dados lidos pela IA:</span>
+                                         <span className="bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 px-2 py-1 rounded-md text-[10px] font-mono font-bold border border-slate-200 dark:border-slate-700">Cantos: {autoResult.cornersTotal}</span>
+                                         <span className="bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 px-2 py-1 rounded-md text-[10px] font-mono font-bold border border-slate-200 dark:border-slate-700">Chutes Alvo (Totais): {autoResult.sotTotal}</span>
+                                         <span className="bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 px-2 py-1 rounded-md text-[10px] font-mono font-bold border border-slate-200 dark:border-slate-700">AP Max: {autoResult.apMax}</span>
+                                     </div>
                                  </div>
-                                 <span className="text-indigo-600 dark:text-indigo-400 font-mono font-black flex items-center gap-1.5 shrink-0 bg-indigo-50 dark:bg-indigo-500/10 px-3 py-1 rounded-md border border-indigo-200 dark:border-indigo-500/20"><Clock size={14}/> {autoResult.min}'</span>
                              </div>
 
                              {/* TOPO: APOSTA SUGERIDA */}

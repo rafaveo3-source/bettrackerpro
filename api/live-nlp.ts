@@ -63,35 +63,35 @@ TEXTO BRUTO:
 ${textData}
 """
 
-REGRAS DE EXTRAÇÃO DE ALTA PRECISÃO:
-1. TIMES E PLACAR: Encontre o nome dos dois times. O placar deve ser extraído (Ex: "1-0").
-2. MINUTO ATUAL (min): Procure por relógios. Se ler "INTERVALO" ou "HT", retorne 45. Se ler "FT", "Encerrado" ou "Finalizado", retorne 90. Ex: 38.
-3. GOLS TOTAIS: Soma dos gols EXATOS do placar (Ex: 1-1 = 2).
-4. CANTOS TOTAIS: REGRA DE OURO! NUNCA some números de uma timeline de eventos (como "9 Canto", "16 Canto", "30 Canto"). Isso causará falha grave. Você DEVE procurar APENAS a linha de Estatísticas/Dados do Jogo que diz "Escanteios" ou "Cantos" (Ex: "6 Escanteios 3" ou "1 Cantos 3"). Some os valores (6+3=9). Se não encontrar essa linha exata de total, retorne 0.
-5. PRESSÃO (apPress / apDef): Procure por "Ataques Perigosos" ou "Ataques P.". 'apPress' é o MAIOR número absoluto (ignorando taxas por minuto). 'apDef' é o MENOR número. Se não achar "Ataques Perigosos", use "Ataques".
-6. LETALIDADE (sot / sofft): Pegue "Chutes no Alvo" / "Finalizações no alvo" (sot) e "Chutes para fora" / "Finalizações para fora" (sofft) APENAS do time que tem o MAIOR apPress.
+REGRAS DE EXTRAÇÃO E BLINDAGEM MATEMÁTICA:
+1. TIMES E PLACAR: Encontre o nome dos dois times e o placar EXATO atual.
+2. MINUTO ATUAL (min): Procure por relógios. Se "INTERVALO", retorne 45. Se "FT" ou "Encerrado", retorne 90. Ex: 77.
+3. GOLS TOTAIS: Soma dos gols EXATOS do placar (Ex: 2-1 = 3).
+4. CANTOS TOTAIS: REGRA DE OURO! VÁ EXCLUSIVAMENTE para a aba/seção de "Estatísticas" ou "Dados Jogo". Ache a linha que diz "Escanteios" ou "Cantos" com os valores dos dois times (Ex: "3 Escanteios 4"). SOME OS DOIS VALORES (3+4=7). NUNCA pegue números de linha do tempo ou de resumos de texto.
+5. PRESSÃO (apPress / apDef): Procure por "Ataques Perigosos" ou "Ataques P.". 'apPress' é o MAIOR número absoluto (não a taxa por minuto). 'apDef' é o MENOR número absoluto.
+6. LETALIDADE (sot / sofft): PARA GOLS, PRECISAMOS DO TOTAL DA PARTIDA. SOME os "Chutes no Alvo" (ou Finalizações no alvo/Remates baliza) das DUAS EQUIPES. Esse será o 'sot'. SOME os "Chutes para fora" das DUAS EQUIPES. Esse será o 'sofft'.
 7. CONTEXTO: 
    - redCard: Se o time atacante (maior apPress) tomou vermelho = "pressing". Defesa = "defending". Nenhum = "none".
    - pressureTrend: "increasing", "stable" ou "decreasing".
-   - matchTemperature: "intense" (jogo movimentado/aberto) ou "calm" (morno).
+   - matchTemperature: "intense" (jogo movimentado/chutes) ou "calm" (morno).
    - needsGoal: true se o time com MAIOR apPress está empatando ou perdendo por 1 gol de diferença.
 
 RETORNE ESTE JSON ESTRITAMENTE:
 {
-  "homeTeam": "Talleres Córdoba",
-  "awayTeam": "Boca Juniors",
-  "score": "0-0",
-  "min": 38,
-  "totalGoals": 0,
-  "totalCorners": 4,
-  "apPress": 19,
-  "apDef": 15,
-  "sot": 1,
-  "sofft": 1,
-  "recentShots": 0,
-  "recentCorners": 0,
+  "homeTeam": "Palmeiras",
+  "awayTeam": "Grêmio",
+  "score": "2-1",
+  "min": 77,
+  "totalGoals": 3,
+  "totalCorners": 7,
+  "apPress": 55,
+  "apDef": 25,
+  "sot": 5,
+  "sofft": 4,
+  "recentShots": 1,
+  "recentCorners": 1,
   "pressureTrend": "increasing",
-  "matchTemperature": "calm",
+  "matchTemperature": "intense",
   "redCard": "none",
   "needsGoal": true
 }`;
@@ -136,8 +136,9 @@ RETORNE ESTE JSON ESTRITAMENTE:
             json.totalCorners = parseInt(json.totalCorners) || 0;
             json.apPress = parseInt(json.apPress) || 0;
             json.apDef = parseInt(json.apDef) || 0;
+            json.sot = parseInt(json.sot) || 0;
             
-            // TRAVA DE SANIDADE PARA CANTOS: É impossível ter mais cantos que o minuto atual (Ex: 40 cantos aos 30 min)
+            // Trava de sanidade temporal: 30 cantos aos 20 min é impossível, corrige pra zero se a IA pirar.
             if (json.totalCorners > (json.min * 0.8)) json.totalCorners = Math.round(json.min / 10); 
             
             json.redCard = ["pressing", "defending"].includes(json.redCard) ? json.redCard : "none";
