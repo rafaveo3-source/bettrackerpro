@@ -7,152 +7,208 @@ export default async function handler(req: any, res: any) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method Not Allowed' });
 
   try {
-    const origin = req.headers.origin || req.headers.referer || '';
-    if (process.env.NODE_ENV === 'production' && (!origin || !origin.includes('bettrackerpro.com.br'))) return res.status(403).json({ error: 'Acesso negado.' });
+    const { textData, mode } = req.body;
 
-    const { textData, email, mode } = req.body; 
-    
-    const geminiKey = process.env.GEMINI_API_KEY;
-    const openaiKey = process.env.OPENAI_API_KEY;
+    if (!textData || textData.length < 20) {
+      return res.status(400).json({ error: 'Texto insuficiente.' });
+    }
 
-    if (!geminiKey) return res.status(500).json({ error: 'Chave Gemini ausente.' });
-    if (!textData || textData.trim().length < 20) return res.status(400).json({ error: 'Texto insuficiente.' });
+    const gemini = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
+    const openai = process.env.OPENAI_API_KEY
+      ? new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
+      : null;
 
-    const genAI = new GoogleGenerativeAI(geminiKey);
-    const aiModel = genAI.getGenerativeModel({ 
-        model: 'gemini-1.5-flash',
-        generationConfig: { temperature: 0.1, responseMimeType: "application/json" }
+    // 🔥 PROMPT V8 (ROBUSTO PRA QUALQUER SITE)
+    const prompt = `
+Você é um EXTRATOR QUANTITATIVO PROFISSIONAL (NÍVEL TRADING).
+
+OBJETIVO:
+Transformar texto bagunçado (Flashscore, SofaScore, CornerPro, RoboTip)
+em um JSON ESTRUTURADO E MATEMÁTICO.
+
+REGRAS CRÍTICAS:
+
+1. EXTRAIA DADOS POR TIME (NUNCA MÉDIA)
+2. PRIORIDADE MÁXIMA:
+   - "Dados do Jogo"
+   - "Estatísticas"
+3. IGNORE:
+   - comentários
+   - eventos
+   - timeline
+
+4. CANTOS:
+Procure linha:
+"Escanteios" ou "Cantos"
+Ex:
+6 3 → home=6 away=3
+
+5. ATAQUES PERIGOSOS:
+"ataques perigosos" ou "Ataques P."
+
+6. FINALIZAÇÕES:
+- no alvo
+- totais
+
+7. CRUZAMENTOS:
+se existir → usar
+se não → 0
+
+8. MINUTO:
+se FT → 90
+
+---
+
+RETORNE EXATAMENTE:
+
+{
+  "homeTeam": "",
+  "awayTeam": "",
+  "score": "0-0",
+  "min": 66,
+
+  "home": {
+    "corners": 0,
+    "attacks": 0,
+    "dangerousAttacks": 0,
+    "shots": 0,
+    "shotsOnTarget": 0,
+    "crosses": 0
+  },
+
+  "away": {
+    "corners": 0,
+    "attacks": 0,
+    "dangerousAttacks": 0,
+    "shots": 0,
+    "shotsOnTarget": 0,
+    "crosses": 0
+  }
+}
+
+TEXTO:
+${textData}
+`;
+
+    let raw = "";
+
+    // 🔁 TENTATIVA 1: GEMINI
+    try {
+      const model = gemini.getGenerativeModel({ model: "gemini-1.5-flash" });
+
+      const result = await model.generateContent(prompt);
+      raw = result.response.text();
+
+    } catch (e) {
+      console.error("Gemini falhou:", e?.message);
+      
+      // 🔁 FALLBACK REAL (PROMPT DIFERENTE)
+      if (openai) {
+        const fallbackPrompt = `
+Extraia dados estruturados de futebol deste texto.
+
+Formato obrigatório JSON.
+
+Foque em:
+- cantos
+- ataques perigosos
+- finalizações
+
+Texto:
+${textData}
+`;
+
+        const response = await openai.chat.completions.create({
+          model: "gpt-4o-mini",
+          messages: [{ role: "user", content: fallbackPrompt }],
+          temperature: 0.1,
+          response_format: { type: "json_object" }
+        });
+
+        raw = response.choices[0].message.content || "";
+      } else {
+        throw new Error("Sem fallback disponível");
+      }
+    }
+
+    // 🔧 LIMPEZA
+    raw = raw.replace(/```json/gi, '').replace(/```/g, '').trim();
+
+    const json = JSON.parse(raw);
+
+    // 🔥 NORMALIZAÇÃO PROFISSIONAL
+
+    const home = json.home || {};
+    const away = json.away || {};
+
+    const safe = (v: any) => parseInt(v) || 0;
+
+    const data = {
+      homeTeam: json.homeTeam || "Home",
+      awayTeam: json.awayTeam || "Away",
+      score: json.score || "0-0",
+      min: safe(json.min),
+
+      home: {
+        corners: safe(home.corners),
+        attacks: safe(home.attacks),
+        dangerousAttacks: safe(home.dangerousAttacks),
+        shots: safe(home.shots),
+        shotsOnTarget: safe(home.shotsOnTarget),
+        crosses: safe(home.crosses)
+      },
+
+      away: {
+        corners: safe(away.corners),
+        attacks: safe(away.attacks),
+        dangerousAttacks: safe(away.dangerousAttacks),
+        shots: safe(away.shots),
+        shotsOnTarget: safe(away.shotsOnTarget),
+        crosses: safe(away.crosses)
+      }
+    };
+
+    // 🧠 FEATURES QUANT (O SEGREDO)
+
+    const homePressure = data.home.dangerousAttacks;
+    const awayPressure = data.away.dangerousAttacks;
+
+    const leader = homePressure > awayPressure ? "home" : "away";
+
+    const pressureDiff = Math.abs(homePressure - awayPressure);
+
+    const totalShots = data.home.shots + data.away.shots;
+    const totalSOT = data.home.shotsOnTarget + data.away.shotsOnTarget;
+
+    const efficiency = totalShots > 0 ? totalSOT / totalShots : 0;
+
+    const intensity = (homePressure + awayPressure) / Math.max(data.min, 1);
+
+    const needsGoal =
+      data.score === "0-0" ||
+      (leader === "home" && data.score.startsWith("0-1")) ||
+      (leader === "away" && data.score.startsWith("1-0"));
+
+    return res.status(200).json({
+      ...data,
+
+      total: {
+        corners: data.home.corners + data.away.corners,
+        shots: totalShots,
+        shotsOnTarget: totalSOT
+      },
+
+      meta: {
+        pressureLeader: leader,
+        pressureDiff,
+        intensity,
+        efficiency,
+        needsGoal
+      }
     });
 
-    const openai = openaiKey ? new OpenAI({ apiKey: openaiKey }) : null;
-
-    let prompt = "";
-
-    if (mode === 'grid') {
-        prompt = `Atue como um Scanner HFT de Apostas. O usuário colou uma GRADE inteira de jogos ao vivo.
-Sua missão é filtrar o ruído e encontrar APENAS os 3 a 5 melhores jogos com potencial de "Amasso" (Volume ofensivo alto).
-
-REGRAS DE TEMPO:
-1. IGNORE SUMARIAMENTE jogos com 88 minutos ou mais (ex: 88', 89', 90+1', FT, Fim de Jogo).
-2. Jogos entre 80' e 87' SÓ podem ser recomendados para "Escanteios".
-3. Recomendações de "Gols" exigem que o jogo esteja, no máximo, aos 75'-80'.
-
-TEXTO BRUTO:
-"""
-${textData}
-"""
-
-Retorne ESTRITAMENTE este JSON (array de objetos):
-{
-  "matches": [
-    {
-      "time": "75'",
-      "match": "Time A vs Time B",
-      "score": "0-1",
-      "market": "Gols ou Cantos",
-      "reason": "Time A perdendo, posse alta e gerando xG."
-    }
-  ]
-}`;
-    } else {
-        prompt = `Atue como um Extrator Quantitativo de Dados Ao Vivo (In-Play) para modelos HFT.
-O usuário copiou a página de um único jogo (CornerPro, RoboTip, SofaScore ou Flashscore). 
-
-TEXTO BRUTO:
-"""
-${textData}
-"""
-
-REGRAS DE EXTRAÇÃO E BLINDAGEM MATEMÁTICA:
-1. TIMES E PLACAR: Encontre o nome dos dois times e o placar EXATO atual.
-2. MINUTO ATUAL (min): Procure por relógios. Se "INTERVALO", retorne 45. Se "FT" ou "Encerrado", retorne 90. Ex: 77.
-3. GOLS TOTAIS: Soma dos gols EXATOS do placar (Ex: 2-1 = 3).
-4. CANTOS TOTAIS: REGRA DE OURO! VÁ EXCLUSIVAMENTE para a aba/seção de "Estatísticas" ou "Dados Jogo". Ache a linha que diz "Escanteios" ou "Cantos" com os valores dos dois times (Ex: "3 Escanteios 4"). SOME OS DOIS VALORES (3+4=7). NUNCA pegue números de linha do tempo ou de resumos de texto.
-5. PRESSÃO (apPress / apDef): Procure por "Ataques Perigosos" ou "Ataques P.". 'apPress' é o MAIOR número absoluto (não a taxa por minuto). 'apDef' é o MENOR número absoluto.
-6. LETALIDADE (sot / sofft): PARA GOLS, PRECISAMOS DO TOTAL DA PARTIDA. SOME os "Chutes no Alvo" (ou Finalizações no alvo/Remates baliza) das DUAS EQUIPES. Esse será o 'sot'. SOME os "Chutes para fora" das DUAS EQUIPES. Esse será o 'sofft'.
-7. CONTEXTO: 
-   - redCard: Se o time atacante (maior apPress) tomou vermelho = "pressing". Defesa = "defending". Nenhum = "none".
-   - pressureTrend: "increasing", "stable" ou "decreasing".
-   - matchTemperature: "intense" (jogo movimentado/chutes) ou "calm" (morno).
-   - needsGoal: true se o time com MAIOR apPress está empatando ou perdendo por 1 gol de diferença.
-
-RETORNE ESTE JSON ESTRITAMENTE:
-{
-  "homeTeam": "Palmeiras",
-  "awayTeam": "Grêmio",
-  "score": "2-1",
-  "min": 77,
-  "totalGoals": 3,
-  "totalCorners": 7,
-  "apPress": 55,
-  "apDef": 25,
-  "sot": 5,
-  "sofft": 4,
-  "recentShots": 1,
-  "recentCorners": 1,
-  "pressureTrend": "increasing",
-  "matchTemperature": "intense",
-  "redCard": "none",
-  "needsGoal": true
-}`;
-    }
-
-    let textResult = "";
-    
-    try {
-        const result = await aiModel.generateContent({ contents: [{ role: "user", parts: [{ text: prompt }] }] });
-        textResult = result.response.text();
-    } catch (geminiError: any) { 
-        if (openai) {
-            try {
-                const response = await openai.chat.completions.create({
-                    model: "gpt-4o-mini",
-                    messages: [{ role: "user", content: prompt }],
-                    temperature: 0.1,
-                    response_format: { type: "json_object" }
-                });
-                textResult = response.choices[0].message?.content || "";
-            } catch (openaiError: any) {
-                throw new Error("Ambas as APIs de IA falharam.");
-            }
-        } else {
-            throw new Error("Falha na extração de dados via IA.");
-        }
-    }
-
-    try {
-        textResult = textResult.replace(/```json/gi, '').replace(/```/g, '').trim();
-        const jsonMatch = textResult.match(/\{[\s\S]*\}|\[[\s\S]*\]/);
-        if (jsonMatch) textResult = jsonMatch[0];
-        
-        const json = JSON.parse(textResult);
-
-        if (mode !== 'grid') {
-            json.homeTeam = json.homeTeam || "Casa";
-            json.awayTeam = json.awayTeam || "Fora";
-            json.score = json.score || "-";
-            json.min = parseInt(json.min) || 0;
-            json.totalGoals = parseInt(json.totalGoals) || 0;
-            json.totalCorners = parseInt(json.totalCorners) || 0;
-            json.apPress = parseInt(json.apPress) || 0;
-            json.apDef = parseInt(json.apDef) || 0;
-            json.sot = parseInt(json.sot) || 0;
-            
-            // Trava de sanidade temporal: 30 cantos aos 20 min é impossível, corrige pra zero se a IA pirar.
-            if (json.totalCorners > (json.min * 0.8)) json.totalCorners = Math.round(json.min / 10); 
-            
-            json.redCard = ["pressing", "defending"].includes(json.redCard) ? json.redCard : "none";
-            json.pressureTrend = ["increasing", "stable", "decreasing"].includes(json.pressureTrend) ? json.pressureTrend : "stable";
-            json.matchTemperature = ["intense", "calm"].includes(json.matchTemperature) ? json.matchTemperature : "calm";
-        }
-
-        return res.status(200).json(json);
-
-    } catch(e) {
-        throw new Error("Não foi possível extrair estatísticas viáveis deste texto.");
-    }
-
-  } catch (error: any) {
-    return res.status(400).json({ error: error.message || 'Erro ao processar dados In-Play.' });
+  } catch (err: any) {
+    console.error("Erro V8:", err);
+    return res.status(400).json({ error: err.message });
   }
 }
