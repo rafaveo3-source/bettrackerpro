@@ -51,7 +51,6 @@ const Calculators: React.FC = () => {
       }
   };
 
-  // 🔥 MOTOR NLP (IA API)
   const processNLPEngine = async () => {
     if (!isPro) { setToast({ type: 'error', message: 'Exclusivo PRO.' }); return; }
     if (!checkAiLimit()) { setToast({ type: 'error', message: 'Limite de Scans atingido.' }); return; }
@@ -91,7 +90,7 @@ const Calculators: React.FC = () => {
     } finally { setIsScanning(false); }
   };
 
-  // 🔥 MOTOR DE AUTO-DISCOVERY (Matemática Pura - Reativo à ODD)
+  // 🔥 MOTOR DE AUTO-DISCOVERY (Blended Poisson + Tipster Target Lines)
   const runAutoDiscoveryHFT = () => {
       if (!liveContext) return null;
 
@@ -113,26 +112,37 @@ const Calculators: React.FC = () => {
       const fieldTilt = totalAP > 0 ? (apP / totalAP) * 100 : 0; 
       const appm = apP / m;
 
-      // Poisson Cantos
-      let cornerRateOld = ((apP * 0.06) + (sT * 0.25) + (sOff * 0.20)) / m; 
-      let cornerLambda = cornerRateOld * remainingTime;
-      if (needsGoal) cornerLambda *= 1.25;
+      // 1. BLENDED POISSON PARA CANTOS
+      const actualCornerRate = m > 0 ? currCorners / m : 0;
+      const calcCornerRate = ((apP * 0.06) + (sT * 0.25) + (sOff * 0.15)) / m;
+      let blendedCornerRate = (actualCornerRate * 0.4) + (calcCornerRate * 0.6);
+      let cornerLambda = blendedCornerRate * remainingTime;
+      if (needsGoal) cornerLambda *= 1.20;
 
-      // Poisson Gols
-      let goalRateOld = ((sT * 0.16) + (sOff * 0.05) + (apP * 0.005)) / m;
-      let goalLambda = goalRateOld * remainingTime;
+      // 2. BLENDED POISSON PARA GOLS
+      const actualGoalRate = m > 0 ? currGoals / m : 0;
+      const calcGoalRate = ((sT * 0.16) + (sOff * 0.05) + (apP * 0.005)) / m;
+      let blendedGoalRate = (actualGoalRate * 0.3) + (calcGoalRate * 0.7);
+      let goalLambda = blendedGoalRate * remainingTime;
       if (sT >= 2 && sOff >= 3) goalLambda *= 1.3; 
       if (apD > (apP * 0.5)) goalLambda *= 1.1; 
       if (needsGoal) goalLambda *= 1.15;
 
       let scenarios = [];
 
-      if (isHT && m >= 20 && m <= 43) {
-          scenarios.push({ id: 'ht_corner', market: 'Escanteios', name: `Canto Asiático HT (+ de ${currCorners + 0.5})`, lambda: cornerLambda, type: 'corner' });
-          scenarios.push({ id: 'ht_goal', market: 'Gols', name: `Gols HT (+ de ${currGoals + 0.5})`, lambda: goalLambda, type: 'goal' });
+      // Probabilidades independentes (Bater 1 evento ou 2 eventos)
+      const prob1MoreCorner = (1 - poissonExact(0, cornerLambda)) * 100;
+      const prob2MoreCorners = (1 - poissonExact(0, cornerLambda) - poissonExact(1, cornerLambda)) * 100;
+      const prob1MoreGoal = (1 - poissonExact(0, goalLambda)) * 100;
+
+      if (isHT && m >= 20 && m <= 42) {
+          scenarios.push({ id: 'ht_corner_asi', market: 'Escanteios HT', name: `Canto Asiático HT (Aguarde a linha cair para +${currCorners + 1.0})`, probReal: prob2MoreCorners, type: 'corner', targetAdd: 1.0 });
+          scenarios.push({ id: 'ht_corner_lim', market: 'Escanteios HT', name: `Canto Limite HT (Mais de ${currCorners + 0.5})`, probReal: prob1MoreCorner, type: 'corner', targetAdd: 0.5 });
+          scenarios.push({ id: 'ht_goal', market: 'Gols HT', name: `Mais de ${currGoals + 0.5} Gols HT`, probReal: prob1MoreGoal, type: 'goal', targetAdd: 0.5 });
       } else if (!isHT && m >= 60 && m <= 88) {
-          scenarios.push({ id: 'ft_corner', market: 'Escanteios', name: `Canto Asiático FT (+ de ${currCorners + 0.5})`, lambda: cornerLambda, type: 'corner' });
-          scenarios.push({ id: 'ft_goal', market: 'Gols', name: `Gols FT (+ de ${currGoals + 0.5})`, lambda: goalLambda, type: 'goal' });
+          scenarios.push({ id: 'ft_corner_asi', market: 'Escanteios FT', name: `Canto Asiático FT (Aguarde a linha cair para +${currCorners + 1.0})`, probReal: prob2MoreCorners, type: 'corner', targetAdd: 1.0 });
+          scenarios.push({ id: 'ft_corner_lim', market: 'Escanteios FT', name: `Canto Limite FT (Mais de ${currCorners + 0.5})`, probReal: prob1MoreCorner, type: 'corner', targetAdd: 0.5 });
+          scenarios.push({ id: 'ft_goal', market: 'Gols FT', name: `Mais de ${currGoals + 0.5} Gols FT`, probReal: prob1MoreGoal, type: 'goal', targetAdd: 0.5 });
       }
 
       if (scenarios.length === 0) {
@@ -143,21 +153,18 @@ const Calculators: React.FC = () => {
       let maxScore = -1;
 
       scenarios.forEach(scen => {
-          const p0 = poissonExact(0, scen.lambda);
-          const probBater = (1 - p0) * 100;
+          let score = scen.probReal;
           
-          let cScore = probBater;
-          
-          if (scen.type === 'corner' && appm > 1.0 && sT <= 2) cScore += 15; 
-          if (scen.type === 'goal' && sT >= 2 && fieldTilt > 55) cScore += 20; 
+          if (scen.type === 'corner' && appm > 1.0 && sT <= 2) score += 15; 
+          if (scen.type === 'goal' && sT >= 2 && fieldTilt > 55) score += 20; 
 
-          if (pressureTrend === 'increasing') cScore += 10;
-          if (needsGoal) cScore += 8;
-          if (matchTemperature === 'intense') cScore += 5;
+          if (pressureTrend === 'increasing') score += 10;
+          if (needsGoal) score += 8;
+          if (matchTemperature === 'intense') score += 5;
 
-          if (cScore > maxScore) {
-              maxScore = cScore;
-              bestScenario = { ...scen, probReal: probBater, finalScore: Math.min(100, cScore) };
+          if (score > maxScore) {
+              maxScore = score;
+              bestScenario = { ...scen, finalScore: Math.min(100, score) };
           }
       });
 
@@ -188,30 +195,32 @@ const Calculators: React.FC = () => {
       if (bestScenario.type === 'corner' && appm > 0.9) reasons.push(`Chuva de ataques: ${appm.toFixed(2)} ataques perigosos/min`);
       if (odd > 0 && ev > 5) reasons.push(`Odd de muito Valor (+${ev.toFixed(1)}% EV encontrado)`);
 
+      let tipsterAdvice = "";
+      if (bestScenario.type === 'corner' && bestScenario.targetAdd === 1.0) {
+          tipsterAdvice = `DICA DE OURO: A Bet365 vai tentar te jogar numa linha alta (+${currCorners + 1.5}). NÃO ENTRE! Aguarde o relógio andar, a linha cair para o Canto Asiático (+${currCorners + 1.0}) e pegue a odd justa.`;
+      } else if (bestScenario.type === 'corner' && bestScenario.targetAdd === 0.5) {
+          tipsterAdvice = `DICA DE OURO: Estamos buscando o Canto Limite (+${currCorners + 0.5}). Aguarde a odd bater @1.65+ e dispare.`;
+      } else if (bestScenario.type === 'goal') {
+          tipsterAdvice = `DICA DE OURO: Nunca compre odds esmagadas em gols. Se a odd estiver abaixo da Odd Justa (@${fairOdd.toFixed(2)}), espere o tempo passar.`;
+      }
+
       let projection = "";
       let smartWarning = "";
-      let tipsterAdvice = "";
-
-      if (bestScenario.type === 'corner') {
-          tipsterAdvice = `DICA DE OURO: A casa de apostas sempre tenta forçar uma linha alta (+${currCorners + 1.5}). Tenha paciência! Aguarde o relógio andar, a linha cair para o Asiático (+${currCorners + 1.0}) ou Limite (+${currCorners + 0.5}) e pegue quando a odd bater @1.75+.`;
-      } else if (bestScenario.type === 'goal') {
-          tipsterAdvice = `DICA DE OURO: Nunca compre odds esmagadas em gols. Se a odd estiver muito abaixo da Odd Justa (@${fairOdd.toFixed(2)}), espere o tempo passar. O gol pode sair a qualquer momento com esse volume.`;
-      }
 
       if (isHT) {
           if (bestScenario.type === 'corner') {
-              projection = `Se esse amasso continuar no 2º tempo, a linha de Mais de ${currCorners + 4.5} Cantos FT vai abrir com muito valor. Fique de olho na volta.`;
+              projection = `Se esse amasso continuar no 2º tempo, a linha de Mais de ${currCorners + 4.5} Cantos FT vai abrir com muito valor. Fique de olho.`;
               smartWarning = `Se o ritmo cair bruscamente nos próximos 5 min ou o time favorito fizer um gol, ABORTE imediatamente a operação HT.`;
           } else {
-              projection = `Jogo aberto e vertical. O mercado de Mais de ${currGoals + 1.5} Gols FT será a principal rota de lucro na segunda etapa.`;
-              smartWarning = `Cuidado com contra-ataques! Se o time dominado achar um gol isolado, o jogo pode truncar. Proteja sua stake.`;
+              projection = `Jogo aberto e vertical. O mercado de Mais de ${currGoals + 1.5} Gols FT será a rota de lucro na segunda etapa.`;
+              smartWarning = `Cuidado com contra-ataques! Se o time dominado achar um gol isolado, o jogo pode truncar.`;
           }
       } else {
           if (m < 85) {
-             projection = `Se o placar não mudar até os 86', a entrada no 'Canto Zóio' (Canto Limite Final) será muito clara pelo nível de abafa.`;
-             if (bestScenario.type === 'corner') smartWarning = `Se a odd asiática não bater @1.80 a tempo, pule fora. Não compre odds esmagadas na reta final.`;
+             projection = `Se o placar não mudar até os 86', a entrada no 'Canto Zóio' (Limite Final) será obrigatória.`;
+             if (bestScenario.type === 'corner') smartWarning = `Se a linha não cair para a nossa meta (+${bestScenario.targetAdd}) a tempo, pule fora.`;
           } else {
-             projection = `Reta finalíssima. Defesas expostas. Padrão puro de Kamikaze para buscar o último suspiro (Zóio) com odd estourada.`;
+             projection = `Reta finalíssima. Defesas expostas. Padrão puro de Kamikaze para buscar o último suspiro com odd estourada.`;
              smartWarning = `Regra de Ouro: Entradas no 'Apagar das Luzes' exigem gestão rigorosa (Máx 0.5% a 1% da banca). É cara ou coroa tático.`;
           }
       }
@@ -221,7 +230,6 @@ const Calculators: React.FC = () => {
       };
   };
 
-  // Variável computada a cada re-render (Reatividade pura!)
   const autoResult = runAutoDiscoveryHFT();
 
   const ProLockScreen = () => (
@@ -275,9 +283,15 @@ const Calculators: React.FC = () => {
 
   const sidebarInfo = (() => {
     switch(activeTab) {
-      case 'dutching': return { title: 'Gestão de Risco', text: 'O Dutching divide a sua exposição entre múltiplas seleções, diluindo o risco do investimento.' };
-      case 'live_hft': return { title: 'Live HFT Engine', text: 'Motor Quantitativo Ao Vivo. Cole as estatísticas da partida e o robô cruzará Field Tilt, Momentum e Relógio para te dar a calada exata de Gols ou Cantos.' };
-      default: return { title: 'Ferramentas Analíticas', text: 'Tome decisões baseadas em matemática e fuja do feeling.' };
+      case 'dutching': return { title: 'Gestão de Risco', text: 'O Dutching divide a sua exposição entre múltiplas seleções, diluindo o risco do investimento em um único evento.' };
+      case 'kelly': return { title: 'Cálculo de Exposição', text: 'O Critério de Kelly ajusta matematicamente a stake ideal com base na probabilidade e na odd apresentada.' };
+      case 'value': return { title: 'Análise de EV+', text: 'O conceito de Value Bet compara a cotação oferecida pelo mercado com a probabilidade real.' };
+      case 'arb': return { title: 'Arbitragem Matemática', text: 'Calcula o volume exato a ser distribuído em duas vias para anular o risco direcional.' };
+      case 'stake': return { title: 'Gestão Fixa', text: 'O cálculo de stake fixa percentual ajuda a manter o controle do drawdown em fases de oscilação.' };
+      case 'odds': return { title: 'Leitura Global', text: 'Conversão automática de formatos de cotações utilizados em bolsas esportivas.' };
+      case 'breakeven': return { title: 'Ponto de Equilíbrio', text: 'A taxa de acerto (Hit-Rate) necessária para manter a estabilidade do capital com a odd informada.' };
+      case 'live_hft': return { title: 'Live HFT Engine', text: 'Motor Quantitativo Ao Vivo. Minerador de Ouro varre a grade inteira. O Raio-X cruza Field Tilt, Momentum e Relógio para te dar a calada exata e te impedir de comprar odds esmagadas.' };
+      default: return { title: 'Ferramentas Analíticas', text: 'Tome decisões baseadas em dados.' };
     }
   })();
 
@@ -509,6 +523,7 @@ const Calculators: React.FC = () => {
                       </span>
                    </div>
 
+                   {/* TOGGLE INTERNO (GRADE vs RAIO-X) */}
                    <div className="flex bg-slate-100 dark:bg-[#09090b] p-1.5 rounded-2xl border border-slate-200 dark:border-slate-800 mb-6 shadow-inner">
                       <button onClick={() => { setHftMode('grid'); setLiveTextData(''); setGridContext(null); setLiveCurrentOdd(''); }} className={`flex-1 py-3 text-[10px] sm:text-xs font-black uppercase tracking-widest rounded-xl transition-all ${hftMode === 'grid' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/20 scale-[1.02]' : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'}`}>
                           1. Minerador de Grade
@@ -518,6 +533,7 @@ const Calculators: React.FC = () => {
                       </button>
                    </div>
 
+                   {/* CAIXA DE TEXTO NLP */}
                    <div className="relative group overflow-hidden rounded-[2rem] border border-indigo-200 dark:border-indigo-500/20 focus-within:border-indigo-400 dark:focus-within:border-indigo-500 transition-all p-1 flex flex-col shadow-sm dark:shadow-inner bg-indigo-50/30 dark:bg-[#09090b] mb-6">
                       <div className="flex flex-col sm:flex-row sm:items-center justify-between p-4 border-b border-slate-200 dark:border-slate-800 gap-4">
                          <div className="flex items-center gap-2 text-slate-500 dark:text-slate-400">
@@ -564,7 +580,7 @@ const Calculators: React.FC = () => {
                    
                    <AnimatePresence>
                      {/* ========================================================
-                         RESULTADO: MINERADOR DE GRADE
+                         RESULTADO: MINERADOR DE GRADE (OURO)
                          ======================================================== */}
                      {hftMode === 'grid' && gridContext && gridContext.length > 0 && (
                          <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-4 mt-8">

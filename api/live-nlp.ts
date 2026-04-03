@@ -56,7 +56,7 @@ Retorne ESTRITAMENTE este JSON (array de objetos):
 }`;
     } else {
         prompt = `Atue como um Extrator Quantitativo de Dados Ao Vivo (In-Play) para modelos HFT.
-O usuário copiou a página de um único jogo de um site de estatísticas. Extraia os dados cruciais.
+O usuário copiou a página de um único jogo (CornerPro, RoboTip, SofaScore ou Flashscore). 
 
 TEXTO BRUTO:
 """
@@ -64,30 +64,30 @@ ${textData}
 """
 
 REGRAS DE EXTRAÇÃO E BLINDAGEM:
-1. TIMES E PLACAR: Encontre o nome dos dois times e o placar exato (Ex: "1-0").
-2. MINUTO ATUAL (min): Procure por relógios. Se "INTERVALO" ou "HT", retorne 45. Caso contrário, retorne apenas o número (Ex: 33).
-3. GOLS TOTAIS: Soma dos gols do placar (Ex: 1-0 = 1).
-4. CANTOS TOTAIS: Soma dos escanteios/cantos das duas equipes. Se não achar, assuma 0.
-5. PRESSÃO (apPress / apDef): Procure por "Ataques Perigosos" ou "Ataques". 'apPress' é o MAIOR número absoluto. 'apDef' é o MENOR número absoluto. Se o site não fornecer, ESTIME multiplicando as Finalizações Totais do time por 5.
-6. LETALIDADE (sot / sofft): Pegue os "Chutes no Alvo" (sot) e "Chutes para Fora" (sofft) APENAS do time que tem o MAIOR apPress.
+1. TIMES E PLACAR: Encontre o nome dos dois times e o placar exato.
+2. MINUTO ATUAL (min): Procure por relógios. Se "INTERVALO", retorne 45. Ex: 66.
+3. GOLS TOTAIS: Soma dos gols EXATOS do placar. Ex: Se "1-1", retorne 2.
+4. CANTOS TOTAIS: ATENÇÃO EXTREMA! Procure a seção "Dados Jogo" ou "Estatísticas". Localize "Cantos" ou "Escanteios". Some os valores precisos das duas equipes. CUIDADO para não confundir com os números de Ataques Perigosos.
+5. PRESSÃO (apPress / apDef): Procure por "Ataques Perigosos" ou "Ataques P.". 'apPress' é o MAIOR número absoluto. 'apDef' é o MENOR número absoluto.
+6. LETALIDADE (sot / sofft): Pegue "Chutes no Alvo" (sot) e "Chutes para Fora" (sofft) APENAS do time que tem o MAIOR apPress.
 7. CONTEXTO: 
-   - redCard: Se o time que ataca tomou vermelho retorne "pressing". Se o que defende tomou retorne "defending". Caso contrário "none".
+   - redCard: Se o time atacante tomou vermelho = "pressing". Defesa = "defending". Nenhum = "none".
    - pressureTrend: "increasing", "stable" ou "decreasing".
    - matchTemperature: "intense" (jogo movimentado/aberto) ou "calm" (morno).
-   - needsGoal: true se o time com MAIOR apPress está empatando ou perdendo pela diferença de 1 gol.
+   - needsGoal: true se o time com MAIOR apPress está empatando ou perdendo por 1 gol.
 
 RETORNE ESTE JSON ESTRITAMENTE:
 {
   "homeTeam": "Leganés",
   "awayTeam": "Real Zaragoza",
-  "score": "1-0",
-  "min": 33,
-  "totalGoals": 1,
-  "totalCorners": 6,
-  "apPress": 19,
-  "apDef": 10,
-  "sot": 2,
-  "sofft": 6,
+  "score": "1-1",
+  "min": 66,
+  "totalGoals": 2,
+  "totalCorners": 11,
+  "apPress": 36,
+  "apDef": 19,
+  "sot": 4,
+  "sofft": 1,
   "recentShots": 2,
   "recentCorners": 1,
   "pressureTrend": "increasing",
@@ -127,17 +127,23 @@ RETORNE ESTE JSON ESTRITAMENTE:
         
         const json = JSON.parse(textResult);
 
-        // Blindagem contra valores null ou undefined
+        // Blindagem contra alucinações matemáticas da IA
         if (mode !== 'grid') {
             json.homeTeam = json.homeTeam || "Time Casa";
             json.awayTeam = json.awayTeam || "Time Fora";
             json.score = json.score || "-";
+            json.min = parseInt(json.min) || 0;
+            json.totalGoals = parseInt(json.totalGoals) || 0;
+            json.totalCorners = parseInt(json.totalCorners) || 0;
+            json.apPress = parseInt(json.apPress) || 0;
+            json.apDef = parseInt(json.apDef) || 0;
+            
+            // Trava de sanidade para cantos
+            if (json.totalCorners > 30) json.totalCorners = Math.round(json.min / 10); 
+            
             json.redCard = ["pressing", "defending"].includes(json.redCard) ? json.redCard : "none";
             json.pressureTrend = ["increasing", "stable", "decreasing"].includes(json.pressureTrend) ? json.pressureTrend : "stable";
             json.matchTemperature = ["intense", "calm"].includes(json.matchTemperature) ? json.matchTemperature : "calm";
-            json.min = json.min || 0;
-            json.apPress = json.apPress || 0;
-            json.apDef = json.apDef || 0;
         }
 
         return res.status(200).json(json);
