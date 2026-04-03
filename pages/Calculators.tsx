@@ -8,7 +8,7 @@ import {
 } from 'lucide-react';
 import { useBetStore } from '../store/useBetStore';
 import { motion, AnimatePresence } from 'framer-motion';
-import { runMonteCarloV9 } from '../lib/montecarlo-v9'; // 🔥 IMPORT DA ENGINE V9
+import { runMonteCarloV10 } from '../lib/montecarlo-v10'; // 🔥 IMPORT DA ENGINE V10
 
 const Calculators: React.FC = () => {
   const { user, currentBankrollBalance, isPro, aiScansUsedToday, canUseAiScan, incrementAiScan, setToast } = useBetStore();
@@ -62,10 +62,10 @@ const Calculators: React.FC = () => {
                 throw new Error('Nenhum jogo com padrão claro encontrado na grade.');
             }
         } else {
-            if (data && data.min >= 1) { // ✅ AJUSTE ANTI-QUEBRA AQUI
+            if (data && data.min >= 1) { 
                setLiveContext(data);
                handleIncrementScan();
-               setToast({ type: 'success', message: 'Leitura de jogo concluída!' });
+               setToast({ type: 'success', message: 'Radiografia extraída!' });
             } else {
                throw new Error('Não foi possível extrair o relógio (minuto) do jogo.');
             }
@@ -75,20 +75,17 @@ const Calculators: React.FC = () => {
     } finally { setIsScanning(false); }
   };
 
-  // 🔥 MOTOR AUTO-DISCOVERY + MONTE CARLO V9
+  // 🔥 STATEFUL MONTE CARLO (V10) ENGINE
   const runAutoDiscoveryHFT = () => {
       if (!liveContext) return null;
 
       const { homeTeam, awayTeam, score, min, totalGoals, totalCorners, apPress, apDef, sot, pressureTrend, matchTemperature, needsGoal } = liveContext;
       const odd = parseFloat(liveCurrentOdd) || 0;
 
-      const mRaw = parseFloat(min) || 1;
-      const safeMinute = Math.max(1, Math.min(95, mRaw)); // ✅ EXTRA ANTI-QUEBRA
-      const m = safeMinute;
+      const m = Math.max(1, Math.min(95, parseFloat(min) || 1));
 
-      // ✅ CORREÇÃO: Suspende apenas jogos aos 92'+
       if (m >= 92) {
-          return { error: `Jogo aos ${m}'. Operações matemáticas suspensas por falta de liquidez no mercado final.`, color: 'red' };
+          return { error: `Jogo aos ${m}'. Operações suspensas. O mercado já retirou a liquidez.`, color: 'red' };
       }
 
       const isHT = m <= 45;
@@ -105,6 +102,7 @@ const Calculators: React.FC = () => {
 
       let scenarios = [];
 
+      // DEFINIÇÃO DAS LINHAS ALVO
       if (isHT && m >= 20 && m <= 43) {
           scenarios.push({ id: 'ht_corner_asi', market: 'Escanteios HT', name: `Canto Asiático HT (+ de ${currCorners + 1.0})`, type: 'corner', targetAdd: 1.0 });
           scenarios.push({ id: 'ht_corner_lim', market: 'Escanteios HT', name: `Canto Limite HT (+ de ${currCorners + 0.5})`, type: 'corner', targetAdd: 0.5 });
@@ -116,24 +114,21 @@ const Calculators: React.FC = () => {
       }
 
       if (scenarios.length === 0) {
-          return { error: `Relógio aos ${m}'. O jogo está numa zona morta ou com finalizações insuficientes. Aguarde a janela de HT (20-42') ou FT (60-88').`, color: 'yellow' };
+          return { error: `Relógio aos ${m}'. O jogo está numa zona morta ou com finalizações insuficientes para o modelo operar.`, color: 'yellow' };
       }
 
       let bestScenario: any = null;
       let maxScore = -1;
 
       scenarios.forEach(scen => {
-          // 🔥 RODA A SIMULAÇÃO DE MONTE CARLO V9 PARA CADA CENÁRIO
-          const mcResult = runMonteCarloV9(liveContext, scen.type as 'corner'|'goal', scen.targetAdd);
+          // 🔥 RODA A SIMULAÇÃO DE MONTE CARLO V10 (STATEFUL)
+          const mcResult = runMonteCarloV10(liveContext, scen.type as 'corner'|'goal', scen.targetAdd, liveTextData);
           
           let cScore = mcResult.probReal;
           
+          // Bônus Analítico (Pós-simulação)
           if (scen.type === 'corner' && appm > 1.0 && sT <= 2) cScore += 15; 
           if (scen.type === 'goal' && sT >= 4 && fieldTilt > 55) cScore += 20; 
-
-          if (pressureTrend === 'increasing') cScore += 10;
-          if (needsGoal) cScore += 8;
-          if (matchTemperature === 'intense') cScore += 5;
 
           if (cScore > maxScore) {
               maxScore = cScore;
@@ -149,7 +144,7 @@ const Calculators: React.FC = () => {
       let actionMessage = 'MODELO REJEITA A ENTRADA';
 
       if (bestScenario.finalScore >= 70) {
-          if (odd === 0) { label = '🔒 ALTO VALOR (AGUARDANDO ODD)'; color = 'green'; actionMessage = `BUSQUE ODD ACIMA DE @${bestScenario.fairOdd.toFixed(2)}`; }
+          if (odd === 0) { label = '🔒 ALTO VALOR TÁTICO'; color = 'green'; actionMessage = `BUSQUE ODD ACIMA DE @${bestScenario.fairOdd.toFixed(2)}`; }
           else if (ev > 2) { label = '🔒 ENTRADA APROVADA (EV+)'; color = 'green'; actionMessage = `ENTRADA APROVADA (EV +${ev.toFixed(1)}%)`; }
           else { label = '🟡 AGUARDE A ODD VALORIZAR'; color = 'yellow'; actionMessage = `ODD ESMAGADA. ESPERE BATER @${bestScenario.fairOdd.toFixed(2)}`; }
       }
@@ -161,18 +156,18 @@ const Calculators: React.FC = () => {
 
       let reasons = [];
       if (fieldTilt >= 60) reasons.push(`Amasso territorial (Controle de ${fieldTilt.toFixed(0)}% das ações)`);
-      if (pressureTrend === 'increasing') reasons.push('Blitz ligada: Time acelerou o ritmo no Radar recente');
-      if (needsGoal) reasons.push('Modo desespero: Precisa do resultado (Padrão Kamikaze ativado)');
-      if (bestScenario.type === 'goal' && sT >= 3) reasons.push(`Mira calibrada: Jogo aberto com ${sT} chutes no alvo totais (Alto xG)`);
+      if (pressureTrend === 'increasing') reasons.push('Blitz ligada: Pressão em Random Walk crescente');
+      if (needsGoal) reasons.push('Modo desespero: Fator psicológico (Needs Goal) ativado no motor');
+      if (bestScenario.type === 'goal' && sT >= 3) reasons.push(`Alta Letalidade: Jogo com ${sT} chutes no alvo totais`);
       if (bestScenario.type === 'corner' && appm >= 0.8) reasons.push(`Volume alto: ${appm.toFixed(2)} ataques perigosos/min`);
-      if (odd > 0 && ev > 5) reasons.push(`Odd de muito Valor (+${ev.toFixed(1)}% EV encontrado)`);
+      if (odd > 0 && ev > 5) reasons.push(`Edge Detectado (+${ev.toFixed(1)}% EV)`);
 
       let tipsterAdvice = "";
       if (bestScenario.type === 'corner') {
-          if (bestScenario.targetAdd >= 1.0) tipsterAdvice = `DICA DE OURO: A casa sempre tenta forçar uma linha alta (+${currCorners + 1.5}). Tenha paciência. Aguarde a linha cair para o Asiático (+${currCorners + 1.0}) e pegue quando a odd bater @1.70+.`;
-          else tipsterAdvice = `DICA DE OURO: Reta final (${m}'). Apenas entre no Canto Limite (+0.5) se a odd bater @1.65+.`;
+          if (bestScenario.targetAdd >= 1.0) tipsterAdvice = `DICA DO SISTEMA: A casa sempre tenta forçar uma linha alta (+${currCorners + 1.5}). Tenha paciência. Aguarde a linha cair para o Asiático (+${currCorners + 1.0}) e pegue quando a odd bater @1.70+.`;
+          else tipsterAdvice = `DICA DO SISTEMA: Reta final (${m}'). Apenas entre no Canto Limite (+0.5) se a odd bater @1.65+.`;
       } else if (bestScenario.type === 'goal') {
-          tipsterAdvice = `DICA DE OURO: Nunca compre odds esmagadas em gols. Se a odd estiver muito abaixo da Odd Justa (@${bestScenario.fairOdd.toFixed(2)}), não entre! Deixe a odd valorizar.`;
+          tipsterAdvice = `DICA DO SISTEMA: Nunca compre odds esmagadas em gols. Se a odd estiver muito abaixo da Odd Justa (@${bestScenario.fairOdd.toFixed(2)}), não entre! Deixe a odd valorizar.`;
       }
 
       let projection = "";
@@ -180,19 +175,19 @@ const Calculators: React.FC = () => {
 
       if (isHT) {
           if (bestScenario.type === 'corner') {
-              projection = `Se esse amasso continuar no 2º tempo, o mercado de cantos FT vai abrir com muito valor. Fique de olho.`;
-              smartWarning = `Se o ritmo cair bruscamente ou o time favorito fizer um gol, ABORTE imediatamente a operação HT.`;
+              projection = `Se a dinâmica se mantiver no 2º tempo, o mercado de cantos FT vai abrir com EV+. Fique de olho.`;
+              smartWarning = `Se o ritmo cair bruscamente ou o time favorito fizer um gol, ABORTE a operação HT.`;
           } else {
-              projection = `Jogo aberto. O mercado de Mais de ${currGoals + 1.5} Gols FT será a principal rota de lucro na segunda etapa.`;
-              smartWarning = `Cuidado com contra-ataques! Se o time dominado achar um gol isolado, o jogo esfria.`;
+              projection = `Jogo intenso. O mercado de Mais de ${currGoals + 1.5} Gols FT será a principal rota de lucro.`;
+              smartWarning = `Cuidado com contra-ataques! Gol do time dominado esfria o jogo.`;
           }
       } else {
           if (m < 85) {
-             projection = `Se o placar não mudar até os 86', a entrada no 'Canto Zóio' (Limite Final) será clara pela pressão.`;
-             if (bestScenario.type === 'corner') smartWarning = `Se a linha demorar muito para cair para a meta calculada, pule fora. Não force entradas na reta final.`;
+             projection = `Se o placar não mudar até os 86', a entrada no 'Canto Zóio' será sugerida pelo motor.`;
+             if (bestScenario.type === 'corner') smartWarning = `Se a linha não cair para a meta calculada a tempo, pule fora.`;
           } else {
-             projection = `Reta finalíssima. Defesas expostas. Padrão puro de Kamikaze para buscar o último suspiro.`;
-             smartWarning = `Regra de Ouro: Entradas no 'Apagar das Luzes' exigem gestão rigorosa (Máx 0.5% a 1% da banca). É cara ou coroa tático.`;
+             projection = `Late Game Chaos. Defesas expostas e padrão de ataque em desespero detectado no Monte Carlo.`;
+             smartWarning = `Regra Institucional: Entradas no 'Apagar das Luzes' exigem Gestão de Banca Severa (Máx 0.5% a 1%).`;
           }
       }
 
@@ -257,7 +252,7 @@ const Calculators: React.FC = () => {
   const sidebarInfo = (() => {
     switch(activeTab) {
       case 'dutching': return { title: 'Gestão de Risco', text: 'O Dutching divide a sua exposição entre múltiplas seleções, diluindo o risco do investimento em um único evento.' };
-      case 'live_hft': return { title: 'Live HFT Engine', text: 'Motor Quantitativo Ao Vivo com Simulação Monte Carlo. Minerador de Ouro varre a grade inteira. O Raio-X cruza Field Tilt, Momentum e Relógio para te dar a calada exata.' };
+      case 'live_hft': return { title: 'Monte Carlo V10 Engine', text: 'Motor Quantitativo Ao Vivo. Minerador de Ouro varre a grade inteira. O Raio-X faz uma simulação estocástica (Random Walk) com base nos eventos e no tempo para te dar a calada exata de Gols ou Cantos.' };
       default: return { title: 'Ferramentas Analíticas', text: 'Tome decisões baseadas em dados matemáticos.' };
     }
   })();
@@ -304,7 +299,7 @@ const Calculators: React.FC = () => {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 px-4 md:px-0">
         <div className="lg:col-span-2 space-y-6 min-w-0 w-full">
             
-            {/* OMITIDO AQUI MAS MANTIDO NO ARQUIVO AS CALCULADORAS ANTIGAS PARA NÃO GASTAR ESPAÇO NO CHAT */}
+            {/* OMITIDO AQUI AS CALCULADORAS ANTIGAS PARA O CHAT */}
             {activeTab === 'dutching' && (
                 <div className="bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-800 rounded-[2rem] p-6 shadow-sm w-full overflow-hidden">
                     <h2 className="text-lg font-black text-slate-900 dark:text-white uppercase tracking-tighter italic mb-4">Calculadora Dutching</h2>
@@ -477,7 +472,7 @@ const Calculators: React.FC = () => {
             )}
 
             {/* =========================================
-                LIVE HFT ENGINE (DUPLO MODO)
+                LIVE HFT ENGINE (DUPLO MODO + V10)
             ========================================= */}
             {activeTab === 'live_hft' && !isPro && <ProLockScreen />}
             {activeTab === 'live_hft' && isPro && (
@@ -523,7 +518,7 @@ const Calculators: React.FC = () => {
                       <textarea
                           value={liveTextData}
                           onChange={(e) => setLiveTextData(e.target.value)}
-                          placeholder={hftMode === 'grid' ? "Cole a grade de todos os jogos ao vivo aqui. A IA vai filtrar apenas os que têm padrão de Ouro..." : "Cole as estatísticas daquele jogo específico aqui. A IA vai definir a Odd Justa e a Entrada..."}
+                          placeholder={hftMode === 'grid' ? "Cole a grade de todos os jogos ao vivo aqui. A IA vai filtrar apenas os que têm padrão de Ouro..." : "Cole as estatísticas daquele jogo específico aqui. A IA vai rodar a simulação para definir a Entrada..."}
                           className="w-full bg-transparent text-slate-700 dark:text-slate-300 placeholder:text-slate-400 dark:placeholder:text-slate-600 p-6 min-h-[160px] outline-none resize-none font-mono text-xs leading-relaxed"
                           disabled={isScanning}
                       />
@@ -540,7 +535,7 @@ const Calculators: React.FC = () => {
                               <motion.div initial={{ width: '0%' }} animate={{ width: '100%' }} transition={{ repeat: Infinity, duration: 2 }} className="absolute bottom-0 left-0 h-1.5 shadow-[0_0_30px_currentColor] bg-indigo-500 text-indigo-500" />
                               <Sparkles size={40} className="mb-4 animate-pulse text-indigo-500" />
                               <p className="font-mono font-bold text-[10px] sm:text-xs uppercase tracking-widest text-center px-4 mt-2 text-indigo-600 dark:text-indigo-400">
-                                {hftMode === 'grid' ? 'Varrendo todos os jogos...' : 'Cruzando métricas de Gols e Cantos...'}
+                                {hftMode === 'grid' ? 'Varrendo todos os jogos...' : 'Rodando Simulação Monte Carlo V10...'}
                               </p>
                           </div>
                       )}
@@ -581,7 +576,7 @@ const Calculators: React.FC = () => {
                      )}
 
                      {/* ========================================================
-                         RESULTADO: RAIO-X SINGLE MATCH
+                         RESULTADO: RAIO-X SINGLE MATCH COM ODD REACTIVA
                          ======================================================== */}
                      {hftMode === 'single' && liveContext && (
                        <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} className="relative z-10 overflow-hidden">
@@ -611,30 +606,30 @@ const Calculators: React.FC = () => {
                              </div>
                          </div>
 
-                         {autoResult && !autoResult.error ? (
+                         {autoResult() && !autoResult()?.error ? (
                          <div className="bg-slate-50 dark:bg-[#020617] rounded-[2rem] border border-slate-200 dark:border-slate-800 p-4 sm:p-6 overflow-hidden relative shadow-md dark:shadow-2xl mt-4">
                              <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-[0.05] dark:opacity-[0.03]"></div>
                              
                              <div className={`absolute top-0 right-0 w-64 h-64 rounded-full blur-[60px] dark:blur-[80px] -mr-20 -mt-20 pointer-events-none transition-colors duration-1000 ${
-                                autoResult.color === 'green' ? 'bg-emerald-500/10 dark:bg-emerald-500/20' : 
-                                autoResult.color === 'yellow' ? 'bg-yellow-500/10' : 'bg-red-500/5 dark:bg-red-500/10'
+                                autoResult()!.color === 'green' ? 'bg-emerald-500/10 dark:bg-emerald-500/20' : 
+                                autoResult()!.color === 'yellow' ? 'bg-yellow-500/10' : 'bg-red-500/5 dark:bg-red-500/10'
                              }`}></div>
 
                              {/* BANNER DO JOGO + AUDITORIA DA IA */}
                              <div className="relative z-10 bg-white dark:bg-slate-900/80 p-4 rounded-xl mb-6 flex flex-col sm:flex-row justify-between items-center border border-slate-200 dark:border-slate-800 shadow-sm dark:shadow-none gap-3">
                                  <div className="w-full flex flex-col gap-3">
                                      <div className="flex items-center gap-3 w-full justify-between sm:justify-start">
-                                        <span className="font-bold text-slate-800 dark:text-white uppercase text-xs sm:text-sm text-right flex-1 sm:flex-auto truncate">{autoResult.homeTeam}</span>
-                                        <span className="bg-indigo-500 text-white px-3 py-1 rounded-lg font-black shrink-0">{autoResult.score}</span>
-                                        <span className="font-bold text-slate-800 dark:text-white uppercase text-xs sm:text-sm flex-1 sm:flex-auto truncate">{autoResult.awayTeam}</span>
-                                        <span className="text-indigo-600 dark:text-indigo-400 font-mono font-black flex items-center gap-1.5 shrink-0 bg-indigo-50 dark:bg-indigo-500/10 px-2 py-1 rounded-md border border-indigo-200 dark:border-indigo-500/20"><Clock size={14}/> {autoResult.min}'</span>
+                                        <span className="font-bold text-slate-800 dark:text-white uppercase text-xs sm:text-sm text-right flex-1 sm:flex-auto truncate">{autoResult()!.homeTeam}</span>
+                                        <span className="bg-indigo-500 text-white px-3 py-1 rounded-lg font-black shrink-0">{autoResult()!.score}</span>
+                                        <span className="font-bold text-slate-800 dark:text-white uppercase text-xs sm:text-sm flex-1 sm:flex-auto truncate">{autoResult()!.awayTeam}</span>
+                                        <span className="text-indigo-600 dark:text-indigo-400 font-mono font-black flex items-center gap-1.5 shrink-0 bg-indigo-50 dark:bg-indigo-500/10 px-2 py-1 rounded-md border border-indigo-200 dark:border-indigo-500/20"><Clock size={14}/> {autoResult()!.min}'</span>
                                      </div>
                                      {/* FITA DE AUDITORIA */}
                                      <div className="flex flex-wrap gap-2 border-t border-slate-200 dark:border-slate-800 pt-3">
                                          <span className="bg-slate-100 dark:bg-slate-950 text-slate-600 dark:text-slate-400 px-2 py-1 rounded-md text-[10px] font-mono border border-slate-200 dark:border-slate-800 flex items-center gap-1"><LayoutList size={10}/> Dados lidos pela IA:</span>
-                                         <span className="bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 px-2 py-1 rounded-md text-[10px] font-mono font-bold border border-slate-200 dark:border-slate-700">Cantos: {autoResult.cornersTotal}</span>
-                                         <span className="bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 px-2 py-1 rounded-md text-[10px] font-mono font-bold border border-slate-200 dark:border-slate-700">Chutes Alvo (Totais): {autoResult.sotTotal}</span>
-                                         <span className="bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 px-2 py-1 rounded-md text-[10px] font-mono font-bold border border-slate-200 dark:border-slate-700">AP Max: {autoResult.apMax}</span>
+                                         <span className="bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 px-2 py-1 rounded-md text-[10px] font-mono font-bold border border-slate-200 dark:border-slate-700">Cantos: {autoResult()!.cornersTotal}</span>
+                                         <span className="bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 px-2 py-1 rounded-md text-[10px] font-mono font-bold border border-slate-200 dark:border-slate-700">Chutes Alvo (Totais): {autoResult()!.sotTotal}</span>
+                                         <span className="bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 px-2 py-1 rounded-md text-[10px] font-mono font-bold border border-slate-200 dark:border-slate-700">AP Max: {autoResult()!.apMax}</span>
                                      </div>
                                  </div>
                              </div>
@@ -646,13 +641,13 @@ const Calculators: React.FC = () => {
                                     
                                     <div className="relative w-20 h-20 flex items-center justify-center">
                                        <svg className="absolute inset-0 w-full h-full -rotate-90" viewBox="0 0 72 72">
-                                         <circle cx="36" cy="36" r="32" fill="transparent" stroke="currentColor" strokeWidth="6" strokeDasharray={`${(autoResult.finalScore / 100) * 201} 201`} className={autoResult.color === 'green' ? 'text-emerald-500' : autoResult.color === 'yellow' ? 'text-yellow-500' : 'text-red-500'} />
+                                         <circle cx="36" cy="36" r="32" fill="transparent" stroke="currentColor" strokeWidth="6" strokeDasharray={`${(autoResult()!.finalScore / 100) * 201} 201`} className={autoResult()!.color === 'green' ? 'text-emerald-500' : autoResult()!.color === 'yellow' ? 'text-yellow-500' : 'text-red-500'} />
                                        </svg>
-                                       <span className="text-2xl font-black text-slate-800 dark:text-white z-10">{autoResult.finalScore.toFixed(0)}</span>
+                                       <span className="text-2xl font-black text-slate-800 dark:text-white z-10">{autoResult()!.finalScore.toFixed(0)}</span>
                                     </div>
 
-                                    <span className={`mt-4 text-[9px] font-black uppercase tracking-widest px-3 py-1.5 rounded text-center w-full ${autoResult.color === 'green' ? 'bg-emerald-100 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400' : autoResult.color === 'yellow' ? 'bg-yellow-100 dark:bg-yellow-500/20 text-yellow-600 dark:text-yellow-400' : 'bg-red-100 dark:bg-red-500/20 text-red-600 dark:text-red-400'}`}>
-                                        {autoResult.label}
+                                    <span className={`mt-4 text-[9px] font-black uppercase tracking-widest px-3 py-1.5 rounded text-center w-full ${autoResult()!.color === 'green' ? 'bg-emerald-100 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400' : autoResult()!.color === 'yellow' ? 'bg-yellow-100 dark:bg-yellow-500/20 text-yellow-600 dark:text-yellow-400' : 'bg-red-100 dark:bg-red-500/20 text-red-600 dark:text-red-400'}`}>
+                                        {autoResult()!.label}
                                     </span>
                                  </div>
 
@@ -660,14 +655,14 @@ const Calculators: React.FC = () => {
                                      <p className="text-[10px] uppercase tracking-widest text-slate-500 font-bold mb-3 flex items-center gap-2"><Target size={14} className="text-indigo-500"/> Recomendação do Robô</p>
                                      <div className="bg-indigo-50 dark:bg-indigo-500/10 border border-indigo-200 dark:border-indigo-500/30 p-4 rounded-xl mb-4 shadow-sm dark:shadow-none">
                                          <h3 className="text-sm sm:text-lg font-black text-indigo-600 dark:text-indigo-400 uppercase tracking-widest mb-2 flex items-center gap-2 leading-tight">
-                                             {autoResult.type === 'corner' ? <Flag size={18} className="shrink-0"/> : <Goal size={18} className="shrink-0"/>} {autoResult.name}
+                                             {autoResult()!.type === 'corner' ? <Flag size={18} className="shrink-0"/> : <Goal size={18} className="shrink-0"/>} {autoResult()!.name}
                                          </h3>
                                          <p className="text-[11px] sm:text-xs font-medium text-slate-600 dark:text-slate-400">
-                                            Probabilidade Real: <strong className="text-slate-800 dark:text-white">{autoResult.probReal.toFixed(1)}%</strong> | Odd Justa: <strong className="text-indigo-600 dark:text-indigo-400">@{autoResult.fairOdd.toFixed(2)}</strong>
+                                            Probabilidade Real (Monte Carlo): <strong className="text-slate-800 dark:text-white">{autoResult()!.probReal.toFixed(1)}%</strong> | Odd Justa: <strong className="text-indigo-600 dark:text-indigo-400">@{autoResult()!.fairOdd.toFixed(2)}</strong>
                                          </p>
                                      </div>
                                      <ul className="space-y-2">
-                                         {autoResult.reasons.map((r: string, i: number) => (
+                                         {autoResult()!.reasons.map((r: string, i: number) => (
                                              <li key={`pos-${i}`} className="text-[11px] sm:text-xs text-slate-600 dark:text-slate-300 flex items-start gap-2 bg-emerald-50 dark:bg-slate-900/50 p-2.5 rounded-lg border border-emerald-100 dark:border-slate-800/50 leading-relaxed font-medium">
                                                  <span className="text-emerald-500 dark:text-emerald-400 shrink-0 mt-0.5">✔</span> {r}
                                              </li>
@@ -678,44 +673,44 @@ const Calculators: React.FC = () => {
 
                              {/* PROJEÇÃO E ALERTAS TÁTICOS */}
                              <div className="space-y-3 mb-6 relative z-10">
-                                 {autoResult.tipsterAdvice && (
+                                 {autoResult()!.tipsterAdvice && (
                                      <div className="bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-200 dark:border-emerald-500/30 text-emerald-700 dark:text-emerald-400 p-4 rounded-2xl text-[11px] sm:text-xs font-medium flex items-start gap-3 shadow-sm dark:shadow-inner">
                                          <Crown size={18} className="shrink-0 mt-0.5 text-emerald-500 dark:text-emerald-400" /> 
-                                         <span className="leading-relaxed">{autoResult.tipsterAdvice}</span>
+                                         <span className="leading-relaxed">{autoResult()!.tipsterAdvice}</span>
                                      </div>
                                  )}
-                                 {autoResult.projection && (
+                                 {autoResult()!.projection && (
                                      <div className="bg-blue-50 dark:bg-blue-500/10 border border-blue-200 dark:border-blue-500/20 text-blue-700 dark:text-blue-400 p-4 rounded-2xl text-[11px] sm:text-xs font-medium flex items-start gap-3 shadow-sm dark:shadow-inner">
                                          <Eye size={18} className="shrink-0 mt-0.5 text-blue-500 dark:text-blue-400" /> 
-                                         <span className="leading-relaxed"><strong>Visão de Futuro:</strong> {autoResult.projection}</span>
+                                         <span className="leading-relaxed"><strong>Visão de Futuro:</strong> {autoResult()!.projection}</span>
                                      </div>
                                  )}
-                                 {autoResult.smartWarning && (
+                                 {autoResult()!.smartWarning && (
                                      <div className="bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/20 text-amber-700 dark:text-amber-400 p-4 rounded-2xl text-[11px] sm:text-xs font-medium flex items-start gap-3 shadow-sm dark:shadow-inner">
                                          <ShieldAlert size={18} className="shrink-0 mt-0.5 text-amber-500 dark:text-amber-400" /> 
-                                         <span className="leading-relaxed"><strong>Alerta Tático:</strong> {autoResult.smartWarning}</span>
+                                         <span className="leading-relaxed"><strong>Alerta Tático:</strong> {autoResult()!.smartWarning}</span>
                                      </div>
                                  )}
                              </div>
 
                              {/* SINAL RADIOATIVO */}
                              <div className="relative z-20 mt-4">
-                               {autoResult.color === 'green' && (
+                               {autoResult()!.color === 'green' && (
                                   <motion.div initial={{ scale: 0.95 }} animate={{ scale: 1 }} className="relative group cursor-pointer">
                                       <div className="absolute -inset-0.5 rounded-2xl blur opacity-30 dark:opacity-40 group-hover:opacity-50 dark:group-hover:opacity-60 transition animate-pulse bg-gradient-to-r from-emerald-500 to-teal-400"></div>
                                       <div className="relative w-full py-4 rounded-2xl font-black text-[10px] sm:text-xs md:text-sm tracking-widest uppercase text-center flex items-center justify-center gap-2 shadow-sm dark:shadow-none bg-emerald-500 text-white dark:text-slate-950">
-                                         <Zap fill="currentColor" size={18} className="animate-bounce shrink-0"/> {autoResult.actionMessage}
+                                         <Zap fill="currentColor" size={18} className="animate-bounce shrink-0"/> {autoResult()!.actionMessage}
                                       </div>
                                   </motion.div>
                                )}
-                               {autoResult.color === 'yellow' && (
+                               {autoResult()!.color === 'yellow' && (
                                   <div className="bg-yellow-500 text-white dark:text-slate-950 w-full py-4 rounded-2xl font-black text-[10px] sm:text-xs uppercase text-center flex justify-center items-center gap-2 shadow-sm dark:shadow-none">
-                                    <AlertTriangle size={16} className="shrink-0"/> {autoResult.actionMessage}
+                                    <AlertTriangle size={16} className="shrink-0"/> {autoResult()!.actionMessage}
                                   </div>
                                )}
-                               {autoResult.color === 'red' && (
+                               {autoResult()!.color === 'red' && (
                                   <div className="bg-white dark:bg-[#09090b] border border-red-200 dark:border-red-500/30 text-red-500 dark:text-red-400 w-full py-4 rounded-2xl font-black text-[10px] sm:text-xs tracking-widest uppercase text-center flex items-center justify-center gap-2 shadow-sm dark:shadow-inner">
-                                     <AlertTriangle size={16} className="shrink-0 text-red-500"/> {autoResult.actionMessage}
+                                     <AlertTriangle size={16} className="shrink-0 text-red-500"/> {autoResult()!.actionMessage}
                                   </div>
                                )}
                              </div>
@@ -724,9 +719,9 @@ const Calculators: React.FC = () => {
                                ⚠️ Atenção: Projeção baseada em estatística. Não constitui recomendação financeira.
                              </p>
                          </div>
-                         ) : autoResult?.error ? (
-                             <div className="bg-slate-100 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400 p-6 rounded-2xl text-xs sm:text-sm font-bold flex items-center justify-center gap-3 shadow-sm dark:shadow-none mt-4 text-center">
-                                <Clock size={20} className="shrink-0" /> {autoResult.error}
+                         ) : autoResult()?.error ? (
+                             <div className="bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/30 text-amber-600 dark:text-amber-400 p-6 rounded-2xl text-xs sm:text-sm font-bold flex items-center justify-center gap-3 shadow-sm dark:shadow-inner mt-4 text-center">
+                                <Clock size={20} className="shrink-0" /> {autoResult()!.error}
                              </div>
                          ) : null}
                        </motion.div>
