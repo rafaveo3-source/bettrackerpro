@@ -45,22 +45,72 @@ export default async function handler(req: any, res: any) {
     let prompt = "";
 
     if (mode === 'grid') {
-        prompt = `Atue como um Scanner HFT de Apostas. Filtre a GRADE de jogos ao vivo.
-REGRAS: 1. Ignore jogos com 88'+. 2. 80'-87' só cantos. 3. Gols máx 75'.
-Retorne JSON: { "matches": [{ "time": "75'", "match": "A vs B", "score": "0-1", "market": "Gols/Cantos", "reason": "..." }] }
-TEXTO: """${textData}"""`;
+        prompt = `Atue como um Scanner HFT de Apostas. O usuário colou uma GRADE inteira de jogos ao vivo.
+Sua missão é filtrar o ruído e encontrar APENAS os 3 a 5 melhores jogos com potencial de "Amasso" (Volume ofensivo alto).
+
+REGRAS DE TEMPO:
+1. IGNORE SUMARIAMENTE jogos com 88 minutos ou mais (ex: 88', 89', 90+1', FT, Fim de Jogo).
+2. Jogos entre 80' e 87' SÓ podem ser recomendados para "Escanteios".
+3. Recomendações de "Gols" exigem que o jogo esteja, no máximo, aos 75'-80'.
+
+TEXTO BRUTO:
+"""
+${textData}
+"""
+
+Retorne ESTRITAMENTE este JSON (array de objetos):
+{
+  "matches": [
+    {
+      "time": "75'",
+      "match": "Time A vs Time B",
+      "score": "0-1",
+      "market": "Gols ou Cantos",
+      "reason": "Time A perdendo, posse alta e gerando xG."
+    }
+  ]
+}`;
     } else {
-        prompt = `Atue como Extrator Quantitativo In-Play. 
-REGRAS:
-1. TIMES/PLACAR: Nome e placar exato (Ex: "0-0").
-2. MINUTO (min): Apenas número. HT=45, FT=90.
-3. GOLS TOTAIS: Soma do placar.
-4. CANTOS TOTAIS: Vá APENAS na tabela de "Estatísticas". Localize "Cantos" (Ex: "3 Cantos 4"). Some (7). NUNCA some da timeline.
-5. PRESSÃO: "Ataques Perigosos". 'apPress'=MAIOR número. 'apDef'=MENOR.
-6. LETALIDADE: 'sot'=Chutes no Alvo das DUAS EQUIPES somados. 'sofft'=Chutes pra fora totais.
-7. CONTEXTO: redCard ("pressing"/"defending"/"none"), pressureTrend ("increasing"/"stable"/"decreasing"), matchTemperature ("intense"/"calm"), needsGoal (true/false se apPress está empatando/perdendo).
-RETORNE JSON: { "homeTeam": "A", "awayTeam": "B", "score": "0-0", "min": 38, "totalGoals": 0, "totalCorners": 4, "apPress": 19, "apDef": 15, "sot": 1, "sofft": 1, "pressureTrend": "increasing", "matchTemperature": "intense", "redCard": "none", "needsGoal": true }
-TEXTO: """${textData}"""`;
+        prompt = `Atue como um Extrator Quantitativo de Dados Ao Vivo (In-Play) para modelos HFT.
+O usuário copiou a página de um único jogo (CornerPro, RoboTip, SofaScore ou Flashscore). 
+
+TEXTO BRUTO:
+"""
+${textData}
+"""
+
+REGRAS DE EXTRAÇÃO DE ALTA PRECISÃO MATEMÁTICA:
+1. TIMES E PLACAR: Encontre o nome dos dois times. O placar deve ser o atual EXATO (Ex: "0-0").
+2. MINUTO ATUAL (min): Procure por relógios. Se "INTERVALO", retorne 45. Se "FT" ou "Encerrado", retorne 90. Ex: 66.
+3. GOLS TOTAIS: Soma dos gols EXATOS do placar (Ex: 0-0 = 0).
+4. CANTOS TOTAIS: REGRA DE OURO MÁXIMA! IGNORE ABSOLUTAMENTE TUDO sob a aba "Eventos Jogo" ou linhas da linha do tempo. Vá DIRETAMENTE para a tabela "Dados Jogo" ou "Estatísticas". Encontre a palavra exata "Cantos" ou "Escanteios". Você verá um número para o time da casa e um para o visitante (Ex: "2 Cantos 4"). SOME OS DOIS VALORES (Ex: 2+4=6). Retorne APENAS a SOMA TOTAL. Se não encontrar a linha da estatística principal, retorne 0. NUNCA conte palavras soltas.
+5. PRESSÃO (apPress / apDef): Procure por "Ataques Perigosos" ou "Ataques P.". 'apPress' é o MAIOR número absoluto (ignorando taxas por minuto). 'apDef' é o MENOR número absoluto. 
+6. LETALIDADE (sot / sofft): PARA GOLS, PRECISAMOS DO TOTAL DA PARTIDA. SOME os "Chutes no Alvo" (ou Remates baliza / Finalizações no alvo) das DUAS EQUIPES. Esse será o 'sot'. SOME os "Chutes para Fora" (Remates ao lado) das DUAS EQUIPES. Esse será o 'sofft'.
+7. CONTEXTO: 
+   - redCard: Se o time que ataca tomou vermelho = "pressing". Defesa = "defending". Nenhum = "none".
+   - pressureTrend: "increasing", "stable" ou "decreasing".
+   - matchTemperature: "intense" (jogo movimentado/aberto) ou "calm" (morno).
+   - needsGoal: true se o time com MAIOR apPress está empatando ou perdendo por 1 gol de diferença.
+
+RETORNE ESTE JSON ESTRITAMENTE:
+{
+  "homeTeam": "Independiente Medellín",
+  "awayTeam": "Once Caldas",
+  "score": "0-0",
+  "min": 66,
+  "totalGoals": 0,
+  "totalCorners": 6,
+  "apPress": 35,
+  "apDef": 23,
+  "sot": 1,
+  "sofft": 10,
+  "recentShots": 0,
+  "recentCorners": 0,
+  "pressureTrend": "increasing",
+  "matchTemperature": "calm",
+  "redCard": "none",
+  "needsGoal": true
+}`;
     }
 
     let textResult = "";
@@ -71,10 +121,19 @@ TEXTO: """${textData}"""`;
     } catch (geminiError: any) { 
         if (openai) {
             try {
-                const response = await openai.chat.completions.create({ model: "gpt-4o-mini", messages: [{ role: "user", content: prompt }], temperature: 0.1, response_format: { type: "json_object" } });
+                const response = await openai.chat.completions.create({
+                    model: "gpt-4o-mini",
+                    messages: [{ role: "user", content: prompt }],
+                    temperature: 0.1,
+                    response_format: { type: "json_object" }
+                });
                 textResult = response.choices[0].message?.content || "";
-            } catch (openaiError: any) { throw new Error("Ambas as APIs de IA falharam."); }
-        } else { throw new Error("Falha na extração via IA."); }
+            } catch (openaiError: any) {
+                throw new Error("Ambas as APIs de IA falharam.");
+            }
+        } else {
+            throw new Error("Falha na extração de dados via IA.");
+        }
     }
 
     try {
@@ -89,11 +148,8 @@ TEXTO: """${textData}"""`;
             json.awayTeam = json.awayTeam || "Fora";
             json.score = json.score || "-";
             
-            // 🔥 APLICAÇÃO DO FALLBACK DE MINUTO
             let minute = parseInt(json.min) || 0;
-            if (!minute || minute < 1) {
-                minute = extractMinuteFallback(textData);
-            }
+            if (!minute || minute < 1) minute = extractMinuteFallback(textData);
             json.min = minute < 1 ? 1 : minute;
 
             json.totalGoals = parseInt(json.totalGoals) || 0;
@@ -102,7 +158,8 @@ TEXTO: """${textData}"""`;
             json.apDef = parseInt(json.apDef) || 0;
             json.sot = parseInt(json.sot) || 0;
             
-            if (json.totalCorners > (json.min * 0.8)) json.totalCorners = Math.round(json.min / 10); 
+            // TRAVA FÍSICA PARA CANTOS: Se a IA disser que tem 19 cantos aos 66', ela corta na hora.
+            if (json.totalCorners > (json.min * 0.4)) json.totalCorners = Math.round(json.min / 10); 
             
             json.redCard = ["pressing", "defending"].includes(json.redCard) ? json.redCard : "none";
             json.pressureTrend = ["increasing", "stable", "decreasing"].includes(json.pressureTrend) ? json.pressureTrend : "stable";
