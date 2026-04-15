@@ -1,6 +1,6 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import Tesseract from 'tesseract.js';
-import { Camera, Upload, X, Check, Loader2, BotMessageSquare, Save, Edit3, AlertTriangle } from 'lucide-react';
+import { Camera, Upload, X, Check, Loader2, BotMessageSquare, Save, Edit3, AlertTriangle, ClipboardPaste } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 interface TicketScannerProps {
@@ -17,6 +17,37 @@ const TicketScanner: React.FC<TicketScannerProps> = ({ onScanComplete }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const statusMap = { 'won': 'Ganha ✅', 'lost': 'Perdida ❌', 'refunded': 'Devolvida ⚠️', 'half-won': '½ Ganha', 'half-lost': '½ Perdida', 'cashout': 'Cashout 💰', 'pending': 'Em Aberto' };
+
+  // 🔥 OUVINTE DE CTRL+V (PASTE GLOBAL) 🔥
+  useEffect(() => {
+    const handleGlobalPaste = (e: ClipboardEvent) => {
+      // Se o modal de validação estiver aberto ou o usuário estiver digitando em um input, NÃO intercepta
+      const target = e.target as HTMLElement;
+      if (showValidationModal || target.tagName === 'INPUT' || target.tagName === 'TEXTAREA') return;
+
+      const items = e.clipboardData?.items;
+      if (!items) return;
+
+      for (let i = 0; i < items.length; i++) {
+        if (items[i].type.indexOf('image') !== -1) {
+          e.preventDefault(); // Impede o comportamento padrão de colar
+          const file = items[i].getAsFile();
+          if (!file) continue;
+
+          const reader = new FileReader();
+          reader.onload = (event) => {
+            setImage(event.target?.result as string);
+            setError(null);
+          };
+          reader.readAsDataURL(file);
+          break; // Pega apenas a primeira imagem colada
+        }
+      }
+    };
+
+    window.addEventListener('paste', handleGlobalPaste);
+    return () => window.removeEventListener('paste', handleGlobalPaste);
+  }, [showValidationModal]);
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -66,7 +97,6 @@ const TicketScanner: React.FC<TicketScannerProps> = ({ onScanComplete }) => {
     onScanComplete(scannedResult); 
   };
 
-  // 🔥 FUNÇÃO PARA EDITAR OS DADOS DIRETO NO MODAL DA IA 🔥
   const handleEditField = (field: string, value: string) => {
       setScannedResult((prev: any) => ({ ...prev, [field]: value }));
   };
@@ -96,9 +126,9 @@ const TicketScanner: React.FC<TicketScannerProps> = ({ onScanComplete }) => {
             className="border-2 border-dashed border-slate-700 rounded-xl p-8 text-center cursor-pointer hover:bg-slate-800/50 transition-colors group relative z-10 mt-auto mb-auto"
         >
           <div className="bg-indigo-500/10 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform shadow-lg">
-             <Upload size={24} className="text-indigo-400" />
+             <ClipboardPaste size={24} className="text-indigo-400" />
           </div>
-          <p className="text-sm font-bold text-slate-300">Anexar um Print de Aposta</p>
+          <p className="text-sm font-bold text-slate-300">Clique para anexar ou <span className="text-emerald-400 border-b border-emerald-400/30 pb-0.5">CTRL+V</span> para colar</p>
           <p className="text-[10px] uppercase tracking-widest text-slate-500 mt-2">Suporta Bet365, Betano e Betfair</p>
           <input type="file" ref={fileInputRef} onChange={handleImageUpload} accept="image/png, image/jpeg" className="hidden" />
         </div>
