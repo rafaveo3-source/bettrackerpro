@@ -573,10 +573,11 @@ const NewBetModal: React.FC<NewBetModalProps> = ({
                                       step="0.01"
                                       value={formData.odds}
                                       onChange={(e) => setFormData({ ...formData, odds: e.target.value })}
-                                      placeholder="1.00"
-                                      className={`${inputStyle} pl-8`}
+                                      placeholder="1.85"
+                                      className={`${inputStyle} pl-8 font-mono`}
                                     />
-                                    <Percent size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
+                                    {/* 🔥 CORRIGIDO: Removido o ícone de % e colocado o @ 🔥 */}
+                                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 font-black text-sm font-mono">@</span>
                                   </div>
                                 </div>
 

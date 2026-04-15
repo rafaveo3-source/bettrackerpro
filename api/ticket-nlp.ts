@@ -4,11 +4,20 @@ import OpenAI from 'openai';
 export const maxDuration = 60;
 
 // 🔥 PROMPTS TÁTICOS (Agora focados em ler OCR fragmentado e extrair a SELEÇÃO)
+// 🔥 PROMPTS TÁTICOS (Blindagem contra mistura de dados)
 const specializedPrompts = {
-    'Bet365': (text: string) => `O texto é da Bet365. A ODD costuma ser um número decimal. A STAKE é o valor apostado. A SELEÇÃO é o palpite exato (ex: Vitória do Kremser, Over 2.5). Texto OCR: """${text}"""`,
-    'Betano': (text: string) => `O texto é da Betano. A ODD pode estar fragmentada (ex: 1 . 8 3 = 1.83). A STAKE é o valor após 'Aposta'. A SELEÇÃO é o palpite (ex: Bolívar -0.5, Ambas Marcam). Texto OCR: """${text}"""`,
+    'Bet365': (text: string) => `O texto é da Bet365. 
+REGRA 1: O JOGO (match) é composto apenas por letras (Ex: Time A x Time B). Ignore números decimais aqui.
+REGRA 2: A SELEÇÃO é o palpite apostado (Ex: Kremser SC, Mais de 2.5). 
+REGRA 3: A ODD é SEMPRE um número decimal (Ex: 1.83). Se estiver ao lado do nome do time, separe.
+REGRA 4: A STAKE é o 'Valor' ou 'Aposta'.
+Texto OCR: """${text}"""`,
+    
+    'Betano': (text: string) => `O texto é da Betano. A ODD pode estar fragmentada (ex: 1 . 8 3 = 1.83). A STAKE é o valor após 'Aposta'. A SELEÇÃO é o palpite. Texto OCR: """${text}"""`,
+    
     'Betfair': (text: string) => `O texto é da Betfair. A ODD costuma ter um @ antes. A SELEÇÃO é o nome do time ou palpite apostado. Texto OCR: """${text}"""`,
-    'Outra': (text: string) => `Extraia Jogo, Mercado, Seleção (Palpite exato), Odd e Stake deste texto. Cuidado com números espaçados (ex: 1 , 9 0 = 1.90). Texto OCR: """${text}"""`
+    
+    'Outra': (text: string) => `Extraia Jogo (Apenas Letras), Mercado, Seleção (Palpite exato), Odd (Apenas decimal) e Stake deste texto. Texto OCR: """${text}"""`
 };
 
 export default async function handler(req: any, res: any) {
