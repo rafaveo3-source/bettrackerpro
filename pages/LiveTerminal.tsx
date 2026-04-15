@@ -1,7 +1,9 @@
 import React, { useState, useMemo } from 'react';
 import { Clock, Target, Flag, Goal, TrendingUp, ShieldAlert, BarChart3, Eye, CheckCircle2, AlertTriangle } from 'lucide-react';
 
-// Função auxiliar para calcular Poisson P(x=k)
+// ==========================================
+// FUNÇÕES AUXILIARES MATEMÁTICAS
+// ==========================================
 const poisson = (lambda: number, k: number) => {
   return (Math.pow(lambda, k) * Math.exp(-lambda)) / factorial(k);
 };
@@ -13,10 +15,33 @@ const factorial = (n: number): number => {
   return result;
 };
 
-const LiveTerminal: React.FC = () => {
-  // ==========================================
-  // ESTADOS: SLIDERS DO USUÁRIO
-  // ==========================================
+// 🔥 CORREÇÃO 1: COMPONENTE DE SLIDER INDEPENDENTE (Resolve o Lag) 🔥
+interface SliderGroupProps {
+  label: string;
+  value: number;
+  max: number;
+  setter: (val: number) => void;
+  colorClass: string;
+}
+
+const SliderGroup: React.FC<SliderGroupProps> = ({ label, value, max, setter, colorClass }) => (
+  <div className="mb-4">
+    <div className="flex justify-between mb-1.5">
+       <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">{label}</label>
+       <span className={`font-mono font-black ${colorClass}`}>{value}</span>
+    </div>
+    <input 
+      type="range" min="0" max={max} value={value} 
+      onChange={(e) => setter(Number(e.target.value))} 
+      className={`w-full h-1.5 bg-slate-800 rounded-lg appearance-none cursor-pointer hover:h-2 transition-all ${colorClass.replace('text-', 'accent-')}`} 
+    />
+  </div>
+);
+
+// ==========================================
+// ORÁCULO LIVE (MOTOR PRINCIPAL)
+// ==========================================
+const OraculoLive: React.FC = () => {
   const [minute, setMinute] = useState<number>(65);
   const [targetHalf, setTargetHalf] = useState<'HT' | 'FT'>('FT');
 
@@ -30,19 +55,28 @@ const LiveTerminal: React.FC = () => {
   const [sotH, setSotH] = useState<number>(3);
   const [sotA, setSotA] = useState<number>(1);
 
-  // ==========================================
-  // MOTOR POISSON AVANÇADO (useMemo = ZERO LAG)
-  // ==========================================
+  // 🔥 CORREÇÃO 2: TRAVA DE SEGURANÇA HT/FT 🔥
+  const handleHalfToggle = (half: 'HT' | 'FT') => {
+      setTargetHalf(half);
+      // Se o usuário clicar em HT e o minuto for maior que 45, volta para 45 para não bugar a linha do tempo
+      if (half === 'HT' && minute > 45) {
+          setMinute(45);
+      }
+  };
+
   const { goalStats, cornerStats, gameScript } = useMemo(() => {
     const extraTime = targetHalf === 'HT' ? 3 : 6; 
     const maxTime = (targetHalf === 'HT' ? 45 : 90) + extraTime;
     const timeLeft = Math.max(0, maxTime - minute);
 
+    // 🔥 CORREÇÃO 3: OBJETO DE RECOMENDAÇÃO SEGURO (Evita a Tela Preta) 🔥
+    const closedRec = { status: 'FECHADO', conf: 'NULA', color: 'text-slate-500', bg: 'bg-slate-800/50 border-slate-700' };
+
     if (timeLeft <= 0) {
       return {
-        goalStats: { p05: 0, odd05: 0, p15: 0, odd15: 0, expTotal: scoreH + scoreA, recommendation: 'FORA', conf: 'NULA' },
-        cornerStats: { p05: 0, odd05: 0, p10Win: 0, p10Void: 0, odd10: 0, expTotal: cornersH + cornersA, recommendation: 'FORA', conf: 'NULA' },
-        gameScript: "Mercado Fechado."
+        goalStats: { p05: 0, odd05: 0, p15: 0, odd15: 0, expTotal: scoreH + scoreA, rec: closedRec },
+        cornerStats: { p05: 0, odd05: 0, p10Win: 0, p10Void: 0, odd10: 0, expTotal: cornersH + cornersA, rec: closedRec },
+        gameScript: "Mercado Fechado ou Fora da Janela."
       };
     }
 
@@ -91,7 +125,6 @@ const LiveTerminal: React.FC = () => {
     const calcOdd = (prob: number) => prob > 0.01 ? 1 / prob : 99.0;
     const oddAsiatica10 = pCorner10Win > 0.01 ? (1 - pCorner10Void) / pCorner10Win : 99.0;
 
-    // --- LÓGICA DE RECOMENDAÇÃO / CONFIANÇA ---
     const getRecommendation = (prob: number) => {
         if (prob >= 0.65) return { status: 'APROVADO', conf: 'ALTA', color: 'text-emerald-400', bg: 'bg-emerald-500/10 border-emerald-500/20' };
         if (prob >= 0.45) return { status: 'MODERADO', conf: 'MÉDIA', color: 'text-amber-400', bg: 'bg-amber-500/10 border-amber-500/20' };
@@ -120,20 +153,6 @@ const LiveTerminal: React.FC = () => {
       gameScript: script
     };
   }, [minute, scoreH, scoreA, cornersH, cornersA, apH, apA, sotH, sotA, targetHalf]);
-
-  const SliderGroup = ({ label, value, max, setter, colorClass }: any) => (
-    <div className="mb-4">
-      <div className="flex justify-between mb-1.5">
-         <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">{label}</label>
-         <span className={`font-mono font-black ${colorClass}`}>{value}</span>
-      </div>
-      <input 
-        type="range" min="0" max={max} value={value} 
-        onChange={(e) => setter(Number(e.target.value))} 
-        className={`w-full h-1.5 bg-slate-800 rounded-lg appearance-none cursor-pointer hover:h-2 transition-all ${colorClass.replace('text-', 'accent-')}`} 
-      />
-    </div>
-  );
 
   return (
     <div className="w-full max-w-5xl mx-auto space-y-6 pb-20">
@@ -174,18 +193,24 @@ const LiveTerminal: React.FC = () => {
               </div>
            </div>
 
-           {/* VEREDITO GOLS (CORRIGIDO) */}
+           {/* VEREDITO GOLS E PROJEÇÃO TOTAL */}
            <div className={`mt-auto border rounded-xl p-3 flex flex-col gap-1 ${goalStats.rec.bg}`}>
-               <div className="flex justify-between items-center">
+               <div className="flex justify-between items-center mb-2 border-b border-slate-800/50 pb-2">
+                   <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Projeção Total de Gols ({targetHalf}):</span>
+                   <span className="text-sm font-black text-orange-400">{goalStats.expTotal.toFixed(2)}</span>
+               </div>
+               <div className="flex justify-between items-center mt-1">
                    <span className="text-[10px] font-black uppercase tracking-widest text-slate-300">Veredito do Motor:</span>
                    <span className={`text-[10px] font-black uppercase tracking-widest ${goalStats.rec.color}`}>{goalStats.rec.conf} CONFIANÇA</span>
                </div>
                {goalStats.rec.status === 'APROVADO' ? (
-                   <p className="text-xs text-emerald-100/70 font-medium flex items-center gap-1.5 mt-1"><CheckCircle2 size={14} className="text-emerald-400"/> <strong>RECOMENDADO:</strong> Aposte se a odd da casa for maior que <strong className="text-white bg-slate-900 px-1.5 rounded">@{goalStats.odd05.toFixed(2)}</strong>.</p>
+                   <p className="text-xs text-emerald-100/70 font-medium flex items-center gap-1.5 mt-1"><CheckCircle2 size={14} className="text-emerald-400 shrink-0"/> <span><strong>RECOMENDADO:</strong> Aposte se a odd da casa for maior que <strong className="text-white bg-slate-900 px-1.5 rounded">@{goalStats.odd05.toFixed(2)}</strong>.</span></p>
                ) : goalStats.rec.status === 'MODERADO' ? (
-                   <p className="text-xs text-amber-100/70 font-medium flex items-center gap-1.5 mt-1"><AlertTriangle size={14} className="text-amber-400"/> <strong>ATENÇÃO:</strong> Aposte apenas se tiver margem de segurança (Odd &gt; <strong className="text-white bg-slate-900 px-1.5 rounded">@{goalStats.odd05.toFixed(2)}</strong>).</p>
+                   <p className="text-xs text-amber-100/70 font-medium flex items-center gap-1.5 mt-1"><AlertTriangle size={14} className="text-amber-400 shrink-0"/> <span><strong>ATENÇÃO:</strong> Aposte apenas se tiver margem (Odd &gt; <strong className="text-white bg-slate-900 px-1.5 rounded">@{goalStats.odd05.toFixed(2)}</strong>).</span></p>
+               ) : goalStats.rec.status === 'FECHADO' ? (
+                   <p className="text-xs text-slate-400 font-medium flex items-center gap-1.5 mt-1"><ShieldAlert size={14} className="text-slate-500 shrink-0"/> <span>Mercado encerrado ou margem de tempo inválida.</span></p>
                ) : (
-                   <p className="text-xs text-red-100/70 font-medium flex items-center gap-1.5 mt-1"><ShieldAlert size={14} className="text-red-400"/> <strong>NÃO RECOMENDADO:</strong> Fique de fora. O risco de red é altíssimo.</p>
+                   <p className="text-xs text-red-100/70 font-medium flex items-center gap-1.5 mt-1"><ShieldAlert size={14} className="text-red-400 shrink-0"/> <span><strong>NÃO RECOMENDADO:</strong> Fique de fora. Risco altíssimo.</span></p>
                )}
            </div>
         </div>
@@ -219,18 +244,24 @@ const LiveTerminal: React.FC = () => {
               </div>
            </div>
 
-           {/* VEREDITO CANTOS */}
+           {/* VEREDITO CANTOS E PROJEÇÃO TOTAL */}
            <div className={`mt-auto border rounded-xl p-3 flex flex-col gap-1 ${cornerStats.rec.bg}`}>
-               <div className="flex justify-between items-center">
+               <div className="flex justify-between items-center mb-2 border-b border-slate-800/50 pb-2">
+                   <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Projeção Total de Cantos ({targetHalf}):</span>
+                   <span className="text-sm font-black text-emerald-400">{cornerStats.expTotal.toFixed(2)}</span>
+               </div>
+               <div className="flex justify-between items-center mt-1">
                    <span className="text-[10px] font-black uppercase tracking-widest text-slate-300">Veredito Asiático (+1.0):</span>
                    <span className={`text-[10px] font-black uppercase tracking-widest ${cornerStats.rec.color}`}>{cornerStats.rec.conf} CONFIANÇA</span>
                </div>
                {cornerStats.rec.status === 'APROVADO' ? (
-                   <p className="text-xs text-emerald-100/70 font-medium flex items-center gap-1.5 mt-1"><CheckCircle2 size={14} className="text-emerald-400 shrink-0"/> <span><strong>RECOMENDADO:</strong> Entre na Linha Asiática se a odd for maior que <strong className="text-white bg-slate-900 px-1.5 rounded">@{cornerStats.odd10.toFixed(2)}</strong>.</span></p>
+                   <p className="text-xs text-emerald-100/70 font-medium flex items-center gap-1.5 mt-1"><CheckCircle2 size={14} className="text-emerald-400 shrink-0"/> <span><strong>RECOMENDADO:</strong> Entre se a odd for maior que <strong className="text-white bg-slate-900 px-1.5 rounded">@{cornerStats.odd10.toFixed(2)}</strong>.</span></p>
                ) : cornerStats.rec.status === 'MODERADO' ? (
-                   <p className="text-xs text-amber-100/70 font-medium flex items-center gap-1.5 mt-1"><AlertTriangle size={14} className="text-amber-400 shrink-0"/> <span><strong>ATENÇÃO:</strong> Entre apenas se a casa oferecer <strong className="text-white bg-slate-900 px-1.5 rounded">@{cornerStats.odd10.toFixed(2)}</strong> ou superior.</span></p>
+                   <p className="text-xs text-amber-100/70 font-medium flex items-center gap-1.5 mt-1"><AlertTriangle size={14} className="text-amber-400 shrink-0"/> <span><strong>ATENÇÃO:</strong> Entre se a casa oferecer <strong className="text-white bg-slate-900 px-1.5 rounded">@{cornerStats.odd10.toFixed(2)}</strong> ou mais.</span></p>
+               ) : cornerStats.rec.status === 'FECHADO' ? (
+                   <p className="text-xs text-slate-400 font-medium flex items-center gap-1.5 mt-1"><ShieldAlert size={14} className="text-slate-500 shrink-0"/> <span>Mercado encerrado ou margem de tempo inválida.</span></p>
                ) : (
-                   <p className="text-xs text-red-100/70 font-medium flex items-center gap-1.5 mt-1"><ShieldAlert size={14} className="text-red-400 shrink-0"/> <span><strong>NÃO RECOMENDADO:</strong> Valor EV negativo. Risco alto de Red. Fique de fora.</span></p>
+                   <p className="text-xs text-red-100/70 font-medium flex items-center gap-1.5 mt-1"><ShieldAlert size={14} className="text-red-400 shrink-0"/> <span><strong>NÃO RECOMENDADO:</strong> Valor EV negativo. Risco alto de Red.</span></p>
                )}
            </div>
         </div>
@@ -258,8 +289,8 @@ const LiveTerminal: React.FC = () => {
             </div>
 
             <div className="flex bg-slate-900 p-1 rounded-xl border border-slate-800 w-full sm:w-64 shrink-0 shadow-inner">
-               <button onClick={() => setTargetHalf('HT')} className={`flex-1 py-2 text-[10px] font-black uppercase tracking-widest rounded-lg transition-all ${targetHalf === 'HT' ? 'bg-indigo-600 text-white shadow-md scale-105' : 'text-slate-500 hover:text-slate-300'}`}>HT (1º Tempo)</button>
-               <button onClick={() => setTargetHalf('FT')} className={`flex-1 py-2 text-[10px] font-black uppercase tracking-widest rounded-lg transition-all ${targetHalf === 'FT' ? 'bg-indigo-600 text-white shadow-md scale-105' : 'text-slate-500 hover:text-slate-300'}`}>FT (Fim de Jogo)</button>
+               <button onClick={() => handleHalfToggle('HT')} className={`flex-1 py-2 text-[10px] font-black uppercase tracking-widest rounded-lg transition-all ${targetHalf === 'HT' ? 'bg-indigo-600 text-white shadow-md scale-105' : 'text-slate-500 hover:text-slate-300'}`}>HT (1º Tempo)</button>
+               <button onClick={() => handleHalfToggle('FT')} className={`flex-1 py-2 text-[10px] font-black uppercase tracking-widest rounded-lg transition-all ${targetHalf === 'FT' ? 'bg-indigo-600 text-white shadow-md scale-105' : 'text-slate-500 hover:text-slate-300'}`}>FT (Fim de Jogo)</button>
             </div>
          </div>
 
@@ -304,4 +335,4 @@ const LiveTerminal: React.FC = () => {
   );
 };
 
-export default LiveTerminal;
+export default OraculoLive;
