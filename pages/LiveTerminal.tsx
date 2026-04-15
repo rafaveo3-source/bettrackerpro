@@ -13,7 +13,7 @@ const factorial = (n: number): number => {
   return result;
 };
 
-const OraculoLive: React.FC = () => {
+const LiveTerminal: React.FC = () => {
   // ==========================================
   // ESTADOS: SLIDERS DO USUÁRIO
   // ==========================================
@@ -174,7 +174,7 @@ const OraculoLive: React.FC = () => {
               </div>
            </div>
 
-           {/* VEREDITO GOLS */}
+           {/* VEREDITO GOLS (CORRIGIDO) */}
            <div className={`mt-auto border rounded-xl p-3 flex flex-col gap-1 ${goalStats.rec.bg}`}>
                <div className="flex justify-between items-center">
                    <span className="text-[10px] font-black uppercase tracking-widest text-slate-300">Veredito do Motor:</span>
@@ -183,7 +183,7 @@ const OraculoLive: React.FC = () => {
                {goalStats.rec.status === 'APROVADO' ? (
                    <p className="text-xs text-emerald-100/70 font-medium flex items-center gap-1.5 mt-1"><CheckCircle2 size={14} className="text-emerald-400"/> <strong>RECOMENDADO:</strong> Aposte se a odd da casa for maior que <strong className="text-white bg-slate-900 px-1.5 rounded">@{goalStats.odd05.toFixed(2)}</strong>.</p>
                ) : goalStats.rec.status === 'MODERADO' ? (
-                   <p className="text-xs text-amber-100/70 font-medium flex items-center gap-1.5 mt-1"><AlertTriangle size={14} className="text-amber-400"/> <strong>ATENÇÃO:</strong> Aposte apenas se tiver margem de segurança (Odd > <strong className="text-white bg-slate-900 px-1.5 rounded">@{goalStats.odd05.toFixed(2)}</strong>).</p>
+                   <p className="text-xs text-amber-100/70 font-medium flex items-center gap-1.5 mt-1"><AlertTriangle size={14} className="text-amber-400"/> <strong>ATENÇÃO:</strong> Aposte apenas se tiver margem de segurança (Odd &gt; <strong className="text-white bg-slate-900 px-1.5 rounded">@{goalStats.odd05.toFixed(2)}</strong>).</p>
                ) : (
                    <p className="text-xs text-red-100/70 font-medium flex items-center gap-1.5 mt-1"><ShieldAlert size={14} className="text-red-400"/> <strong>NÃO RECOMENDADO:</strong> Fique de fora. O risco de red é altíssimo.</p>
                )}
@@ -304,4 +304,4 @@ const OraculoLive: React.FC = () => {
   );
 };
 
-export default OraculoLive;
+export default LiveTerminal;
