@@ -1,6 +1,6 @@
 import React, { useState, useRef } from 'react';
 import Tesseract from 'tesseract.js';
-import { Camera, Upload, X, Check, Loader2, BotMessageSquare, Save, Edit3 } from 'lucide-react';
+import { Camera, Upload, X, Check, Loader2, BotMessageSquare, Save, Edit3, AlertTriangle } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 interface TicketScannerProps {
@@ -131,7 +131,7 @@ const TicketScanner: React.FC<TicketScannerProps> = ({ onScanComplete }) => {
       )}
     </div>
 
-    {/* 🔥 MODAL DE VALIDAÇÃO (EDITÁVEL + SCROLL CORRIGIDO) 🔥 */}
+    {/* 🔥 MODAL DE VALIDAÇÃO DA IA 🔥 */}
     <AnimatePresence>
       {showValidationModal && scannedResult && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[60] flex items-center justify-center p-4 sm:p-6" onClick={() => setShowValidationModal(false)}>
@@ -179,23 +179,78 @@ const TicketScanner: React.FC<TicketScannerProps> = ({ onScanComplete }) => {
                           {key: 'selection', label: 'Seleção (Posição)', prefix: ''},
                           {key: 'odd', label: 'Cotação (Odd)', prefix: '@ '}, 
                           {key: 'stake', label: 'Exposição (Valor)', prefix: 'R$ '} 
-                        ].map((item, idx) => (
-                          <div key={idx} className="bg-slate-900 border border-slate-800 p-3 sm:p-4 rounded-xl flex items-center justify-between gap-3 shadow-sm group focus-within:border-emerald-500/50 focus-within:bg-slate-800/50 transition-colors">
-                             <div className="min-w-0 flex-1 flex flex-col">
-                                 <label className="text-[9px] uppercase font-bold text-slate-500 tracking-wider mb-1">{item.label}</label>
-                                 <div className="flex items-center gap-1">
-                                     {item.prefix && <span className="text-slate-400 font-bold text-xs sm:text-sm">{item.prefix}</span>}
-                                     <input 
-                                         type="text"
-                                         value={scannedResult[item.key] || ''}
-                                         onChange={(e) => handleEditField(item.key, e.target.value)}
-                                         className={`bg-transparent text-xs sm:text-sm font-bold text-slate-200 w-full outline-none truncate ${item.key === 'odd' || item.key === 'stake' ? 'font-mono' : ''}`}
-                                     />
-                                 </div>
-                             </div>
-                             <div className="text-slate-700 group-hover:text-emerald-500 transition-colors shrink-0"><Edit3 size={14}/></div>
-                          </div>
-                        ))}
+                        ].map((item, idx) => {
+                          
+                          // Lógica de Validação Visual (UX)
+                          const isEmpty = !scannedResult[item.key] || scannedResult[item.key] === 0 || scannedResult[item.key] === '';
+                          const isCritical = item.key === 'stake' || item.key === 'odd';
+                          const hasWarning = isCritical && isEmpty;
+
+                          return (
+                            <div 
+                              key={idx} 
+                              onClick={(e) => {
+                                  // Foca no input se o usuário clicar em qualquer lugar do card
+                                  const input = e.currentTarget.querySelector('input');
+                                  if (input) input.focus();
+                              }}
+                              className={`p-3 sm:p-4 rounded-xl flex items-center justify-between gap-3 shadow-sm group cursor-text transition-colors border
+                                ${hasWarning 
+                                  ? 'bg-amber-500/5 border-amber-500/50' 
+                                  : 'bg-slate-900 border-slate-800 focus-within:border-emerald-500/50 focus-within:bg-slate-800/50'
+                                }`}
+                            >
+                               <div className="min-w-0 flex-1 flex flex-col">
+                                   <label className="text-[9px] uppercase font-bold text-slate-500 tracking-wider mb-1 flex justify-between items-center w-full">
+                                       {item.label}
+                                       {hasWarning && <span className="text-amber-500 text-[8px] flex items-center gap-1"><AlertTriangle size={10}/> Obrigatório</span>}
+                                   </label>
+                                   <div className="flex items-center gap-1">
+                                       {item.prefix && <span className={`${hasWarning ? 'text-amber-500/60' : 'text-slate-400'} font-bold text-xs sm:text-sm`}>{item.prefix}</span>}
+                                       <input 
+                                           type="text"
+                                           value={scannedResult[item.key] || ''}
+                                           onChange={(e) => handleEditField(item.key, e.target.value)}
+                                           onBlur={(e) => {
+                                               // Formatação automática (1.7 vira 1.70)
+                                               if (item.key === 'odd' && e.target.value) {
+                                                   const val = parseFloat(e.target.value.replace(',', '.'));
+                                                   if (!isNaN(val)) handleEditField('odd', val.toFixed(2));
+                                               }
+                                           }}
+                                           placeholder={hasWarning ? 'Preencha o valor' : ''}
+                                           className={`bg-transparent text-xs sm:text-sm font-bold w-full outline-none truncate 
+                                            ${hasWarning ? 'text-amber-400 placeholder:text-amber-500/30' : 'text-slate-200'} 
+                                            ${item.key === 'odd' || item.key === 'stake' ? 'font-mono' : ''}`}
+                                       />
+                                   </div>
+
+                                   {/* Chips de Adição Rápida para a Exposição (Stake) */}
+                                   {item.key === 'stake' && (
+                                       <div className="flex gap-1.5 mt-2">
+                                           {[10, 50, 100].map(val => (
+                                               <button
+                                                   key={val}
+                                                   type="button"
+                                                   onClick={(e) => {
+                                                       e.stopPropagation();
+                                                       const current = parseFloat(String(scannedResult.stake).replace(',', '.')) || 0;
+                                                       handleEditField('stake', (current + val).toString());
+                                                   }}
+                                                   className="text-[9px] font-bold text-slate-400 bg-slate-800/80 hover:bg-slate-700 hover:text-white px-2 py-0.5 rounded transition-colors border border-slate-700/50"
+                                               >
+                                                   +{val}
+                                               </button>
+                                           ))}
+                                       </div>
+                                   )}
+                               </div>
+                               <div className={`${hasWarning ? 'text-amber-500' : 'text-slate-700 group-hover:text-emerald-500'} transition-colors shrink-0`}>
+                                  <Edit3 size={14}/>
+                               </div>
+                            </div>
+                          )
+                        })}
                     </div>
               </div>
 
