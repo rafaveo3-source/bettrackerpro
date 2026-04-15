@@ -131,7 +131,7 @@ const TicketScanner: React.FC<TicketScannerProps> = ({ onScanComplete }) => {
       )}
     </div>
 
-    {/* 🔥 MODAL DE VALIDAÇÃO (EDITÁVEL) 🔥 */}
+    {/* 🔥 MODAL DE VALIDAÇÃO (EDITÁVEL + SCROLL CORRIGIDO) 🔥 */}
     <AnimatePresence>
       {showValidationModal && scannedResult && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[60] flex items-center justify-center p-4 sm:p-6" onClick={() => setShowValidationModal(false)}>
@@ -144,6 +144,7 @@ const TicketScanner: React.FC<TicketScannerProps> = ({ onScanComplete }) => {
             className="bg-slate-900 border border-slate-800 w-full max-w-xl max-h-[90vh] rounded-3xl shadow-2xl flex flex-col relative overflow-hidden"
           >
               
+              {/* HEADER FIXO */}
               <div className="flex justify-between items-center p-5 border-b border-slate-800 shrink-0 bg-slate-900 z-10">
                   <div>
                       <h2 className="text-sm sm:text-lg font-black text-white uppercase tracking-tighter italic flex items-center gap-2">
@@ -154,6 +155,7 @@ const TicketScanner: React.FC<TicketScannerProps> = ({ onScanComplete }) => {
                   <button onClick={() => setShowValidationModal(false)} className="bg-slate-800/50 p-2 rounded-full text-slate-500 hover:text-white hover:bg-slate-700 transition-all"><X size={20} /></button>
               </div>
 
+              {/* CORPO SCROLLÁVEL */}
               <div className="flex-1 overflow-y-auto p-5 sm:p-6 bg-slate-950/50 custom-scrollbar">
                     <h4 className="text-[10px] uppercase font-bold text-slate-500 tracking-widest flex items-center gap-1.5 mb-4">
                         <Edit3 size={12}/> Dados Extraídos (Edite os campos se houver erro)
@@ -161,7 +163,7 @@ const TicketScanner: React.FC<TicketScannerProps> = ({ onScanComplete }) => {
                     
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                         
-                        {/* Campo STATUS (Somente leitura para não complicar lógica de dropwdown aqui) */}
+                        {/* Campo STATUS (Somente leitura) */}
                         <div className="bg-slate-900 border border-slate-800 p-3 sm:p-4 rounded-xl flex items-center justify-between gap-3 shadow-sm">
                             <div className="min-w-0 flex-1">
                                 <p className="text-[9px] uppercase font-bold text-slate-500 tracking-wider mb-0.5">Status</p>
@@ -185,7 +187,7 @@ const TicketScanner: React.FC<TicketScannerProps> = ({ onScanComplete }) => {
                                      {item.prefix && <span className="text-slate-400 font-bold text-xs sm:text-sm">{item.prefix}</span>}
                                      <input 
                                          type="text"
-                                         value={scannedResult[item.key]}
+                                         value={scannedResult[item.key] || ''}
                                          onChange={(e) => handleEditField(item.key, e.target.value)}
                                          className={`bg-transparent text-xs sm:text-sm font-bold text-slate-200 w-full outline-none truncate ${item.key === 'odd' || item.key === 'stake' ? 'font-mono' : ''}`}
                                      />
@@ -197,10 +199,11 @@ const TicketScanner: React.FC<TicketScannerProps> = ({ onScanComplete }) => {
                     </div>
               </div>
 
+              {/* RODAPÉ FIXO */}
               <div className="p-5 border-t border-slate-800 bg-slate-900 shrink-0 flex flex-col sm:flex-row justify-end gap-3 z-10">
                   <button onClick={() => setShowValidationModal(false)} className="text-xs font-bold text-slate-400 px-4 py-4 sm:py-3 hover:text-white bg-slate-800 rounded-xl active:scale-95 transition-all order-2 sm:order-1 hidden sm:block">Cancelar</button>
                   <button onClick={finalizeAndSave} className="flex-1 sm:flex-none text-xs font-black text-slate-950 uppercase px-6 py-4 sm:py-3 bg-emerald-500 hover:bg-emerald-400 rounded-xl flex items-center justify-center gap-1.5 shadow-lg shadow-emerald-900/20 active:scale-95 transition-all order-1 sm:order-2">
-                      <Save size={16} /> Validar e Preencher Formulário
+                      <Save size={16} /> Preencher Formulário
                   </button>
               </div>
 
