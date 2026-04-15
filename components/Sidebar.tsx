@@ -17,7 +17,8 @@ import {
   Moon,
   Sun,
   PlayCircle,
-  Sparkles, // 🔥 Ícone para o HFT
+  Sparkles, 
+  Activity, // 🔥 Importado para o Terminal Live
   Lock
 } from 'lucide-react';
 import { useBetStore } from '../store/useBetStore';
@@ -48,7 +49,7 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, setView, isOpen, setIsOp
 
   const menuItems = [
     { id: 'dashboard', label: 'Visão Geral', icon: LayoutDashboard },
-    // 🔥 SCOUT SEPARADO DA LISTA PARA RENDER CUSTOMIZADO ABAIXO
+    // SCOUT IA E TERMINAL RENDERIZADOS CUSTOMIZADAMENTE ABAIXO
     { id: 'analytics', label: 'Análise de Dados', icon: BarChart2 },
     { id: 'metas', label: 'Metas (Take Profit)', icon: Target },
     { id: 'mindset', label: 'Psicologia', icon: BrainCircuit },
@@ -126,7 +127,7 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, setView, isOpen, setIsOp
                 Visão Geral
             </button>
 
-            {/* 🔥 BOTÃO KILLER: SCOUT HFT IA COM NEON EFFECT 🔥 */}
+            {/* 🔥 BOTÃO KILLER 1: SCOUT HFT IA 🔥 */}
             <div className="tour-sidebar-scout relative mb-2">
                <div className="absolute inset-0 bg-indigo-500/20 dark:bg-indigo-500/10 blur-xl rounded-full"></div>
                <button
@@ -142,6 +143,23 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, setView, isOpen, setIsOp
                    </div>
                    {!isPro && <Lock size={12} className="opacity-50" />}
                    {isPro && <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse shadow-[0_0_8px_#34d399]"></div>}
+               </button>
+            </div>
+
+            {/* 🔥 BOTÃO KILLER 2: TERMINAL LIVE 🔥 */}
+            <div className="relative mb-4">
+               <button
+                   onClick={() => handleNavigation('terminal')}
+                   className={`relative w-full flex items-center justify-between px-4 py-3.5 rounded-xl text-sm font-black uppercase tracking-widest transition-all duration-300 border overflow-hidden group shadow-sm
+                   ${currentView === 'terminal' 
+                       ? 'bg-emerald-500 text-slate-950 border-emerald-400 shadow-[0_0_20px_rgba(16,185,129,0.3)] scale-[1.02]' 
+                       : 'bg-emerald-50 dark:bg-emerald-500/5 text-emerald-600 dark:text-emerald-500 border-emerald-200 dark:border-emerald-500/20 hover:bg-emerald-500 hover:text-slate-950 hover:border-emerald-400'}`}
+               >
+                   <div className="flex items-center gap-3 relative z-10">
+                       <Activity size={18} className={`${currentView === 'terminal' ? 'animate-pulse text-slate-950' : 'text-emerald-500 dark:text-emerald-500 group-hover:text-slate-950'}`} />
+                       Terminal Live <span className="text-[8px] bg-slate-950 text-emerald-400 px-1.5 py-0.5 rounded ml-1">BETA</span>
+                   </div>
+                   {!isPro && <Lock size={12} className="opacity-50" />}
                </button>
             </div>
 

@@ -512,20 +512,26 @@ Retorne APENAS JSON válido, seguindo esta exata estrutura de chaves:
     const riskLabel = bestOpp.prob < 0.45 ? "ALTO" : bestOpp.prob >= 0.60 ? "BAIXO" : "MÉDIO";
 
     // =====================================================
-    // ✍️ CAMADA 5: RELATÓRIO DO APOSTADOR
+    // ✍️ CAMADA 5: RELATÓRIO DO APOSTADOR (Linguagem Agressiva & PRO)
     // =====================================================
     const topPickDesc = bestOpp.legs.map((l:any) => `${l.market}`).join(" + ");
-    let scriptTraduzido = detectedGameScript === "HOME_PRESSURE" ? "Pressão do Mandante" : detectedGameScript === "AWAY_PRESSURE" ? "Pressão do Visitante" : detectedGameScript === "LOW_TEMPO" ? "Jogo Truncado / Under" : "Jogo Aberto (Lá e Cá)";
+    
+    // Traduz o Game Script do robô para o dialeto do trader
+    let scriptTraduzido = "";
+    if (detectedGameScript === "HOME_PRESSURE") scriptTraduzido = "AMASSO DO MANDANTE";
+    else if (detectedGameScript === "AWAY_PRESSURE") scriptTraduzido = "AMASSO DO VISITANTE";
+    else if (detectedGameScript === "LOW_TEMPO") scriptTraduzido = "JOGO TRUNCADO / CEMITÉRIO";
+    else scriptTraduzido = "JOGO ABERTO (LÁ E CÁ)";
 
-    const generatedAnalysis = `🎯 LEITURA TÁTICA: [${scriptTraduzido}]. Analisando a regressão de Poisson, o nosso motor encontrou a melhor assimetria matemática em: "${topPickDesc}".\n\nEssa seleção respeita a correlação de eventos (Cópula Gaussiana) e entrega uma probabilidade real de ${combinedProb}% (Odd Justa de @${fairOdd.toFixed(2)}). É uma entrada validada pelo filtro de Valor Esperado (EV+).`;
+    const generatedAnalysis = `🔥 LEITURA DO MOTOR: [${scriptTraduzido}].\nEsqueça o achismo. O nosso modelo quantitativo rastreou uma linha desajustada na casa de apostas. A entrada com maior Valor Esperado (EV+) é a combinação: "${topPickDesc}".\n\n📊 A MATEMÁTICA: O cruzamento do volume de pressão com a eficiência de finalização (xG) nos mostra que a probabilidade REAL dessa aposta bater é de ${combinedProb}%. A sua Odd Justa (Fair Odd) é de @${fairOdd.toFixed(2)}. Se o mercado te oferecer qualquer coisa acima disso, é erro da casa. Pegue o valor e vamos pro Green!`;
 
     let generatedAlt = topOpportunities.length > 1 
-        ? `💡 OPÇÃO SECUNDÁRIA: ${topOpportunities[1].legs.map((l:any) => `${l.market}`).join(" + ")} (Odd Justa: @${topOpportunities[1].odd.toFixed(2)}). Excelente leitura de backup baseada no volume de jogo.`
-        : "O filtro de segurança eliminou opções secundárias para garantir que você foque apenas na aposta de maior valor.";
+        ? `💡 PLANO B (Backup de Valor): Se a odd principal derreter, monte "${topOpportunities[1].legs.map((l:any) => `${l.market}`).join(" + ")}". A Odd Justa aqui é @${topOpportunities[1].odd.toFixed(2)}. Leitura tática perfeita para pegar a sobra do mercado.`
+        : "O filtro de segurança eliminou opções secundárias. O algoritmo exige foco 100% na entrada principal.";
 
     let generatedCons = topOpportunities.length > 2
-        ? `🛡️ PROTEÇÃO / REDUÇÃO DE RISCO: ${topOpportunities[2].legs.map((l:any) => `${l.market}`).join(" + ")} (Odd Justa: @${topOpportunities[2].odd.toFixed(2)}).`
-        : `⚠️ Mantenha sua gestão de banca com Stake Padrão, o cenário aponta para um Risco ${riskLabel}.`;
+        ? `🛡️ ROTA CONSERVADORA: Quer reduzir o risco? Vá de "${topOpportunities[2].legs.map((l:any) => `${l.market}`).join(" + ")}" (Odd Justa: @${topOpportunities[2].odd.toFixed(2)}).`
+        : `⚠️ GESTÃO DE BANCA: O cenário atual exige respeito. Nível de Risco: ${riskLabel}. Não fuja da sua Stake Padrão (Flat Stake).`;
 
     return res.status(200).json({
         selections: finalSelections,
