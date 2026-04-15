@@ -3,6 +3,14 @@ import OpenAI from 'openai';
 
 export const maxDuration = 60;
 
+// 🔥 PROMPTS TÁTICOS ESPECILIZADOS POR CASA DE APOSTA 🔥
+const specializedPrompts = {
+    'Bet365': (text: string) => `O texto abaixo é da Bet365. Encontre a Odd após 'Odd' ou 'Cotação'. Encontre a Stake após 'Aposta Total' ou 'Total Apostado'. Encontre o Resultado após 'Vencida' ou 'Perdida'. Encontre o Jogo perto do topo. Texto: """${text}"""`,
+    'Betano': (text: string) => `O texto abaixo é da Betano. Encontre a Odd após '@'. Encontre a Stake após 'Valor Apostado' ou 'Aposta'. Encontre o Resultado após 'Vencida' ou 'Ganha'. Encontre o Jogo na linha do evento. Texto: """${text}"""`,
+    'Betfair': (text: string) => `O texto abaixo é da Betfair. Encontre a Odd após '@' ou 'Odd'. Encontre a Stake após 'Apostar' ou 'Total Apostado'. Encontre o Resultado após 'Ganhos' ou 'Perdas'. Encontre o Jogo no cabeçalho. Texto: """${text}"""`,
+    'Outra': (text: string) => `Tente extrair Jogo, Mercado, Odd, Stake, Retorno e Resultado deste texto genérico de aposta. Texto: """${text}"""`
+};
+
 export default async function handler(req: any, res: any) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method Not Allowed' });
 
@@ -20,36 +28,23 @@ export default async function handler(req: any, res: any) {
 
     // Instancia o Google Gemini
     const genAI = new GoogleGenerativeAI(geminiKey);
-    const aiModel = genAI.getGenerativeModel({ 
-        model: 'gemini-1.5-flash-latest', // Nome atualizado para evitar 404
-        generationConfig: { temperature: 0.1 } 
-    });
+    const aiModel = genAI.getGenerativeModel({ model: 'gemini-1.5-flash-latest', generationConfig: { temperature: 0.1, responseMimeType: "application/json" } });
 
     // Instancia a OpenAI como Plano B
     const openai = openaiKey ? new OpenAI({ apiKey: openaiKey }) : null;
 
-    const prompt = `Você é um Analista de Dados de Apostas. O texto abaixo foi extraído por OCR de um print de um bilhete de aposta esportiva (provavelmente Bet365, Betano ou Betfair). O texto está sujo e desestruturado.
-Sua missão é entender o contexto e organizar os dados.
+    // 🚀 PASSO 1: CLASSICAR A CASA DE APOSTA (Muito Rápido)
+    const classificationPrompt = `Analise este texto bruto de um bilhete de aposta e diga apenas qual é a casa (Bet365, Betano ou Betfair). Se não conseguir, diga 'Outra'. Texto: """${textData}"""`;
+    const classificationResult = await aiModel.generateContent(classificationPrompt);
+    const bookmaker = classificationResult.response.text().trim().replace(/['"`]/g, ''); // Limpa aspas
 
-TEXTO EXTRAÍDO DO OCR:
-"""
-${textData}
-"""
-
-REGRAS DE EXTRAÇÃO:
-1. bookmaker: Tente identificar a casa (Bet365, Betano, Betfair). Se não achar, retorne "Outra".
-2. match: O confronto (Ex: "Flamengo x Palmeiras"). Se houver "v", "vs", "-", substitua por " x ".
-3. market: O mercado apostado (Ex: "Over 2.5 Gols", "Escanteios Mais de 9", "Vencedor do Encontro").
-4. odd: A cotação decimal (Ex: 1.85). Se achar "," transforme em ".".
-5. stake: O valor investido na aposta (Apenas o número, sem R$ ou $).
-6. return: O valor total de retorno (Ganhos Potenciais ou Retorno). Apenas o número. Se não achar, assuma 0.
-7. status: Avalie palavras como "Ganha", "Vencedora", "Resolvida", "Pago", "Retorno Obtido" (Retorne "won"). Palavras como "Perdida", "Perdedora" (Retorne "lost"). Palavras como "Devolvida", "Reembolsada", "Anulada" (Retorne "refunded"). Se "Encerrar Aposta" com lucro (Retorne "half_won") ou prejuízo (Retorne "half_lost"). Se não conseguir determinar o resultado final, retorne "pending".
-
-Retorne ESTRITAMENTE este JSON:
+    // 🚀 PASSO 2: EXECUTAR PROMPT TÁTICO ESPECIALIZADO
+    const promptStrategy = specializedPrompts[bookmaker as keyof typeof specializedPrompts] || specializedPrompts['Outra'];
+    const tacticalPrompt = promptStrategy(textData) + `\n\nRetorne ESTRITAMENTE este JSON:
 {
-  "bookmaker": "Bet365",
-  "match": "Real Madrid x Barcelona",
-  "market": "Mais de 2.5 Gols",
+  "bookmaker": "${bookmaker}",
+  "match": "Time A vs Time B",
+  "market": "Over 2.5",
   "odd": 1.85,
   "stake": 100.00,
   "return": 185.00,
@@ -60,7 +55,7 @@ Retorne ESTRITAMENTE este JSON:
 
     try {
         // TENTA PRIMEIRO COM O GEMINI
-        const result = await aiModel.generateContent({ contents: [{ role: "user", parts: [{ text: prompt }] }] });
+        const result = await aiModel.generateContent({ contents: [{ role: "user", parts: [{ text: tacticalPrompt }] }] });
         textResult = result.response.text();
     } catch (geminiError: any) { 
         // SE O GEMINI FALHAR (Ex: erro 404), ACIONA A OPENAI AUTOMATICAMENTE
@@ -68,7 +63,7 @@ Retorne ESTRITAMENTE este JSON:
             try {
                 const response = await openai.chat.completions.create({
                     model: "gpt-4o-mini",
-                    messages: [{ role: "user", content: prompt }],
+                    messages: [{ role: "user", content: tacticalPrompt }],
                     temperature: 0.1,
                     response_format: { type: "json_object" }
                 });
@@ -90,6 +85,7 @@ Retorne ESTRITAMENTE este JSON:
 
     // Calcula o lucro líquido com base no status e valores
     let profit = 0;
+    // Tenta limpar possíveis moedas (R$, $, etc.) antes de converter
     let stakeStr = String(parsedData.stake).replace(/[^\d.,]/g, '').replace(',', '.');
     let returnStr = String(parsedData.return).replace(/[^\d.,]/g, '').replace(',', '.');
     
@@ -107,7 +103,7 @@ Retorne ESTRITAMENTE este JSON:
     }
 
     parsedData.profit = parseFloat(profit.toFixed(2));
-    parsedData.odd = parseFloat(String(parsedData.odd).replace(',', '.')) || 1;
+    parsedData.odd = parseFloat(String(parsedData.odd).replace(',', '.')) || 1; // Limpa vírgula
     parsedData.stake = stake;
     parsedData.return = totalReturn;
 
