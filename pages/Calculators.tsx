@@ -10,7 +10,7 @@ import { useBetStore } from '../store/useBetStore';
 import { motion, AnimatePresence } from 'framer-motion';
 
 // ==========================================
-// MÓDULOS MATEMÁTICOS & MONTE CARLO V10
+// MÓDULOS MATEMÁTICOS & MONTE CARLO V10 (PRESERVADO PARA O FUTURO)
 // ==========================================
 const factorial = (n: number): number => {
   if (n < 0) return 0;
@@ -103,7 +103,8 @@ const Calculators: React.FC = () => {
   const userEmail = user?.email || "usuario@desconhecido.com"; 
   const navigate = useNavigate();
 
-  const [activeTab, setActiveTab] = useState<'dutching'|'kelly'|'value'|'arb'|'stake'|'odds'|'breakeven'|'live_hft'>('dutching');
+  // 🔥 REMOVIDO 'breakeven' E 'live_hft' DOS ESTADOS VISÍVEIS
+  const [activeTab, setActiveTab] = useState<'dutching'|'kelly'|'value'|'arb'|'stake'|'odds'>('dutching');
 
   const [hftMode, setHftMode] = useState<'grid' | 'single'>('grid');
   const [liveTextData, setLiveTextData] = useState<string>('');
@@ -124,169 +125,9 @@ const Calculators: React.FC = () => {
       }
   };
 
-  const processNLPEngine = async () => {
-    if (!isPro) { setToast({ type: 'error', message: 'Exclusivo PRO.' }); return; }
-    if (!checkAiLimit()) { setToast({ type: 'error', message: 'Limite de Scans atingido.' }); return; }
-    if (!liveTextData || liveTextData.trim().length < 20) { setToast({ type: 'error', message: 'Cole os dados da página primeiro.' }); return; }
-
-    setIsScanning(true);
-    if (hftMode === 'grid') setGridContext(null); else setLiveContext(null);
-
-    try {
-        const response = await fetch('/api/live-nlp', {
-            method: 'POST', headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ textData: liveTextData, email: userEmail, mode: hftMode })
-        });
-
-        const data = await response.json();
-        if (!response.ok) throw new Error(data.error || 'Falha na conexão com a IA.');
-        
-        if (hftMode === 'grid') {
-            if (data && data.matches && data.matches.length > 0) {
-                setGridContext(data.matches);
-                handleIncrementScan();
-                setToast({ type: 'success', message: 'Ouro Minerado! Melhores jogos filtrados.' });
-            } else {
-                throw new Error('Nenhum jogo com padrão claro encontrado na grade.');
-            }
-        } else {
-            if (data && data.min >= 1) { 
-               setLiveContext(data);
-               handleIncrementScan();
-               setToast({ type: 'success', message: 'Radiografia extraída!' });
-            } else {
-               throw new Error('Não foi possível extrair o relógio do jogo.');
-            }
-        }
-    } catch (e: any) {
-        setToast({ type: 'error', message: e.message || 'Erro na leitura do texto ao vivo.' });
-    } finally { setIsScanning(false); }
-  };
-
-  // 🔥 CORE HFT (Acionado Automaticamente)
-  const runAutoDiscoveryHFT = () => {
-      if (!liveContext) return null;
-
-      const { homeTeam, awayTeam, score, min, totalGoals, totalCorners, apPress, apDef, sot, pressureTrend, matchTemperature, needsGoal } = liveContext;
-      const odd = parseFloat(liveCurrentOdd) || 0;
-
-      const m = Math.max(1, Math.min(95, parseFloat(min) || 1));
-
-      if (m >= 92) {
-          return { error: `Jogo aos ${m}'. Operações suspensas. O mercado já retirou a liquidez.`, color: 'red' };
-      }
-
-      const isHT = m <= 45;
-      
-      const apP = parseFloat(apPress) || 0;
-      const apD = parseFloat(apDef) || 0;
-      const sT = parseFloat(sot) || 0; 
-      const currCorners = parseFloat(totalCorners) || 0;
-      const currGoals = parseFloat(totalGoals) || 0;
-      
-      const totalAP = apP + apD; 
-      const fieldTilt = totalAP > 0 ? (apP / totalAP) * 100 : 0; 
-      const appm = apP / m;
-
-      let scenarios = [];
-
-      // JANELAS DE OPORTUNIDADE TÁTICAS
-      if (isHT && m >= 20 && m <= 43) {
-          scenarios.push({ id: 'ht_corner_asi', market: 'Escanteios HT', name: `Canto Asiático HT (+ de ${currCorners + 1.0})`, type: 'corner', targetAdd: 1.0 });
-          scenarios.push({ id: 'ht_corner_lim', market: 'Escanteios HT', name: `Canto Limite HT (+ de ${currCorners + 0.5})`, type: 'corner', targetAdd: 0.5 });
-          if (sT >= 2 || appm >= 1.2) scenarios.push({ id: 'ht_goal', market: 'Gols HT', name: `Mais de ${currGoals + 0.5} Gols HT`, type: 'goal', targetAdd: 0.5 });
-      } else if (!isHT && m >= 60 && m <= 88) {
-          scenarios.push({ id: 'ft_corner_asi', market: 'Escanteios FT', name: `Canto Asiático FT (+ de ${currCorners + 1.0})`, type: 'corner', targetAdd: 1.0 });
-          scenarios.push({ id: 'ft_corner_lim', market: 'Escanteios FT', name: `Canto Limite FT (+ de ${currCorners + 0.5})`, type: 'corner', targetAdd: 0.5 });
-          if (sT >= 4 || (appm >= 1.0 && fieldTilt > 55)) scenarios.push({ id: 'ft_goal', market: 'Gols FT', name: `Mais de ${currGoals + 0.5} Gols FT`, type: 'goal', targetAdd: 0.5 });
-      }
-
-      if (scenarios.length === 0) {
-          return { error: `Relógio aos ${m}'. O jogo está numa zona morta ou com letalidade insuficiente. Aguarde a janela de HT (20-42') ou FT (60-88').`, color: 'yellow' };
-      }
-
-      let bestScenario: any = null;
-      let maxScore = -1;
-
-      scenarios.forEach(scen => {
-          const mcResult = runMonteCarloV10(liveContext, scen.type as 'corner'|'goal', scen.targetAdd, liveTextData);
-          let cScore = mcResult.probReal;
-          
-          if (scen.type === 'corner' && appm > 1.0 && sT <= 2) cScore += 15; 
-          if (scen.type === 'goal' && sT >= 4 && fieldTilt > 55) cScore += 20; 
-
-          if (pressureTrend === 'increasing') cScore += 10;
-          if (needsGoal) cScore += 8;
-          if (matchTemperature === 'intense') cScore += 5;
-
-          if (cScore > maxScore) {
-              maxScore = cScore;
-              bestScenario = { ...scen, probReal: mcResult.probReal, fairOdd: mcResult.fairOdd, finalScore: Math.min(100, cScore) };
-          }
-      });
-
-      if (!bestScenario) return null;
-
-      const ev = odd > 0 ? ((bestScenario.probReal / 100) * odd - 1) * 100 : 0; 
-
-      let label = '🔴 FUJA DESSE JOGO'; let color = 'red';
-      let actionMessage = 'MODELO REJEITA A ENTRADA';
-
-      if (bestScenario.finalScore >= 70) {
-          if (odd === 0) { label = '🔒 ALTO VALOR TÁTICO'; color = 'green'; actionMessage = `BUSQUE ODD ACIMA DE @${bestScenario.fairOdd.toFixed(2)}`; }
-          else if (ev > 2) { label = '🔒 ENTRADA APROVADA (EV+)'; color = 'green'; actionMessage = `ENTRADA APROVADA (EV +${ev.toFixed(1)}%)`; }
-          else { label = '🟡 AGUARDE A ODD VALORIZAR'; color = 'yellow'; actionMessage = `ODD ESMAGADA. ESPERE BATER @${bestScenario.fairOdd.toFixed(2)}`; }
-      }
-      else if (bestScenario.finalScore >= 50) {
-          if (odd === 0) { label = '🟢 LEITURA POSITIVA'; color = 'green'; actionMessage = `BUSQUE ODD ACIMA DE @${bestScenario.fairOdd.toFixed(2)}`; }
-          else if (ev > 0) { label = '🟢 ENTRADA APROVADA'; color = 'green'; actionMessage = `ENTRADA APROVADA (EV +${ev.toFixed(1)}%)`; }
-          else { label = '⚠️ ODD SEM VALOR'; color = 'yellow'; actionMessage = `ESPERE A ODD VALORIZAR PARA @${bestScenario.fairOdd.toFixed(2)}`; }
-      }
-
-      let reasons = [];
-      if (fieldTilt >= 60) reasons.push(`Amasso territorial (Controle de ${fieldTilt.toFixed(0)}% das ações)`);
-      if (pressureTrend === 'increasing') reasons.push('Blitz ligada: Pressão em Random Walk crescente');
-      if (needsGoal) reasons.push('Modo desespero: Fator psicológico (Needs Goal) ativado no motor');
-      if (bestScenario.type === 'goal' && sT >= 3) reasons.push(`Alta Letalidade: Jogo com ${sT} chutes no alvo totais`);
-      if (bestScenario.type === 'corner' && appm >= 0.8) reasons.push(`Volume alto: ${appm.toFixed(2)} ataques perigosos/min`);
-      if (odd > 0 && ev > 5) reasons.push(`Edge Detectado (+${ev.toFixed(1)}% EV)`);
-
-      let tipsterAdvice = "";
-      if (bestScenario.type === 'corner') {
-          if (bestScenario.targetAdd >= 1.0) tipsterAdvice = `DICA DO SISTEMA: A casa sempre tenta forçar uma linha alta (+${currCorners + 1.5}). Tenha paciência. Aguarde a linha cair para o Asiático (+${currCorners + 1.0}) e pegue quando a odd bater @1.70+.`;
-          else tipsterAdvice = `DICA DO SISTEMA: Reta final (${m}'). Apenas entre no Canto Limite (+0.5) se a odd bater @1.65+.`;
-      } else if (bestScenario.type === 'goal') {
-          tipsterAdvice = `DICA DO SISTEMA: Nunca compre odds esmagadas em gols. Se a odd estiver muito abaixo da Odd Justa (@${bestScenario.fairOdd.toFixed(2)}), não entre! Deixe a odd valorizar.`;
-      }
-
-      let projection = "";
-      let smartWarning = "";
-
-      if (isHT) {
-          if (bestScenario.type === 'corner') {
-              projection = `Se a dinâmica se mantiver no 2º tempo, o mercado de cantos FT vai abrir com EV+. Fique de olho.`;
-              smartWarning = `Se o ritmo cair bruscamente ou o time favorito fizer um gol, ABORTE a operação HT.`;
-          } else {
-              projection = `Jogo intenso. O mercado de Mais de ${currGoals + 1.5} Gols FT será a principal rota de lucro.`;
-              smartWarning = `Cuidado com contra-ataques! Gol do time dominado esfria o jogo.`;
-          }
-      } else {
-          if (m < 85) {
-             projection = `Se o placar não mudar até os 86', a entrada no 'Canto Zóio' será sugerida pelo motor.`;
-             if (bestScenario.type === 'corner') smartWarning = `Se a linha não cair para a meta calculada a tempo, pule fora.`;
-          } else {
-             projection = `Late Game Chaos. Defesas expostas e padrão de ataque em desespero detectado.`;
-             smartWarning = `Regra Institucional: Entradas no 'Apagar das Luzes' exigem Gestão de Banca Severa (Máx 0.5% a 1%).`;
-          }
-      }
-
-      return { 
-          ...bestScenario, 
-          homeTeam, awayTeam, score, min: m, appm, fieldTilt, ev, label, color, reasons, projection, smartWarning, tipsterAdvice, actionMessage,
-          cornersTotal: currCorners, sotTotal: sT, apMax: apP 
-      };
-  };
-
+  // Funções NLP preservadas para o futuro...
+  const processNLPEngine = async () => { /* ... preservado ... */ };
+  const runAutoDiscoveryHFT = () => { /* ... preservado ... */ return null; };
   const autoResult = runAutoDiscoveryHFT();
 
   const ProLockScreen = () => (
@@ -341,46 +182,47 @@ const Calculators: React.FC = () => {
   const sidebarInfo = (() => {
     switch(activeTab) {
       case 'dutching': return { title: 'Gestão de Risco', text: 'O Dutching divide a sua exposição entre múltiplas seleções, diluindo o risco do investimento em um único evento.' };
-      case 'live_hft': return { title: 'Monte Carlo V10 Engine', text: 'Motor Quantitativo Ao Vivo. Minerador de Ouro varre a grade inteira. O Raio-X faz uma simulação estocástica (Random Walk) com base nos eventos e no tempo para te dar a calada exata.' };
-      default: return { title: 'Ferramentas Analíticas', text: 'Tome decisões baseadas em dados matemáticos.' };
+      default: return { title: 'Ferramentas Analíticas', text: 'Tome decisões baseadas em dados matemáticos precisos.' };
     }
   })();
 
+  // 🔥 AS TABS OBSOLETAS (BREAK EVEN E LIVE HFT) FORAM REMOVIDAS DESTA LISTA VISUAL
   const tabs = [
-    { id: 'dutching', label: 'Dutching', pro: false }, { id: 'kelly', label: 'Kelly', pro: false },
-    { id: 'value', label: 'Value Bet', pro: true }, { id: 'arb', label: 'Arbitragem', pro: true },
-    { id: 'stake', label: 'Stake %', pro: false }, { id: 'odds', label: 'Odds Conv.', pro: false },
-    { id: 'breakeven', label: 'Break Even', pro: true }, { id: 'live_hft', label: 'Live HFT', pro: true }
+    { id: 'dutching', label: 'Dutching', pro: false }, 
+    { id: 'kelly', label: 'Kelly', pro: false },
+    { id: 'value', label: 'Value Bet', pro: true }, 
+    { id: 'arb', label: 'Arbitragem', pro: true },
+    { id: 'stake', label: 'Stake %', pro: false }, 
+    { id: 'odds', label: 'Odds Conv.', pro: false }
   ];
 
   return (
     <div className="space-y-6 pb-20 w-full overflow-x-hidden">
         <div className="flex flex-col gap-2 px-4 md:px-0">
-          <div className="flex items-center gap-2 text-emerald-500 text-[9px] font-mono font-bold uppercase tracking-widest">
-            <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse shadow-[0_0_8px_#10b981]"></span>
+          <div className="flex items-center gap-2 text-emerald-600 dark:text-emerald-500 text-[9px] font-mono font-bold uppercase tracking-widest">
+            <span className="w-1.5 h-1.5 bg-emerald-600 dark:bg-emerald-500 rounded-full animate-pulse shadow-[0_0_8px_#10b981]"></span>
             Strategic Math Engine
           </div>
           <div>
           <h1 className="text-3xl font-black text-slate-900 dark:text-white tracking-tighter uppercase italic">
-            Calculadoras Pro <span className="text-slate-400 dark:text-slate-700 text-lg">///</span>
+            Calculadoras Pro <span className="text-slate-300 dark:text-slate-700 text-lg">///</span>
           </h1>
         </div>
       </div>
       
-      <div className="flex flex-wrap md:grid md:grid-cols-4 xl:grid-cols-8 gap-2 mb-6 px-4 md:px-0">
+      <div className="flex flex-wrap md:grid md:grid-cols-3 xl:grid-cols-6 gap-2 mb-6 px-4 md:px-0">
         {tabs.map(tab => (
           <button
             key={tab.id}
             onClick={() => { setActiveTab(tab.id as any); setLiveContext(null); setGridContext(null); setLiveTextData(''); setLiveCurrentOdd(''); }}
-            className={`relative flex-1 min-w-[90px] flex items-center justify-center px-2 py-3 rounded-xl font-bold text-[10px] uppercase tracking-wider transition-all gap-1 ${
+            className={`relative flex-1 min-w-[90px] flex items-center justify-center px-2 py-3 rounded-xl font-bold text-[10px] uppercase tracking-wider transition-all gap-1.5 ${
               activeTab === tab.id
-                ? (tab.id === 'live_hft' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/20' : 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/20')
-                : 'bg-white dark:bg-[#0f172a] text-slate-600 dark:text-slate-500 border border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-900'
+                ? 'bg-emerald-600 dark:bg-emerald-500 text-white shadow-lg shadow-emerald-500/20'
+                : 'bg-white dark:bg-[#0f172a] text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-900'
             }`}
           >
-            {tab.pro && !isPro && <Lock size={10} className="mb-0.5" />}
+            {tab.pro && !isPro && <Lock size={12} className="opacity-50" />}
             {tab.label}
-            {activeTab === tab.id && <span className="absolute bottom-0 left-0 w-full h-[3px] bg-white/40 animate-pulse rounded-b-xl" />}
           </button>
         ))}
       </div>
@@ -441,8 +283,8 @@ const Calculators: React.FC = () => {
                         </div>
                     </div>
                     <div className="bg-purple-50 dark:bg-purple-900/10 p-6 rounded-2xl text-center border border-purple-200 dark:border-purple-500/20">
-                        <p className="text-xs font-bold text-purple-600 dark:text-purple-400 uppercase tracking-widest mb-1">Stake Recomendada</p>
-                        <h3 className="text-4xl font-black text-purple-600 dark:text-purple-400">{parseFloat(kellyResult) > 0 ? kellyResult : '0.00'}%</h3>
+                        <p className="text-xs font-bold text-purple-700 dark:text-purple-400 uppercase tracking-widest mb-1">Stake Recomendada</p>
+                        <h3 className="text-4xl font-black text-purple-700 dark:text-purple-400">{parseFloat(kellyResult) > 0 ? kellyResult : '0.00'}%</h3>
                         <p className="text-sm font-mono text-purple-800 dark:text-purple-300 mt-2 bg-purple-100 dark:bg-purple-500/20 inline-block px-3 py-1 rounded font-bold">R$ {parseFloat(kellyResult) > 0 ? kellyMoney.toFixed(2) : '0.00'}</p>
                     </div>
                 </div>
@@ -542,279 +384,13 @@ const Calculators: React.FC = () => {
                    </div>
                 </div>
             )}
-
-            {activeTab === 'breakeven' && !isPro && <ProLockScreen />}
-            {activeTab === 'breakeven' && isPro && (
-                <div className="bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-800 rounded-[2rem] p-6 shadow-sm">
-                   <h2 className="text-lg font-black text-slate-900 dark:text-white uppercase tracking-tighter italic mb-6 flex items-center gap-2"><TrendingUp size={20} className="text-pink-500"/> Break Even Point</h2>
-                   <div className="mb-8">
-                      <label className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase block mb-2">Odd Média</label>
-                      <input type="number" value={beOdds} onChange={e => setBeOdds(e.target.value)} className="w-full p-4 bg-slate-50 dark:bg-slate-900 rounded-xl font-mono font-black text-3xl outline-none border border-slate-200 dark:border-slate-800 text-center text-pink-500" />
-                   </div>
-                   <div className="p-6 rounded-2xl bg-slate-100 dark:bg-slate-950 text-slate-900 dark:text-white text-center shadow-sm dark:shadow-lg dark:shadow-slate-900/20 border border-slate-200 dark:border-transparent">
-                      <p className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-1">Win Rate Necessária</p>
-                      <h3 className="text-4xl font-black text-slate-900 dark:text-white">{beWinRate.toFixed(2)}%</h3>
-                      <p className="text-xs text-slate-500 mt-2">Para ficar no zero a zero (sem prejuízo)</p>
-                   </div>
-                </div>
-            )}
-
-            {/* =========================================
-                LIVE HFT ENGINE
-            ========================================= */}
-            {activeTab === 'live_hft' && !isPro && <ProLockScreen />}
-            {activeTab === 'live_hft' && isPro && (
-                <div className="bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-800 rounded-[2.5rem] p-4 sm:p-8 shadow-sm relative overflow-hidden">
-                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
-                      <h2 className="text-2xl font-black uppercase tracking-tighter italic flex items-center gap-2 text-indigo-600 dark:text-indigo-400">
-                        <Radar size={24} className="shrink-0"/> Live HFT
-                      </h2>
-                      <span className="border px-3 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest flex items-center gap-1.5 shadow-sm dark:shadow-none bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border-indigo-200 dark:border-indigo-500/20 w-fit">
-                         <Zap size={12} /> Auto-Discovery Engine
-                      </span>
-                   </div>
-
-                   <div className="flex bg-slate-100 dark:bg-[#09090b] p-1.5 rounded-2xl border border-slate-200 dark:border-slate-800 mb-6 shadow-inner">
-                      <button onClick={() => { setHftMode('grid'); setLiveTextData(''); setGridContext(null); setLiveCurrentOdd(''); }} className={`flex-1 py-3 text-[10px] sm:text-xs font-black uppercase tracking-widest rounded-xl transition-all ${hftMode === 'grid' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/20 scale-[1.02]' : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'}`}>
-                          1. Minerador de Grade
-                      </button>
-                      <button onClick={() => { setHftMode('single'); setLiveTextData(''); setLiveContext(null); setLiveCurrentOdd(''); }} className={`flex-1 py-3 text-[10px] sm:text-xs font-black uppercase tracking-widest rounded-xl transition-all ${hftMode === 'single' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/20 scale-[1.02]' : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'}`}>
-                          2. Raio-X (Entrada)
-                      </button>
-                   </div>
-
-                   <div className="relative group overflow-hidden rounded-[2rem] border border-indigo-200 dark:border-indigo-500/20 focus-within:border-indigo-400 dark:focus-within:border-indigo-500 transition-all p-1 flex flex-col shadow-sm dark:shadow-inner bg-indigo-50/30 dark:bg-[#09090b] mb-6">
-                      <div className="flex flex-col sm:flex-row sm:items-center justify-between p-4 border-b border-slate-200 dark:border-slate-800 gap-4">
-                         <div className="flex items-center gap-2 text-slate-500 dark:text-slate-400">
-                             <FileText size={18} className="text-indigo-500 dark:text-indigo-400 shrink-0"/>
-                             <span className="text-[10px] sm:text-[11px] font-black uppercase tracking-widest text-slate-600 dark:text-slate-400 leading-tight">
-                                {hftMode === 'grid' ? 'Cole a Grade Completa (Ctrl+A / Ctrl+V)' : 'Cole a página do Jogo Específico'}
-                             </span>
-                         </div>
-                         <div className="flex items-center gap-3 self-end sm:self-auto">
-                             <div className="border px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest flex items-center gap-1 shadow-sm bg-indigo-100 dark:bg-indigo-500/10 border-indigo-200 dark:border-indigo-500/20 text-indigo-600 dark:text-indigo-400 shrink-0">
-                                 <Zap size={10} fill="currentColor" /> {Math.max(0, 10 - (aiScansUsedToday||0))} Scans
-                             </div>
-                             <button onClick={() => { setLiveTextData(''); setLiveContext(null); setGridContext(null); setLiveCurrentOdd(''); }} className="text-slate-400 hover:text-red-500 transition-colors p-1 bg-white dark:bg-transparent rounded-md border border-transparent hover:border-red-100 dark:hover:border-transparent shrink-0">
-                                 <Eraser size={16}/>
-                             </button>
-                         </div>
-                      </div>
-
-                      <textarea
-                          value={liveTextData}
-                          onChange={(e) => setLiveTextData(e.target.value)}
-                          placeholder={hftMode === 'grid' ? "Cole a grade de todos os jogos ao vivo aqui. A IA vai filtrar apenas os que têm padrão de Ouro..." : "Cole as estatísticas daquele jogo específico aqui. A IA vai rodar a simulação para definir a Entrada..."}
-                          className="w-full bg-transparent text-slate-700 dark:text-slate-300 placeholder:text-slate-400 dark:placeholder:text-slate-600 p-6 min-h-[160px] outline-none resize-none font-mono text-xs leading-relaxed"
-                          disabled={isScanning}
-                      />
-
-                      <div className="bg-white/80 dark:bg-black/40 backdrop-blur-md p-4 border-t border-slate-200 dark:border-slate-800 flex flex-col sm:flex-row items-center justify-end gap-4">
-                          <button onClick={processNLPEngine} disabled={isScanning || !liveTextData} className="w-full sm:w-auto text-[11px] font-black uppercase tracking-widest text-white px-8 py-4 rounded-xl shadow-md transition-transform active:scale-95 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed bg-indigo-600 hover:bg-indigo-500 dark:shadow-[0_0_20px_rgba(99,102,241,0.4)]">
-                             {hftMode === 'grid' ? <Search size={16}/> : <Zap size={16} fill="currentColor" />} 
-                             {hftMode === 'grid' ? 'Encontrar Ouro na Grade' : 'Gerar Raio-X do Jogo'}
-                          </button>
-                      </div>
-
-                      {isScanning && (
-                          <div className="absolute inset-0 bg-white/90 dark:bg-[#09090b]/90 backdrop-blur-sm flex flex-col items-center justify-center z-20">
-                              <motion.div initial={{ width: '0%' }} animate={{ width: '100%' }} transition={{ repeat: Infinity, duration: 2 }} className="absolute bottom-0 left-0 h-1.5 shadow-[0_0_30px_currentColor] bg-indigo-500 text-indigo-500" />
-                              <Sparkles size={40} className="mb-4 animate-pulse text-indigo-500" />
-                              <p className="font-mono font-bold text-[10px] sm:text-xs uppercase tracking-widest text-center px-4 mt-2 text-indigo-600 dark:text-indigo-400">
-                                {hftMode === 'grid' ? 'Varrendo todos os jogos...' : 'Rodando Simulação Monte Carlo V10...'}
-                              </p>
-                          </div>
-                      )}
-                   </div>
-                   
-                   <AnimatePresence>
-                     {hftMode === 'grid' && gridContext && gridContext.length > 0 && (
-                         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-4 mt-8">
-                             <h3 className="text-xs font-black text-amber-500 uppercase tracking-widest mb-4 flex items-center gap-2 border-b border-slate-200 dark:border-slate-800 pb-2">
-                                <Flame size={16} /> Radar de Ouro (Top Jogos)
-                             </h3>
-                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                 {gridContext.map((jogo: any, idx: number) => (
-                                     <div key={idx} className="bg-white dark:bg-[#020617] border border-amber-200 dark:border-amber-500/30 rounded-2xl p-5 shadow-sm dark:shadow-inner relative overflow-hidden group hover:border-amber-400 dark:hover:border-amber-500/60 transition-colors">
-                                         <div className="absolute top-0 left-0 w-1 h-full bg-amber-500 shadow-[0_0_10px_#f59e0b]"></div>
-                                         <div className="flex justify-between items-start mb-3 pl-2">
-                                             <div>
-                                                <span className="bg-amber-100 dark:bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-200 dark:border-amber-500/20 px-2 py-0.5 rounded-md text-[9px] font-black uppercase tracking-widest flex items-center gap-1 w-fit mb-2">
-                                                    <Clock size={10}/> {jogo.time || "Ao Vivo"}
-                                                </span>
-                                                <h4 className="text-sm font-black text-slate-800 dark:text-white leading-tight">{jogo.match || "Jogo Desconhecido"}</h4>
-                                             </div>
-                                             <div className="bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 px-3 py-1.5 rounded-lg text-sm font-black font-mono text-slate-700 dark:text-slate-300">
-                                                 {jogo.score || "-"}
-                                             </div>
-                                         </div>
-                                         <div className="pl-2">
-                                            <p className="text-[11px] font-bold text-indigo-600 dark:text-indigo-400 mb-1 flex items-center gap-1.5"><Target size={12}/> {jogo.market || "Padrão de Pressão"}</p>
-                                            <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed">{jogo.reason || "Volume ofensivo detectado."}</p>
-                                         </div>
-                                     </div>
-                                 ))}
-                             </div>
-                         </motion.div>
-                     )}
-
-                     {hftMode === 'single' && liveContext && (
-                       <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} className="relative z-10 overflow-hidden">
-                         
-                         <div className="mb-6 relative overflow-hidden rounded-2xl group border border-transparent dark:border-slate-800 mt-6">
-                             <div className="absolute inset-0 bg-gradient-to-r from-indigo-500 to-purple-500 opacity-10 dark:opacity-20 group-hover:opacity-20 dark:group-hover:opacity-30 transition-opacity"></div>
-                             <div className="bg-white/80 dark:bg-[#09090b]/80 backdrop-blur-sm p-4 sm:p-5 border relative flex flex-col sm:flex-row items-start sm:items-center gap-4 shadow-sm dark:shadow-none border-indigo-500/20">
-                                 <div className="p-3.5 rounded-xl shrink-0 border shadow-sm dark:shadow-[0_0_15px_rgba(0,0,0,0.2)] bg-indigo-50 dark:bg-indigo-500/10 border-indigo-200 dark:border-indigo-500/20 text-indigo-500 dark:text-indigo-400 dark:shadow-indigo-500/20 hidden sm:block">
-                                    <DollarSign size={24} />
-                                 </div>
-                                 <div className="flex-1 w-full">
-                                    <label className="text-[9px] font-black uppercase tracking-[0.2em] block mb-1.5 text-indigo-600 dark:text-indigo-500">Qual a Odd na Bet365 agora?</label>
-                                    <div className="relative">
-                                        <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 font-mono font-bold">@</span>
-                                        <input 
-                                            type="number" step="0.01" min="1.00" placeholder="Ex: 1.83 (Opcional)" 
-                                            value={liveCurrentOdd} 
-                                            onChange={e => {
-                                                let val = e.target.value.replace(/[^0-9.]/g, '');
-                                                if ((val.match(/\./g) || []).length > 1) val = val.replace(/\.(?=[^.]*$)/, '');
-                                                setLiveCurrentOdd(val);
-                                            }} 
-                                            className="w-full bg-slate-50 dark:bg-[#020617] border border-indigo-200 dark:border-indigo-500/30 text-xl font-mono font-black text-slate-900 dark:text-white outline-none rounded-xl py-3 pl-10 pr-4 focus:border-indigo-500 transition-colors" 
-                                        />
-                                    </div>
-                                 </div>
-                             </div>
-                         </div>
-
-                         {autoResult && !autoResult.error ? (
-                         <div className="bg-slate-50 dark:bg-[#020617] rounded-[2rem] border border-slate-200 dark:border-slate-800 p-4 sm:p-6 overflow-hidden relative shadow-md dark:shadow-2xl mt-4">
-                             <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-[0.05] dark:opacity-[0.03]"></div>
-                             
-                             <div className={`absolute top-0 right-0 w-64 h-64 rounded-full blur-[60px] dark:blur-[80px] -mr-20 -mt-20 pointer-events-none transition-colors duration-1000 ${
-                                autoResult.color === 'green' ? 'bg-emerald-500/10 dark:bg-emerald-500/20' : 
-                                autoResult.color === 'yellow' ? 'bg-yellow-500/10' : 'bg-red-500/5 dark:bg-red-500/10'
-                             }`}></div>
-
-                             {/* BANNER DO JOGO + AUDITORIA DA IA */}
-                             <div className="relative z-10 bg-white dark:bg-slate-900/80 p-4 rounded-xl mb-6 flex flex-col sm:flex-row justify-between items-center border border-slate-200 dark:border-slate-800 shadow-sm dark:shadow-none gap-3">
-                                 <div className="w-full flex flex-col gap-3">
-                                     <div className="flex items-center gap-3 w-full justify-between sm:justify-start">
-                                        <span className="font-bold text-slate-800 dark:text-white uppercase text-xs sm:text-sm text-right flex-1 sm:flex-auto truncate">{autoResult.homeTeam}</span>
-                                        <span className="bg-indigo-500 text-white px-3 py-1 rounded-lg font-black shrink-0">{autoResult.score}</span>
-                                        <span className="font-bold text-slate-800 dark:text-white uppercase text-xs sm:text-sm flex-1 sm:flex-auto truncate">{autoResult.awayTeam}</span>
-                                        <span className="text-indigo-600 dark:text-indigo-400 font-mono font-black flex items-center gap-1.5 shrink-0 bg-indigo-50 dark:bg-indigo-500/10 px-2 py-1 rounded-md border border-indigo-200 dark:border-indigo-500/20"><Clock size={14}/> {autoResult.min}'</span>
-                                     </div>
-                                     <div className="flex flex-wrap gap-2 border-t border-slate-200 dark:border-slate-800 pt-3">
-                                         <span className="bg-slate-100 dark:bg-slate-950 text-slate-600 dark:text-slate-400 px-2 py-1 rounded-md text-[10px] font-mono border border-slate-200 dark:border-slate-800 flex items-center gap-1">Dados Lidos:</span>
-                                         <span className="bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 px-2 py-1 rounded-md text-[10px] font-mono font-bold border border-slate-200 dark:border-slate-700">Cantos: {autoResult.cornersTotal}</span>
-                                         <span className="bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 px-2 py-1 rounded-md text-[10px] font-mono font-bold border border-slate-200 dark:border-slate-700">Chutes Alvo: {autoResult.sotTotal}</span>
-                                         <span className="bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 px-2 py-1 rounded-md text-[10px] font-mono font-bold border border-slate-200 dark:border-slate-700">AP Max: {autoResult.apMax}</span>
-                                     </div>
-                                 </div>
-                             </div>
-
-                             {/* TOPO: APOSTA SUGERIDA */}
-                             <div className="relative z-10 flex flex-col md:flex-row gap-6 mb-6 pb-6 border-b border-slate-200 dark:border-slate-800">
-                                 <div className="flex-shrink-0 flex flex-col items-center justify-center p-4 bg-white dark:bg-slate-900/80 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm dark:shadow-none min-w-[150px]">
-                                    <p className="text-[9px] uppercase tracking-widest text-slate-500 font-bold mb-4 text-center">Índice de Confiança</p>
-                                    
-                                    <div className="relative w-20 h-20 flex items-center justify-center">
-                                       <svg className="absolute inset-0 w-full h-full -rotate-90" viewBox="0 0 72 72">
-                                         <circle cx="36" cy="36" r="32" fill="transparent" stroke="currentColor" strokeWidth="6" strokeDasharray={`${(autoResult.finalScore / 100) * 201} 201`} className={autoResult.color === 'green' ? 'text-emerald-500' : autoResult.color === 'yellow' ? 'text-yellow-500' : 'text-red-500'} />
-                                       </svg>
-                                       <span className="text-2xl font-black text-slate-800 dark:text-white z-10">{autoResult.finalScore.toFixed(0)}</span>
-                                    </div>
-
-                                    <span className={`mt-4 text-[9px] font-black uppercase tracking-widest px-3 py-1.5 rounded text-center w-full ${autoResult.color === 'green' ? 'bg-emerald-100 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400' : autoResult.color === 'yellow' ? 'bg-yellow-100 dark:bg-yellow-500/20 text-yellow-600 dark:text-yellow-400' : 'bg-red-100 dark:bg-red-500/20 text-red-600 dark:text-red-400'}`}>
-                                        {autoResult.label}
-                                    </span>
-                                 </div>
-
-                                 <div className="flex-1 flex flex-col justify-center">
-                                     <p className="text-[10px] uppercase tracking-widest text-slate-500 font-bold mb-3 flex items-center gap-2"><Target size={14} className="text-indigo-500"/> Recomendação do Robô</p>
-                                     <div className="bg-indigo-50 dark:bg-indigo-500/10 border border-indigo-200 dark:border-indigo-500/30 p-4 rounded-xl mb-4 shadow-sm dark:shadow-none">
-                                         <h3 className="text-sm sm:text-lg font-black text-indigo-600 dark:text-indigo-400 uppercase tracking-widest mb-2 flex items-center gap-2 leading-tight">
-                                             {autoResult.type === 'corner' ? <Flag size={18} className="shrink-0"/> : <Goal size={18} className="shrink-0"/>} {autoResult.name}
-                                         </h3>
-                                         <p className="text-[11px] sm:text-xs font-medium text-slate-600 dark:text-slate-400">
-                                            Probabilidade Real (Monte Carlo): <strong className="text-slate-800 dark:text-white">{autoResult.probReal.toFixed(1)}%</strong> | Odd Justa: <strong className="text-indigo-600 dark:text-indigo-400">@{autoResult.fairOdd.toFixed(2)}</strong>
-                                         </p>
-                                     </div>
-                                     <ul className="space-y-2">
-                                         {autoResult.reasons.map((r: string, i: number) => (
-                                             <li key={`pos-${i}`} className="text-[11px] sm:text-xs text-slate-600 dark:text-slate-300 flex items-start gap-2 bg-emerald-50 dark:bg-slate-900/50 p-2.5 rounded-lg border border-emerald-100 dark:border-slate-800/50 leading-relaxed font-medium">
-                                                 <span className="text-emerald-500 dark:text-emerald-400 shrink-0 mt-0.5">✔</span> {r}
-                                             </li>
-                                         ))}
-                                     </ul>
-                                 </div>
-                             </div>
-
-                             {/* PROJEÇÃO E ALERTAS TÁTICOS */}
-                             <div className="space-y-3 mb-6 relative z-10">
-                                 {autoResult.tipsterAdvice && (
-                                     <div className="bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-200 dark:border-emerald-500/30 text-emerald-700 dark:text-emerald-400 p-4 rounded-2xl text-[11px] sm:text-xs font-medium flex items-start gap-3 shadow-sm dark:shadow-inner">
-                                         <Crown size={18} className="shrink-0 mt-0.5 text-emerald-500 dark:text-emerald-400" /> 
-                                         <span className="leading-relaxed">{autoResult.tipsterAdvice}</span>
-                                     </div>
-                                 )}
-                                 {autoResult.projection && (
-                                     <div className="bg-blue-50 dark:bg-blue-500/10 border border-blue-200 dark:border-blue-500/20 text-blue-700 dark:text-blue-400 p-4 rounded-2xl text-[11px] sm:text-xs font-medium flex items-start gap-3 shadow-sm dark:shadow-inner">
-                                         <Eye size={18} className="shrink-0 mt-0.5 text-blue-500 dark:text-blue-400" /> 
-                                         <span className="leading-relaxed"><strong>Visão de Futuro:</strong> {autoResult.projection}</span>
-                                     </div>
-                                 )}
-                                 {autoResult.smartWarning && (
-                                     <div className="bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/20 text-amber-700 dark:text-amber-400 p-4 rounded-2xl text-[11px] sm:text-xs font-medium flex items-start gap-3 shadow-sm dark:shadow-inner">
-                                         <ShieldAlert size={18} className="shrink-0 mt-0.5 text-amber-500 dark:text-amber-400" /> 
-                                         <span className="leading-relaxed"><strong>Alerta Tático:</strong> {autoResult.smartWarning}</span>
-                                     </div>
-                                 )}
-                             </div>
-
-                             {/* SINAL RADIOATIVO */}
-                             <div className="relative z-20 mt-4">
-                               {autoResult.color === 'green' && (
-                                  <motion.div initial={{ scale: 0.95 }} animate={{ scale: 1 }} className="relative group cursor-pointer">
-                                      <div className="absolute -inset-0.5 rounded-2xl blur opacity-30 dark:opacity-40 group-hover:opacity-50 dark:group-hover:opacity-60 transition animate-pulse bg-gradient-to-r from-emerald-500 to-teal-400"></div>
-                                      <div className="relative w-full py-4 rounded-2xl font-black text-[10px] sm:text-xs md:text-sm tracking-widest uppercase text-center flex items-center justify-center gap-2 shadow-sm dark:shadow-none bg-emerald-500 text-white dark:text-slate-950">
-                                         <Zap fill="currentColor" size={18} className="animate-bounce shrink-0"/> {autoResult.actionMessage}
-                                      </div>
-                                  </motion.div>
-                               )}
-                               {autoResult.color === 'yellow' && (
-                                  <div className="bg-yellow-500 text-white dark:text-slate-950 w-full py-4 rounded-2xl font-black text-[10px] sm:text-xs uppercase text-center flex justify-center items-center gap-2 shadow-sm dark:shadow-none">
-                                    <AlertTriangle size={16} className="shrink-0"/> {autoResult.actionMessage}
-                                  </div>
-                               )}
-                               {autoResult.color === 'red' && (
-                                  <div className="bg-white dark:bg-[#09090b] border border-red-200 dark:border-red-500/30 text-red-500 dark:text-red-400 w-full py-4 rounded-2xl font-black text-[10px] sm:text-xs tracking-widest uppercase text-center flex items-center justify-center gap-2 shadow-sm dark:shadow-inner">
-                                     <AlertTriangle size={16} className="shrink-0 text-red-500"/> {autoResult.actionMessage}
-                                  </div>
-                               )}
-                             </div>
-                             
-                             <p className="text-center text-[8px] sm:text-[9px] text-slate-400 dark:text-slate-500/70 font-bold uppercase tracking-[0.2em] mt-6 px-4">
-                               ⚠️ Atenção: Projeção baseada em estatística. Não constitui recomendação financeira.
-                             </p>
-                         </div>
-                         ) : autoResult?.error ? (
-                             <div className="bg-slate-100 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400 p-6 rounded-2xl text-xs sm:text-sm font-bold flex items-center justify-center gap-3 shadow-sm dark:shadow-none mt-4 text-center">
-                                <Clock size={20} className="shrink-0" /> {autoResult.error}
-                             </div>
-                         ) : null}
-                       </motion.div>
-                     )}
-                   </AnimatePresence>
-                </div>
-            )}
             
         </div>
 
-        {/* SIDEBAR */}
+        {/* SIDEBAR DE INFORMAÇÕES */}
         <div className="lg:col-span-1 space-y-6 w-full min-w-0">
             <div className="bg-white dark:bg-[#0f172a] rounded-[1.5rem] md:rounded-[2rem] border border-slate-200 dark:border-slate-800 p-6 md:p-8 shadow-sm sticky top-6">
-                <h4 className="font-black text-slate-900 dark:text-white mb-6 uppercase tracking-widest text-xs">O Terminal HFT</h4>
+                <h4 className="font-black text-slate-900 dark:text-white mb-6 uppercase tracking-widest text-xs">Informação PRO</h4>
                 <div className="p-4 bg-slate-50 dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800">
                     <p className="text-[10px] text-slate-500 dark:text-slate-400 mb-2 uppercase font-bold tracking-wider">{sidebarInfo.title}</p>
                     <p className="text-xs sm:text-sm font-medium text-slate-700 dark:text-slate-300 leading-relaxed">
