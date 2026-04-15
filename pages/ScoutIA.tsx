@@ -4,11 +4,11 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Sparkles, Scan, Layers, Clock, Zap, Target, CheckCircle2, 
   Square, Goal, Flag, ArrowRight, Plus, ArrowRightLeft, 
-  ShieldAlert, Activity, Crown, Trash, Info, TrendingUp, TrendingDown, Calculator, FileText, Eraser
+  ShieldAlert, Activity, Crown, Info, TrendingUp, TrendingDown, Calculator, FileText, Eraser, AlertTriangle
 } from 'lucide-react';
 import { useBetStore } from '../store/useBetStore';
 
-// 🔥 COMPRESSOR DE IMAGEM HFT (Usado APENAS no Radar de Grade agora)
+// 🔥 COMPRESSOR DE IMAGEM HFT
 const fileToBase64 = async (file: File): Promise<string> => {
   const img = new Image();
   const objectUrl = URL.createObjectURL(file);
@@ -69,13 +69,11 @@ const ScoutIA: React.FC = () => {
   const userEmail = user?.email || "usuario@desconhecido.com"; 
   const navigate = useNavigate();
 
-  // Estados
   const [scoutMode, setScoutMode] = useState<'grid' | 'builder'>('grid');
   const [scoutGridImage, setScoutGridImage] = useState<string | null>(null);
   const [scoutGridResult, setScoutGridResult] = useState<any[] | null>(null);
   const [selectedMatchesForBuilder, setSelectedMatchesForBuilder] = useState<string[]>([]);
   
-  // 🔥 NOVO STATE NLP PARA O CONSTRUTOR
   const [scoutTextData, setScoutTextData] = useState<string>(''); 
   const [scoutBuilderResult, setScoutBuilderResult] = useState<any | null>(null);
   const [isScanningScout, setIsScanningScout] = useState(false);
@@ -106,11 +104,10 @@ const ScoutIA: React.FC = () => {
       }
   };
 
-  // Tratamento de Ctrl+V (Só aceita imagem se estiver no Radar de Grade)
   useEffect(() => {
     const handleGlobalPaste = (e: ClipboardEvent) => {
       if (document.activeElement?.tagName === 'INPUT' || document.activeElement?.tagName === 'TEXTAREA') return;
-      if (scoutMode !== 'grid') return; // Se estiver no construtor, ignora Ctrl+V de imagem global
+      if (scoutMode !== 'grid') return; 
       
       const items = e.clipboardData?.items;
       if (!items) return;
@@ -168,7 +165,6 @@ const ScoutIA: React.FC = () => {
       } finally { setIsScanningScout(false); }
   };
 
-  // 🔥 O NOVO MOTOR DO CONSTRUTOR (NLP TEXT-TO-JSON)
   const processNLPEngine = async () => {
       if (!scoutTextData || scoutTextData.trim().length < 50) {
           setToast({ type: 'error', message: 'Cole os dados do site de estatísticas primeiro. Texto muito curto.' });
@@ -229,13 +225,13 @@ const ScoutIA: React.FC = () => {
   const clearGrid = () => { setScoutGridImage(null); setScoutGridResult(null); setSelectedMatchesForBuilder([]); };
   const clearBuilder = () => { setScoutTextData(''); setScoutBuilderResult(null); setSelectedMatchesForBuilder([]); setUserOdd(''); };
 
-  // 🔥 CÁLCULO DINÂMICO DO ESPECTRO DE EV NO FRONTEND
+  // 🔥 CÁLCULO DINÂMICO DE EV
   let dynamicEVMin: number | null = null;
   let dynamicEVMax: number | null = null;
   let evStatus: 'positive' | 'negative' | 'mixed' | null = null;
 
   if (scoutBuilderResult && userOdd) {
-      const parsedOdd = parseFloat(userOdd);
+      const parsedOdd = parseFloat(userOdd.replace(',', '.'));
       if (!isNaN(parsedOdd) && parsedOdd > 1) {
           const minProbDecimal = scoutBuilderResult.minProb / 100;
           const maxProbDecimal = scoutBuilderResult.maxProb / 100;
@@ -243,9 +239,9 @@ const ScoutIA: React.FC = () => {
           dynamicEVMin = ((minProbDecimal * parsedOdd) - 1) * 100;
           dynamicEVMax = ((maxProbDecimal * parsedOdd) - 1) * 100;
 
-          if (dynamicEVMin > 0) evStatus = 'positive'; // EV 100% garantido na banda
-          else if (dynamicEVMax < 0) evStatus = 'negative'; // Fuga imediata
-          else evStatus = 'mixed'; // Neutro/Risco
+          if (dynamicEVMin > 0) evStatus = 'positive';
+          else if (dynamicEVMax < 0) evStatus = 'negative';
+          else evStatus = 'mixed'; 
       }
   }
 
@@ -313,15 +309,15 @@ const ScoutIA: React.FC = () => {
                    <ul className="text-[11px] sm:text-xs text-slate-600 dark:text-slate-300 space-y-2.5 font-medium">
                        {scoutMode === 'grid' ? (
                            <>
-                               <li><strong className="text-indigo-600 dark:text-indigo-300">Passo 1:</strong> Acesse uma lista de jogos do dia (Ex: Flashscore, Sofascore ou a própria Bet365).</li>
+                               <li><strong className="text-indigo-600 dark:text-indigo-300">Passo 1:</strong> Acesse uma lista de jogos do dia (Ex: Flashscore, Sofascore).</li>
                                <li><strong className="text-indigo-600 dark:text-indigo-300">Passo 2:</strong> Tire um Print (captura de tela) que mostre os times e as odds 1x2.</li>
-                               <li><strong className="text-indigo-600 dark:text-indigo-300">Passo 3:</strong> Cole a imagem aqui. A IA vai varrer a grade e encontrar os jogos com Assimetria.</li>
+                               <li><strong className="text-indigo-600 dark:text-indigo-300">Passo 3:</strong> Cole a imagem aqui. A IA vai varrer a grade e encontrar os jogos de valor.</li>
                            </>
                        ) : (
                            <>
-                               <li><strong className="text-indigo-600 dark:text-indigo-300">Passo 1:</strong> Vá no seu site de estatísticas favorito (CornerPro, Sofascore, Flashscore).</li>
-                               <li><strong className="text-indigo-600 dark:text-indigo-300">Passo 2 (O Segredo):</strong> Aperte "Ctrl+A" na página do jogo, ou simplesmente selecione todo o texto com o mouse/dedo e copie.</li>
-                               <li><strong className="text-indigo-600 dark:text-indigo-300">Passo 3:</strong> Cole toda a bagunça de texto na caixa abaixo. O Motor HFT vai filtrar os números cruciais e montar a aposta.</li>
+                               <li><strong className="text-indigo-600 dark:text-indigo-300">Passo 1:</strong> Vá no seu site de estatísticas (CornerPro, Sofascore, Flashscore).</li>
+                               <li><strong className="text-indigo-600 dark:text-indigo-300">Passo 2 (O Segredo):</strong> Aperte "Ctrl+A" para selecionar todo o texto da página e copie.</li>
+                               <li><strong className="text-indigo-600 dark:text-indigo-300">Passo 3:</strong> Cole toda a bagunça na caixa abaixo. O NLP filtrará apenas os dados úteis.</li>
                            </>
                        )}
                    </ul>
@@ -442,7 +438,7 @@ const ScoutIA: React.FC = () => {
            )}
 
            {/* ========================================================= */}
-           {/* MODO 2: CONSTRUTOR HFT (NOVO MODO NLP COM CAIXA DE TEXTO) */}
+           {/* MODO 2: CONSTRUTOR HFT (UX REFINADA & ANTIFRICÇÃO)       */}
            {/* ========================================================= */}
            {scoutMode === 'builder' && (
              <div className="space-y-6">
@@ -472,42 +468,51 @@ const ScoutIA: React.FC = () => {
                     </div>
                 </div>
 
-                <div className="relative group overflow-hidden rounded-[2rem] border border-slate-200 dark:border-slate-700 focus-within:border-indigo-400 dark:focus-within:border-indigo-500 bg-white dark:bg-[#09090b] transition-all p-1 flex flex-col shadow-sm dark:shadow-inner">
+                {/* 🔥 O CARD DE INPUT (AGORA COM BARRA DE AÇÃO INTEGRADA E FEEDBACK VISUAL) 🔥 */}
+                <div className="relative overflow-hidden rounded-[2rem] border border-slate-200 dark:border-slate-700 focus-within:border-indigo-400 dark:focus-within:border-indigo-500 bg-white dark:bg-[#09090b] transition-all shadow-sm dark:shadow-inner flex flex-col">
                    
-                   <div className="flex items-center justify-between p-4 border-b border-slate-100 dark:border-slate-800">
+                   {/* HEADER DO INPUT */}
+                   <div className="flex items-center justify-between p-4 border-b border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/30">
                       <div className="flex items-center gap-2 text-slate-500 dark:text-slate-400">
                           <FileText size={18} className="text-indigo-500 dark:text-indigo-400"/>
-                          <span className="text-[11px] font-black uppercase tracking-widest text-slate-600 dark:text-slate-400">3. Input de Dados (Ctrl+C / Ctrl+V)</span>
+                          <span className="text-[11px] font-black uppercase tracking-widest text-slate-600 dark:text-slate-400">3. Base de Dados NLP (Cole o Texto Aqui)</span>
                       </div>
-                      <button onClick={() => setScoutTextData('')} className="text-slate-400 dark:text-slate-500 hover:text-red-500 dark:hover:text-red-400 transition-colors p-1 bg-slate-50 dark:bg-transparent rounded-md border border-transparent hover:border-red-100 dark:hover:border-transparent" title="Limpar Texto">
-                          <Eraser size={16}/>
-                      </button>
+                      
+                      {/* FEEDBACK DE CARACTERES LIDOS */}
+                      {scoutTextData.length > 0 && (
+                          <div className="flex items-center gap-1.5 text-[9px] font-bold uppercase tracking-widest bg-emerald-50 text-emerald-600 dark:bg-emerald-500/10 dark:text-emerald-400 px-3 py-1 rounded-full border border-emerald-200 dark:border-emerald-500/20">
+                             <CheckCircle2 size={12} /> {scoutTextData.length} Caracteres Lidos
+                          </div>
+                      )}
                    </div>
 
+                   {/* A CAIXA DE TEXTO */}
                    <textarea
                        value={scoutTextData}
                        onChange={(e) => setScoutTextData(e.target.value)}
-                       placeholder="Vá no site do jogo (CornerPro, Flashscore, etc), aperte Ctrl+A para selecionar toda a página, copie e cole aqui..."
-                       className="w-full bg-transparent text-slate-700 dark:text-slate-300 placeholder:text-slate-400 dark:placeholder:text-slate-600 p-6 min-h-[220px] outline-none resize-none font-mono text-xs leading-relaxed"
+                       placeholder="1. Acesse o SofaScore ou CornerPro&#10;2. Aperte Ctrl+A e copie todo o texto&#10;3. Cole aqui (Ctrl+V)&#10;4. A Inteligência Artificial fará a limpeza matemática."
+                       className="w-full bg-transparent text-slate-700 dark:text-slate-300 placeholder:text-slate-400 dark:placeholder:text-slate-600 p-6 min-h-[220px] outline-none resize-none font-mono text-xs leading-relaxed custom-scrollbar"
                        disabled={isScanningScout}
                    />
 
+                   {/* TELA DE LOADING (OVERLAY) */}
                    {isScanningScout && (
                        <div className="absolute inset-0 bg-white/90 dark:bg-[#09090b]/90 backdrop-blur-sm flex flex-col items-center justify-center z-20">
                            <motion.div initial={{ width: '0%' }} animate={{ width: '100%' }} transition={{ repeat: Infinity, duration: 2 }} className="absolute bottom-0 left-0 h-1.5 bg-indigo-500 shadow-[0_0_30px_#6366f1]" />
                            <Sparkles size={40} className="text-indigo-500 dark:text-indigo-400 mb-4 animate-pulse" />
-                           <p className="text-indigo-600 dark:text-indigo-400 font-mono font-bold text-xs uppercase tracking-widest text-center px-4 mt-2">Extraindo matrizes via NLP e processando simulação HFT...</p>
+                           <p className="text-indigo-600 dark:text-indigo-400 font-mono font-bold text-xs uppercase tracking-widest text-center px-4 mt-2">Filtrando ruídos e calculando covariância NLP...</p>
                        </div>
                    )}
-                </div>
 
-                <div className="flex justify-end gap-3 mt-4">
-                    <button onClick={clearBuilder} className="text-[11px] font-black uppercase tracking-widest text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-white bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 px-6 py-3.5 rounded-xl transition-colors">
-                        Zerar Motor
-                    </button>
-                    <button onClick={processNLPEngine} disabled={isScanningScout || !scoutTextData} className="text-[11px] font-black uppercase tracking-widest text-white bg-indigo-600 hover:bg-indigo-500 px-8 py-3.5 rounded-xl shadow-md dark:shadow-[0_0_20px_rgba(99,102,241,0.4)] transition-transform active:scale-95 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed">
-                        <Sparkles size={16}/> Rodar Algoritmo
-                    </button>
+                   {/* BARRA DE AÇÃO FIXA (NO RODAPÉ DO INPUT) */}
+                   <div className="flex flex-col sm:flex-row items-center justify-between gap-3 p-4 bg-slate-50 dark:bg-slate-900/50 border-t border-slate-100 dark:border-slate-800">
+                       <button onClick={clearBuilder} className="w-full sm:w-auto text-[10px] sm:text-[11px] font-black uppercase tracking-widest text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-white bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-6 py-3 rounded-xl transition-colors flex items-center justify-center gap-2">
+                           <Eraser size={14} /> Limpar Dados
+                       </button>
+                       <button onClick={processNLPEngine} disabled={isScanningScout || !scoutTextData} className="w-full sm:w-auto text-[11px] font-black uppercase tracking-widest text-white bg-indigo-600 hover:bg-indigo-500 px-8 py-3.5 rounded-xl shadow-md dark:shadow-[0_0_20px_rgba(99,102,241,0.4)] transition-transform active:scale-95 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed">
+                           <Sparkles size={16}/> Extrair e Processar HFT
+                       </button>
+                   </div>
                 </div>
 
                 {/* RESULTADO GERADO PELO MOTOR NLP */}
@@ -515,7 +520,7 @@ const ScoutIA: React.FC = () => {
                     <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="bg-slate-50 dark:bg-[#020617] border border-indigo-100 dark:border-indigo-500/20 rounded-[2.5rem] p-6 sm:p-10 shadow-sm dark:shadow-[0_0_40px_rgba(99,102,241,0.1)] relative overflow-hidden mt-10">
                         <div className="absolute top-0 right-0 w-80 h-80 bg-indigo-500/5 dark:bg-indigo-500/10 rounded-full blur-[80px] dark:blur-[100px] -mr-20 -mt-20 pointer-events-none"></div>
                         
-                        <h3 className="text-xs font-black text-indigo-600 dark:text-indigo-400 uppercase tracking-widest mb-8 flex items-center gap-3 border-b border-indigo-100 dark:border-indigo-500/10 pb-4"><Target size={18}/> Aposta Sugerida (EV+)</h3>
+                        <h3 className="text-xs font-black text-indigo-600 dark:text-indigo-400 uppercase tracking-widest mb-8 flex items-center gap-3 border-b border-indigo-100 dark:border-indigo-500/10 pb-4"><Target size={18}/> Aposta Sugerida (Game Script)</h3>
                         
                         <div className="space-y-3 mb-8 relative z-10">
                             {scoutBuilderResult.selections.map((sel: any, idx: number) => (
@@ -538,17 +543,31 @@ const ScoutIA: React.FC = () => {
                         </div>
 
                         {/* ======================================================== */}
-                        {/* 🔥 AUDITORIA DINÂMICA DE EV% COM INTERVALO DE CONFIANÇA  */}
+                        {/* 🔥 AUDITORIA DINÂMICA DE EV% COM INTERFACE ALARMANTE 🔥  */}
                         {/* ======================================================== */}
-                        <div className="bg-slate-100 dark:bg-[#0b101e] border border-indigo-100 dark:border-indigo-500/30 p-6 rounded-3xl mb-8 relative z-10 shadow-sm dark:shadow-inner">
-                            <h4 className="text-[11px] font-black text-indigo-600 dark:text-indigo-400 uppercase tracking-widest mb-5 flex items-center gap-2">
-                                <Calculator size={16} /> Comparador vs Mercado (EV%)
+                        <div className={`border p-6 rounded-3xl mb-8 relative z-10 transition-colors duration-500 ${
+                            evStatus === 'negative' 
+                              ? 'bg-red-50 dark:bg-red-500/10 border-red-300 dark:border-red-500/50 shadow-[0_0_20px_rgba(239,68,68,0.15)]' 
+                              : 'bg-slate-100 dark:bg-[#0b101e] border-indigo-100 dark:border-indigo-500/30 shadow-sm dark:shadow-inner'
+                        }`}>
+                            <h4 className={`text-[11px] font-black uppercase tracking-widest mb-5 flex items-center gap-2 ${
+                                evStatus === 'negative' ? 'text-red-600 dark:text-red-400' : 'text-indigo-600 dark:text-indigo-400'
+                            }`}>
+                                <Calculator size={16} /> Comparador vs Mercado (Valor Esperado)
                             </h4>
+                            
+                            {evStatus === 'negative' && (
+                                <div className="mb-6 flex items-center gap-3 bg-red-100 dark:bg-red-500/20 text-red-700 dark:text-red-300 p-3 rounded-xl border border-red-200 dark:border-red-500/30">
+                                   <AlertTriangle size={20} className="shrink-0 animate-pulse"/>
+                                   <p className="text-[10px] sm:text-xs font-bold">ALERTA MATEMÁTICO: A odd oferecida pela casa é menor que a probabilidade real de bater. Fazer esta aposta destrói o seu capital a longo prazo (EV Negativo).</p>
+                                </div>
+                            )}
+
                             <div className="flex flex-col md:flex-row items-center gap-6">
                                 <div className="w-full md:w-1/3">
-                                    <p className="text-[10px] text-slate-500 dark:text-slate-400 uppercase tracking-widest font-bold mb-2 ml-1">Odd Oferecida na Bet365</p>
+                                    <p className={`text-[10px] uppercase tracking-widest font-bold mb-2 ml-1 ${evStatus === 'negative' ? 'text-red-600/80 dark:text-red-400' : 'text-slate-500 dark:text-slate-400'}`}>Odd Oferecida (Sua Casa)</p>
                                     <div className="relative">
-                                        <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500 font-mono font-bold">@</span>
+                                        <span className={`absolute left-4 top-1/2 -translate-y-1/2 font-mono font-bold ${evStatus === 'negative' ? 'text-red-400' : 'text-slate-400 dark:text-slate-500'}`}>@</span>
                                         <input
                                             type="text"
                                             placeholder="Ex: 1.85"
@@ -558,12 +577,16 @@ const ScoutIA: React.FC = () => {
                                                 if ((val.match(/\./g) || []).length > 1) val = val.replace(/\.(?=[^.]*$)/, '');
                                                 setUserOdd(val);
                                             }}
-                                            className="w-full bg-white dark:bg-[#020617] border border-slate-300 dark:border-slate-700 focus:border-indigo-400 dark:focus:border-indigo-500 text-slate-900 dark:text-white text-left font-mono text-lg py-3 pl-10 pr-4 rounded-xl outline-none transition-colors shadow-sm dark:shadow-inner placeholder:text-slate-400 dark:placeholder:text-slate-700"
+                                            className={`w-full text-left font-mono text-lg py-3 pl-10 pr-4 rounded-xl outline-none transition-colors shadow-sm dark:shadow-inner ${
+                                                evStatus === 'negative' 
+                                                  ? 'bg-white dark:bg-[#020617] border-2 border-red-400 dark:border-red-500 text-red-600 dark:text-red-400 placeholder:text-red-300 dark:placeholder:text-red-500/50 focus:ring-4 focus:ring-red-500/20'
+                                                  : 'bg-white dark:bg-[#020617] border border-slate-300 dark:border-slate-700 focus:border-indigo-400 dark:focus:border-indigo-500 text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-700'
+                                            }`}
                                         />
                                     </div>
                                 </div>
 
-                                <div className="hidden md:block w-px h-12 bg-slate-200 dark:bg-slate-800"></div>
+                                <div className={`hidden md:block w-px h-12 ${evStatus === 'negative' ? 'bg-red-200 dark:bg-red-500/30' : 'bg-slate-200 dark:bg-slate-800'}`}></div>
 
                                 <div className="flex-1 w-full grid grid-cols-1 md:grid-cols-3 gap-3">
                                     <div className="bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 rounded-xl p-3 sm:p-4 text-center flex flex-col justify-center shadow-sm dark:shadow-none">
@@ -580,10 +603,10 @@ const ScoutIA: React.FC = () => {
                                     <div className={`border rounded-xl p-3 sm:p-4 text-center flex flex-col justify-center transition-colors shadow-sm dark:shadow-inner ${
                                         evStatus === null ? 'bg-white dark:bg-slate-900/50 border-slate-200 dark:border-slate-800 text-slate-400 dark:text-slate-500' :
                                         evStatus === 'positive' ? 'bg-emerald-50 dark:bg-emerald-500/10 border-emerald-200 dark:border-emerald-500/30 text-emerald-600 dark:text-emerald-400 dark:shadow-[0_0_15px_rgba(16,185,129,0.1)]' :
-                                        evStatus === 'negative' ? 'bg-red-50 dark:bg-red-500/10 border-red-200 dark:border-red-500/30 text-red-600 dark:text-red-400 dark:shadow-[0_0_15px_rgba(239,68,68,0.1)]' :
+                                        evStatus === 'negative' ? 'bg-red-600 dark:bg-red-500/20 border-red-500 dark:border-red-500/50 text-white dark:text-red-400 shadow-md shadow-red-500/20' :
                                         'bg-amber-50 dark:bg-amber-500/10 border-amber-200 dark:border-amber-500/30 text-amber-600 dark:text-amber-400 dark:shadow-[0_0_15px_rgba(245,158,11,0.1)]'
                                     }`}>
-                                        <p className="text-[8px] sm:text-[9px] uppercase tracking-widest font-bold mb-1 sm:mb-2 flex items-center justify-center gap-1">
+                                        <p className={`text-[8px] sm:text-[9px] uppercase tracking-widest font-bold mb-1 sm:mb-2 flex items-center justify-center gap-1 ${evStatus === 'negative' ? 'text-red-100 dark:text-red-400' : ''}`}>
                                             {evStatus === null ? <Minus size={10}/> : evStatus === 'positive' ? <TrendingUp size={10}/> : evStatus === 'negative' ? <TrendingDown size={10}/> : <Minus size={10}/>}
                                             Análise de EV
                                         </p>
