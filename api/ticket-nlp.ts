@@ -3,22 +3,6 @@ import OpenAI from 'openai';
 
 export const maxDuration = 60;
 
-// 🔥 PROMPTS TÁTICOS (Blindagem contra mistura de dados + Anti-Alucinação de Stake)
-const specializedPrompts = {
-    'Bet365': (text: string) => `O texto é da Bet365. 
-REGRA 1: O JOGO (match) é composto apenas por letras (Ex: Time A x Time B). Ignore números decimais aqui.
-REGRA 2: A SELEÇÃO é o palpite apostado (Ex: Kremser SC, Mais de 2.5). 
-REGRA 3: A ODD é SEMPRE um número decimal (Ex: 1.83). Se estiver ao lado do nome do time, separe.
-REGRA 4: A STAKE (Exposição) é o valor numérico EXATO após 'Aposta', 'Valor' ou 'R$' (Ex: se diz R$5,00, a stake é 5.00). NUNCA invente esse valor.
-Texto OCR: """${text}"""`,
-    
-    'Betano': (text: string) => `O texto é da Betano. A ODD pode estar fragmentada (ex: 1 . 8 3 = 1.83). A STAKE é o valor EXATO após 'Aposta' ou 'R$'. A SELEÇÃO é o palpite. NUNCA invente a stake. Texto OCR: """${text}"""`,
-    
-    'Betfair': (text: string) => `O texto é da Betfair. A ODD costuma ter um @ antes. A STAKE é o valor EXATO apostado. A SELEÇÃO é o nome do time ou palpite apostado. NUNCA invente a stake. Texto OCR: """${text}"""`,
-    
-    'Outra': (text: string) => `Extraia Jogo (Apenas Letras), Mercado, Seleção (Palpite exato), Odd (Apenas decimal) e Stake (Valor apostado exato) deste texto. Não invente valores. Texto OCR: """${text}"""`
-};
-
 export default async function handler(req: any, res: any) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method Not Allowed' });
 
@@ -33,59 +17,60 @@ export default async function handler(req: any, res: any) {
     const genAI = new GoogleGenerativeAI(geminiKey);
     const openai = openaiKey ? new OpenAI({ apiKey: openaiKey }) : null;
 
-    // 🚀 PASSO 1: CLASSIFICAR A CASA (Usando gemini-1.5-flash, sem travas de MIME para evitar 404)
+    // 🔥 PROMPT BLINDADO: A IA agora atua como corretora do OCR
+    const tacticalPrompt = `Você é um analista quantitativo de apostas esportivas.
+    O texto abaixo foi extraído de um print de apostas através de OCR (Reconhecimento Óptico de Caracteres).
+    O OCR comete MUITOS erros porque tenta ler ícones (como camisas de times) como se fossem letras, e quebra números decimais.
+    
+    Sua missão é atuar como um filtro inteligente, deduzir o contexto real e limpar os dados.
+
+    REGRAS DE OURO (SIGA ESTRITAMENTE):
+    1. SELEÇÃO (Palpite): Corrija nomes bizarros. Se o OCR leu "E emser se" ou algo ilegível, mas o jogo for "Kremser SC vs Neusiedl", a seleção apostada é "Kremser SC".
+    2. ODD (Cotação): O OCR costuma espaçar números. Se você ler "1 . 83", "1, 83" ou apenas "1" e um "83" perdido, a odd real é 1.83.
+    3. STAKE (Exposição): Encontre o valor após "Aposta", "Valor" ou "R$". NUNCA invente valores de exemplo.
+    4. STATUS: O OCR NÃO ENXERGA ÍCONES DE CHECK (✅) OU CRUZ (❌). Portanto, se NÃO HOUVER a palavra explícita "Retorno", "Ganhos", "Encerrada" ou "Perdida" no texto, você DEVE OBRIGATORIAMENTE retornar o status como "pending" (Em Aberto). Não tente adivinhar.
+
+    Texto bruto extraído pelo OCR:
+    """${textData}"""
+
+    Retorne ESTRITAMENTE este JSON válido (sem formatação markdown, apenas o JSON puro):
+    {
+      "bookmaker": "Bet365 ou Betano ou Betfair ou Outra",
+      "match": "Time A vs Time B",
+      "market": "Mercado (ex: Resultado Final)",
+      "selection": "Palpite corrigido",
+      "odd": 1.83,
+      "stake": 5.00,
+      "return": 0.00,
+      "status": "pending" 
+    }`;
+
     let aiModel = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
-    
-    let bookmaker = "Outra";
-    try {
-        const classificationPrompt = `Diga apenas o nome da casa de aposta (Bet365, Betano ou Betfair). Se não souber, diga 'Outra'. Texto: """${textData}"""`;
-        const classificationResult = await aiModel.generateContent(classificationPrompt);
-        bookmaker = classificationResult.response.text().trim().replace(/['"`]/g, '');
-    } catch (e) {
-        // Ignora erro na classificação e assume 'Outra'
-    }
-
-    // 🚀 PASSO 2: EXECUTAR PROMPT TÁTICO
-    const promptStrategy = specializedPrompts[bookmaker as keyof typeof specializedPrompts] || specializedPrompts['Outra'];
-    
-    // 🔥 PROMPT BLINDADO: Ordem explícita para não inventar o 100.00 de exemplo
-    const tacticalPrompt = promptStrategy(textData) + `\n\nATENÇÃO MÁXIMA: NUNCA invente valores! Extraia o número real do texto para a stake. Junte números fragmentados (ex: 1 . 8 3 vira 1.83). Retorne ESTRITAMENTE este JSON:
-{
-  "bookmaker": "${bookmaker}",
-  "match": "Time A vs Time B",
-  "market": "Resultado Final",
-  "selection": "Palpite",
-  "odd": 1.85,
-  "stake": 5.00,
-  "return": 9.25,
-  "status": "won"
-}`;
-
     let textResult = "";
 
     try {
-        // TENTA GEMINI FLASH
+        // TENTA GEMINI FLASH (Em apenas 1 passo para ser mais rápido)
         const result = await aiModel.generateContent(tacticalPrompt);
         textResult = result.response.text();
     } catch (geminiError: any) { 
         try {
-            // FALLBACK 1: TENTA GEMINI PRO (Modelos antigos de SDK suportam esse)
+            // FALLBACK 1: GEMINI PRO
             aiModel = genAI.getGenerativeModel({ model: 'gemini-pro' });
             const result = await aiModel.generateContent(tacticalPrompt);
             textResult = result.response.text();
         } catch (geminiProError: any) {
-            // FALLBACK 2: OPENAI (Se configurada)
+            // FALLBACK 2: OPENAI
             if (openai) {
                 try {
                     const response = await openai.chat.completions.create({
                         model: "gpt-4o-mini",
-                        messages: [{ role: "user", content: tacticalPrompt }],
+                        messages: [{ role: "system", content: "Retorne apenas JSON válido." }, { role: "user", content: tacticalPrompt }],
                         temperature: 0.1,
                         response_format: { type: "json_object" }
                     });
                     textResult = response.choices[0].message?.content || "";
                 } catch (openaiError: any) {
-                    throw new Error("Ambas as APIs falharam.");
+                    throw new Error("Ambas as APIs de IA falharam.");
                 }
             } else {
                 throw new Error("A API do Google falhou e a chave da OpenAI não está configurada.");
@@ -93,37 +78,47 @@ export default async function handler(req: any, res: any) {
         }
     }
     
-    // Limpa a resposta da IA (Blindagem de JSON)
+    // 🛡️ BLINDAGEM DE PARSER DO JSON E LIMPEZA DE CARACTERES LIXO
     textResult = textResult.replace(/```json/gi, '').replace(/```/g, '').trim();
     const jsonMatch = textResult.match(/\{[\s\S]*\}/);
     if (jsonMatch) textResult = jsonMatch[0];
     
     const parsedData = JSON.parse(textResult);
 
-    let profit = 0;
-    let stakeStr = String(parsedData.stake).replace(/[^\d.,]/g, '').replace(',', '.');
-    let returnStr = String(parsedData.return).replace(/[^\d.,]/g, '').replace(',', '.');
+    // Limpeza forçada dos números para garantir que o Javascript não corte a Odd
+    let rawOdd = String(parsedData.odd).replace(/[^\d.,]/g, '').replace(',', '.');
+    let rawStake = String(parsedData.stake).replace(/[^\d.,]/g, '').replace(',', '.');
+    let rawReturn = String(parsedData.return).replace(/[^\d.,]/g, '').replace(',', '.');
     
-    const stake = parseFloat(stakeStr) || 0;
-    const totalReturn = parseFloat(returnStr) || 0;
+    const odd = parseFloat(rawOdd) || 1;
+    const stake = parseFloat(rawStake) || 0;
+    const totalReturn = parseFloat(rawReturn) || 0;
+    let profit = 0;
 
     if (parsedData.status === 'won') {
-        profit = totalReturn > 0 ? (totalReturn - stake) : (stake * parseFloat(parsedData.odd)) - stake;
+        profit = totalReturn > 0 ? (totalReturn - stake) : (stake * odd) - stake;
     } else if (parsedData.status === 'lost') {
         profit = -stake;
     } else if (parsedData.status === 'half_won' || parsedData.status === 'half_lost' || parsedData.status === 'cashout') {
         profit = totalReturn - stake; 
     }
 
-    parsedData.profit = parseFloat(profit.toFixed(2));
-    parsedData.odd = parseFloat(String(parsedData.odd).replace(/\s/g, '').replace(',', '.')) || 1; 
-    parsedData.stake = stake;
-    parsedData.return = totalReturn;
-    parsedData.selection = parsedData.selection || "";
+    // Reconstruindo o JSON de forma blindada
+    const finalData = {
+        bookmaker: parsedData.bookmaker || "Outra",
+        match: parsedData.match || "",
+        market: parsedData.market || "",
+        selection: parsedData.selection || "",
+        odd: parseFloat(odd.toFixed(2)),
+        stake: stake,
+        return: totalReturn,
+        profit: parseFloat(profit.toFixed(2)),
+        status: parsedData.status || "pending"
+    };
 
-    return res.status(200).json(parsedData);
+    return res.status(200).json(finalData);
 
   } catch (error: any) {
-    return res.status(400).json({ error: error.message || 'Erro ao processar dados.' });
+    return res.status(400).json({ error: error.message || 'Erro ao processar dados da IA.' });
   }
 }
