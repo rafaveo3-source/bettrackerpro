@@ -18,7 +18,7 @@ import {
   Sun,
   PlayCircle,
   Sparkles, 
-  Activity, // 🔥 Importado para o Terminal Live
+  Eye, // 🔥 Ícone do Oráculo
   Lock
 } from 'lucide-react';
 import { useBetStore } from '../store/useBetStore';
@@ -49,7 +49,7 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, setView, isOpen, setIsOp
 
   const menuItems = [
     { id: 'dashboard', label: 'Visão Geral', icon: LayoutDashboard },
-    // SCOUT IA E TERMINAL RENDERIZADOS CUSTOMIZADAMENTE ABAIXO
+    // SCOUT IA E ORÁCULO RENDERIZADOS CUSTOMIZADAMENTE ABAIXO
     { id: 'analytics', label: 'Análise de Dados', icon: BarChart2 },
     { id: 'metas', label: 'Metas (Take Profit)', icon: Target },
     { id: 'mindset', label: 'Psicologia', icon: BrainCircuit },
@@ -120,22 +120,22 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, setView, isOpen, setIsOp
                 onClick={() => handleNavigation('dashboard')}
                 className={`tour-sidebar-dashboard w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200 group mb-2
                 ${currentView === 'dashboard' 
-                    ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-500 border border-emerald-500/20' 
+                    ? 'bg-emerald-50 text-emerald-600 border-emerald-200 dark:bg-emerald-500/10 dark:text-emerald-500 dark:border-emerald-500/20 border' 
                     : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800/50'}`}
             >
-                <LayoutDashboard size={18} className={currentView === 'dashboard' ? 'text-emerald-500' : 'text-slate-400 group-hover:text-slate-600 dark:group-hover:text-white'} />
+                <LayoutDashboard size={18} className={currentView === 'dashboard' ? 'text-emerald-600 dark:text-emerald-500' : 'text-slate-400 group-hover:text-slate-600 dark:group-hover:text-white'} />
                 Visão Geral
             </button>
 
             {/* 🔥 BOTÃO KILLER 1: SCOUT HFT IA 🔥 */}
             <div className="tour-sidebar-scout relative mb-2">
-               <div className="absolute inset-0 bg-indigo-500/20 dark:bg-indigo-500/10 blur-xl rounded-full"></div>
+               <div className="absolute inset-0 bg-indigo-500/10 dark:bg-indigo-500/10 blur-xl rounded-full"></div>
                <button
                    onClick={() => handleNavigation('scout')}
-                   className={`relative w-full flex items-center justify-between px-4 py-3.5 rounded-xl text-sm font-black uppercase tracking-widest transition-all duration-300 border overflow-hidden group shadow-lg
+                   className={`relative w-full flex items-center justify-between px-4 py-3.5 rounded-xl text-sm font-black uppercase tracking-widest transition-all duration-300 border overflow-hidden group shadow-sm
                    ${currentView === 'scout' 
                        ? 'bg-indigo-600 text-white border-indigo-500 shadow-[0_0_20px_rgba(99,102,241,0.4)] scale-[1.02]' 
-                       : 'bg-indigo-50 dark:bg-[#0f172a] text-indigo-600 dark:text-indigo-400 border-indigo-300 dark:border-indigo-500/40 hover:bg-indigo-600 hover:text-white hover:border-indigo-500 shadow-[0_0_15px_rgba(99,102,241,0.2)]'}`}
+                       : 'bg-indigo-50 dark:bg-[#0f172a] text-indigo-600 dark:text-indigo-400 border-indigo-200 dark:border-indigo-500/40 hover:bg-indigo-600 hover:text-white hover:border-indigo-500'}`}
                >
                    <div className="flex items-center gap-3 relative z-10">
                        <Sparkles size={18} className={`${currentView === 'scout' ? 'animate-pulse text-white' : 'text-indigo-500 dark:text-indigo-400 group-hover:text-white'}`} />
@@ -146,18 +146,18 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, setView, isOpen, setIsOp
                </button>
             </div>
 
-            {/* 🔥 BOTÃO KILLER 2: TERMINAL LIVE 🔥 */}
+            {/* 🔥 BOTÃO KILLER 2: ORÁCULO LIVE (RENOMEADO E REFATORADO) 🔥 */}
             <div className="relative mb-4">
                <button
                    onClick={() => handleNavigation('terminal')}
                    className={`relative w-full flex items-center justify-between px-4 py-3.5 rounded-xl text-sm font-black uppercase tracking-widest transition-all duration-300 border overflow-hidden group shadow-sm
                    ${currentView === 'terminal' 
-                       ? 'bg-emerald-500 text-slate-950 border-emerald-400 shadow-[0_0_20px_rgba(16,185,129,0.3)] scale-[1.02]' 
-                       : 'bg-emerald-50 dark:bg-emerald-500/5 text-emerald-600 dark:text-emerald-500 border-emerald-200 dark:border-emerald-500/20 hover:bg-emerald-500 hover:text-slate-950 hover:border-emerald-400'}`}
+                       ? 'bg-emerald-500 text-white dark:text-slate-950 border-emerald-400 shadow-[0_0_20px_rgba(16,185,129,0.3)] scale-[1.02]' 
+                       : 'bg-emerald-50 dark:bg-emerald-500/5 text-emerald-600 dark:text-emerald-500 border-emerald-200 dark:border-emerald-500/20 hover:bg-emerald-500 hover:text-white dark:hover:text-slate-950 hover:border-emerald-400'}`}
                >
                    <div className="flex items-center gap-3 relative z-10">
-                       <Activity size={18} className={`${currentView === 'terminal' ? 'animate-pulse text-slate-950' : 'text-emerald-500 dark:text-emerald-500 group-hover:text-slate-950'}`} />
-                       Terminal Live <span className="text-[8px] bg-slate-950 text-emerald-400 px-1.5 py-0.5 rounded ml-1">BETA</span>
+                       <Eye size={18} className={`${currentView === 'terminal' ? 'animate-pulse text-white dark:text-slate-950' : 'text-emerald-600 dark:text-emerald-500 group-hover:text-white dark:group-hover:text-slate-950'}`} />
+                       Oráculo Live <span className={`text-[8px] px-1.5 py-0.5 rounded ml-1 ${currentView === 'terminal' ? 'bg-white/20 dark:bg-slate-950 text-white dark:text-emerald-400' : 'bg-emerald-100 dark:bg-slate-950 text-emerald-600 dark:text-emerald-400'}`}>PRO</span>
                    </div>
                    {!isPro && <Lock size={12} className="opacity-50" />}
                </button>
@@ -183,11 +183,11 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, setView, isOpen, setIsOp
                             ${tourClass}
                             w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200 group
                             ${isActive 
-                                ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-500 border border-emerald-500/20' 
+                                ? 'bg-emerald-50 text-emerald-600 border-emerald-200 dark:bg-emerald-500/10 dark:text-emerald-500 dark:border-emerald-500/20 border' 
                                 : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800/50'}
                         `}
                     >
-                        <item.icon size={18} className={isActive ? 'text-emerald-500' : 'text-slate-400 dark:text-slate-500 group-hover:text-slate-600 dark:group-hover:text-white'} />
+                        <item.icon size={18} className={isActive ? 'text-emerald-600 dark:text-emerald-500' : 'text-slate-400 dark:text-slate-500 group-hover:text-slate-600 dark:group-hover:text-white'} />
                         {item.label}
                     </button>
                 )
@@ -201,14 +201,14 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, setView, isOpen, setIsOp
                     resetTutorial();
                     if (window.innerWidth < 768) setIsOpen(true); 
                 }}
-                className="w-full flex items-center justify-center gap-2 text-blue-500 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-500/10 py-3 rounded-xl transition-all text-xs font-bold uppercase tracking-widest mb-2"
+                className="w-full flex items-center justify-center gap-2 text-blue-600 dark:text-blue-500 hover:text-blue-700 dark:hover:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-500/10 py-3 rounded-xl transition-all text-xs font-bold uppercase tracking-widest mb-2"
             >
                 <PlayCircle size={16} /> Rever Tutorial
             </button>
 
             <button 
                 onClick={toggleTheme}
-                className="w-full flex items-center justify-center gap-2 text-slate-500 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200 dark:hover:bg-slate-800/50 py-3 rounded-xl transition-all text-xs font-bold uppercase tracking-widest mb-2"
+                className="w-full flex items-center justify-center gap-2 text-slate-600 dark:text-slate-500 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200 dark:hover:bg-slate-800/50 py-3 rounded-xl transition-all text-xs font-bold uppercase tracking-widest mb-2"
             >
                 {isDarkMode ? <Sun size={16} /> : <Moon size={16} />}
                 {isDarkMode ? 'Modo Claro' : 'Modo Escuro'}
@@ -225,7 +225,7 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, setView, isOpen, setIsOp
                             e.stopPropagation();
                             handleNavigation('pro');
                         }}
-                        className="w-full bg-slate-900 text-white dark:bg-white dark:text-slate-950 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest hover:bg-emerald-500 dark:hover:bg-emerald-400 transition-colors"
+                        className="w-full bg-slate-900 text-white dark:bg-white dark:text-slate-950 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest hover:bg-emerald-600 dark:hover:bg-emerald-400 transition-colors"
                     >
                         Fazer Upgrade
                     </button>
@@ -234,7 +234,7 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, setView, isOpen, setIsOp
 
             <button 
                 onClick={handleLogout}
-                className="w-full flex items-center justify-center gap-2 text-slate-500 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 py-3 rounded-xl transition-all text-xs font-bold uppercase tracking-widest"
+                className="w-full flex items-center justify-center gap-2 text-slate-600 dark:text-slate-500 hover:text-red-600 dark:hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 py-3 rounded-xl transition-all text-xs font-bold uppercase tracking-widest"
             >
                 <LogOut size={16} /> Sair do Sistema
             </button>

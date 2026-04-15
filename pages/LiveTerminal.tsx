@@ -1,5 +1,6 @@
 import React, { useState, useMemo } from 'react';
-import { Clock, Target, Flag, Goal, TrendingUp, ShieldAlert, BarChart3, Eye, CheckCircle2, AlertTriangle } from 'lucide-react';
+import { Clock, Target, Flag, Goal, ShieldAlert, BarChart3, Eye, CheckCircle2, AlertTriangle, Zap } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 
 // ==========================================
 // FUNÇÕES AUXILIARES MATEMÁTICAS
@@ -15,7 +16,22 @@ const factorial = (n: number): number => {
   return result;
 };
 
-// 🔥 CORREÇÃO 1: COMPONENTE DE SLIDER INDEPENDENTE (Resolve o Lag) 🔥
+// 🔥 COMPONENTE DE ANIMAÇÃO DE NÚMEROS (PULSO SUAVE) 🔥
+const AnimatedNumber = ({ value, prefix = "", suffix = "", className = "" }: { value: string | number, prefix?: string, suffix?: string, className?: string }) => (
+    <AnimatePresence mode="popLayout">
+        <motion.span
+            key={value}
+            initial={{ opacity: 0.5, scale: 0.90, y: -2 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            transition={{ duration: 0.2, ease: "easeOut" }}
+            className={`inline-block ${className}`}
+        >
+            {prefix}{value}{suffix}
+        </motion.span>
+    </AnimatePresence>
+);
+
+// 🔥 COMPONENTE DE SLIDER INDEPENDENTE (ZERO LAG) 🔥
 interface SliderGroupProps {
   label: string;
   value: number;
@@ -27,13 +43,13 @@ interface SliderGroupProps {
 const SliderGroup: React.FC<SliderGroupProps> = ({ label, value, max, setter, colorClass }) => (
   <div className="mb-4">
     <div className="flex justify-between mb-1.5">
-       <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">{label}</label>
+       <label className="text-[10px] font-bold text-slate-600 dark:text-slate-500 uppercase tracking-widest">{label}</label>
        <span className={`font-mono font-black ${colorClass}`}>{value}</span>
     </div>
     <input 
       type="range" min="0" max={max} value={value} 
       onChange={(e) => setter(Number(e.target.value))} 
-      className={`w-full h-1.5 bg-slate-800 rounded-lg appearance-none cursor-pointer hover:h-2 transition-all ${colorClass.replace('text-', 'accent-')}`} 
+      className={`w-full h-1.5 bg-slate-200 dark:bg-slate-800 rounded-lg appearance-none cursor-pointer hover:h-2 transition-all accent-current ${colorClass}`} 
     />
   </div>
 );
@@ -55,13 +71,20 @@ const OraculoLive: React.FC = () => {
   const [sotH, setSotH] = useState<number>(3);
   const [sotA, setSotA] = useState<number>(1);
 
-  // 🔥 CORREÇÃO 2: TRAVA DE SEGURANÇA HT/FT 🔥
+  // 🔥 PRESETS PRO (CENÁRIOS RÁPIDOS) 🔥
+  const applyPreset = (type: 'blitz_casa' | 'blitz_fora' | 'equilibrado') => {
+      if (type === 'blitz_casa') {
+          setMinute(75); setTargetHalf('FT'); setScoreH(0); setScoreA(1); setCornersH(6); setCornersA(1); setApH(85); setApA(20); setSotH(5); setSotA(1);
+      } else if (type === 'blitz_fora') {
+          setMinute(75); setTargetHalf('FT'); setScoreH(1); setScoreA(0); setCornersH(2); setCornersA(7); setApH(25); setApA(90); setSotH(2); setSotA(6);
+      } else {
+          setMinute(30); setTargetHalf('HT'); setScoreH(0); setScoreA(0); setCornersH(2); setCornersA(2); setApH(25); setApA(25); setSotH(1); setSotA(1);
+      }
+  };
+
   const handleHalfToggle = (half: 'HT' | 'FT') => {
       setTargetHalf(half);
-      // Se o usuário clicar em HT e o minuto for maior que 45, volta para 45 para não bugar a linha do tempo
-      if (half === 'HT' && minute > 45) {
-          setMinute(45);
-      }
+      if (half === 'HT' && minute > 45) setMinute(45);
   };
 
   const { goalStats, cornerStats, gameScript } = useMemo(() => {
@@ -69,8 +92,7 @@ const OraculoLive: React.FC = () => {
     const maxTime = (targetHalf === 'HT' ? 45 : 90) + extraTime;
     const timeLeft = Math.max(0, maxTime - minute);
 
-    // 🔥 CORREÇÃO 3: OBJETO DE RECOMENDAÇÃO SEGURO (Evita a Tela Preta) 🔥
-    const closedRec = { status: 'FECHADO', conf: 'NULA', color: 'text-slate-500', bg: 'bg-slate-800/50 border-slate-700' };
+    const closedRec = { status: 'FECHADO', conf: 'NULA', color: 'text-slate-500', bg: 'bg-slate-100 border-slate-200 dark:bg-slate-800/50 dark:border-slate-700' };
 
     if (timeLeft <= 0) {
       return {
@@ -125,10 +147,11 @@ const OraculoLive: React.FC = () => {
     const calcOdd = (prob: number) => prob > 0.01 ? 1 / prob : 99.0;
     const oddAsiatica10 = pCorner10Win > 0.01 ? (1 - pCorner10Void) / pCorner10Win : 99.0;
 
+    // --- LÓGICA DE RECOMENDAÇÃO (CORES ADAPTADAS PARA CLARO/ESCURO) ---
     const getRecommendation = (prob: number) => {
-        if (prob >= 0.65) return { status: 'APROVADO', conf: 'ALTA', color: 'text-emerald-400', bg: 'bg-emerald-500/10 border-emerald-500/20' };
-        if (prob >= 0.45) return { status: 'MODERADO', conf: 'MÉDIA', color: 'text-amber-400', bg: 'bg-amber-500/10 border-amber-500/20' };
-        return { status: 'RISCO / FORA', conf: 'BAIXA', color: 'text-red-400', bg: 'bg-red-500/10 border-red-500/20' };
+        if (prob >= 0.65) return { status: 'APROVADO', conf: 'ALTA', color: 'text-emerald-700 dark:text-emerald-400', bg: 'bg-emerald-50 border-emerald-200 dark:bg-emerald-500/10 dark:border-emerald-500/20' };
+        if (prob >= 0.45) return { status: 'MODERADO', conf: 'MÉDIA', color: 'text-amber-700 dark:text-amber-400', bg: 'bg-amber-50 border-amber-200 dark:bg-amber-500/10 dark:border-amber-500/20' };
+        return { status: 'RISCO / FORA', conf: 'BAIXA', color: 'text-red-700 dark:text-red-400', bg: 'bg-red-50 border-red-200 dark:bg-red-500/10 dark:border-red-500/20' };
     };
 
     let script = "";
@@ -155,113 +178,115 @@ const OraculoLive: React.FC = () => {
   }, [minute, scoreH, scoreA, cornersH, cornersA, apH, apA, sotH, sotA, targetHalf]);
 
   return (
-    <div className="w-full max-w-5xl mx-auto space-y-6 pb-20">
+    <div className="w-full max-w-5xl mx-auto space-y-6 pb-20 px-4 md:px-0">
       
       {/* HEADER */}
       <div className="flex flex-col gap-2 mb-6">
-        <div className="flex items-center gap-2 text-indigo-500 text-[9px] font-mono font-bold uppercase tracking-widest">
-          <span className="w-1.5 h-1.5 bg-indigo-500 rounded-full animate-pulse"></span>
+        <div className="flex items-center gap-2 text-indigo-600 dark:text-indigo-500 text-[9px] font-mono font-bold uppercase tracking-widest">
+          <span className="w-1.5 h-1.5 bg-indigo-600 dark:bg-indigo-500 rounded-full animate-pulse"></span>
           ORÁCULO LIVE HFT
         </div>
-        <h1 className="text-3xl sm:text-4xl font-black text-white tracking-tighter uppercase italic flex items-center gap-3">
-          <Eye size={32} className="text-indigo-500"/> Oráculo Live <span className="text-slate-700 text-lg">///</span>
+        <h1 className="text-3xl sm:text-4xl font-black text-slate-900 dark:text-white tracking-tighter uppercase italic flex items-center gap-3">
+          <Eye size={32} className="text-indigo-600 dark:text-indigo-500"/> Oráculo Live <span className="text-slate-300 dark:text-slate-700 text-lg">///</span>
         </h1>
-        <p className="text-slate-400 text-sm">Arraste os controles sem travamentos para precificar Linhas Asiáticas e Valor Esperado (EV+).</p>
+        <p className="text-slate-600 dark:text-slate-400 text-sm font-medium">Arraste os controles para precificar Linhas Asiáticas e Valor Esperado (EV+).</p>
       </div>
 
       {/* DASHBOARD HUD: RESULTADOS PREDITIVOS */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         
         {/* CARD GOLS */}
-        <div className="bg-[#0b101e] border border-slate-800 rounded-3xl p-6 shadow-xl flex flex-col h-full">
-           <h3 className="text-[10px] font-black text-orange-500 uppercase tracking-widest mb-4 flex items-center gap-2 border-b border-slate-800 pb-3"><Goal size={14}/> Mercado de Gols</h3>
+        <div className="bg-white dark:bg-[#0b101e] border border-slate-200 dark:border-slate-800 rounded-3xl p-6 shadow-sm dark:shadow-xl flex flex-col h-full relative overflow-hidden">
+           <div className="absolute top-0 right-0 w-32 h-32 bg-orange-500/5 dark:bg-orange-500/10 rounded-full blur-3xl pointer-events-none -mr-10 -mt-10"></div>
+           <h3 className="text-[10px] font-black text-orange-600 dark:text-orange-500 uppercase tracking-widest mb-4 flex items-center gap-2 border-b border-slate-100 dark:border-slate-800 pb-3"><Goal size={14}/> Mercado de Gols</h3>
            
            <div className="grid grid-cols-2 gap-6 mb-6">
               <div>
                  <p className="text-slate-500 text-[9px] uppercase font-bold tracking-widest mb-1">Linha +0.5 Gols</p>
-                 <div className="flex items-end gap-3">
-                    <p className="text-2xl font-black text-white">{(goalStats.p05 * 100).toFixed(1)}%</p>
-                    <p className="text-sm font-mono font-bold text-orange-400 mb-1">@{goalStats.odd05.toFixed(2)}</p>
+                 <div className="flex items-end gap-2">
+                    <AnimatedNumber value={(goalStats.p05 * 100).toFixed(1)} suffix="%" className="text-2xl font-black text-slate-900 dark:text-white" />
+                    <AnimatedNumber value={goalStats.odd05.toFixed(2)} prefix="@" className="text-sm font-mono font-bold text-orange-600 dark:text-orange-400 mb-1" />
                  </div>
               </div>
               <div>
                  <p className="text-slate-500 text-[9px] uppercase font-bold tracking-widest mb-1">Linha +1.5 Gols</p>
-                 <div className="flex items-end gap-3">
-                    <p className="text-2xl font-black text-white">{(goalStats.p15 * 100).toFixed(1)}%</p>
-                    <p className="text-sm font-mono font-bold text-orange-400 mb-1">@{goalStats.odd15.toFixed(2)}</p>
+                 <div className="flex items-end gap-2">
+                    <AnimatedNumber value={(goalStats.p15 * 100).toFixed(1)} suffix="%" className="text-2xl font-black text-slate-900 dark:text-white" />
+                    <AnimatedNumber value={goalStats.odd15.toFixed(2)} prefix="@" className="text-sm font-mono font-bold text-orange-600 dark:text-orange-400 mb-1" />
                  </div>
               </div>
            </div>
 
            {/* VEREDITO GOLS E PROJEÇÃO TOTAL */}
-           <div className={`mt-auto border rounded-xl p-3 flex flex-col gap-1 ${goalStats.rec.bg}`}>
-               <div className="flex justify-between items-center mb-2 border-b border-slate-800/50 pb-2">
-                   <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Projeção Total de Gols ({targetHalf}):</span>
-                   <span className="text-sm font-black text-orange-400">{goalStats.expTotal.toFixed(2)}</span>
+           <div className={`mt-auto border rounded-xl p-3 flex flex-col gap-1 shadow-sm dark:shadow-none ${goalStats.rec.bg}`}>
+               <div className="flex justify-between items-center mb-2 border-b border-slate-200/50 dark:border-slate-800/50 pb-2">
+                   <span className="text-[10px] font-bold text-slate-600 dark:text-slate-400 uppercase tracking-widest">Projeção Total de Gols ({targetHalf}):</span>
+                   <AnimatedNumber value={goalStats.expTotal.toFixed(2)} className="text-sm font-black text-orange-600 dark:text-orange-400" />
                </div>
                <div className="flex justify-between items-center mt-1">
-                   <span className="text-[10px] font-black uppercase tracking-widest text-slate-300">Veredito do Motor:</span>
+                   <span className="text-[10px] font-black uppercase tracking-widest text-slate-700 dark:text-slate-300">Veredito do Motor:</span>
                    <span className={`text-[10px] font-black uppercase tracking-widest ${goalStats.rec.color}`}>{goalStats.rec.conf} CONFIANÇA</span>
                </div>
                {goalStats.rec.status === 'APROVADO' ? (
-                   <p className="text-xs text-emerald-100/70 font-medium flex items-center gap-1.5 mt-1"><CheckCircle2 size={14} className="text-emerald-400 shrink-0"/> <span><strong>RECOMENDADO:</strong> Aposte se a odd da casa for maior que <strong className="text-white bg-slate-900 px-1.5 rounded">@{goalStats.odd05.toFixed(2)}</strong>.</span></p>
+                   <p className="text-xs text-emerald-800 dark:text-emerald-100/70 font-medium flex items-center gap-1.5 mt-1"><CheckCircle2 size={14} className="text-emerald-600 dark:text-emerald-400 shrink-0"/> <span><strong>RECOMENDADO:</strong> Aposte se a odd for maior que <strong className="text-slate-900 bg-white border border-slate-200 dark:text-white dark:bg-slate-900 dark:border-transparent px-1.5 rounded">@{goalStats.odd05.toFixed(2)}</strong>.</span></p>
                ) : goalStats.rec.status === 'MODERADO' ? (
-                   <p className="text-xs text-amber-100/70 font-medium flex items-center gap-1.5 mt-1"><AlertTriangle size={14} className="text-amber-400 shrink-0"/> <span><strong>ATENÇÃO:</strong> Aposte apenas se tiver margem (Odd &gt; <strong className="text-white bg-slate-900 px-1.5 rounded">@{goalStats.odd05.toFixed(2)}</strong>).</span></p>
+                   <p className="text-xs text-amber-800 dark:text-amber-100/70 font-medium flex items-center gap-1.5 mt-1"><AlertTriangle size={14} className="text-amber-600 dark:text-amber-400 shrink-0"/> <span><strong>ATENÇÃO:</strong> Aposte se a odd for maior que <strong className="text-slate-900 bg-white border border-slate-200 dark:text-white dark:bg-slate-900 dark:border-transparent px-1.5 rounded">@{goalStats.odd05.toFixed(2)}</strong>.</span></p>
                ) : goalStats.rec.status === 'FECHADO' ? (
-                   <p className="text-xs text-slate-400 font-medium flex items-center gap-1.5 mt-1"><ShieldAlert size={14} className="text-slate-500 shrink-0"/> <span>Mercado encerrado ou margem de tempo inválida.</span></p>
+                   <p className="text-xs text-slate-600 dark:text-slate-400 font-medium flex items-center gap-1.5 mt-1"><ShieldAlert size={14} className="text-slate-500 shrink-0"/> <span>Mercado encerrado ou fora da janela.</span></p>
                ) : (
-                   <p className="text-xs text-red-100/70 font-medium flex items-center gap-1.5 mt-1"><ShieldAlert size={14} className="text-red-400 shrink-0"/> <span><strong>NÃO RECOMENDADO:</strong> Fique de fora. Risco altíssimo.</span></p>
+                   <p className="text-xs text-red-800 dark:text-red-100/70 font-medium flex items-center gap-1.5 mt-1"><ShieldAlert size={14} className="text-red-600 dark:text-red-400 shrink-0"/> <span><strong>NÃO RECOMENDADO:</strong> Fique de fora. Risco altíssimo.</span></p>
                )}
            </div>
         </div>
 
         {/* CARD CANTOS (ASIÁTICOS) */}
-        <div className="bg-[#0b101e] border border-slate-800 rounded-3xl p-6 shadow-xl flex flex-col h-full">
-           <h3 className="text-[10px] font-black text-emerald-500 uppercase tracking-widest mb-4 flex items-center gap-2 border-b border-slate-800 pb-3"><Flag size={14}/> Escanteios Asiáticos</h3>
+        <div className="bg-white dark:bg-[#0b101e] border border-slate-200 dark:border-slate-800 rounded-3xl p-6 shadow-sm dark:shadow-xl flex flex-col h-full relative overflow-hidden">
+           <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/5 dark:bg-emerald-500/10 rounded-full blur-3xl pointer-events-none -mr-10 -mt-10"></div>
+           <h3 className="text-[10px] font-black text-emerald-600 dark:text-emerald-500 uppercase tracking-widest mb-4 flex items-center gap-2 border-b border-slate-100 dark:border-slate-800 pb-3"><Flag size={14}/> Escanteios Asiáticos</h3>
            
            <div className="grid grid-cols-2 gap-6 mb-6">
               <div>
                  <p className="text-slate-500 text-[9px] uppercase font-bold tracking-widest mb-1">Linha Limpa (+0.5)</p>
-                 <div className="flex items-end gap-3">
-                    <p className="text-2xl font-black text-white">{(cornerStats.p05 * 100).toFixed(1)}%</p>
-                    <p className="text-sm font-mono font-bold text-emerald-400 mb-1">@{cornerStats.odd05.toFixed(2)}</p>
+                 <div className="flex items-end gap-2">
+                    <AnimatedNumber value={(cornerStats.p05 * 100).toFixed(1)} suffix="%" className="text-2xl font-black text-slate-900 dark:text-white" />
+                    <AnimatedNumber value={cornerStats.odd05.toFixed(2)} prefix="@" className="text-sm font-mono font-bold text-emerald-600 dark:text-emerald-400 mb-1" />
                  </div>
               </div>
-              <div className="bg-slate-900/50 p-2 rounded-xl border border-emerald-500/20">
-                 <p className="text-emerald-500/80 text-[9px] uppercase font-bold tracking-widest mb-1">Linha Asiática (+1.0)</p>
+              <div className="bg-slate-50 dark:bg-slate-900/50 p-2.5 rounded-xl border border-emerald-200 dark:border-emerald-500/20 shadow-inner">
+                 <p className="text-emerald-700 dark:text-emerald-500/80 text-[9px] uppercase font-bold tracking-widest mb-1">Linha Asiática (+1.0)</p>
                  <div className="flex justify-between items-center mb-1">
-                    <span className="text-[9px] text-slate-400">Prob Green:</span>
-                    <span className="text-xs font-black text-emerald-400">{(cornerStats.p10Win * 100).toFixed(1)}%</span>
+                    <span className="text-[9px] text-slate-500 dark:text-slate-400 font-bold">Prob Green:</span>
+                    <AnimatedNumber value={(cornerStats.p10Win * 100).toFixed(1)} suffix="%" className="text-xs font-black text-emerald-600 dark:text-emerald-400" />
                  </div>
-                 <div className="flex justify-between items-center border-b border-slate-800 pb-1 mb-1">
-                    <span className="text-[9px] text-slate-400">Reembolso:</span>
-                    <span className="text-[10px] font-bold text-slate-300">{(cornerStats.p10Void * 100).toFixed(1)}%</span>
+                 <div className="flex justify-between items-center border-b border-slate-200 dark:border-slate-800 pb-1 mb-1">
+                    <span className="text-[9px] text-slate-500 dark:text-slate-400 font-bold">Reembolso:</span>
+                    <AnimatedNumber value={(cornerStats.p10Void * 100).toFixed(1)} suffix="%" className="text-[10px] font-bold text-slate-600 dark:text-slate-300" />
                  </div>
                  <div className="flex justify-between items-center">
-                    <span className="text-[9px] text-slate-500 font-bold uppercase">Odd Justa:</span>
-                    <span className="text-sm font-mono font-black text-emerald-400">@{cornerStats.odd10.toFixed(2)}</span>
+                    <span className="text-[9px] text-slate-600 dark:text-slate-500 font-bold uppercase">Odd Justa:</span>
+                    <AnimatedNumber value={cornerStats.odd10.toFixed(2)} prefix="@" className="text-sm font-mono font-black text-emerald-600 dark:text-emerald-400" />
                  </div>
               </div>
            </div>
 
            {/* VEREDITO CANTOS E PROJEÇÃO TOTAL */}
-           <div className={`mt-auto border rounded-xl p-3 flex flex-col gap-1 ${cornerStats.rec.bg}`}>
-               <div className="flex justify-between items-center mb-2 border-b border-slate-800/50 pb-2">
-                   <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Projeção Total de Cantos ({targetHalf}):</span>
-                   <span className="text-sm font-black text-emerald-400">{cornerStats.expTotal.toFixed(2)}</span>
+           <div className={`mt-auto border rounded-xl p-3 flex flex-col gap-1 shadow-sm dark:shadow-none ${cornerStats.rec.bg}`}>
+               <div className="flex justify-between items-center mb-2 border-b border-slate-200/50 dark:border-slate-800/50 pb-2">
+                   <span className="text-[10px] font-bold text-slate-600 dark:text-slate-400 uppercase tracking-widest">Projeção Total de Cantos ({targetHalf}):</span>
+                   <AnimatedNumber value={cornerStats.expTotal.toFixed(2)} className="text-sm font-black text-emerald-600 dark:text-emerald-400" />
                </div>
                <div className="flex justify-between items-center mt-1">
-                   <span className="text-[10px] font-black uppercase tracking-widest text-slate-300">Veredito Asiático (+1.0):</span>
+                   <span className="text-[10px] font-black uppercase tracking-widest text-slate-700 dark:text-slate-300">Veredito Asiático (+1.0):</span>
                    <span className={`text-[10px] font-black uppercase tracking-widest ${cornerStats.rec.color}`}>{cornerStats.rec.conf} CONFIANÇA</span>
                </div>
                {cornerStats.rec.status === 'APROVADO' ? (
-                   <p className="text-xs text-emerald-100/70 font-medium flex items-center gap-1.5 mt-1"><CheckCircle2 size={14} className="text-emerald-400 shrink-0"/> <span><strong>RECOMENDADO:</strong> Entre se a odd for maior que <strong className="text-white bg-slate-900 px-1.5 rounded">@{cornerStats.odd10.toFixed(2)}</strong>.</span></p>
+                   <p className="text-xs text-emerald-800 dark:text-emerald-100/70 font-medium flex items-center gap-1.5 mt-1"><CheckCircle2 size={14} className="text-emerald-600 dark:text-emerald-400 shrink-0"/> <span><strong>RECOMENDADO:</strong> Entre se a odd for maior que <strong className="text-slate-900 bg-white border border-slate-200 dark:text-white dark:bg-slate-900 dark:border-transparent px-1.5 rounded">@{cornerStats.odd10.toFixed(2)}</strong>.</span></p>
                ) : cornerStats.rec.status === 'MODERADO' ? (
-                   <p className="text-xs text-amber-100/70 font-medium flex items-center gap-1.5 mt-1"><AlertTriangle size={14} className="text-amber-400 shrink-0"/> <span><strong>ATENÇÃO:</strong> Entre se a casa oferecer <strong className="text-white bg-slate-900 px-1.5 rounded">@{cornerStats.odd10.toFixed(2)}</strong> ou mais.</span></p>
+                   <p className="text-xs text-amber-800 dark:text-amber-100/70 font-medium flex items-center gap-1.5 mt-1"><AlertTriangle size={14} className="text-amber-600 dark:text-amber-400 shrink-0"/> <span><strong>ATENÇÃO:</strong> Entre se a casa oferecer <strong className="text-slate-900 bg-white border border-slate-200 dark:text-white dark:bg-slate-900 dark:border-transparent px-1.5 rounded">@{cornerStats.odd10.toFixed(2)}</strong> ou mais.</span></p>
                ) : cornerStats.rec.status === 'FECHADO' ? (
-                   <p className="text-xs text-slate-400 font-medium flex items-center gap-1.5 mt-1"><ShieldAlert size={14} className="text-slate-500 shrink-0"/> <span>Mercado encerrado ou margem de tempo inválida.</span></p>
+                   <p className="text-xs text-slate-600 dark:text-slate-400 font-medium flex items-center gap-1.5 mt-1"><ShieldAlert size={14} className="text-slate-500 shrink-0"/> <span>Mercado encerrado ou fora da janela.</span></p>
                ) : (
-                   <p className="text-xs text-red-100/70 font-medium flex items-center gap-1.5 mt-1"><ShieldAlert size={14} className="text-red-400 shrink-0"/> <span><strong>NÃO RECOMENDADO:</strong> Valor EV negativo. Risco alto de Red.</span></p>
+                   <p className="text-xs text-red-800 dark:text-red-100/70 font-medium flex items-center gap-1.5 mt-1"><ShieldAlert size={14} className="text-red-600 dark:text-red-400 shrink-0"/> <span><strong>NÃO RECOMENDADO:</strong> Valor EV negativo. Risco alto.</span></p>
                )}
            </div>
         </div>
@@ -269,28 +294,36 @@ const OraculoLive: React.FC = () => {
       </div>
 
       {/* SCRIPT DO JOGO */}
-      <div className="bg-indigo-500/10 border border-indigo-500/20 p-4 rounded-2xl flex items-center gap-3 shadow-inner">
-         <BarChart3 size={20} className="text-indigo-400 shrink-0" />
-         <p className="text-xs sm:text-sm text-indigo-300 font-black tracking-wide uppercase">{gameScript}</p>
+      <div className="bg-indigo-50 dark:bg-indigo-500/10 border border-indigo-200 dark:border-indigo-500/20 p-4 rounded-2xl flex items-center gap-3 shadow-sm dark:shadow-inner">
+         <BarChart3 size={20} className="text-indigo-600 dark:text-indigo-400 shrink-0" />
+         <p className="text-xs sm:text-sm text-indigo-800 dark:text-indigo-300 font-black tracking-wide uppercase">{gameScript}</p>
       </div>
 
       {/* ========================================== */}
       {/* PAINEL DE SLIDERS CONTROLS               */}
       {/* ========================================== */}
-      <div className="bg-[#0b101e] border border-slate-800 rounded-3xl p-5 md:p-8 relative shadow-xl">
+      <div className="bg-white dark:bg-[#0b101e] border border-slate-200 dark:border-slate-800 rounded-3xl p-5 md:p-8 relative shadow-sm dark:shadow-xl">
          
-         <div className="flex flex-col sm:flex-row items-center justify-between gap-6 mb-8 border-b border-slate-800 pb-6">
+         {/* 🔥 BOTÕES DE PRESET (QUICK LOAD) 🔥 */}
+         <div className="flex flex-wrap gap-2 mb-6 pb-6 border-b border-slate-100 dark:border-slate-800">
+             <span className="w-full text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">Simular Cenários Rápidos:</span>
+             <button onClick={() => applyPreset('blitz_casa')} className="text-[10px] uppercase font-bold tracking-widest px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-slate-600 dark:text-slate-300 hover:border-indigo-500 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors flex items-center gap-1.5"><Zap size={12}/> Blitz Mandante</button>
+             <button onClick={() => applyPreset('blitz_fora')} className="text-[10px] uppercase font-bold tracking-widest px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-slate-600 dark:text-slate-300 hover:border-indigo-500 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors flex items-center gap-1.5"><Zap size={12}/> Blitz Visitante</button>
+             <button onClick={() => applyPreset('equilibrado')} className="text-[10px] uppercase font-bold tracking-widest px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-slate-600 dark:text-slate-300 hover:border-indigo-500 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors flex items-center gap-1.5"><Target size={12}/> Equilibrado</button>
+         </div>
+
+         <div className="flex flex-col sm:flex-row items-center justify-between gap-6 mb-8 border-b border-slate-100 dark:border-slate-800 pb-6">
             <div className="w-full sm:w-1/2">
                <div className="flex justify-between mb-2">
                   <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest flex items-center gap-1"><Clock size={12}/> Minuto Atual</label>
-                  <span className="text-indigo-400 font-mono font-black text-xl">{minute}'</span>
+                  <span className="text-indigo-600 dark:text-indigo-400 font-mono font-black text-xl">{minute}'</span>
                </div>
-               <input type="range" min="1" max={targetHalf === 'HT' ? 45 : 99} value={minute} onChange={(e) => setMinute(Number(e.target.value))} className="w-full h-2 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-indigo-500 hover:h-3 transition-all" />
+               <input type="range" min="1" max={targetHalf === 'HT' ? 45 : 99} value={minute} onChange={(e) => setMinute(Number(e.target.value))} className="w-full h-2 bg-slate-200 dark:bg-slate-800 rounded-lg appearance-none cursor-pointer accent-indigo-600 dark:accent-indigo-500 hover:h-3 transition-all" />
             </div>
 
-            <div className="flex bg-slate-900 p-1 rounded-xl border border-slate-800 w-full sm:w-64 shrink-0 shadow-inner">
-               <button onClick={() => handleHalfToggle('HT')} className={`flex-1 py-2 text-[10px] font-black uppercase tracking-widest rounded-lg transition-all ${targetHalf === 'HT' ? 'bg-indigo-600 text-white shadow-md scale-105' : 'text-slate-500 hover:text-slate-300'}`}>HT (1º Tempo)</button>
-               <button onClick={() => handleHalfToggle('FT')} className={`flex-1 py-2 text-[10px] font-black uppercase tracking-widest rounded-lg transition-all ${targetHalf === 'FT' ? 'bg-indigo-600 text-white shadow-md scale-105' : 'text-slate-500 hover:text-slate-300'}`}>FT (Fim de Jogo)</button>
+            <div className="flex bg-slate-100 dark:bg-slate-900 p-1 rounded-xl border border-slate-200 dark:border-slate-800 w-full sm:w-64 shrink-0 shadow-inner">
+               <button onClick={() => handleHalfToggle('HT')} className={`flex-1 py-2 text-[10px] font-black uppercase tracking-widest rounded-lg transition-all ${targetHalf === 'HT' ? 'bg-indigo-600 text-white shadow-md scale-105' : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'}`}>HT (1º Tempo)</button>
+               <button onClick={() => handleHalfToggle('FT')} className={`flex-1 py-2 text-[10px] font-black uppercase tracking-widest rounded-lg transition-all ${targetHalf === 'FT' ? 'bg-indigo-600 text-white shadow-md scale-105' : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'}`}>FT (Fim de Jogo)</button>
             </div>
          </div>
 
@@ -299,34 +332,34 @@ const OraculoLive: React.FC = () => {
             
             {/* LADO CASA */}
             <div className="space-y-2">
-               <h4 className="text-sm font-black text-white uppercase tracking-widest mb-4 flex items-center justify-between gap-2 bg-slate-800/50 p-3 rounded-xl border border-slate-700">
+               <h4 className="text-sm font-black text-slate-800 dark:text-white uppercase tracking-widest mb-4 flex items-center justify-between gap-2 bg-slate-50 dark:bg-slate-800/50 p-3 rounded-xl border border-slate-200 dark:border-slate-700">
                    Time da Casa 
                    <div className="flex gap-4">
-                      <span className="text-xs text-amber-400 font-mono">{scoreH} G</span>
-                      <span className="text-xs text-emerald-400 font-mono">{cornersH} C</span>
+                      <span className="text-xs text-amber-600 dark:text-amber-400 font-mono">{scoreH} G</span>
+                      <span className="text-xs text-emerald-600 dark:text-emerald-400 font-mono">{cornersH} C</span>
                    </div>
                </h4>
-               <SliderGroup label="Gols do Casa" value={scoreH} max={10} setter={setScoreH} colorClass="text-amber-400" />
-               <SliderGroup label="Escanteios do Casa" value={cornersH} max={25} setter={setCornersH} colorClass="text-emerald-400" />
-               <div className="border-t border-slate-800/50 my-2 pt-2"></div>
-               <SliderGroup label="Ataques Perigosos" value={apH} max={150} setter={setApH} colorClass="text-indigo-400" />
-               <SliderGroup label="Chutes no Alvo" value={sotH} max={20} setter={setSotH} colorClass="text-sky-400" />
+               <SliderGroup label="Gols do Casa" value={scoreH} max={10} setter={setScoreH} colorClass="text-amber-600 dark:text-amber-400" />
+               <SliderGroup label="Escanteios do Casa" value={cornersH} max={25} setter={setCornersH} colorClass="text-emerald-600 dark:text-emerald-400" />
+               <div className="border-t border-slate-100 dark:border-slate-800/50 my-2 pt-2"></div>
+               <SliderGroup label="Ataques Perigosos" value={apH} max={150} setter={setApH} colorClass="text-indigo-600 dark:text-indigo-400" />
+               <SliderGroup label="Chutes no Alvo" value={sotH} max={20} setter={setSotH} colorClass="text-sky-600 dark:text-sky-400" />
             </div>
 
             {/* LADO VISITANTE */}
             <div className="space-y-2">
-               <h4 className="text-sm font-black text-white uppercase tracking-widest mb-4 flex items-center justify-between gap-2 bg-slate-800/50 p-3 rounded-xl border border-slate-700">
+               <h4 className="text-sm font-black text-slate-800 dark:text-white uppercase tracking-widest mb-4 flex items-center justify-between gap-2 bg-slate-50 dark:bg-slate-800/50 p-3 rounded-xl border border-slate-200 dark:border-slate-700">
                    Time Visitante
                    <div className="flex gap-4">
-                      <span className="text-xs text-amber-400 font-mono">{scoreA} G</span>
-                      <span className="text-xs text-emerald-400 font-mono">{cornersA} C</span>
+                      <span className="text-xs text-amber-600 dark:text-amber-400 font-mono">{scoreA} G</span>
+                      <span className="text-xs text-emerald-600 dark:text-emerald-400 font-mono">{cornersA} C</span>
                    </div>
                </h4>
-               <SliderGroup label="Gols do Visitante" value={scoreA} max={10} setter={setScoreA} colorClass="text-amber-400" />
-               <SliderGroup label="Escanteios do Visitante" value={cornersA} max={25} setter={setCornersA} colorClass="text-emerald-400" />
-               <div className="border-t border-slate-800/50 my-2 pt-2"></div>
-               <SliderGroup label="Ataques Perigosos" value={apA} max={150} setter={setApA} colorClass="text-indigo-400" />
-               <SliderGroup label="Chutes no Alvo" value={sotA} max={20} setter={setSotA} colorClass="text-sky-400" />
+               <SliderGroup label="Gols do Visitante" value={scoreA} max={10} setter={setScoreA} colorClass="text-amber-600 dark:text-amber-400" />
+               <SliderGroup label="Escanteios do Visitante" value={cornersA} max={25} setter={setCornersA} colorClass="text-emerald-600 dark:text-emerald-400" />
+               <div className="border-t border-slate-100 dark:border-slate-800/50 my-2 pt-2"></div>
+               <SliderGroup label="Ataques Perigosos" value={apA} max={150} setter={setApA} colorClass="text-indigo-600 dark:text-indigo-400" />
+               <SliderGroup label="Chutes no Alvo" value={sotA} max={20} setter={setSotA} colorClass="text-sky-600 dark:text-sky-400" />
             </div>
 
          </div>
