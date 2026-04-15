@@ -186,11 +186,18 @@ const TicketScanner: React.FC<TicketScannerProps> = ({ onScanComplete }) => {
                  <div className="space-y-5 flex flex-col">
                     <h4 className="text-[10px] uppercase font-bold text-slate-500 tracking-widest flex items-center gap-1.5"><Edit size={12}/> Dados Organizados pela IA - Revise Tudo</h4>
                     
-                    {[ {label: 'Resultado (Status)', value: statusMap[scannedResult.status as keyof typeof statusMap] || scannedResult.status}, {label: 'Jogo (Evento)', value: scannedResult.match}, {label: 'Mercado', value: scannedResult.market}, {label: 'Cotação (Odd)', value: `@${scannedResult.odd.toFixed(2)}`}, {label: `Exposição (${scannedResult.stake > 0 ? scannedResult.stake : 'R$ ???'})`, value: `R$ ${scannedResult.stake.toFixed(2)}`} ].map((item, idx) => (
+                    {[ 
+                      {label: 'Resultado (Status)', value: statusMap[scannedResult.status as keyof typeof statusMap] || scannedResult.status}, 
+                      {label: 'Jogo (Evento)', value: scannedResult.match}, 
+                      {label: 'Mercado', value: scannedResult.market}, 
+                      {label: 'Seleção (Palpite)', value: scannedResult.selection || 'Não detectado'}, // 🔥 ADICIONADO AQUI
+                      {label: 'Cotação (Odd)', value: `@${scannedResult.odd.toFixed(2)}`}, 
+                      {label: `Exposição (${scannedResult.stake > 0 ? scannedResult.stake : 'R$ ???'})`, value: `R$ ${scannedResult.stake.toFixed(2)}`} 
+                    ].map((item, idx) => (
                       <div key={idx} className="bg-slate-950 border border-slate-800 p-4 rounded-xl flex items-center justify-between gap-3 shadow-inner">
                          <div>
                              <p className="text-[10px] uppercase font-bold text-slate-500 tracking-wider mb-1">{item.label}</p>
-                             <p className={`text-sm font-bold text-slate-200 truncate ${idx === 3 ? 'font-mono' : ''}`}>{item.value}</p>
+                             <p className={`text-sm font-bold text-slate-200 truncate ${idx === 4 ? 'font-mono' : ''}`}>{item.value}</p>
                          </div>
                          <div className="text-emerald-500"><Check size={20}/></div>
                       </div>

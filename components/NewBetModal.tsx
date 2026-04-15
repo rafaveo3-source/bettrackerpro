@@ -159,28 +159,26 @@ const NewBetModal: React.FC<NewBetModalProps> = ({
         ...prev,
         event: scannedData.match || prev.event,
         market: scannedData.market || prev.market,
+        selection: scannedData.selection || prev.selection, // 🔥 ADICIONE ESTA LINHA AQUI
         odds: scannedData.odd ? scannedData.odd.toString() : prev.odds,
         stake: scannedData.stake ? scannedData.stake.toString() : prev.stake,
         status: (scannedData.status as BetStatus) || 'pending',
-        // Attempt to auto-fill cashout if the status indicates it
         cashoutValue: (scannedData.status === 'half-won' || scannedData.status === 'half-lost' || scannedData.status === 'cashout') && scannedData.return 
             ? scannedData.return.toString() 
             : ''
     }));
 
-    // If market is not in the predefined list, set it as custom
     if (scannedData.market && !availableMarkets.some(m => m.name === scannedData.market)) {
         setFormData(prev => ({ ...prev, market: '__custom' }));
         setManualMarket(scannedData.market);
     }
 
-    setIsManualMode(true); // Force generic input mode since teams might not match exact DB IDs
-    setEntryMode('manual'); // Switch to manual tab for review
+    setIsManualMode(true);
+    setEntryMode('manual');
     if (setToast) {
-       setToast({ type: 'success', message: `Dados extraídos com sucesso de ${scannedData.bookmaker || 'bilhete'}. Por favor, revise antes de salvar.` });
+       setToast({ type: 'success', message: `Dados extraídos com sucesso de ${scannedData.bookmaker || 'bilhete'}. Revise antes de salvar.` });
     }
   };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
