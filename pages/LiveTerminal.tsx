@@ -1,6 +1,8 @@
 import React, { useState, useMemo } from 'react';
-import { Clock, Target, Flag, Goal, ShieldAlert, BarChart3, Eye, CheckCircle2, AlertTriangle, Zap } from 'lucide-react';
+import { Clock, Target, Flag, Goal, TrendingUp, ShieldAlert, BarChart3, Eye, CheckCircle2, AlertTriangle, Crown } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useNavigate } from 'react-router-dom';
+import { useBetStore } from '../store/useBetStore';
 
 // ==========================================
 // FUNÇÕES AUXILIARES MATEMÁTICAS
@@ -58,6 +60,10 @@ const SliderGroup: React.FC<SliderGroupProps> = ({ label, value, max, setter, co
 // ORÁCULO LIVE (MOTOR PRINCIPAL)
 // ==========================================
 const OraculoLive: React.FC = () => {
+  // 🛡️ CONTROLE DE ACESSO PRO 🛡️
+  const { isPro } = useBetStore();
+  const navigate = useNavigate();
+
   const [minute, setMinute] = useState<number>(65);
   const [targetHalf, setTargetHalf] = useState<'HT' | 'FT'>('FT');
 
@@ -177,6 +183,30 @@ const OraculoLive: React.FC = () => {
     };
   }, [minute, scoreH, scoreA, cornersH, cornersA, apH, apA, sotH, sotA, targetHalf]);
 
+  // 🛡️ RENDERIZAÇÃO DO PAYWALL SE O USUÁRIO FOR FREE 🛡️
+  if (!isPro) {
+      return (
+          <div className="w-full h-[80vh] flex items-center justify-center p-6">
+              <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-[2rem] p-10 text-center flex flex-col items-center justify-center max-w-2xl w-full shadow-xl relative overflow-hidden">
+                  <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/5 to-emerald-500/5 opacity-50" />
+                  <div className="bg-slate-50 dark:bg-slate-800 p-5 rounded-full mb-6 relative z-10 shadow-sm border border-slate-100 dark:border-slate-700">
+                      <Crown size={40} className="text-emerald-500 dark:text-emerald-400" />
+                  </div>
+                  <h2 className="text-3xl font-black text-slate-900 dark:text-white uppercase italic tracking-tighter mb-3 relative z-10">
+                      Oráculo Live <span className="text-emerald-500">PRO</span>
+                  </h2>
+                  <p className="text-slate-600 dark:text-slate-400 max-w-md mx-auto mb-8 text-base relative z-10 leading-relaxed">
+                      O motor quantitativo ao vivo que cruza xG, Posse de Bola e Ataques Perigosos para calcular a Odd Justa de Gols e Escanteios Asiáticos em tempo real. Uma ferramenta exclusiva para assinantes PRO.
+                  </p>
+                  <button onClick={() => navigate('/pro')} className="bg-slate-900 text-white dark:bg-gradient-to-r dark:from-emerald-500 dark:to-emerald-400 dark:text-slate-950 font-black py-4 px-10 rounded-xl shadow-lg shadow-slate-900/20 dark:shadow-emerald-500/20 transition-all hover:scale-105 active:scale-95 relative z-10 text-sm tracking-widest uppercase">
+                      Desbloquear Oráculo
+                  </button>
+              </div>
+          </div>
+      );
+  }
+
+  // 👇 DAQUI PARA BAIXO, SÓ USUÁRIOS PRO ACESSAM 👇
   return (
     <div className="w-full max-w-5xl mx-auto space-y-6 pb-20 px-4 md:px-0">
       
@@ -286,7 +316,7 @@ const OraculoLive: React.FC = () => {
                ) : cornerStats.rec.status === 'FECHADO' ? (
                    <p className="text-xs text-slate-600 dark:text-slate-400 font-medium flex items-center gap-1.5 mt-1"><ShieldAlert size={14} className="text-slate-500 shrink-0"/> <span>Mercado encerrado ou fora da janela.</span></p>
                ) : (
-                   <p className="text-xs text-red-800 dark:text-red-100/70 font-medium flex items-center gap-1.5 mt-1"><ShieldAlert size={14} className="text-red-600 dark:text-red-400 shrink-0"/> <span><strong>NÃO RECOMENDADO:</strong> Valor EV negativo. Risco alto.</span></p>
+                   <p className="text-xs text-red-800 dark:text-red-100/70 font-medium flex items-center gap-1.5 mt-1"><ShieldAlert size={14} className="text-red-600 dark:text-red-400 shrink-0"/> <span><strong>NÃO RECOMENDADO:</strong> Valor EV negativo. Risco alto de Red.</span></p>
                )}
            </div>
         </div>
@@ -307,9 +337,9 @@ const OraculoLive: React.FC = () => {
          {/* 🔥 BOTÕES DE PRESET (QUICK LOAD) 🔥 */}
          <div className="flex flex-wrap gap-2 mb-6 pb-6 border-b border-slate-100 dark:border-slate-800">
              <span className="w-full text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">Simular Cenários Rápidos:</span>
-             <button onClick={() => applyPreset('blitz_casa')} className="text-[10px] uppercase font-bold tracking-widest px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-slate-600 dark:text-slate-300 hover:border-indigo-500 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors flex items-center gap-1.5"><Zap size={12}/> Blitz Mandante</button>
-             <button onClick={() => applyPreset('blitz_fora')} className="text-[10px] uppercase font-bold tracking-widest px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-slate-600 dark:text-slate-300 hover:border-indigo-500 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors flex items-center gap-1.5"><Zap size={12}/> Blitz Visitante</button>
-             <button onClick={() => applyPreset('equilibrado')} className="text-[10px] uppercase font-bold tracking-widest px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-slate-600 dark:text-slate-300 hover:border-indigo-500 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors flex items-center gap-1.5"><Target size={12}/> Equilibrado</button>
+             <button onClick={() => applyPreset('blitz_casa')} className="text-[10px] uppercase font-bold tracking-widest px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-slate-600 dark:text-slate-300 hover:border-indigo-500 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors flex items-center gap-1.5">Blitz Mandante</button>
+             <button onClick={() => applyPreset('blitz_fora')} className="text-[10px] uppercase font-bold tracking-widest px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-slate-600 dark:text-slate-300 hover:border-indigo-500 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors flex items-center gap-1.5">Blitz Visitante</button>
+             <button onClick={() => applyPreset('equilibrado')} className="text-[10px] uppercase font-bold tracking-widest px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-slate-600 dark:text-slate-300 hover:border-indigo-500 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors flex items-center gap-1.5">Equilibrado</button>
          </div>
 
          <div className="flex flex-col sm:flex-row items-center justify-between gap-6 mb-8 border-b border-slate-100 dark:border-slate-800 pb-6">
