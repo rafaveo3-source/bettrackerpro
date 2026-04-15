@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { Activity, Clock, Target, Flag, Goal, Calculator, TrendingUp, AlertTriangle, ShieldAlert, BarChart3, Eye } from 'lucide-react';
+import React, { useState, useMemo } from 'react';
+import { Clock, Target, Flag, Goal, TrendingUp, ShieldAlert, BarChart3, Eye, CheckCircle2, AlertTriangle } from 'lucide-react';
 
 // Função auxiliar para calcular Poisson P(x=k)
 const poisson = (lambda: number, k: number) => {
@@ -31,118 +31,94 @@ const OraculoLive: React.FC = () => {
   const [sotA, setSotA] = useState<number>(1);
 
   // ==========================================
-  // RESULTADOS MATEMÁTICOS
+  // MOTOR POISSON AVANÇADO (useMemo = ZERO LAG)
   // ==========================================
-  const [goalStats, setGoalStats] = useState({ p05: 0, odd05: 0, p15: 0, odd15: 0, expTotal: 0 });
-  const [cornerStats, setCornerStats] = useState({ p05: 0, odd05: 0, p10Win: 0, p10Void: 0, odd10: 0, expTotal: 0 });
-  const [gameScript, setGameScript] = useState<string>("");
-
-  // ==========================================
-  // MOTOR POISSON AVANÇADO + GAME STATE
-  // ==========================================
-  useEffect(() => {
+  const { goalStats, cornerStats, gameScript } = useMemo(() => {
     const extraTime = targetHalf === 'HT' ? 3 : 6; 
     const maxTime = (targetHalf === 'HT' ? 45 : 90) + extraTime;
     const timeLeft = Math.max(0, maxTime - minute);
 
     if (timeLeft <= 0) {
-      setGoalStats({ p05: 0, odd05: 0, p15: 0, odd15: 0, expTotal: scoreH + scoreA });
-      setCornerStats({ p05: 0, odd05: 0, p10Win: 0, p10Void: 0, odd10: 0, expTotal: cornersH + cornersA });
-      setGameScript("Mercado Fechado.");
-      return;
+      return {
+        goalStats: { p05: 0, odd05: 0, p15: 0, odd15: 0, expTotal: scoreH + scoreA, recommendation: 'FORA', conf: 'NULA' },
+        cornerStats: { p05: 0, odd05: 0, p10Win: 0, p10Void: 0, odd10: 0, expTotal: cornersH + cornersA, recommendation: 'FORA', conf: 'NULA' },
+        gameScript: "Mercado Fechado."
+      };
     }
 
     const safeMin = Math.max(1, minute);
     
-    // Frequência Base por Minuto
     const apRateH = apH / safeMin;
     const apRateA = apA / safeMin;
     const sotRateH = sotH / safeMin;
     const sotRateA = sotA / safeMin;
 
-    // Taxa Crua (Lambda por minuto)
     let baseGoalH = (apRateH * 0.015) + (sotRateH * 0.15);
     let baseGoalA = (apRateA * 0.015) + (sotRateA * 0.15);
     let baseCornerH = (apRateH * 0.12) + (sotRateH * 0.1);
     let baseCornerA = (apRateA * 0.12) + (sotRateA * 0.1);
 
-    // 🔥 GAME STATE MODIFIER (O Placar afeta o desespero e o ritmo) 🔥
     const scoreDiff = scoreH - scoreA;
     let stateModH = 1.0;
     let stateModA = 1.0;
 
     if (Math.abs(scoreDiff) >= 3) {
-      // GAME KILL (Goleada): O jogo morre, ninguém ataca com intensidade real
       stateModH = 0.6; stateModA = 0.6;
     } else if (scoreDiff < 0) {
-      // Casa Perdendo: Casa ataca desesperadamente, Visitante recua
       stateModH = 1.35; stateModA = 0.8;
     } else if (scoreDiff > 0) {
-      // Visitante Perdendo: Visitante ataca, Casa recua
       stateModH = 0.8; stateModA = 1.35;
     }
 
-    // Aplica o modificador de tempo (Abafa)
     let timeMod = 1.0;
     if (targetHalf === 'FT' && minute > 75) timeMod = Math.exp((minute - 75) / 25);
     else if (targetHalf === 'HT' && minute > 38) timeMod = 1.2;
 
-    // Lambda Final Projetado para o Tempo Restante
     const lambdaGoal = (baseGoalH * stateModH + baseGoalA * stateModA) * timeLeft * timeMod;
     const lambdaCorner = (baseCornerH * stateModH + baseCornerA * stateModA) * timeLeft * timeMod;
 
-    // =====================================
-    // CÁLCULO DE PROBABILIDADES (POISSON)
-    // =====================================
-    // GOLS: P(0), P(1)
     const pGoal0 = poisson(lambdaGoal, 0);
     const pGoal1 = poisson(lambdaGoal, 1);
-    
-    // +0.5 Gols (Sair pelo menos 1)
     const pGoal05 = 1 - pGoal0;
-    // +1.5 Gols (Sair pelo menos 2)
     const pGoal15 = 1 - pGoal0 - pGoal1;
 
-    // CANTOS: P(0), P(1)
     const pCorner0 = poisson(lambdaCorner, 0);
     const pCorner1 = poisson(lambdaCorner, 1);
-    
-    // +0.5 Cantos (Sair pelo menos 1)
     const pCorner05 = 1 - pCorner0;
-    // +1.0 Canto Asiático (Reembolso com 1, Win com 2+)
     const pCorner10Void = pCorner1;
     const pCorner10Win = 1 - pCorner0 - pCorner1;
 
-    // Tratamento de Odd Justa (Evitar Infinity)
     const calcOdd = (prob: number) => prob > 0.01 ? 1 / prob : 99.0;
-    // Odd Justa Asiática: (1 - Prob. Void) / Prob. Win
     const oddAsiatica10 = pCorner10Win > 0.01 ? (1 - pCorner10Void) / pCorner10Win : 99.0;
 
-    setGoalStats({
-      p05: Math.min(0.99, Math.max(0.01, pGoal05)),
-      odd05: Math.min(99, calcOdd(pGoal05)),
-      p15: Math.min(0.99, Math.max(0.01, pGoal15)),
-      odd15: Math.min(99, calcOdd(pGoal15)),
-      expTotal: scoreH + scoreA + lambdaGoal
-    });
+    // --- LÓGICA DE RECOMENDAÇÃO / CONFIANÇA ---
+    const getRecommendation = (prob: number) => {
+        if (prob >= 0.65) return { status: 'APROVADO', conf: 'ALTA', color: 'text-emerald-400', bg: 'bg-emerald-500/10 border-emerald-500/20' };
+        if (prob >= 0.45) return { status: 'MODERADO', conf: 'MÉDIA', color: 'text-amber-400', bg: 'bg-amber-500/10 border-amber-500/20' };
+        return { status: 'RISCO / FORA', conf: 'BAIXA', color: 'text-red-400', bg: 'bg-red-500/10 border-red-500/20' };
+    };
 
-    setCornerStats({
-      p05: Math.min(0.99, Math.max(0.01, pCorner05)),
-      odd05: Math.min(99, calcOdd(pCorner05)),
-      p10Win: Math.min(0.99, Math.max(0.01, pCorner10Win)),
-      p10Void: Math.min(0.99, Math.max(0.01, pCorner10Void)),
-      odd10: Math.min(99, oddAsiatica10),
-      expTotal: cornersH + cornersA + lambdaCorner
-    });
-
-    // Script Leitura Tática
+    let script = "";
     const totalApRate = apRateH + apRateA;
-    if (Math.abs(scoreDiff) >= 3) setGameScript("❄️ GAME KILL: Jogo resolvido. A tendência de Over despenca drasticamente.");
-    else if (totalApRate < 0.8) setGameScript("💤 CEMITÉRIO: Jogo lento. Fique fora dos Overs.");
-    else if (baseGoalH * stateModH > (baseGoalA * stateModA) * 2.5) setGameScript(`🔥 BLITZ MANDANTE: O Desespero do time da casa elevou a projeção ao limite.`);
-    else if (baseGoalA * stateModA > (baseGoalH * stateModH) * 2.5) setGameScript(`🔥 BLITZ VISITANTE: Pressão absurda do visitante. Valor alto em cantos.`);
-    else setGameScript("⚔️ LÁ E CÁ: Trocação franca com defesas abertas.");
+    if (Math.abs(scoreDiff) >= 3) script = "❄️ GAME KILL: Jogo resolvido. A tendência de Over despenca.";
+    else if (totalApRate < 0.8) script = "💤 CEMITÉRIO: Jogo lento. Fique fora dos Overs.";
+    else if (baseGoalH * stateModH > (baseGoalA * stateModA) * 2.5) script = `🔥 BLITZ MANDANTE: O Desespero do time da casa elevou a projeção.`;
+    else if (baseGoalA * stateModA > (baseGoalH * stateModH) * 2.5) script = `🔥 BLITZ VISITANTE: Pressão absurda do visitante. Valor em cantos.`;
+    else script = "⚔️ LÁ E CÁ: Trocação franca com defesas abertas. Excelente cenário.";
 
+    return {
+      goalStats: {
+        p05: Math.min(0.99, Math.max(0.01, pGoal05)), odd05: Math.min(99, calcOdd(pGoal05)),
+        p15: Math.min(0.99, Math.max(0.01, pGoal15)), odd15: Math.min(99, calcOdd(pGoal15)),
+        expTotal: scoreH + scoreA + lambdaGoal, rec: getRecommendation(pGoal05)
+      },
+      cornerStats: {
+        p05: Math.min(0.99, Math.max(0.01, pCorner05)), odd05: Math.min(99, calcOdd(pCorner05)),
+        p10Win: Math.min(0.99, Math.max(0.01, pCorner10Win)), p10Void: Math.min(0.99, Math.max(0.01, pCorner10Void)), odd10: Math.min(99, oddAsiatica10),
+        expTotal: cornersH + cornersA + lambdaCorner, rec: getRecommendation(pCorner05)
+      },
+      gameScript: script
+    };
   }, [minute, scoreH, scoreA, cornersH, cornersA, apH, apA, sotH, sotA, targetHalf]);
 
   const SliderGroup = ({ label, value, max, setter, colorClass }: any) => (
@@ -154,7 +130,7 @@ const OraculoLive: React.FC = () => {
       <input 
         type="range" min="0" max={max} value={value} 
         onChange={(e) => setter(Number(e.target.value))} 
-        className={`w-full h-1.5 bg-slate-800 rounded-lg appearance-none cursor-pointer ${colorClass.replace('text-', 'accent-')}`} 
+        className={`w-full h-1.5 bg-slate-800 rounded-lg appearance-none cursor-pointer hover:h-2 transition-all ${colorClass.replace('text-', 'accent-')}`} 
       />
     </div>
   );
@@ -171,14 +147,14 @@ const OraculoLive: React.FC = () => {
         <h1 className="text-3xl sm:text-4xl font-black text-white tracking-tighter uppercase italic flex items-center gap-3">
           <Eye size={32} className="text-indigo-500"/> Oráculo Live <span className="text-slate-700 text-lg">///</span>
         </h1>
-        <p className="text-slate-400 text-sm">Arraste os controles para simular o cenário e precificar Linhas Asiáticas.</p>
+        <p className="text-slate-400 text-sm">Arraste os controles sem travamentos para precificar Linhas Asiáticas e Valor Esperado (EV+).</p>
       </div>
 
       {/* DASHBOARD HUD: RESULTADOS PREDITIVOS */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         
         {/* CARD GOLS */}
-        <div className="bg-[#0b101e] border border-slate-800 rounded-3xl p-6 shadow-xl">
+        <div className="bg-[#0b101e] border border-slate-800 rounded-3xl p-6 shadow-xl flex flex-col h-full">
            <h3 className="text-[10px] font-black text-orange-500 uppercase tracking-widest mb-4 flex items-center gap-2 border-b border-slate-800 pb-3"><Goal size={14}/> Mercado de Gols</h3>
            
            <div className="grid grid-cols-2 gap-6 mb-6">
@@ -197,15 +173,25 @@ const OraculoLive: React.FC = () => {
                  </div>
               </div>
            </div>
-           
-           <div className="bg-slate-900/50 p-3 rounded-xl border border-slate-800 flex justify-between items-center">
-              <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Gols Previstos (Total FT/HT):</span>
-              <span className="text-lg font-black text-orange-400">{goalStats.expTotal.toFixed(2)}</span>
+
+           {/* VEREDITO GOLS */}
+           <div className={`mt-auto border rounded-xl p-3 flex flex-col gap-1 ${goalStats.rec.bg}`}>
+               <div className="flex justify-between items-center">
+                   <span className="text-[10px] font-black uppercase tracking-widest text-slate-300">Veredito do Motor:</span>
+                   <span className={`text-[10px] font-black uppercase tracking-widest ${goalStats.rec.color}`}>{goalStats.rec.conf} CONFIANÇA</span>
+               </div>
+               {goalStats.rec.status === 'APROVADO' ? (
+                   <p className="text-xs text-emerald-100/70 font-medium flex items-center gap-1.5 mt-1"><CheckCircle2 size={14} className="text-emerald-400"/> <strong>RECOMENDADO:</strong> Aposte se a odd da casa for maior que <strong className="text-white bg-slate-900 px-1.5 rounded">@{goalStats.odd05.toFixed(2)}</strong>.</p>
+               ) : goalStats.rec.status === 'MODERADO' ? (
+                   <p className="text-xs text-amber-100/70 font-medium flex items-center gap-1.5 mt-1"><AlertTriangle size={14} className="text-amber-400"/> <strong>ATENÇÃO:</strong> Aposte apenas se tiver margem de segurança (Odd > <strong className="text-white bg-slate-900 px-1.5 rounded">@{goalStats.odd05.toFixed(2)}</strong>).</p>
+               ) : (
+                   <p className="text-xs text-red-100/70 font-medium flex items-center gap-1.5 mt-1"><ShieldAlert size={14} className="text-red-400"/> <strong>NÃO RECOMENDADO:</strong> Fique de fora. O risco de red é altíssimo.</p>
+               )}
            </div>
         </div>
 
         {/* CARD CANTOS (ASIÁTICOS) */}
-        <div className="bg-[#0b101e] border border-slate-800 rounded-3xl p-6 shadow-xl">
+        <div className="bg-[#0b101e] border border-slate-800 rounded-3xl p-6 shadow-xl flex flex-col h-full">
            <h3 className="text-[10px] font-black text-emerald-500 uppercase tracking-widest mb-4 flex items-center gap-2 border-b border-slate-800 pb-3"><Flag size={14}/> Escanteios Asiáticos</h3>
            
            <div className="grid grid-cols-2 gap-6 mb-6">
@@ -232,10 +218,20 @@ const OraculoLive: React.FC = () => {
                  </div>
               </div>
            </div>
-           
-           <div className="bg-slate-900/50 p-3 rounded-xl border border-slate-800 flex justify-between items-center">
-              <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Cantos Previstos (Total FT/HT):</span>
-              <span className="text-lg font-black text-emerald-400">{cornerStats.expTotal.toFixed(2)}</span>
+
+           {/* VEREDITO CANTOS */}
+           <div className={`mt-auto border rounded-xl p-3 flex flex-col gap-1 ${cornerStats.rec.bg}`}>
+               <div className="flex justify-between items-center">
+                   <span className="text-[10px] font-black uppercase tracking-widest text-slate-300">Veredito Asiático (+1.0):</span>
+                   <span className={`text-[10px] font-black uppercase tracking-widest ${cornerStats.rec.color}`}>{cornerStats.rec.conf} CONFIANÇA</span>
+               </div>
+               {cornerStats.rec.status === 'APROVADO' ? (
+                   <p className="text-xs text-emerald-100/70 font-medium flex items-center gap-1.5 mt-1"><CheckCircle2 size={14} className="text-emerald-400 shrink-0"/> <span><strong>RECOMENDADO:</strong> Entre na Linha Asiática se a odd for maior que <strong className="text-white bg-slate-900 px-1.5 rounded">@{cornerStats.odd10.toFixed(2)}</strong>.</span></p>
+               ) : cornerStats.rec.status === 'MODERADO' ? (
+                   <p className="text-xs text-amber-100/70 font-medium flex items-center gap-1.5 mt-1"><AlertTriangle size={14} className="text-amber-400 shrink-0"/> <span><strong>ATENÇÃO:</strong> Entre apenas se a casa oferecer <strong className="text-white bg-slate-900 px-1.5 rounded">@{cornerStats.odd10.toFixed(2)}</strong> ou superior.</span></p>
+               ) : (
+                   <p className="text-xs text-red-100/70 font-medium flex items-center gap-1.5 mt-1"><ShieldAlert size={14} className="text-red-400 shrink-0"/> <span><strong>NÃO RECOMENDADO:</strong> Valor EV negativo. Risco alto de Red. Fique de fora.</span></p>
+               )}
            </div>
         </div>
 
@@ -258,12 +254,12 @@ const OraculoLive: React.FC = () => {
                   <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest flex items-center gap-1"><Clock size={12}/> Minuto Atual</label>
                   <span className="text-indigo-400 font-mono font-black text-xl">{minute}'</span>
                </div>
-               <input type="range" min="1" max={targetHalf === 'HT' ? 45 : 99} value={minute} onChange={(e) => setMinute(Number(e.target.value))} className="w-full h-2 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-indigo-500" />
+               <input type="range" min="1" max={targetHalf === 'HT' ? 45 : 99} value={minute} onChange={(e) => setMinute(Number(e.target.value))} className="w-full h-2 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-indigo-500 hover:h-3 transition-all" />
             </div>
 
             <div className="flex bg-slate-900 p-1 rounded-xl border border-slate-800 w-full sm:w-64 shrink-0 shadow-inner">
-               <button onClick={() => setTargetHalf('HT')} className={`flex-1 py-2 text-[10px] font-black uppercase tracking-widest rounded-lg transition-all ${targetHalf === 'HT' ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-500 hover:text-slate-300'}`}>HT (1º Tempo)</button>
-               <button onClick={() => setTargetHalf('FT')} className={`flex-1 py-2 text-[10px] font-black uppercase tracking-widest rounded-lg transition-all ${targetHalf === 'FT' ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-500 hover:text-slate-300'}`}>FT (Fim de Jogo)</button>
+               <button onClick={() => setTargetHalf('HT')} className={`flex-1 py-2 text-[10px] font-black uppercase tracking-widest rounded-lg transition-all ${targetHalf === 'HT' ? 'bg-indigo-600 text-white shadow-md scale-105' : 'text-slate-500 hover:text-slate-300'}`}>HT (1º Tempo)</button>
+               <button onClick={() => setTargetHalf('FT')} className={`flex-1 py-2 text-[10px] font-black uppercase tracking-widest rounded-lg transition-all ${targetHalf === 'FT' ? 'bg-indigo-600 text-white shadow-md scale-105' : 'text-slate-500 hover:text-slate-300'}`}>FT (Fim de Jogo)</button>
             </div>
          </div>
 
@@ -272,18 +268,32 @@ const OraculoLive: React.FC = () => {
             
             {/* LADO CASA */}
             <div className="space-y-2">
-               <h4 className="text-sm font-black text-white uppercase tracking-widest mb-4 flex items-center gap-2 bg-slate-800/50 p-2 rounded-lg border border-slate-700">Time da Casa</h4>
-               <SliderGroup label="Gols" value={scoreH} max={10} setter={setScoreH} colorClass="text-amber-400" />
-               <SliderGroup label="Escanteios" value={cornersH} max={25} setter={setCornersH} colorClass="text-emerald-400" />
+               <h4 className="text-sm font-black text-white uppercase tracking-widest mb-4 flex items-center justify-between gap-2 bg-slate-800/50 p-3 rounded-xl border border-slate-700">
+                   Time da Casa 
+                   <div className="flex gap-4">
+                      <span className="text-xs text-amber-400 font-mono">{scoreH} G</span>
+                      <span className="text-xs text-emerald-400 font-mono">{cornersH} C</span>
+                   </div>
+               </h4>
+               <SliderGroup label="Gols do Casa" value={scoreH} max={10} setter={setScoreH} colorClass="text-amber-400" />
+               <SliderGroup label="Escanteios do Casa" value={cornersH} max={25} setter={setCornersH} colorClass="text-emerald-400" />
+               <div className="border-t border-slate-800/50 my-2 pt-2"></div>
                <SliderGroup label="Ataques Perigosos" value={apH} max={150} setter={setApH} colorClass="text-indigo-400" />
                <SliderGroup label="Chutes no Alvo" value={sotH} max={20} setter={setSotH} colorClass="text-sky-400" />
             </div>
 
             {/* LADO VISITANTE */}
             <div className="space-y-2">
-               <h4 className="text-sm font-black text-white uppercase tracking-widest mb-4 flex items-center gap-2 bg-slate-800/50 p-2 rounded-lg border border-slate-700">Time Visitante</h4>
-               <SliderGroup label="Gols" value={scoreA} max={10} setter={setScoreA} colorClass="text-amber-400" />
-               <SliderGroup label="Escanteios" value={cornersA} max={25} setter={setCornersA} colorClass="text-emerald-400" />
+               <h4 className="text-sm font-black text-white uppercase tracking-widest mb-4 flex items-center justify-between gap-2 bg-slate-800/50 p-3 rounded-xl border border-slate-700">
+                   Time Visitante
+                   <div className="flex gap-4">
+                      <span className="text-xs text-amber-400 font-mono">{scoreA} G</span>
+                      <span className="text-xs text-emerald-400 font-mono">{cornersA} C</span>
+                   </div>
+               </h4>
+               <SliderGroup label="Gols do Visitante" value={scoreA} max={10} setter={setScoreA} colorClass="text-amber-400" />
+               <SliderGroup label="Escanteios do Visitante" value={cornersA} max={25} setter={setCornersA} colorClass="text-emerald-400" />
+               <div className="border-t border-slate-800/50 my-2 pt-2"></div>
                <SliderGroup label="Ataques Perigosos" value={apA} max={150} setter={setApA} colorClass="text-indigo-400" />
                <SliderGroup label="Chutes no Alvo" value={sotA} max={20} setter={setSotA} colorClass="text-sky-400" />
             </div>
