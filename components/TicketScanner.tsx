@@ -1,6 +1,6 @@
 import React, { useState, useRef } from 'react';
 import Tesseract from 'tesseract.js';
-import { Camera, Upload, X, Check, Loader2, BotMessageSquare, Save } from 'lucide-react';
+import { Camera, Upload, X, Check, Loader2, BotMessageSquare, Save, FileText, AlertCircle, Edit } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 interface TicketScannerProps {
@@ -84,7 +84,7 @@ const TicketScanner: React.FC<TicketScannerProps> = ({ onScanComplete }) => {
       
       <p className="text-xs text-slate-400 mb-6 leading-relaxed bg-white/5 p-4 rounded-xl border border-slate-800 shadow-inner relative z-10">
           <Check size={14} className="text-emerald-500 inline mr-1.5" />
-          <strong>Dica:</strong> Para garantir a precisão da IA, use um print limpo do bilhete **finalizado**. Recorte focando nos detalhes da aposta (Times, Mercado, Odd e Valor). A qualidade da imagem influencia no reconhecimento tático.
+          <strong>Dica:</strong> Para garantir a precisão da IA, use um print limpo do bilhete <strong>finalizado</strong>. Recorte focando nos detalhes da aposta (Times, Mercado, Odd e Valor). A qualidade da imagem influencia no reconhecimento tático.
       </p>
 
       {!image ? (
@@ -152,11 +152,18 @@ const TicketScanner: React.FC<TicketScannerProps> = ({ onScanComplete }) => {
               <div className="flex-1 overflow-hidden space-y-6 sm:space-y-8 pb-6 custom-scrollbar flex flex-col">
                     <h4 className="text-[10px] uppercase font-bold text-slate-500 tracking-widest flex items-center gap-1.5"><Edit size={12}/> Dados Organizados pela IA - Revise Tudo</h4>
                     
-                    {[ {label: 'Resultado (Status)', value: statusMap[scannedResult.status as keyof typeof statusMap] || scannedResult.status}, {label: 'Jogo (Evento)', value: scannedResult.match}, {label: 'Mercado', value: scannedResult.market}, {label: 'Cotação (Odd)', value: `@${scannedResult.odd.toFixed(2)}`}, {label: `Exposição (${scannedResult.stake > 0 ? scannedResult.stake : 'R$ ???'})`, value: `R$ ${scannedResult.stake.toFixed(2)}`} ].map((item, idx) => (
+                    {[ 
+                      {label: 'Resultado (Status)', value: statusMap[scannedResult.status as keyof typeof statusMap] || scannedResult.status}, 
+                      {label: 'Jogo (Evento)', value: scannedResult.match}, 
+                      {label: 'Mercado', value: scannedResult.market}, 
+                      {label: 'Seleção (Palpite)', value: scannedResult.selection || 'Não detectado'},
+                      {label: 'Cotação (Odd)', value: `@${scannedResult.odd.toFixed(2)}`}, 
+                      {label: `Exposição (${scannedResult.stake > 0 ? scannedResult.stake : 'R$ ???'})`, value: `R$ ${scannedResult.stake.toFixed(2)}`} 
+                    ].map((item, idx) => (
                       <div key={idx} className="bg-slate-950 border border-slate-800 p-4 rounded-xl flex items-center justify-between gap-3 shadow-inner">
                          <div>
                              <p className="text-[10px] uppercase font-bold text-slate-500 tracking-wider mb-1">{item.label}</p>
-                             <p className={`text-sm font-bold text-slate-200 truncate ${idx === 3 ? 'font-mono' : ''}`}>{item.value}</p>
+                             <p className={`text-sm font-bold text-slate-200 truncate ${idx === 4 ? 'font-mono' : ''}`}>{item.value}</p>
                          </div>
                          <div className="text-emerald-500"><Check size={20}/></div>
                       </div>
@@ -168,7 +175,7 @@ const TicketScanner: React.FC<TicketScannerProps> = ({ onScanComplete }) => {
               <div className="bg-slate-950/90 backdrop-blur-sm border-t border-slate-800 p-6 -mx-8 -mb-8 mt-auto flex justify-end gap-3 rounded-b-3xl">
                   <button onClick={() => setShowValidationModal(false)} className="text-xs font-bold text-slate-500 px-5 py-3 hover:text-white bg-slate-800 rounded-xl active:scale-95 transition-all">Cancelar</button>
                   <button onClick={finalizeAndSave} className="text-xs font-black text-slate-950 uppercase px-8 py-3 bg-emerald-500 hover:bg-emerald-400 rounded-xl flex items-center gap-1.5 shadow-xl shadow-emerald-900/10 active:scale-95 transition-all">
-                      <Save size={16} /> Validar e Enviar para o Portfólio
+                      <Save size={16} /> Validar e Enviar para o Formulário
                   </button>
               </div>
 
