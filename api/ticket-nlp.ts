@@ -17,30 +17,30 @@ export default async function handler(req: any, res: any) {
     const genAI = new GoogleGenerativeAI(geminiKey);
     const openai = openaiKey ? new OpenAI({ apiKey: openaiKey }) : null;
 
-    // 🔥 PROMPT BLINDADO: A IA agora atua como corretora do OCR
+    // 🔥 PROMPT BLINDADO: A IA agora atua como corretora do OCR e Antialucinação
     const tacticalPrompt = `Você é um analista quantitativo de apostas esportivas.
-    O texto abaixo foi extraído de um print de apostas através de OCR (Reconhecimento Óptico de Caracteres).
-    O OCR comete MUITOS erros porque tenta ler ícones (como camisas de times) como se fossem letras, e quebra números decimais.
-    
-    Sua missão é atuar como um filtro inteligente, deduzir o contexto real e limpar os dados.
+    O texto abaixo foi extraído de um print de apostas através de OCR. O texto perdeu a formatação visual e pode estar bagunçado.
 
-    REGRAS DE OURO (SIGA ESTRITAMENTE):
-    1. SELEÇÃO (Palpite): Corrija nomes bizarros. Se o OCR leu "E emser se" ou algo ilegível, mas o jogo for "Kremser SC vs Neusiedl", a seleção apostada é "Kremser SC".
-    2. ODD (Cotação): O OCR costuma espaçar números. Se você ler "1 . 83", "1, 83" ou apenas "1" e um "83" perdido, a odd real é 1.83.
-    3. STAKE (Exposição): Encontre o valor após "Aposta", "Valor" ou "R$". NUNCA invente valores de exemplo.
-    4. STATUS: O OCR NÃO ENXERGA ÍCONES DE CHECK (✅) OU CRUZ (❌). Portanto, se NÃO HOUVER a palavra explícita "Retorno", "Ganhos", "Encerrada" ou "Perdida" no texto, você DEVE OBRIGATORIAMENTE retornar o status como "pending" (Em Aberto). Não tente adivinhar.
+    Sua missão é extrair os dados reais. SIGA ESTAS REGRAS OBRIGATORIAMENTE:
+    
+    1. BOOKMAKER: Identifique a casa de apostas pelo padrão (Ex: Betano usa "Criar Aposta", Bet365 usa "Retornos"). Responda APENAS o nome da casa (Ex: "Betano", "Bet365", "Betfair"). Se não souber, responda "Outra".
+    2. ODD (Cotação): Encontre o multiplicador decimal do bilhete. NUNCA invente esse número. Se não achar, retorne 0.
+    3. SELEÇÃO vs MERCADO (Atenção Betano): Na Betano, a SELEÇÃO (ex: "Sim", "Mais de 2.5") costuma vir separada do MERCADO (ex: "Ambas equipes Marcam"). Separe-os corretamente. Corrija nomes bizarros do OCR (ex: se o OCR leu "E emser se" no jogo Kremser, a seleção é "Kremser").
+    4. STAKE (Exposição): Procure o valor financeiro apostado. Se o usuário cortou a imagem e a aposta não estiver no texto, RETORNE 0 OBRIGATORIAMENTE.
+    5. STATUS: Se NÃO HOUVER palavra explícita como "Retorno", "Ganhos", "Encerrada" ou "Perdida", você DEVE OBRIGATORIAMENTE retornar o status como "pending".
+    6. NUNCA USE OS VALORES DO MOLDE JSON COMO RESPOSTA. OS NÚMEROS DEVEM VIR EXCLUSIVAMENTE DO TEXTO OCR.
 
     Texto bruto extraído pelo OCR:
     """${textData}"""
 
-    Retorne ESTRITAMENTE este JSON válido (sem formatação markdown, apenas o JSON puro):
+    Retorne ESTRITAMENTE este formato JSON válido (Substitua os zeros e vazios pelos dados reais do texto OCR):
     {
-      "bookmaker": "Bet365 ou Betano ou Betfair ou Outra",
-      "match": "Time A vs Time B",
-      "market": "Mercado (ex: Resultado Final)",
-      "selection": "Palpite corrigido",
-      "odd": 1.83,
-      "stake": 5.00,
+      "bookmaker": "",
+      "match": "",
+      "market": "",
+      "selection": "",
+      "odd": 0.00,
+      "stake": 0.00,
       "return": 0.00,
       "status": "pending" 
     }`;
@@ -49,7 +49,7 @@ export default async function handler(req: any, res: any) {
     let textResult = "";
 
     try {
-        // TENTA GEMINI FLASH (Em apenas 1 passo para ser mais rápido)
+        // TENTA GEMINI FLASH (Mais rápido e barato)
         const result = await aiModel.generateContent(tacticalPrompt);
         textResult = result.response.text();
     } catch (geminiError: any) { 
@@ -78,20 +78,21 @@ export default async function handler(req: any, res: any) {
         }
     }
     
-    // 🛡️ BLINDAGEM DE PARSER DO JSON E LIMPEZA DE CARACTERES LIXO
+    // 🛡️ LIMPEZA E PARSER DO JSON
     textResult = textResult.replace(/```json/gi, '').replace(/```/g, '').trim();
     const jsonMatch = textResult.match(/\{[\s\S]*\}/);
     if (jsonMatch) textResult = jsonMatch[0];
     
     const parsedData = JSON.parse(textResult);
 
-    // Limpeza forçada dos números para garantir que o Javascript não corte a Odd
+    // Limpeza forçada dos números
     let rawOdd = String(parsedData.odd).replace(/[^\d.,]/g, '').replace(',', '.');
     let rawStake = String(parsedData.stake).replace(/[^\d.,]/g, '').replace(',', '.');
     let rawReturn = String(parsedData.return).replace(/[^\d.,]/g, '').replace(',', '.');
     
-    const odd = parseFloat(rawOdd) || 1;
-    const stake = parseFloat(rawStake) || 0;
+    // Fallback é 0. Assim o frontend entende que a IA não achou e acende o alerta amarelo
+    const odd = parseFloat(rawOdd) || 0; 
+    const stake = parseFloat(rawStake) || 0; 
     const totalReturn = parseFloat(rawReturn) || 0;
     let profit = 0;
 
@@ -103,7 +104,6 @@ export default async function handler(req: any, res: any) {
         profit = totalReturn - stake; 
     }
 
-    // Reconstruindo o JSON de forma blindada
     const finalData = {
         bookmaker: parsedData.bookmaker || "Outra",
         match: parsedData.match || "",
