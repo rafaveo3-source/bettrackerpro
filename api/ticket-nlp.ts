@@ -3,12 +3,20 @@ import OpenAI from 'openai';
 
 export const maxDuration = 60;
 
-// 🔥 PROMPTS TÁTICOS (Focados em não inventar valores)
+// 🔥 PROMPTS TÁTICOS (Blindagem contra mistura de dados + Anti-Alucinação de Stake)
 const specializedPrompts = {
-    'Bet365': (text: string) => `O texto é da Bet365. REGRA: A ODD é um número decimal. A STAKE é o valor numérico exato após 'Aposta' ou 'R$' (Ex: se o texto diz R$5,00, a stake é 5.00). A SELEÇÃO é o palpite apostado. Texto OCR: """${text}"""`,
-    'Betano': (text: string) => `O texto é da Betano. REGRA: A ODD pode estar fragmentada (ex: 1 . 8 3 = 1.83). A STAKE é o valor exato após 'Aposta' ou 'R$'. A SELEÇÃO é o palpite apostado. Texto OCR: """${text}"""`,
-    'Betfair': (text: string) => `O texto é da Betfair. A ODD costuma ter um @ antes. A STAKE é o valor exato apostado. A SELEÇÃO é o palpite apostado. Texto OCR: """${text}"""`,
-    'Outra': (text: string) => `Extraia Jogo (Apenas Letras), Mercado, Seleção, Odd (Apenas decimal) e Stake (Valor apostado exato) deste texto. Texto OCR: """${text}"""`
+    'Bet365': (text: string) => `O texto é da Bet365. 
+REGRA 1: O JOGO (match) é composto apenas por letras (Ex: Time A x Time B). Ignore números decimais aqui.
+REGRA 2: A SELEÇÃO é o palpite apostado (Ex: Kremser SC, Mais de 2.5). 
+REGRA 3: A ODD é SEMPRE um número decimal (Ex: 1.83). Se estiver ao lado do nome do time, separe.
+REGRA 4: A STAKE (Exposição) é o valor numérico EXATO após 'Aposta', 'Valor' ou 'R$' (Ex: se diz R$5,00, a stake é 5.00). NUNCA invente esse valor.
+Texto OCR: """${text}"""`,
+    
+    'Betano': (text: string) => `O texto é da Betano. A ODD pode estar fragmentada (ex: 1 . 8 3 = 1.83). A STAKE é o valor EXATO após 'Aposta' ou 'R$'. A SELEÇÃO é o palpite. NUNCA invente a stake. Texto OCR: """${text}"""`,
+    
+    'Betfair': (text: string) => `O texto é da Betfair. A ODD costuma ter um @ antes. A STAKE é o valor EXATO apostado. A SELEÇÃO é o nome do time ou palpite apostado. NUNCA invente a stake. Texto OCR: """${text}"""`,
+    
+    'Outra': (text: string) => `Extraia Jogo (Apenas Letras), Mercado, Seleção (Palpite exato), Odd (Apenas decimal) e Stake (Valor apostado exato) deste texto. Não invente valores. Texto OCR: """${text}"""`
 };
 
 export default async function handler(req: any, res: any) {
@@ -19,25 +27,29 @@ export default async function handler(req: any, res: any) {
     const geminiKey = process.env.GEMINI_API_KEY;
     const openaiKey = process.env.OPENAI_API_KEY;
 
-    if (!geminiKey) return res.status(500).json({ error: 'Chave Gemini ausente.' });
-    if (!textData || textData.trim().length < 5) return res.status(400).json({ error: 'Texto insuficiente.' });
+    if (!geminiKey) return res.status(500).json({ error: 'Chave Gemini ausente no servidor.' });
+    if (!textData || textData.trim().length < 5) return res.status(400).json({ error: 'Texto insuficiente enviado pelo OCR.' });
 
     const genAI = new GoogleGenerativeAI(geminiKey);
     const openai = openaiKey ? new OpenAI({ apiKey: openaiKey }) : null;
 
+    // 🚀 PASSO 1: CLASSIFICAR A CASA (Usando gemini-1.5-flash, sem travas de MIME para evitar 404)
     let aiModel = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
     
     let bookmaker = "Outra";
     try {
-        const classificationResult = await aiModel.generateContent(`Diga apenas o nome da casa de aposta (Bet365, Betano ou Betfair). Se não souber, diga 'Outra'. Texto: """${textData}"""`);
+        const classificationPrompt = `Diga apenas o nome da casa de aposta (Bet365, Betano ou Betfair). Se não souber, diga 'Outra'. Texto: """${textData}"""`;
+        const classificationResult = await aiModel.generateContent(classificationPrompt);
         bookmaker = classificationResult.response.text().trim().replace(/['"`]/g, '');
-    } catch (e) { }
+    } catch (e) {
+        // Ignora erro na classificação e assume 'Outra'
+    }
 
+    // 🚀 PASSO 2: EXECUTAR PROMPT TÁTICO
     const promptStrategy = specializedPrompts[bookmaker as keyof typeof specializedPrompts] || specializedPrompts['Outra'];
     
-    // 🔥 PROMPT BLINDADO: Ordem explícita para não inventar o 100.00
-    const tacticalPrompt = promptStrategy(textData) + `\n\nATENÇÃO: Não invente valores! Extraia o número real do texto. Se a aposta for R$ 5,00, a stake é 5.00. Junte números fragmentados. 
-Retorne ESTRITAMENTE este JSON:
+    // 🔥 PROMPT BLINDADO: Ordem explícita para não inventar o 100.00 de exemplo
+    const tacticalPrompt = promptStrategy(textData) + `\n\nATENÇÃO MÁXIMA: NUNCA invente valores! Extraia o número real do texto para a stake. Junte números fragmentados (ex: 1 . 8 3 vira 1.83). Retorne ESTRITAMENTE este JSON:
 {
   "bookmaker": "${bookmaker}",
   "match": "Time A vs Time B",
@@ -52,14 +64,17 @@ Retorne ESTRITAMENTE este JSON:
     let textResult = "";
 
     try {
+        // TENTA GEMINI FLASH
         const result = await aiModel.generateContent(tacticalPrompt);
         textResult = result.response.text();
     } catch (geminiError: any) { 
         try {
+            // FALLBACK 1: TENTA GEMINI PRO (Modelos antigos de SDK suportam esse)
             aiModel = genAI.getGenerativeModel({ model: 'gemini-pro' });
             const result = await aiModel.generateContent(tacticalPrompt);
             textResult = result.response.text();
         } catch (geminiProError: any) {
+            // FALLBACK 2: OPENAI (Se configurada)
             if (openai) {
                 try {
                     const response = await openai.chat.completions.create({
@@ -69,11 +84,16 @@ Retorne ESTRITAMENTE este JSON:
                         response_format: { type: "json_object" }
                     });
                     textResult = response.choices[0].message?.content || "";
-                } catch (openaiError: any) { throw new Error("Ambas as APIs falharam."); }
-            } else { throw new Error("A API falhou."); }
+                } catch (openaiError: any) {
+                    throw new Error("Ambas as APIs falharam.");
+                }
+            } else {
+                throw new Error("A API do Google falhou e a chave da OpenAI não está configurada.");
+            }
         }
     }
     
+    // Limpa a resposta da IA (Blindagem de JSON)
     textResult = textResult.replace(/```json/gi, '').replace(/```/g, '').trim();
     const jsonMatch = textResult.match(/\{[\s\S]*\}/);
     if (jsonMatch) textResult = jsonMatch[0];
