@@ -17,7 +17,7 @@ import Goals from './pages/Goals';
 import SystemLibrary from './pages/SystemLibrary';
 import ProPage from './pages/ProPage'; 
 import ScoutIA from './pages/ScoutIA'; 
-import LiveTerminal from './pages/LiveTerminal'; // 🔥 Novo: O Terminal Quantitativo Live
+import LiveTerminal from './pages/LiveTerminal';
 
 // Páginas Públicas
 import LandingPage from './pages/LandingPage';
@@ -30,12 +30,22 @@ import { Toaster } from './components/ui/Toaster';
 const SystemRoutes: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
+  const { checkProStatus, isAuthenticated } = useBetStore();
+
+  // 🔥 GATILHO GLOBAL CROSS-DEVICE 🔥
+  // Sempre que a rota mudar dentro do sistema logado, força a checagem do plano PRO
+  // Isso mata o bug do celular logar e achar que é FREE por causa de cache antigo.
+  useEffect(() => {
+    if (isAuthenticated) {
+        checkProStatus();
+    }
+  }, [location.pathname, isAuthenticated, checkProStatus]);
 
   const getCurrentViewID = () => {
     const path = location.pathname;
     if (path.includes('/dashboard')) return 'dashboard';
     if (path.includes('/scout')) return 'scout'; 
-    if (path.includes('/terminal-live')) return 'terminal'; // 🔥 Novo ID
+    if (path.includes('/terminal-live')) return 'terminal';
     if (path.includes('/analytics')) return 'analytics';
     if (path.includes('/goals')) return 'metas';
     if (path.includes('/mindset')) return 'mindset';
@@ -53,7 +63,7 @@ const SystemRoutes: React.FC = () => {
     switch (viewId) {
       case 'dashboard': navigate('/dashboard'); break;
       case 'scout': navigate('/scout'); break; 
-      case 'terminal': navigate('/terminal-live'); break; // 🔥 Nova Navegação
+      case 'terminal': navigate('/terminal-live'); break;
       case 'analytics': navigate('/analytics'); break;
       case 'metas': navigate('/goals'); break;
       case 'mindset': navigate('/mindset'); break;
@@ -73,7 +83,7 @@ const SystemRoutes: React.FC = () => {
       <Routes>
         <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/scout" element={<ScoutIA />} /> 
-        <Route path="/terminal-live" element={<LiveTerminal />} /> {/* 🔥 Nova Rota */}
+        <Route path="/terminal-live" element={<LiveTerminal />} />
         <Route path="/analytics" element={<Analytics />} />
         <Route path="/goals" element={<Goals />} />
         <Route path="/mindset" element={<Mindset />} />
@@ -102,18 +112,15 @@ const AppContent: React.FC = () => {
   }, [isDarkMode]);
 
   useEffect(() => {
+    // Escuta mudanças de autenticação globais
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
-      if (session) {
-        checkProStatus();
-      }
+      if (session) checkProStatus();
     });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session);
-      if (session) {
-        checkProStatus();
-      }
+      if (session) checkProStatus();
     });
 
     return () => subscription.unsubscribe();

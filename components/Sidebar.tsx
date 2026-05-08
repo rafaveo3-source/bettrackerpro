@@ -18,7 +18,7 @@ import {
   Sun,
   PlayCircle,
   Sparkles, 
-  Eye, // 🔥 Ícone do Oráculo
+  Eye, 
   Lock
 } from 'lucide-react';
 import { useBetStore } from '../store/useBetStore';
@@ -49,7 +49,6 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, setView, isOpen, setIsOp
 
   const menuItems = [
     { id: 'dashboard', label: 'Visão Geral', icon: LayoutDashboard },
-    // SCOUT IA E ORÁCULO RENDERIZADOS CUSTOMIZADAMENTE ABAIXO
     { id: 'analytics', label: 'Análise de Dados', icon: BarChart2 },
     { id: 'metas', label: 'Metas (Take Profit)', icon: Target },
     { id: 'mindset', label: 'Psicologia', icon: BrainCircuit },
@@ -66,10 +65,11 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, setView, isOpen, setIsOp
     setIsOpen(false);
   };
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
     if(window.confirm('Deseja encerrar a sessão segura?')) {
-        logout();
-        navigate('/');
+        await logout();
+        navigate('/login', { replace: true });
+        window.location.reload(); // 🔥 MATA QUALQUER CACHE RESIDUAL DE MEMÓRIA DO REACT 🔥
     }
   };
 
@@ -115,7 +115,6 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, setView, isOpen, setIsOp
         </div>
 
         <nav className="flex-1 overflow-y-auto py-6 px-4 space-y-1 custom-scrollbar">
-            {/* BOTÃO DASHBOARD FIXO */}
             <button
                 onClick={() => handleNavigation('dashboard')}
                 className={`tour-sidebar-dashboard w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200 group mb-2
@@ -127,7 +126,6 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, setView, isOpen, setIsOp
                 Visão Geral
             </button>
 
-            {/* 🔥 BOTÃO KILLER 1: SCOUT HFT IA 🔥 */}
             <div className="tour-sidebar-scout relative mb-2">
                <div className="absolute inset-0 bg-indigo-500/10 dark:bg-indigo-500/10 blur-xl rounded-full"></div>
                <button
@@ -146,7 +144,6 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, setView, isOpen, setIsOp
                </button>
             </div>
 
-            {/* 🔥 BOTÃO KILLER 2: ORÁCULO LIVE (RENOMEADO E REFATORADO) 🔥 */}
             <div className="relative mb-4">
                <button
                    onClick={() => handleNavigation('terminal')}
@@ -163,7 +160,6 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, setView, isOpen, setIsOp
                </button>
             </div>
 
-            {/* RESTANTE DOS BOTÕES */}
             {menuItems.filter(i => i.id !== 'dashboard').map(item => {
                 const isActive = currentView === item.id;
                 
