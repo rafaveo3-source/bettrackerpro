@@ -87,7 +87,8 @@ const runMonteCarloV10 = (data: any, type: 'corner' | 'goal', targetAdd: number,
 // COMPONENTE PRINCIPAL
 // ==========================================
 const Calculators: React.FC = () => {
-  const { user, currentBankrollBalance, isPro, bets = [], methods = [], settings } = useBetStore();
+  // 🔥 CORREÇÃO CRÍTICA: Lendo da variável correta de apostas no store (history)
+  const { user, currentBankrollBalance, isPro, history = [], methods = [], settings } = useBetStore();
   const navigate = useNavigate();
 
   const [activeTab, setActiveTab] = useState<'dutching'|'kelly'|'value'|'arb'|'stake'|'odds'|'compound'>('compound');
@@ -111,49 +112,59 @@ const Calculators: React.FC = () => {
   );
 
   // ==============================================
-  // 🔥 MOTOR DE LISTAGEM UNIVERSAL (Varre todo o sistema)
-  // ==============================================
-  const availableMethodsList = useMemo(() => {
-      const list = new Set<string>();
-      if (Array.isArray(methods)) methods.forEach(m => list.add(typeof m === 'string' ? m : m.name));
-      if (settings?.methods && Array.isArray(settings.methods)) settings.methods.forEach((m: any) => list.add(typeof m === 'string' ? m : m.name));
-      if (user?.methods && Array.isArray(user.methods)) user.methods.forEach((m: any) => list.add(typeof m === 'string' ? m : m.name));
-      (bets || []).forEach(b => { if (b.method) list.add(b.method); });
-      return Array.from(list).sort();
-  }, [bets, methods, settings, user]);
-
-  // ==============================================
-  // 🔥 MOTOR EXTRATOR DE ESTATÍSTICAS REAIS (CORRIGIDO PARA "GREEN" e "RED")
+  // 🔥 MOTOR EXTRATOR DE ESTATÍSTICAS REAIS (LENDO DE 'history')
   // ==============================================
   const extractedMethods = useMemo(() => {
       const stats: Record<string, { wins: number, resolved: number, totalOdds: number }> = {};
       
-      (bets || []).forEach(bet => {
-          const mName = bet.method || 'Sem Método';
+      // Itera sobre as apostas reais do usuário
+      (history || []).forEach(bet => {
+          // Extrai o nome do método e remove espaços extras
+          const mName = (bet.method || 'Sem Método').trim();
+          
           if (!stats[mName]) stats[mName] = { wins: 0, resolved: 0, totalOdds: 0 };
           
-          // Normaliza o status para letras minúsculas (ex: 'GREEN', 'Green', 'green' viram 'green')
-          const status = String(bet.status || '').toLowerCase();
-          
-          // Dicionário universal de Status de Green (Vencedor) e Red (Perdedor)
-          const isWin = ['won', 'win', 'green', 'half-won', 'half_green', 'half-green', 'meio-green'].includes(status);
-          const isLoss = ['lost', 'loss', 'red', 'half-lost', 'half_red', 'half-red', 'meio-red'].includes(status);
-
-          // Se for Win ou Loss, a aposta foi resolvida (ignora pendentes/canceladas)
-          if (isWin || isLoss) {
-              stats[mName].resolved++;
-              stats[mName].totalOdds += Number(bet.odds || 0);
-              if (isWin) stats[mName].wins++;
+          // Verifica os status exatos definidos no seu Type BetStatus
+          if (['won', 'half-won', 'lost', 'half-lost', 'cashout', 'refunded'].includes(bet.status)) {
+              
+              // Incrementa contador de resolvidas (excluindo devolvidas e cashout neutro para fins de win rate puro)
+              if (['won', 'half-won', 'lost', 'half-lost'].includes(bet.status)) {
+                  stats[mName].resolved++;
+                  stats[mName].totalOdds += Number(bet.odds || 0);
+              }
+              
+              // Incrementa vitórias para cálculo de Win Rate
+              if (bet.status === 'won' || bet.status === 'half-won') {
+                  stats[mName].wins++;
+              }
           }
       });
 
+      // Formata a matriz para uso no Dashboard
       return Object.entries(stats).map(([name, data]) => ({
           name, 
           winRate: data.resolved > 0 ? (data.wins / data.resolved) * 100 : 0, 
           avgOdd: data.resolved > 0 ? data.totalOdds / data.resolved : 0,
           resolved: data.resolved
-      }));
-  }, [bets]);
+      })).filter(m => m.resolved > 0); // Oculta quem não tem histórico concluído
+  }, [history]);
+
+  // ==============================================
+  // 🔥 MOTOR DE LISTAGEM UNIVERSAL (Varre todo o sistema)
+  // ==============================================
+  const availableMethodsList = useMemo(() => {
+      const list = new Set<string>();
+      
+      // Adiciona métodos registrados nas configs do usuário
+      if (Array.isArray(methods)) methods.forEach(m => list.add(typeof m === 'string' ? m : m.name));
+      if (settings?.methods && Array.isArray(settings.methods)) settings.methods.forEach((m: any) => list.add(typeof m === 'string' ? m : m.name));
+      if (user?.methods && Array.isArray(user.methods)) user.methods.forEach((m: any) => list.add(typeof m === 'string' ? m : m.name));
+      
+      // Adiciona métodos puxados do histórico
+      extractedMethods.forEach(em => list.add(em.name));
+      
+      return Array.from(list).sort();
+  }, [history, methods, settings, user, extractedMethods]);
 
   // ==============================================
   // 🔥 ESTADOS DA PLANILHA PRO (MÚLTIPLOS MÉTODOS)
@@ -162,32 +173,35 @@ const Calculators: React.FC = () => {
   const [compTarget, setCompTarget] = useState(currentBankrollBalance > 0 ? String(currentBankrollBalance * 2) : '2000');
   const [compDays, setCompDays] = useState('30');
 
-  // Tabela Editável Inicial
+  // Tabela Editável Inicial (Usa o primeiro com histórico se houver)
+  const defaultInitialMethod = extractedMethods.length > 0 ? extractedMethods[0] : null;
+
   const [simMethods, setSimMethods] = useState([
       { 
         id: 1, 
-        name: availableMethodsList.length > 0 ? availableMethodsList[0] : '', 
-        winRate: extractedMethods.find(e => e.name === availableMethodsList[0])?.winRate || 60, 
-        avgOdd: extractedMethods.find(e => e.name === availableMethodsList[0])?.avgOdd || 1.85, 
+        name: defaultInitialMethod ? defaultInitialMethod.name : '', 
+        winRate: defaultInitialMethod ? Number(defaultInitialMethod.winRate.toFixed(1)) : 60, 
+        avgOdd: defaultInitialMethod ? Number(defaultInitialMethod.avgOdd.toFixed(2)) : 1.85, 
         stake: 1.5, 
         entries: 3,
-        isSynced: false
+        isSynced: !!defaultInitialMethod
       }
   ]);
 
   const addSimMethod = () => {
       const usedNames = simMethods.map(m => m.name);
+      // Pega o próximo método disponível na lista que ainda não está na tabela
       const nextAvailable = availableMethodsList.find(name => !usedNames.includes(name)) || '';
-      const history = extractedMethods.find(ex => ex.name === nextAvailable);
+      const historicalData = extractedMethods.find(ex => ex.name === nextAvailable);
       
       setSimMethods([...simMethods, { 
           id: Date.now(), 
           name: nextAvailable, 
-          winRate: history ? Number(history.winRate.toFixed(1)) : 60, 
-          avgOdd: history ? Number(history.avgOdd.toFixed(2)) : 1.85, 
+          winRate: historicalData ? Number(historicalData.winRate.toFixed(1)) : 50, 
+          avgOdd: historicalData ? Number(historicalData.avgOdd.toFixed(2)) : 2.00, 
           stake: 1.5, 
           entries: 2,
-          isSynced: !!history 
+          isSynced: !!historicalData 
       }]);
   };
 
@@ -201,15 +215,20 @@ const Calculators: React.FC = () => {
           let updatedMethod = { ...m, [field]: field === 'name' ? value : Number(value) };
           
           if (field === 'name') {
-              const history = extractedMethods.find(ex => ex.name.toLowerCase() === value.toLowerCase());
-              if (history && history.resolved > 0) {
-                  updatedMethod.winRate = Number(history.winRate.toFixed(1));
-                  updatedMethod.avgOdd = Number(history.avgOdd.toFixed(2));
+              // Limpa o "(X entradas)" se o usuário selecionar pelo dropdown
+              const cleanValue = value.replace(/ \(\d+ entr.*\)/g, '').trim();
+              updatedMethod.name = cleanValue;
+
+              const historicalData = extractedMethods.find(ex => ex.name.toLowerCase() === cleanValue.toLowerCase());
+              if (historicalData && historicalData.resolved > 0) {
+                  updatedMethod.winRate = Number(historicalData.winRate.toFixed(1));
+                  updatedMethod.avgOdd = Number(historicalData.avgOdd.toFixed(2));
                   updatedMethod.isSynced = true;
               } else {
                   updatedMethod.isSynced = false;
               }
           } else if (field === 'winRate' || field === 'avgOdd') {
+              // Se alterar na mão, desliga a tag de Sincronizado
               updatedMethod.isSynced = false;
           }
 
@@ -221,11 +240,11 @@ const Calculators: React.FC = () => {
       setSimMethods(simMethods.map(m => m.id === id ? { ...m, stake: Number(recommendedStake.toFixed(1)) } : m));
   };
 
+  // Botão Puxar do Histórico
   const syncWithHistory = () => {
-      const validHistory = extractedMethods.filter(m => m.resolved > 0);
-      if (validHistory.length === 0) return alert("Nenhum dado real concluído (Green/Red) encontrado no histórico.");
+      if (extractedMethods.length === 0) return alert("Nenhum dado real concluído (Won/Lost) encontrado no seu Diário de Operações.");
       
-      const synced = validHistory.map((m, i) => ({
+      const synced = extractedMethods.map((m, i) => ({
           id: Date.now() + i,
           name: m.name,
           winRate: Number(m.winRate.toFixed(1)),
@@ -258,17 +277,17 @@ const Calculators: React.FC = () => {
       if (evRaw > 0 && m.avgOdd > 1) {
           const kellyRaw = evRaw / (m.avgOdd - 1); 
           kellyFull = kellyRaw * 100;
-          recommendedStakeRaw = Math.max(0, Math.min(kellyRaw / 4, 0.05)); // Teto de 5%
+          recommendedStakeRaw = Math.max(0, Math.min(kellyRaw / 4, 0.05)); // Teto de segurança 5%
       }
 
       if (evRaw <= 0) {
           riskBadge = <span className="text-[8px] font-black text-red-500 uppercase tracking-widest bg-red-500/10 px-1 py-0.5 rounded">EV Negativo</span>;
       } else if (m.stake > kellyFull) {
-          riskBadge = <span className="text-[8px] font-black text-red-500 uppercase tracking-widest bg-red-500/10 px-1 py-0.5 rounded">Risco Ruína</span>;
+          riskBadge = <span className="text-[8px] font-black text-red-500 uppercase tracking-widest bg-red-500/10 px-1 py-0.5 rounded flex items-center gap-0.5"><AlertTriangle size={8}/> Risco Ruína</span>;
       } else if (m.stake > kellyFull / 2) {
           riskBadge = <span className="text-[8px] font-black text-amber-500 uppercase tracking-widest bg-amber-500/10 px-1 py-0.5 rounded">Risco Alto</span>;
       } else {
-          riskBadge = <span className="text-[8px] font-black text-emerald-500 uppercase tracking-widest bg-emerald-500/10 px-1 py-0.5 rounded">Seguro</span>;
+          riskBadge = <span className="text-[8px] font-black text-emerald-500 uppercase tracking-widest bg-emerald-500/10 px-1 py-0.5 rounded">Gestão Segura</span>;
       }
 
       const recommendedStake = recommendedStakeRaw * 100;
@@ -330,11 +349,12 @@ const Calculators: React.FC = () => {
   return (
     <div className="space-y-6 pb-20 w-full overflow-x-hidden">
         
-      {/* DATALIST: Auto-complete sem bloquear a digitação livre */}
+      {/* DATALIST: UX Melhorada exibindo se o método tem histórico para auto-preencher */}
       <datalist id="methods-list">
-          {availableMethodsList.map(name => (
-             <option key={name} value={name} />
-          ))}
+          {availableMethodsList.map(name => {
+              const hist = extractedMethods.find(ex => ex.name.toLowerCase() === name.toLowerCase());
+              return <option key={name} value={name}>{hist ? ` (${hist.resolved} entradas cadastradas)` : ''}</option>;
+          })}
       </datalist>
 
         <div className="flex flex-col gap-2 px-4 md:px-0">
@@ -478,9 +498,9 @@ const Calculators: React.FC = () => {
                                                             <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
                                                         </div>
                                                         {m.isSynced ? (
-                                                            <span className="text-[8px] font-bold text-emerald-500 uppercase tracking-widest">● Sincronizado</span>
+                                                            <span className="text-[8px] font-bold text-emerald-500 uppercase tracking-widest">● Sincronizado com Diário</span>
                                                         ) : (
-                                                            <span className="text-[8px] font-bold text-indigo-400 uppercase tracking-widest">● Simulação livre</span>
+                                                            <span className="text-[8px] font-bold text-indigo-400 uppercase tracking-widest">● Modo Simulação</span>
                                                         )}
                                                     </div>
                                                 </td>
@@ -512,7 +532,7 @@ const Calculators: React.FC = () => {
                                                 <td className="py-2 px-1">
                                                     <div className="flex flex-col items-center">
                                                         <input type="number" step="0.1" value={m.stake} onChange={e => updateSimMethod(m.id, 'stake', e.target.value)} className={inputClass} />
-                                                        <div className="mt-1">{m.riskBadge}</div>
+                                                        <div className="mt-1 w-full text-center">{m.riskBadge}</div>
                                                     </div>
                                                 </td>
                                                 
@@ -708,7 +728,7 @@ const Calculators: React.FC = () => {
                 <div className="p-4 bg-slate-50 dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800">
                     <p className="text-[10px] text-slate-500 dark:text-slate-400 mb-2 uppercase font-bold tracking-wider">Como funciona?</p>
                     <p className="text-xs sm:text-sm font-medium text-slate-700 dark:text-slate-300 leading-relaxed mb-4">
-                        Comece a digitar o nome de um método na tabela. Se ele já existir, o sistema <strong className="text-emerald-500">Sincroniza</strong> o seu Win Rate automaticamente.
+                        Comece a digitar o nome de um método na tabela. Se ele já tiver apostas cadastradas no diário, o sistema <strong className="text-emerald-500">Sincroniza</strong> o seu Win Rate e Odd automaticamente.
                     </p>
                     <p className="text-xs sm:text-sm font-medium text-slate-700 dark:text-slate-300 leading-relaxed">
                         Se for um método novo, ele entra em modo <strong className="text-indigo-500">Simulação</strong>. Preencha o Win Rate que você espera ter, e o motor te dará a <strong>Stake Sugerida</strong> baseada no Critério de Kelly.
