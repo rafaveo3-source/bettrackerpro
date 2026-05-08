@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
   Plus, Scale, Percent, ArrowRightLeft, 
@@ -6,7 +6,7 @@ import {
   Crosshair, DollarSign, Goal,
   Clock, ShieldAlert, FileText,
   PiggyBank, LineChart, Calendar, Zap, CheckCircle2,
-  TrendingDown, PlusCircle, Trash2, RefreshCcw, LayoutGrid
+  TrendingDown, PlusCircle, Trash2, RefreshCcw, LayoutGrid, BarChart4
 } from 'lucide-react';
 import { useBetStore } from '../store/useBetStore';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -86,7 +86,7 @@ const runMonteCarloV10 = (data: any, type: 'corner' | 'goal', targetAdd: number,
 // COMPONENTE PRINCIPAL
 // ==========================================
 const Calculators: React.FC = () => {
-  const { user, currentBankrollBalance, isPro, bets = [] } = useBetStore();
+  const { user, currentBankrollBalance, isPro, bets } = useBetStore();
   const navigate = useNavigate();
 
   const [activeTab, setActiveTab] = useState<'dutching'|'kelly'|'value'|'arb'|'stake'|'odds'|'compound'>('compound');
@@ -110,11 +110,13 @@ const Calculators: React.FC = () => {
   );
 
   // ==============================================
-  // 🔥 MOTOR EXTRATOR DE DADOS (USADO PARA SINCRONIZAR A TABELA)
+  // 🔥 MOTOR EXTRATOR DE DADOS (PROTEGIDO CONTRA NULL)
   // ==============================================
   const extractedMethods = useMemo(() => {
       const stats: Record<string, { wins: number, resolved: number, totalOdds: number }> = {};
-      bets.forEach(bet => {
+      
+      // Proteção: se 'bets' não existir ainda, usa array vazio
+      (bets || []).forEach(bet => {
           const mName = bet.method || 'Sem Método';
           if (!stats[mName]) stats[mName] = { wins: 0, resolved: 0, totalOdds: 0 };
           
@@ -124,6 +126,7 @@ const Calculators: React.FC = () => {
               if (bet.status === 'won' || bet.status === 'half-won') stats[mName].wins++;
           }
       });
+
       return Object.entries(stats).map(([name, data]) => ({
           name, 
           winRate: data.resolved > 0 ? (data.wins / data.resolved) * 100 : 0, 
@@ -139,7 +142,7 @@ const Calculators: React.FC = () => {
   const [compTarget, setCompTarget] = useState(currentBankrollBalance > 0 ? String(currentBankrollBalance * 2) : '2000');
   const [compDays, setCompDays] = useState('30');
 
-  // Matriz de Métodos Editável (A Tabela Excel)
+  // Matriz de Métodos Editável
   const [simMethods, setSimMethods] = useState([
       { id: 1, name: 'Estratégia A', winRate: 65, avgOdd: 1.80, stake: 2, entries: 3 }
   ]);
@@ -158,8 +161,8 @@ const Calculators: React.FC = () => {
           name: m.name,
           winRate: Number(m.winRate.toFixed(1)),
           avgOdd: Number(m.avgOdd.toFixed(2)),
-          stake: 2, // Padrão
-          entries: 2 // Padrão
+          stake: 2, // Padrão Inicial
+          entries: 2 // Padrão Inicial
       }));
       setSimMethods(synced);
   };
@@ -207,7 +210,7 @@ const Calculators: React.FC = () => {
 
   const [kellyOdds, setKellyOdds] = useState('2.00'); const [kellyProb, setKellyProb] = useState('55'); const [kellyFraction, setKellyFraction] = useState('1'); 
   const kellyResult = (() => { const b = parseFloat(kellyOdds) - 1; const p = parseFloat(kellyProb) / 100; if (b <= 0) return "0.00"; return (((b * p - (1 - p)) / b) * parseFloat(kellyFraction) * 100).toFixed(2); })();
-  const kellyMoney = (parseFloat(kellyResult) / 100) * currentBankrollBalance;
+  const kellyMoney = (parseFloat(kellyResult) / 100) * (currentBankrollBalance || 0);
 
   const [valOdds, setValOdds] = useState('2.10'); const [valProb, setValProb] = useState('50'); 
   const valEV = (parseFloat(valProb) / 100 * parseFloat(valOdds)) - 1; const valEVPercent = valEV * 100;
@@ -217,7 +220,7 @@ const Calculators: React.FC = () => {
   const arbStake1 = (parseFloat(arbTotalStake) * (1 / parseFloat(arbOdds1))) / arbImplied; const arbStake2 = (parseFloat(arbTotalStake) * (1 / parseFloat(arbOdds2))) / arbImplied;
   const arbProfit = (arbStake1 * parseFloat(arbOdds1)) - parseFloat(arbTotalStake);
 
-  const [stakePercentState, setStakePercentState] = useState('1'); const stakeValue = (parseFloat(stakePercentState) / 100) * currentBankrollBalance;
+  const [stakePercentState, setStakePercentState] = useState('1'); const stakeValue = (parseFloat(stakePercentState) / 100) * (currentBankrollBalance || 0);
   const [convDec, setConvDec] = useState('2.00'); const [convAm, setConvAm] = useState('+100'); const [convProb, setConvProb] = useState('50.00');
   const handleDecChange = (val: string) => { setConvDec(val); const d = parseFloat(val); if (d > 1) { setConvProb(((1 / d) * 100).toFixed(2)); setConvAm(d >= 2 ? '+' + ((d - 1) * 100).toFixed(0) : (( -100 / (d - 1) )).toFixed(0)); } };
 
@@ -560,11 +563,18 @@ const Calculators: React.FC = () => {
         {/* SIDEBAR DE INFORMAÇÕES */}
         <div className="lg:col-span-1 space-y-6 w-full min-w-0">
             <div className="bg-white dark:bg-[#0f172a] rounded-[1.5rem] md:rounded-[2rem] border border-slate-200 dark:border-slate-800 p-6 md:p-8 shadow-sm sticky top-6">
-                <h4 className="font-black text-slate-900 dark:text-white mb-6 uppercase tracking-widest text-xs">Informação PRO</h4>
+                <h4 className="font-black text-slate-900 dark:text-white mb-6 uppercase tracking-widest text-xs">A Máquina de Gestão</h4>
+                
                 <div className="p-4 bg-slate-50 dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800">
-                    <p className="text-[10px] text-slate-500 dark:text-slate-400 mb-2 uppercase font-bold tracking-wider">Como funciona?</p>
+                    <p className="text-[10px] text-slate-500 dark:text-slate-400 mb-2 uppercase font-bold tracking-wider">Como Operar:</p>
+                    <p className="text-xs sm:text-sm font-medium text-slate-700 dark:text-slate-300 leading-relaxed mb-4">
+                        1. Digite o valor que você deseja atingir no final do mês.
+                    </p>
+                    <p className="text-xs sm:text-sm font-medium text-slate-700 dark:text-slate-300 leading-relaxed mb-4">
+                        2. Adicione seus métodos na tabela, ou clique em <strong className="text-indigo-500">"Puxar do Histórico"</strong> para o sistema auto-preencher seu Win Rate real.
+                    </p>
                     <p className="text-xs sm:text-sm font-medium text-slate-700 dark:text-slate-300 leading-relaxed">
-                        A "Matriz Operacional" permite que você teste múltiplos métodos simultaneamente. A projeção de crescimento avalia a rentabilidade cruzada de todas as estratégias cadastradas na tabela ao longo dos dias.
+                        3. Ajuste o <strong className="text-emerald-500">Volume de Entradas</strong> e veja a data da sua meta se aproximar matematicamente.
                     </p>
                 </div>
 
@@ -572,7 +582,7 @@ const Calculators: React.FC = () => {
                     <div className="flex items-start gap-3">
                        <AlertTriangle size={16} className="text-yellow-500 mt-0.5 shrink-0" />
                        <p className="text-[10px] text-slate-500 dark:text-slate-400 leading-relaxed font-medium">
-                         Lembre-se: Juros compostos punem perdas na mesma velocidade em que premiam os lucros. Evite Stakes maiores que 3% em um único método.
+                         Alerta: Essa projeção não garante lucro futuro. O crescimento agregado considera que você terá controle emocional para manter sua Taxa de Acerto constante.
                        </p>
                     </div>
                 </div>
