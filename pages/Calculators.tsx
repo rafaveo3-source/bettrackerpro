@@ -1,146 +1,32 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
-  Sparkles, Plus, Scale, Percent, ArrowRightLeft, 
-  Target, TrendingUp, AlertTriangle, Lock, Crown, Radar, 
-  Activity, Crosshair, BarChart4, Zap, DollarSign, Goal, Lightbulb,
-  Clock, Flag, ShieldAlert, FileText, Eraser, Eye, Search, Flame
+  Plus, Scale, Percent, ArrowRightLeft, 
+  Target, TrendingUp, AlertTriangle, Lock, Crown, 
+  Crosshair, DollarSign, Goal,
+  Clock, ShieldAlert, FileText,
+  PiggyBank, LineChart, Calendar, Zap, CheckCircle2
 } from 'lucide-react';
 import { useBetStore } from '../store/useBetStore';
 import { motion, AnimatePresence } from 'framer-motion';
 
-// ==========================================
-// MÓDULOS MATEMÁTICOS & MONTE CARLO V10 (PRESERVADO PARA O FUTURO)
-// ==========================================
-const factorial = (n: number): number => {
-  if (n < 0) return 0;
-  if (n === 0 || n === 1) return 1;
-  let result = 1; for (let i = 2; i <= n; i++) result *= i;
-  return result;
-};
-
-const poissonExact = (k: number, lambda: number): number => {
-  if (lambda <= 0) return k === 0 ? 1 : 0;
-  return (Math.pow(lambda, k) * Math.exp(-lambda)) / factorial(k);
-};
-
-// 🔥 MONTE CARLO V10 ENGINE (EMBUTIDO PARA PREVENIR CRASH)
-const runMonteCarloV10 = (data: any, type: 'corner' | 'goal', targetAdd: number, textData: string = "", iterations = 20000) => {
-    let hits = 0;
-  
-    const minute = Math.max(1, Math.min(95, data.min || 1));
-    const isHT = minute <= 45;
-    const maxTime = isHT ? 48 : 96;
-    const timeLeft = Math.max(1, maxTime - minute);
-  
-    const totalCorners = data.totalCorners || 0;
-    const totalGoals = data.totalGoals || 0;
-  
-    let ap = data.apPress || 0;
-    let sot = data.sot || 0;
-  
-    const scoreDiff = (() => {
-      if (!data.score || !data.score.includes('-')) return 0;
-      const [h, a] = data.score.split('-').map(Number);
-      return Math.abs(h - a); 
-    })();
-  
-    const target = (type === 'corner' ? totalCorners : totalGoals) + targetAdd;
-  
-    const sourceWeight = textData.includes("SofaScore") || textData.includes("sofascore") ? 1.0 :
-                         textData.includes("Flashscore") || textData.includes("flashscore") ? 0.95 :
-                         textData.includes("CornerPro") || textData.includes("Tempo das Estatísticas") ? 0.98 :
-                         0.85; 
-  
-    for (let i = 0; i < iterations; i++) {
-      let sim = type === 'corner' ? totalCorners : totalGoals;
-  
-      let localAP = ap;
-      let localSOT = sot;
-  
-      for (let t = 0; t < timeLeft; t++) {
-        const momentumShift = (Math.random() - 0.5) * 4;
-        localAP = Math.max(0, localAP + momentumShift);
-  
-        let prob = type === 'corner' ? (localAP / 100) * 0.15 : (localAP / 100) * 0.025; 
-  
-        const efficiency = (localSOT + 1) / (localAP + 10);
-        prob *= (0.6 + (efficiency * (type === 'goal' ? 3 : 1)));
-  
-        if (minute + t > 75) prob *= 1.25;
-        if (minute + t > 85) prob *= 1.40;
-  
-        if (scoreDiff !== 0) {
-          if (data.needsGoal) prob *= 1.3;
-          else prob *= 0.85; 
-        }
-  
-        if (localAP < 20 && localSOT < 2) prob *= 0.5;
-  
-        prob = Math.max(0.001, Math.min(prob, type === 'corner' ? 0.35 : 0.12));
-  
-        if (Math.random() < prob) {
-          sim++;
-          localAP += type === 'corner' ? 4 : 2;
-          localSOT += Math.random() < (type === 'goal' ? 0.8 : 0.3) ? 1 : 0;
-        }
-      }
-  
-      if (sim >= target) hits++;
-    }
-  
-    let probFinal = hits / iterations;
-    probFinal *= sourceWeight;
-  
-    return { probReal: probFinal * 100, fairOdd: probFinal > 0 ? 1 / probFinal : 0 };
-};
-
-// ==========================================
-// COMPONENTE PRINCIPAL
-// ==========================================
 const Calculators: React.FC = () => {
-  const { user, currentBankrollBalance, isPro, aiScansUsedToday, canUseAiScan, incrementAiScan, setToast } = useBetStore();
-  const userEmail = user?.email || "usuario@desconhecido.com"; 
+  const { user, currentBankrollBalance, isPro, bets = [] } = useBetStore();
   const navigate = useNavigate();
 
-  // 🔥 REMOVIDO 'breakeven' E 'live_hft' DOS ESTADOS VISÍVEIS
-  const [activeTab, setActiveTab] = useState<'dutching'|'kelly'|'value'|'arb'|'stake'|'odds'>('dutching');
-
-  const [hftMode, setHftMode] = useState<'grid' | 'single'>('grid');
-  const [liveTextData, setLiveTextData] = useState<string>('');
-  const [isScanning, setIsScanning] = useState(false);
-  
-  const [liveCurrentOdd, setLiveCurrentOdd] = useState('');
-  const [liveContext, setLiveContext] = useState<any>(null); 
-  const [gridContext, setGridContext] = useState<any[] | null>(null); 
-
-  const checkAiLimit = () => {
-     if (userEmail === "rafaelancelmo.castro@gmail.com") return true;
-     return canUseAiScan ? canUseAiScan() : false;
-  };
-
-  const handleIncrementScan = () => {
-      if (userEmail !== "rafaelancelmo.castro@gmail.com" && typeof incrementAiScan === 'function') {
-          incrementAiScan();
-      }
-  };
-
-  // Funções NLP preservadas para o futuro...
-  const processNLPEngine = async () => { /* ... preservado ... */ };
-  const runAutoDiscoveryHFT = () => { /* ... preservado ... */ return null; };
-  const autoResult = runAutoDiscoveryHFT();
+  const [activeTab, setActiveTab] = useState<'dutching'|'kelly'|'value'|'arb'|'stake'|'odds'|'compound'>('compound');
 
   const ProLockScreen = () => (
-      <div className="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-[2rem] p-8 text-center flex flex-col items-center justify-center min-h-[300px] relative overflow-hidden shadow-sm">
+      <div className="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-[2rem] p-8 text-center flex flex-col items-center justify-center min-h-[300px] relative overflow-hidden shadow-sm mt-6">
           <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/5 to-purple-500/5 dark:from-indigo-500/10 dark:to-purple-500/10 opacity-50" />
           <div className="bg-white dark:bg-slate-800 p-4 rounded-full mb-4 relative z-10 shadow-sm border border-slate-200 dark:border-slate-700">
               <Crown size={32} className="text-amber-500 dark:text-amber-400" />
           </div>
           <h2 className="text-2xl font-black text-slate-900 dark:text-white uppercase italic tracking-tighter mb-2 relative z-10">
-              Ferramenta Profissional
+              Gestor Quantitativo PRO
           </h2>
           <p className="text-slate-600 dark:text-slate-400 max-w-md mx-auto mb-6 text-sm relative z-10">
-              Esta calculadora matemática avançada é exclusiva para membros PRO. Desbloqueie todo o potencial da sua gestão.
+              Conecte o seu histórico de apostas ao simulador de juros compostos para criar um plano de metas realista baseado na sua Taxa de Acerto (Win Rate) real.
           </p>
           <button onClick={() => navigate('/pro')} className="bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 text-slate-900 font-black py-3 px-8 rounded-xl shadow-lg shadow-amber-500/20 transition-all active:scale-95 relative z-10 uppercase tracking-widest text-xs">
               Quero ser PRO
@@ -148,6 +34,9 @@ const Calculators: React.FC = () => {
       </div>
   );
 
+  // ==============================================
+  // ESTADOS DAS CALCULADORAS ANTIGAS
+  // ==============================================
   const [dutchTotalStake, setDutchTotalStake] = useState('100');
   const [dutchSelections, setDutchSelections] = useState([{ id: 1, name: 'Seleção A', odds: '2.50', stake: 0, profit: 0 }, { id: 2, name: 'Seleção B', odds: '3.20', stake: 0, profit: 0 }]);
   const addDutchSelection = () => setDutchSelections([...dutchSelections, { id: Date.now(), name: `Seleção ${String.fromCharCode(65 + dutchSelections.length)}`, odds: '', stake: 0, profit: 0 }]);
@@ -174,20 +63,149 @@ const Calculators: React.FC = () => {
   const arbStake1 = (parseFloat(arbTotalStake) * (1 / parseFloat(arbOdds1))) / arbImplied; const arbStake2 = (parseFloat(arbTotalStake) * (1 / parseFloat(arbOdds2))) / arbImplied;
   const arbProfit = (arbStake1 * parseFloat(arbOdds1)) - parseFloat(arbTotalStake);
 
-  const [stakePercent, setStakePercent] = useState('1'); const stakeValue = (parseFloat(stakePercent) / 100) * currentBankrollBalance;
+  const [stakePercentState, setStakePercentState] = useState('1'); const stakeValue = (parseFloat(stakePercentState) / 100) * currentBankrollBalance;
   const [convDec, setConvDec] = useState('2.00'); const [convAm, setConvAm] = useState('+100'); const [convProb, setConvProb] = useState('50.00');
   const handleDecChange = (val: string) => { setConvDec(val); const d = parseFloat(val); if (d > 1) { setConvProb(((1 / d) * 100).toFixed(2)); setConvAm(d >= 2 ? '+' + ((d - 1) * 100).toFixed(0) : (( -100 / (d - 1) )).toFixed(0)); } };
-  const [beOdds, setBeOdds] = useState('1.90'); const beWinRate = parseFloat(beOdds) > 1 ? (1 / parseFloat(beOdds)) * 100 : 0;
+
+  // ==============================================
+  // 🔥 NOVO: MOTOR EXTRATOR DE DADOS REAIS DO USUÁRIO
+  // ==============================================
+  const userMethodsStats = useMemo(() => {
+      const stats: Record<string, { wins: number, resolved: number, totalOdds: number, count: number }> = {};
+      
+      bets.forEach(bet => {
+          const method = bet.method || 'Sem Método';
+          if (!stats[method]) stats[method] = { wins: 0, resolved: 0, totalOdds: 0, count: 0 };
+          
+          stats[method].count++;
+          if (bet.odds && bet.odds > 1) {
+              stats[method].totalOdds += Number(bet.odds);
+          }
+          
+          if (['won', 'half-won', 'lost', 'half-lost'].includes(bet.status)) {
+              stats[method].resolved++;
+              if (bet.status === 'won' || bet.status === 'half-won') {
+                  stats[method].wins++;
+              }
+          }
+      });
+
+      const processed = Object.entries(stats).map(([name, data]) => {
+          const winRate = data.resolved > 0 ? (data.wins / data.resolved) * 100 : 0;
+          const avgOdd = data.count > 0 ? data.totalOdds / data.count : 0;
+          const ev = (winRate / 100) * avgOdd - 1;
+          return { name, winRate, avgOdd, count: data.count, resolved: data.resolved, ev: ev * 100 };
+      }).filter(m => m.resolved >= 3); // Só mostra métodos com pelo menos 3 apostas resolvidas para ter relevância estatística
+
+      // Se o usuário não tiver métodos suficientes, cria um método de exemplo (Mock)
+      if (processed.length === 0) {
+          return [{ name: "Método Exemplo (Insira Dados Reais)", winRate: 60, avgOdd: 1.85, count: 0, resolved: 0, ev: 11.0 }];
+      }
+
+      return processed.sort((a, b) => b.count - a.count);
+  }, [bets]);
+
+  // Estados do Simulador PRO
+  const [compBankroll, setCompBankroll] = useState(currentBankrollBalance > 0 ? String(currentBankrollBalance) : '1000');
+  const [compTarget, setCompTarget] = useState(currentBankrollBalance > 0 ? String(currentBankrollBalance * 2) : '2000');
+  const [compDays, setCompDays] = useState('30');
+  
+  const [selectedMethodName, setSelectedMethodName] = useState<string>(userMethodsStats[0]?.name || '');
+  const selectedMethod = userMethodsStats.find(m => m.name === selectedMethodName) || userMethodsStats[0];
+
+  // O usuário pode sobrescrever a realidade para fazer "E se?"
+  const [simWinRate, setSimWinRate] = useState<string>(selectedMethod?.winRate.toFixed(1) || '60');
+  const [simAvgOdd, setSimAvgOdd] = useState<string>(selectedMethod?.avgOdd.toFixed(2) || '1.85');
+  const [simStake, setSimStake] = useState<string>('2');
+  const [simEntries, setSimEntries] = useState<string>('3');
+
+  // Toda vez que ele muda de método no Dropdown, atualiza os inputs com os dados reais
+  const handleMethodChange = (name: string) => {
+      setSelectedMethodName(name);
+      const m = userMethodsStats.find(x => x.name === name);
+      if (m) {
+          setSimWinRate(m.winRate.toFixed(1));
+          setSimAvgOdd(m.avgOdd.toFixed(2));
+      }
+  };
+
+  // Cálculos do Dashboard de Ação
+  const bankrollNum = parseFloat(compBankroll) || 0;
+  const targetNum = parseFloat(compTarget) || 0;
+  const daysNum = parseFloat(compDays) || 1;
+  const wRate = parseFloat(simWinRate) / 100 || 0;
+  const avgOdd = parseFloat(simAvgOdd) || 0;
+  const stakePct = parseFloat(simStake) / 100 || 0;
+  const entriesPerDay = parseFloat(simEntries) || 0;
+
+  // Valor Esperado Real (EV) da simulação atual
+  const methodEV = (wRate * avgOdd) - 1; 
+
+  // Crescimento Diário (%) = EV * Stake% * Entradas
+  // Ex: EV de 5%, Stake 2%, 3 entradas = 0.05 * 0.02 * 3 = 0.003 = 0.3% ao dia
+  const expectedDailyGrowthPct = methodEV > 0 ? (methodEV * stakePct * entriesPerDay * 100) : (methodEV * stakePct * entriesPerDay * 100);
+  const projectedBankroll = bankrollNum * Math.pow(1 + (expectedDailyGrowthPct / 100), daysNum);
+
+  // Crescimento Diário Necessário para bater a meta
+  const reqDailyGrowthRaw = targetNum > bankrollNum && bankrollNum > 0 ? (Math.pow(targetNum / bankrollNum, 1 / daysNum) - 1) : 0;
+  const requiredDailyGrowthPct = reqDailyGrowthRaw * 100;
+
+  const isGoalAchievable = expectedDailyGrowthPct >= requiredDailyGrowthPct && targetNum > bankrollNum;
+
+  // GERAÇÃO DO PLANO DE AÇÃO (A Máquina da Verdade)
+  const generateActionPlan = () => {
+      if (bankrollNum >= targetNum) return { title: 'Meta Inválida', text: 'A meta deve ser maior que a banca inicial.', color: 'text-slate-500' };
+      if (methodEV <= 0) return { title: '⚠️ EV NEGATIVO DETECTADO', text: 'O seu Win Rate e Odd Média não geram lucro matemático a longo prazo. Pare de apostar neste método imediatamente e revise sua estratégia.', color: 'text-red-500' };
+      
+      if (isGoalAchievable) {
+          return { 
+              title: '🎯 PLANO REALISTA. VOCÊ VAI BATER A META!', 
+              text: `Mantenha a disciplina. Executando ${entriesPerDay} entradas/dia com ${simStake}% de stake, sua banca chegará em R$ ${projectedBankroll.toFixed(2)}, superando sua meta de R$ ${targetNum}.`, 
+              color: 'text-emerald-500' 
+          };
+      }
+
+      // Se não for alcançável, calcula o que falta
+      const reqEntries = reqDailyGrowthRaw / (methodEV * stakePct);
+      const reqStake = reqDailyGrowthRaw / (entriesPerDay * methodEV);
+      const reqEV = reqDailyGrowthRaw / (stakePct * entriesPerDay);
+      const reqWinRate = (reqEV + 1) / avgOdd;
+
+      let planText = `Você precisa crescer ${requiredDailyGrowthPct.toFixed(2)}% ao dia, mas seu método atual gera apenas ${expectedDailyGrowthPct.toFixed(2)}%. Para alcançar os R$ ${targetNum}, escolha UMA das opções abaixo:\n\n`;
+      
+      let options = 0;
+      if (reqEntries <= 20) {
+          planText += `📌 Opção A: Aumentar seu volume para ${Math.ceil(reqEntries)} entradas por dia, mantendo a stake de ${simStake}%.\n`;
+          options++;
+      }
+      if (reqStake <= 0.05) { // Stake segura <= 5%
+          planText += `📌 Opção B: Subir sua stake para ${(reqStake * 100).toFixed(1)}% por entrada, mantendo as ${entriesPerDay} entradas.\n`;
+          options++;
+      }
+      if (reqWinRate <= 0.85) { // Win rate humano <= 85%
+          planText += `📌 Opção C: Melhorar seu método para acertar ${(reqWinRate * 100).toFixed(1)}% das apostas (na odd de @${avgOdd}).\n`;
+          options++;
+      }
+
+      if (options === 0) {
+          planText = `🚨 ALERTA VERMELHO: A sua meta é uma utopia matemática. Para atingi-la em apenas ${daysNum} dias, você teria que usar uma Stake Suicida de ${(reqStake * 100).toFixed(1)}% ou fazer ${Math.ceil(reqEntries)} apostas por dia. Aumente o prazo ou diminua a meta para proteger seu capital.`;
+      }
+
+      return { title: '⚠️ CHOQUE DE REALIDADE (Falta Edge)', text: planText, color: 'text-amber-500' };
+  };
+
+  const actionPlan = generateActionPlan();
 
   const sidebarInfo = (() => {
     switch(activeTab) {
       case 'dutching': return { title: 'Gestão de Risco', text: 'O Dutching divide a sua exposição entre múltiplas seleções, diluindo o risco do investimento em um único evento.' };
+      case 'compound': return { title: 'Gestão PRO Automatizada', text: 'Nós puxamos seus dados reais de acerto e odds direto do seu histórico. Cruze com juros compostos e descubra matematicamente o que você precisa fazer para bater sua meta financeira.' };
       default: return { title: 'Ferramentas Analíticas', text: 'Tome decisões baseadas em dados matemáticos precisos.' };
     }
   })();
 
-  // 🔥 AS TABS OBSOLETAS (BREAK EVEN E LIVE HFT) FORAM REMOVIDAS DESTA LISTA VISUAL
   const tabs = [
+    { id: 'compound', label: 'Gestão PRO', pro: true, highlight: true }, 
     { id: 'dutching', label: 'Dutching', pro: false }, 
     { id: 'kelly', label: 'Kelly', pro: false },
     { id: 'value', label: 'Value Bet', pro: true }, 
@@ -195,6 +213,8 @@ const Calculators: React.FC = () => {
     { id: 'stake', label: 'Stake %', pro: false }, 
     { id: 'odds', label: 'Odds Conv.', pro: false }
   ];
+
+  const inputClass = "bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white rounded-lg px-3 py-2 outline-none focus:border-indigo-500 font-mono text-sm w-full";
 
   return (
     <div className="space-y-6 pb-20 w-full overflow-x-hidden">
@@ -210,14 +230,14 @@ const Calculators: React.FC = () => {
         </div>
       </div>
       
-      <div className="flex flex-wrap md:grid md:grid-cols-3 xl:grid-cols-6 gap-2 mb-6 px-4 md:px-0">
+      <div className="flex flex-wrap md:grid md:grid-cols-4 xl:grid-cols-7 gap-2 mb-6 px-4 md:px-0">
         {tabs.map(tab => (
           <button
             key={tab.id}
-            onClick={() => { setActiveTab(tab.id as any); setLiveContext(null); setGridContext(null); setLiveTextData(''); setLiveCurrentOdd(''); }}
+            onClick={() => setActiveTab(tab.id as any)}
             className={`relative flex-1 min-w-[90px] flex items-center justify-center px-2 py-3 rounded-xl font-bold text-[10px] uppercase tracking-wider transition-all gap-1.5 ${
               activeTab === tab.id
-                ? 'bg-emerald-600 dark:bg-emerald-500 text-white shadow-lg shadow-emerald-500/20'
+                ? (tab.highlight ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/20' : 'bg-emerald-600 dark:bg-emerald-500 text-white shadow-lg shadow-emerald-500/20')
                 : 'bg-white dark:bg-[#0f172a] text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-900'
             }`}
           >
@@ -230,6 +250,130 @@ const Calculators: React.FC = () => {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 px-4 md:px-0">
         <div className="lg:col-span-2 space-y-6 min-w-0 w-full">
             
+            {/* ========================================== */}
+            {/* 🔥 NOVA ABA: PLANILHA DE GESTÃO PRO 🔥 */}
+            {/* ========================================== */}
+            {activeTab === 'compound' && !isPro && <ProLockScreen />}
+            {activeTab === 'compound' && isPro && (
+                <div className="bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-800 rounded-[2rem] p-6 shadow-sm w-full overflow-hidden">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
+                        <div className="flex items-center gap-3">
+                            <LineChart size={24} className="text-indigo-500" />
+                            <h2 className="text-xl font-black text-slate-900 dark:text-white uppercase tracking-tighter italic">Simulador Automático</h2>
+                        </div>
+                        <div className="bg-indigo-50 dark:bg-indigo-500/10 border border-indigo-200 dark:border-indigo-500/30 text-indigo-600 dark:text-indigo-400 px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest flex items-center gap-1.5 w-fit">
+                            <Zap size={12} fill="currentColor"/> Dados sincronizados
+                        </div>
+                    </div>
+
+                    {/* SESSÃO 1: OBJETIVO */}
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8 bg-slate-50 dark:bg-[#09090b] p-5 rounded-2xl border border-slate-200 dark:border-slate-800/50">
+                        <div>
+                            <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest flex items-center gap-1.5 mb-2"><PiggyBank size={12}/> Banca Atual</label>
+                            <div className="relative">
+                                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 font-bold">R$</span>
+                                <input type="number" value={compBankroll} onChange={e => setCompBankroll(e.target.value)} className={`${inputClass} pl-8 font-black text-slate-700 dark:text-slate-300`} />
+                            </div>
+                        </div>
+                        <div>
+                            <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest flex items-center gap-1.5 mb-2"><Target size={12}/> Meta Desejada</label>
+                            <div className="relative">
+                                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 font-bold">R$</span>
+                                <input type="number" value={compTarget} onChange={e => setCompTarget(e.target.value)} className={`${inputClass} pl-8 font-black text-indigo-600 dark:text-indigo-400 focus:border-indigo-500`} />
+                            </div>
+                        </div>
+                        <div>
+                            <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest flex items-center gap-1.5 mb-2"><Calendar size={12}/> Em Quantos Dias?</label>
+                            <input type="number" value={compDays} onChange={e => setCompDays(e.target.value)} className={`${inputClass} font-black text-indigo-600 dark:text-indigo-400 focus:border-indigo-500`} />
+                        </div>
+                    </div>
+
+                    {/* SESSÃO 2: MOTOR DE VALIDAÇÃO (SEUS MÉTODOS) */}
+                    <h3 className="text-xs font-black text-slate-800 dark:text-white uppercase tracking-widest mb-4 flex items-center gap-2 border-b border-slate-200 dark:border-slate-800 pb-2"><Crosshair size={14} className="text-slate-400"/> Validador de Estratégia</h3>
+                    
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 mb-8">
+                        {/* Seletor de Método Sincronizado */}
+                        <div className="bg-slate-50 dark:bg-slate-900/50 p-4 rounded-xl border border-slate-200 dark:border-slate-800">
+                            <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2 block">Escolha seu Método Validado:</label>
+                            <select 
+                                value={selectedMethodName} 
+                                onChange={e => handleMethodChange(e.target.value)}
+                                className="w-full bg-white dark:bg-[#020617] border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-white rounded-lg p-2.5 font-bold text-sm outline-none focus:border-indigo-500 shadow-sm"
+                            >
+                                {userMethodsStats.map(m => (
+                                    <option key={m.name} value={m.name}>{m.name} ({m.resolved} registros)</option>
+                                ))}
+                            </select>
+                            
+                            <div className="flex gap-4 mt-4">
+                                <div className="flex-1">
+                                    <label className="text-[9px] font-bold text-slate-500 uppercase tracking-widest mb-1 block">Win Rate Real %</label>
+                                    <input type="number" step="0.1" value={simWinRate} onChange={e => setSimWinRate(e.target.value)} className={`${inputClass} text-center font-bold text-emerald-600 dark:text-emerald-400`} />
+                                </div>
+                                <div className="flex-1">
+                                    <label className="text-[9px] font-bold text-slate-500 uppercase tracking-widest mb-1 block">Odd Média Real</label>
+                                    <input type="number" step="0.01" value={simAvgOdd} onChange={e => setSimAvgOdd(e.target.value)} className={`${inputClass} text-center font-bold text-emerald-600 dark:text-emerald-400`} />
+                                </div>
+                            </div>
+                            <p className="text-[9px] text-slate-400 mt-2 text-center">*(Campos editáveis para simulações)*</p>
+                        </div>
+
+                        {/* Variáveis de Controle */}
+                        <div className="bg-slate-50 dark:bg-slate-900/50 p-4 rounded-xl border border-slate-200 dark:border-slate-800 flex flex-col justify-center">
+                            <div className="mb-4">
+                                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2 flex justify-between"><span>Stake Fixa (%)</span> <span className="text-indigo-500 font-black">{simStake}%</span></label>
+                                <input type="range" min="0.5" max="10" step="0.5" value={simStake} onChange={e => setSimStake(e.target.value)} className="w-full h-1.5 bg-slate-300 dark:bg-slate-700 rounded-lg appearance-none cursor-pointer accent-indigo-500" />
+                            </div>
+                            <div>
+                                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2 flex justify-between"><span>Entradas por Dia</span> <span className="text-indigo-500 font-black">{simEntries} apostas</span></label>
+                                <input type="range" min="1" max="20" step="1" value={simEntries} onChange={e => setSimEntries(e.target.value)} className="w-full h-1.5 bg-slate-300 dark:bg-slate-700 rounded-lg appearance-none cursor-pointer accent-indigo-500" />
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* SESSÃO 3: O VEREDITO E PLANO DE AÇÃO */}
+                    <div className={`p-6 rounded-2xl border shadow-lg relative overflow-hidden transition-colors duration-500 ${
+                        actionPlan.color === 'text-emerald-500' ? 'bg-emerald-50 dark:bg-emerald-500/10 border-emerald-200 dark:border-emerald-500/30' :
+                        actionPlan.color === 'text-red-500' ? 'bg-red-50 dark:bg-red-500/10 border-red-200 dark:border-red-500/30' :
+                        'bg-amber-50 dark:bg-amber-500/10 border-amber-200 dark:border-amber-500/30'
+                    }`}>
+                        <div className="absolute top-0 right-0 w-40 h-40 rounded-full blur-3xl opacity-20 bg-current pointer-events-none -mr-10 -mt-10" style={{ color: actionPlan.color }}></div>
+                        
+                        <h3 className={`text-sm sm:text-base font-black uppercase tracking-widest mb-4 flex items-center gap-2 relative z-10 ${actionPlan.color}`}>
+                            {actionPlan.color === 'text-emerald-500' ? <CheckCircle2 size={20}/> : <AlertTriangle size={20}/>} 
+                            {actionPlan.title}
+                        </h3>
+                        
+                        <div className="text-xs sm:text-sm text-slate-700 dark:text-slate-300 leading-relaxed whitespace-pre-wrap font-medium relative z-10">
+                            {actionPlan.text}
+                        </div>
+
+                        {/* Comparativo Matemático (HUD) */}
+                        <div className="mt-6 pt-4 border-t border-current opacity-80 grid grid-cols-2 sm:grid-cols-4 gap-4 text-center relative z-10" style={{ borderColor: 'inherit' }}>
+                            <div>
+                                <p className="text-[9px] uppercase font-bold tracking-widest mb-1">EV do Método</p>
+                                <p className={`font-mono font-black ${methodEV > 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'}`}>{(methodEV * 100).toFixed(2)}%</p>
+                            </div>
+                            <div>
+                                <p className="text-[9px] uppercase font-bold tracking-widest mb-1">Banca Final Estimada</p>
+                                <p className="font-mono font-black text-slate-900 dark:text-white">R$ {projectedBankroll.toFixed(0)}</p>
+                            </div>
+                            <div>
+                                <p className="text-[9px] uppercase font-bold tracking-widest mb-1">Cresc. Diário Real</p>
+                                <p className={`font-mono font-black ${expectedDailyGrowthPct > 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'}`}>{expectedDailyGrowthPct.toFixed(2)}%</p>
+                            </div>
+                            <div>
+                                <p className="text-[9px] uppercase font-bold tracking-widest mb-1">Cresc. Diário P/ Meta</p>
+                                <p className="font-mono font-black text-slate-900 dark:text-white">{requiredDailyGrowthPct.toFixed(2)}%</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* ========================================== */}
+            {/* OUTRAS CALCULADORAS MANTIDAS INTACTAS      */}
+            {/* ========================================== */}
             {activeTab === 'dutching' && (
                 <div className="bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-800 rounded-[2rem] p-6 shadow-sm w-full overflow-hidden">
                     <h2 className="text-lg font-black text-slate-900 dark:text-white uppercase tracking-tighter italic mb-4">Calculadora Dutching</h2>
@@ -355,7 +499,7 @@ const Calculators: React.FC = () => {
                    <h2 className="text-lg font-black text-slate-900 dark:text-white uppercase tracking-tighter italic mb-6 flex items-center gap-2"><Percent size={20} className="text-orange-500"/> Calculadora Stake Fixa</h2>
                    <div className="mb-6">
                       <label className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase block mb-2">Porcentagem da Banca (%)</label>
-                      <input type="number" value={stakePercent} onChange={e => setStakePercent(e.target.value)} className="w-full p-4 bg-slate-50 dark:bg-slate-900 rounded-xl font-mono font-black text-3xl outline-none border border-slate-200 dark:border-slate-800 text-center text-orange-500" />
+                      <input type="number" value={stakePercentState} onChange={e => setStakePercentState(e.target.value)} className="w-full p-4 bg-slate-50 dark:bg-slate-900 rounded-xl font-mono font-black text-3xl outline-none border border-slate-200 dark:border-slate-800 text-center text-orange-500" />
                    </div>
                    <div className="bg-slate-50 dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 text-center">
                       <p className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-1">Valor da Aposta</p>
