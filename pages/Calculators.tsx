@@ -13,7 +13,7 @@ import { useBetStore } from '../store/useBetStore';
 import { motion, AnimatePresence } from 'framer-motion';
 
 // ==========================================
-// MÓDULOS MATEMÁTICOS & MONTE CARLO V10
+// MÓDULOS MATEMÁTICOS & MONTE CARLO V10 (PRESERVADO)
 // ==========================================
 const factorial = (n: number): number => {
   if (n < 0) return 0;
@@ -123,18 +123,27 @@ const Calculators: React.FC = () => {
   }, [bets, methods, settings, user]);
 
   // ==============================================
-  // 🔥 MOTOR EXTRATOR DE ESTATÍSTICAS REAIS
+  // 🔥 MOTOR EXTRATOR DE ESTATÍSTICAS REAIS (CORRIGIDO PARA "GREEN" e "RED")
   // ==============================================
   const extractedMethods = useMemo(() => {
       const stats: Record<string, { wins: number, resolved: number, totalOdds: number }> = {};
+      
       (bets || []).forEach(bet => {
           const mName = bet.method || 'Sem Método';
           if (!stats[mName]) stats[mName] = { wins: 0, resolved: 0, totalOdds: 0 };
           
-          if (['won', 'half-won', 'lost', 'half-lost'].includes(bet.status)) {
+          // Normaliza o status para letras minúsculas (ex: 'GREEN', 'Green', 'green' viram 'green')
+          const status = String(bet.status || '').toLowerCase();
+          
+          // Dicionário universal de Status de Green (Vencedor) e Red (Perdedor)
+          const isWin = ['won', 'win', 'green', 'half-won', 'half_green', 'half-green', 'meio-green'].includes(status);
+          const isLoss = ['lost', 'loss', 'red', 'half-lost', 'half_red', 'half-red', 'meio-red'].includes(status);
+
+          // Se for Win ou Loss, a aposta foi resolvida (ignora pendentes/canceladas)
+          if (isWin || isLoss) {
               stats[mName].resolved++;
               stats[mName].totalOdds += Number(bet.odds || 0);
-              if (bet.status === 'won' || bet.status === 'half-won') stats[mName].wins++;
+              if (isWin) stats[mName].wins++;
           }
       });
 
@@ -214,7 +223,7 @@ const Calculators: React.FC = () => {
 
   const syncWithHistory = () => {
       const validHistory = extractedMethods.filter(m => m.resolved > 0);
-      if (validHistory.length === 0) return alert("Nenhum dado real concluído encontrado no histórico.");
+      if (validHistory.length === 0) return alert("Nenhum dado real concluído (Green/Red) encontrado no histórico.");
       
       const synced = validHistory.map((m, i) => ({
           id: Date.now() + i,
@@ -478,8 +487,6 @@ const Calculators: React.FC = () => {
 
                                                 <td className="py-2 px-1"><input type="number" value={m.winRate} onChange={e => updateSimMethod(m.id, 'winRate', e.target.value)} className={inputClass} /></td>
                                                 <td className="py-2 px-1"><input type="number" step="0.01" value={m.avgOdd} onChange={e => updateSimMethod(m.id, 'avgOdd', e.target.value)} className={inputClass} /></td>
-                                                
-                                                {/* 🔥 A COLUNA DE ENTRADAS RESTAURADA 🔥 */}
                                                 <td className="py-2 px-1"><input type="number" min="1" value={m.entries} onChange={e => updateSimMethod(m.id, 'entries', e.target.value)} className={inputClass} /></td>
 
                                                 {/* EV Calculator */}
