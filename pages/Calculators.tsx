@@ -7,13 +7,13 @@ import {
   Clock, ShieldAlert, FileText,
   PiggyBank, LineChart, Calendar, Zap, CheckCircle2,
   TrendingDown, PlusCircle, Trash2, RefreshCcw, LayoutGrid, BarChart4,
-  ChevronDown
+  ChevronDown, Cpu, MousePointerClick
 } from 'lucide-react';
 import { useBetStore } from '../store/useBetStore';
 import { motion, AnimatePresence } from 'framer-motion';
 
 // ==========================================
-// MÓDULOS MATEMÁTICOS & MONTE CARLO V10 (PRESERVADO)
+// MÓDULOS MATEMÁTICOS & MONTE CARLO V10
 // ==========================================
 const factorial = (n: number): number => {
   if (n < 0) return 0;
@@ -25,6 +25,62 @@ const factorial = (n: number): number => {
 const poissonExact = (k: number, lambda: number): number => {
   if (lambda <= 0) return k === 0 ? 1 : 0;
   return (Math.pow(lambda, k) * Math.exp(-lambda)) / factorial(k);
+};
+
+const runMonteCarloV10 = (data: any, type: 'corner' | 'goal', targetAdd: number, textData: string = "", iterations = 20000) => {
+    let hits = 0;
+    const minute = Math.max(1, Math.min(95, data.min || 1));
+    const isHT = minute <= 45;
+    const maxTime = isHT ? 48 : 96;
+    const timeLeft = Math.max(1, maxTime - minute);
+    const totalCorners = data.totalCorners || 0;
+    const totalGoals = data.totalGoals || 0;
+    let ap = data.apPress || 0;
+    let sot = data.sot || 0;
+  
+    const scoreDiff = (() => {
+      if (!data.score || !data.score.includes('-')) return 0;
+      const [h, a] = data.score.split('-').map(Number);
+      return Math.abs(h - a); 
+    })();
+  
+    const target = (type === 'corner' ? totalCorners : totalGoals) + targetAdd;
+  
+    const sourceWeight = textData.includes("SofaScore") || textData.includes("sofascore") ? 1.0 :
+                         textData.includes("Flashscore") || textData.includes("flashscore") ? 0.95 :
+                         textData.includes("CornerPro") || textData.includes("Tempo das Estatísticas") ? 0.98 :
+                         0.85; 
+  
+    for (let i = 0; i < iterations; i++) {
+      let sim = type === 'corner' ? totalCorners : totalGoals;
+      let localAP = ap;
+      let localSOT = sot;
+      for (let t = 0; t < timeLeft; t++) {
+        const momentumShift = (Math.random() - 0.5) * 4;
+        localAP = Math.max(0, localAP + momentumShift);
+        let prob = type === 'corner' ? (localAP / 100) * 0.15 : (localAP / 100) * 0.025; 
+        const efficiency = (localSOT + 1) / (localAP + 10);
+        prob *= (0.6 + (efficiency * (type === 'goal' ? 3 : 1)));
+        if (minute + t > 75) prob *= 1.25;
+        if (minute + t > 85) prob *= 1.40;
+        if (scoreDiff !== 0) {
+          if (data.needsGoal) prob *= 1.3;
+          else prob *= 0.85; 
+        }
+        if (localAP < 20 && localSOT < 2) prob *= 0.5;
+        prob = Math.max(0.001, Math.min(prob, type === 'corner' ? 0.35 : 0.12));
+  
+        if (Math.random() < prob) {
+          sim++;
+          localAP += type === 'corner' ? 4 : 2;
+          localSOT += Math.random() < (type === 'goal' ? 0.8 : 0.3) ? 1 : 0;
+        }
+      }
+      if (sim >= target) hits++;
+    }
+    let probFinal = hits / iterations;
+    probFinal *= sourceWeight;
+    return { probReal: probFinal * 100, fairOdd: probFinal > 0 ? 1 / probFinal : 0 };
 };
 
 // ==========================================
@@ -46,7 +102,7 @@ const Calculators: React.FC = () => {
               Gestor Quantitativo PRO
           </h2>
           <p className="text-slate-600 dark:text-slate-400 max-w-md mx-auto mb-6 text-sm relative z-10">
-              Simule projeções de crescimento pelo Volume de Entradas, sincronize com seu histórico real e calcule a Stake Segura baseada em Juros Compostos.
+              Simule projeções de crescimento, cadastre novos métodos e calcule a Stake Segura baseada em Juros Compostos e Critério de Kelly.
           </p>
           <button onClick={() => navigate('/pro')} className="bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 text-slate-900 font-black py-3 px-8 rounded-xl shadow-lg shadow-amber-500/20 transition-all active:scale-95 relative z-10 uppercase tracking-widest text-xs">
               Quero ser PRO
@@ -55,7 +111,7 @@ const Calculators: React.FC = () => {
   );
 
   // ==============================================
-  // 🔥 MOTOR DE LISTAGEM UNIVERSAL
+  // 🔥 MOTOR DE LISTAGEM UNIVERSAL (Varre todo o sistema)
   // ==============================================
   const availableMethodsList = useMemo(() => {
       const list = new Set<string>();
@@ -91,26 +147,28 @@ const Calculators: React.FC = () => {
   }, [bets]);
 
   // ==============================================
-  // 🔥 ESTADOS DA PLANILHA PRO (Volume ao invés de Dias)
+  // 🔥 ESTADOS DA PLANILHA PRO (MÚLTIPLOS MÉTODOS)
   // ==============================================
   const [compBankroll, setCompBankroll] = useState(currentBankrollBalance > 0 ? String(currentBankrollBalance) : '1000');
   const [compTarget, setCompTarget] = useState(currentBankrollBalance > 0 ? String(currentBankrollBalance * 2) : '2000');
-  const [compVolume, setCompVolume] = useState('100'); // Novo: Volume de Entradas
+  const [compDays, setCompDays] = useState('30');
 
+  // Tabela Editável Inicial
   const [simMethods, setSimMethods] = useState([
       { 
         id: 1, 
         name: availableMethodsList.length > 0 ? availableMethodsList[0] : '', 
-        winRate: extractedMethods.find(e => e.name === availableMethodsList[0])?.winRate || 65, 
-        avgOdd: extractedMethods.find(e => e.name === availableMethodsList[0])?.avgOdd || 1.80, 
-        stake: 2, 
-        isSynced: false 
+        winRate: extractedMethods.find(e => e.name === availableMethodsList[0])?.winRate || 60, 
+        avgOdd: extractedMethods.find(e => e.name === availableMethodsList[0])?.avgOdd || 1.85, 
+        stake: 1.5, 
+        entries: 3,
+        isSynced: false
       }
   ]);
 
   const addSimMethod = () => {
       const usedNames = simMethods.map(m => m.name);
-      const nextAvailable = availableMethodsList.find(name => !usedNames.includes(name)) || availableMethodsList[0] || '';
+      const nextAvailable = availableMethodsList.find(name => !usedNames.includes(name)) || '';
       const history = extractedMethods.find(ex => ex.name === nextAvailable);
       
       setSimMethods([...simMethods, { 
@@ -118,16 +176,19 @@ const Calculators: React.FC = () => {
           name: nextAvailable, 
           winRate: history ? Number(history.winRate.toFixed(1)) : 60, 
           avgOdd: history ? Number(history.avgOdd.toFixed(2)) : 1.85, 
-          stake: 2, 
-          isSynced: false 
+          stake: 1.5, 
+          entries: 2,
+          isSynced: !!history 
       }]);
   };
 
   const removeSimMethod = (id: number) => setSimMethods(simMethods.filter(m => m.id !== id));
 
+  // Update Inteligente (Auto-Fill se existir)
   const updateSimMethod = (id: number, field: string, value: string) => {
       setSimMethods(simMethods.map(m => {
           if (m.id !== id) return m;
+          
           let updatedMethod = { ...m, [field]: field === 'name' ? value : Number(value) };
           
           if (field === 'name') {
@@ -139,9 +200,10 @@ const Calculators: React.FC = () => {
               } else {
                   updatedMethod.isSynced = false;
               }
-          } else {
-              if (field === 'winRate' || field === 'avgOdd') updatedMethod.isSynced = false;
+          } else if (field === 'winRate' || field === 'avgOdd') {
+              updatedMethod.isSynced = false;
           }
+
           return updatedMethod;
       }));
   };
@@ -159,46 +221,57 @@ const Calculators: React.FC = () => {
           name: m.name,
           winRate: Number(m.winRate.toFixed(1)),
           avgOdd: Number(m.avgOdd.toFixed(2)),
-          stake: 2, 
+          stake: 1.5, 
+          entries: 2,
           isSynced: true
       }));
       setSimMethods(synced);
   };
 
   // ==============================================
-  // 🔥 CÁLCULOS DO DASHBOARD PRO (SEM TEMPO/DIAS)
+  // 🔥 CÁLCULOS DO DASHBOARD PRO E KELLY
   // ==============================================
   const bankrollNum = parseFloat(compBankroll) || 0;
   const targetNum = parseFloat(compTarget) || 0;
-  const volumeNum = parseFloat(compVolume) || 1;
+  const daysNum = parseFloat(compDays) || 1;
 
   const processedMethods = simMethods.map(m => {
       const evRaw = (m.winRate / 100 * m.avgOdd) - 1;
       const ev = evRaw * 100;
-      // Crescimento por operação (Edge * Fator de Stake)
-      const entryGrowth = evRaw * (m.stake / 100); 
+      const dailyGrowth = evRaw * (m.stake / 100) * m.entries; 
       const stakeValue = bankrollNum * (m.stake / 100); 
 
+      // CRITÉRIO DE KELLY E RISCO DE RUÍNA
       let recommendedStakeRaw = 0;
+      let kellyFull = 0;
+      let riskBadge = null;
+
       if (evRaw > 0 && m.avgOdd > 1) {
           const kellyRaw = evRaw / (m.avgOdd - 1); 
-          recommendedStakeRaw = Math.min(kellyRaw / 4, 0.05); // Quarter Kelly, max 5%
+          kellyFull = kellyRaw * 100;
+          recommendedStakeRaw = Math.max(0, Math.min(kellyRaw / 4, 0.05)); // Teto de 5%
       }
+
+      if (evRaw <= 0) {
+          riskBadge = <span className="text-[8px] font-black text-red-500 uppercase tracking-widest bg-red-500/10 px-1 py-0.5 rounded">EV Negativo</span>;
+      } else if (m.stake > kellyFull) {
+          riskBadge = <span className="text-[8px] font-black text-red-500 uppercase tracking-widest bg-red-500/10 px-1 py-0.5 rounded">Risco Ruína</span>;
+      } else if (m.stake > kellyFull / 2) {
+          riskBadge = <span className="text-[8px] font-black text-amber-500 uppercase tracking-widest bg-amber-500/10 px-1 py-0.5 rounded">Risco Alto</span>;
+      } else {
+          riskBadge = <span className="text-[8px] font-black text-emerald-500 uppercase tracking-widest bg-emerald-500/10 px-1 py-0.5 rounded">Seguro</span>;
+      }
+
       const recommendedStake = recommendedStakeRaw * 100;
 
-      return { ...m, ev, entryGrowth: entryGrowth * 100, stakeValue, recommendedStake };
+      return { ...m, ev, dailyGrowth: dailyGrowth * 100, stakeValue, recommendedStake, riskBadge };
   });
 
-  // Assume que o Volume representa "Ciclos" (1 aposta em cada método da tabela)
-  const aggregateEntryGrowth = processedMethods.reduce((acc, m) => acc + m.entryGrowth, 0);
-  
-  // Projeção baseada em Juros Compostos por Volume de Entradas
-  const projectedBankroll = bankrollNum * Math.pow(1 + (aggregateEntryGrowth / 100), volumeNum);
-  
-  const growthNeededRaw = bankrollNum > 0 && targetNum > bankrollNum ? (Math.pow(targetNum / bankrollNum, 1 / volumeNum) - 1) : 0;
-  const growthNeededPerCycle = growthNeededRaw * 100;
-  
-  const isGoalAchievable = aggregateEntryGrowth >= growthNeededPerCycle && targetNum > bankrollNum;
+  const aggregateDailyGrowth = processedMethods.reduce((acc, m) => acc + m.dailyGrowth, 0);
+  const projectedBankroll = bankrollNum * Math.pow(1 + (aggregateDailyGrowth / 100), daysNum);
+  const dailyGrowthNeededRaw = bankrollNum > 0 && targetNum > bankrollNum ? (Math.pow(targetNum / bankrollNum, 1 / daysNum) - 1) : 0;
+  const dailyGrowthNeeded = dailyGrowthNeededRaw * 100;
+  const isGoalAchievable = aggregateDailyGrowth >= dailyGrowthNeeded && targetNum > bankrollNum;
 
   // ==============================================
   // ESTADOS DAS CALCULADORAS ANTIGAS
@@ -248,7 +321,7 @@ const Calculators: React.FC = () => {
   return (
     <div className="space-y-6 pb-20 w-full overflow-x-hidden">
         
-      {/* DATALIST UNIVERSAL */}
+      {/* DATALIST: Auto-complete sem bloquear a digitação livre */}
       <datalist id="methods-list">
           {availableMethodsList.map(name => (
              <option key={name} value={name} />
@@ -291,7 +364,7 @@ const Calculators: React.FC = () => {
             {activeTab === 'compound' && !isPro && <ProLockScreen />}
             {activeTab === 'compound' && isPro && (
                 <div className="space-y-6">
-                    {/* CARD 1: O ALVO (FOCO EM VOLUME) */}
+                    {/* CARD 1: O ALVO */}
                     <div className="bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-800 rounded-[2rem] p-6 shadow-sm relative overflow-hidden">
                         <div className="flex flex-col md:flex-row justify-between gap-6 relative z-10">
                             <div className="flex-1">
@@ -300,7 +373,7 @@ const Calculators: React.FC = () => {
                                 </p>
                                 <div className="flex items-end gap-3 mt-4">
                                     <div>
-                                        <p className="text-[9px] uppercase font-bold text-slate-500 mb-1">Banca Base (R$)</p>
+                                        <p className="text-[9px] uppercase font-bold text-slate-500 mb-1">Banca Simulada (R$)</p>
                                         <input type="number" value={compBankroll} onChange={e => setCompBankroll(e.target.value)} className="bg-slate-50 dark:bg-[#020617] border border-slate-200 dark:border-slate-800 text-2xl font-black text-slate-900 dark:text-white rounded-xl px-4 py-2 w-full outline-none focus:border-indigo-500" />
                                     </div>
                                 </div>
@@ -311,8 +384,8 @@ const Calculators: React.FC = () => {
                                     <input type="number" value={compTarget} onChange={e => setCompTarget(e.target.value)} className="bg-transparent text-xl font-black text-amber-500 outline-none w-full" />
                                 </div>
                                 <div className="bg-slate-50 dark:bg-slate-900/50 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 flex-1">
-                                    <label className="text-[9px] font-black text-slate-500 uppercase block mb-1">Vol. Entradas</label>
-                                    <input type="number" value={compVolume} onChange={e => setCompVolume(e.target.value)} className="bg-transparent text-xl font-black text-emerald-600 dark:text-emerald-400 outline-none w-full" />
+                                    <label className="text-[9px] font-black text-slate-500 uppercase block mb-1">Prazo (Dias)</label>
+                                    <input type="number" value={compDays} onChange={e => setCompDays(e.target.value)} className="bg-transparent text-xl font-black text-emerald-600 dark:text-emerald-400 outline-none w-full" />
                                 </div>
                             </div>
                         </div>
@@ -326,11 +399,11 @@ const Calculators: React.FC = () => {
                             <h3 className="text-4xl font-black text-white relative z-10 mb-4">R$ {projectedBankroll.toFixed(2)}</h3>
                             <div className="flex gap-6 relative z-10 border-t border-indigo-500/50 pt-4">
                                 <div>
-                                    <p className="text-[9px] uppercase font-bold text-indigo-200">Crescimento / Op</p>
-                                    <p className="text-lg font-black">{aggregateEntryGrowth.toFixed(2)}%</p>
+                                    <p className="text-[9px] uppercase font-bold text-indigo-200">Crescimento Combinado</p>
+                                    <p className="text-lg font-black">{aggregateDailyGrowth.toFixed(2)}% / dia</p>
                                 </div>
                                 <div>
-                                    <p className="text-[9px] uppercase font-bold text-indigo-200">Lucro P/ Volume</p>
+                                    <p className="text-[9px] uppercase font-bold text-indigo-200">Lucro Estimado</p>
                                     <p className="text-lg font-black">+ R$ {(projectedBankroll - bankrollNum).toFixed(0)}</p>
                                 </div>
                             </div>
@@ -341,24 +414,24 @@ const Calculators: React.FC = () => {
                             ? 'bg-emerald-50 dark:bg-emerald-500/10 border-emerald-200 dark:border-emerald-500/20' 
                             : 'bg-red-50 dark:bg-red-500/10 border-red-200 dark:border-red-500/20'
                         }`}>
-                            <p className={`text-[10px] font-bold uppercase tracking-widest mb-1 ${isGoalAchievable ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'}`}>Status para {volumeNum} Entradas</p>
+                            <p className={`text-[10px] font-bold uppercase tracking-widest mb-1 ${isGoalAchievable ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'}`}>Status da Meta ({daysNum} dias)</p>
                             <h3 className={`text-2xl font-black mb-2 ${isGoalAchievable ? 'text-emerald-700 dark:text-emerald-300' : 'text-red-700 dark:text-red-300'}`}>
-                                {isGoalAchievable ? 'Meta Realista ✅' : 'Volume Insuficiente ❌'}
+                                {isGoalAchievable ? 'Meta Realista ✅' : 'Meta Impossível ❌'}
                             </h3>
                             <p className={`text-xs font-medium leading-relaxed ${isGoalAchievable ? 'text-emerald-600/80 dark:text-emerald-400/80' : 'text-red-600/80 dark:text-red-400/80'}`}>
-                                Sua meta exige crescimento de <strong>{growthNeededPerCycle.toFixed(2)}% por operação</strong>. 
-                                {isGoalAchievable ? ' Seus métodos entregam a rentabilidade necessária. Mantenha a disciplina.' : ` Matematicamente impossível. Aumente o volume de entradas para ${Math.ceil(volumeNum * 1.5)} ou melhore a eficiência dos métodos.`}
+                                Sua meta exige crescimento de <strong>{dailyGrowthNeeded.toFixed(2)}% ao dia</strong>. 
+                                {isGoalAchievable ? ' A soma dos seus métodos supera essa taxa. Mantenha a execução.' : ' Seus métodos não entregam retorno suficiente. Edite o volume, stake ou win rate abaixo para criar um novo plano.'}
                             </p>
                         </div>
                     </div>
 
-                    {/* CARD 3: A PLANILHA DE MÉTODOS EDITÁVEL COM DROPDOWN */}
+                    {/* CARD 3: A PLANILHA DE MÉTODOS EDITÁVEL COM DROPDOWN + ENTRADAS */}
                     <div className="bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-800 rounded-[2rem] p-6 shadow-sm overflow-hidden">
                         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
                             <h3 className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-widest flex items-center gap-2"><BarChart4 size={16} className="text-indigo-500"/> Matriz Operacional</h3>
                             <div className="flex gap-2">
                                 <button onClick={syncWithHistory} className="text-[10px] font-black uppercase tracking-widest text-slate-600 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 px-3 py-2 rounded-lg transition-colors flex items-center gap-1.5"><RefreshCcw size={12}/> Auto-Preencher</button>
-                                <button onClick={addSimMethod} className="text-[10px] font-black uppercase tracking-widest text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-500/10 hover:bg-indigo-100 dark:hover:bg-indigo-500/20 px-3 py-2 rounded-lg transition-colors flex items-center gap-1.5"><PlusCircle size={14}/> Add Linha</button>
+                                <button onClick={addSimMethod} className="text-[10px] font-black uppercase tracking-widest text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-500/10 hover:bg-indigo-100 dark:hover:bg-indigo-500/20 px-3 py-2 rounded-lg transition-colors flex items-center gap-1.5"><PlusCircle size={14}/> Método</button>
                             </div>
                         </div>
                         
@@ -367,12 +440,13 @@ const Calculators: React.FC = () => {
                                 <thead>
                                     <tr className="border-b border-slate-200 dark:border-slate-800 text-[9px] uppercase tracking-widest text-slate-500 font-bold">
                                         <th className="pb-3 pl-2 w-48">Método (Digite ou Selecione)</th>
-                                        <th className="pb-3 text-center w-24">Win Rate (%)</th>
+                                        <th className="pb-3 text-center w-20">Win Rate (%)</th>
                                         <th className="pb-3 text-center w-20">Odd Média</th>
-                                        <th className="pb-3 text-center w-24">EV Real</th>
-                                        <th className="pb-3 text-center w-32">Stake Sugerida (Kelly)</th>
-                                        <th className="pb-3 text-center w-24">Stake Aplicada</th>
-                                        <th className="pb-3 text-center text-indigo-500 w-28">Valor (R$)</th>
+                                        <th className="pb-3 text-center w-20">Entr./Dia</th>
+                                        <th className="pb-3 text-center w-20">EV Real</th>
+                                        <th className="pb-3 text-center w-28">Stake Segura (Kelly)</th>
+                                        <th className="pb-3 text-center w-20">Stake (%)</th>
+                                        <th className="pb-3 text-center text-indigo-500 w-24">Valor (R$)</th>
                                         <th className="pb-3 text-center"></th>
                                     </tr>
                                 </thead>
@@ -381,20 +455,23 @@ const Calculators: React.FC = () => {
                                         {processedMethods.map((m) => (
                                             <motion.tr initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, height: 0 }} key={m.id} className="border-b border-slate-100 dark:border-slate-800/50 hover:bg-slate-50 dark:hover:bg-slate-900/30 transition-colors group">
                                                 
-                                                <td className="py-2 pl-2 relative">
+                                                {/* CAMPO HÍBRIDO (DATALIST) */}
+                                                <td className="py-2 pl-2">
                                                     <div className="flex flex-col gap-1">
-                                                        <input 
-                                                            list="methods-list"
-                                                            value={m.name} 
-                                                            onChange={e => updateSimMethod(m.id, 'name', e.target.value)} 
-                                                            className="bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white px-3 py-2 rounded-lg font-black text-sm w-full outline-none focus:border-indigo-500 pr-8"
-                                                            placeholder="Ex: Oportunista..."
-                                                        />
-                                                        <ChevronDown size={14} className="absolute right-4 top-4 text-slate-400 pointer-events-none" />
+                                                        <div className="relative">
+                                                            <input 
+                                                                list="methods-list"
+                                                                value={m.name} 
+                                                                onChange={e => updateSimMethod(m.id, 'name', e.target.value)} 
+                                                                className="bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white px-3 py-2 rounded-lg font-black text-sm w-full outline-none focus:border-indigo-500 pr-8"
+                                                                placeholder="Ex: Oportunista..."
+                                                            />
+                                                            <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+                                                        </div>
                                                         {m.isSynced ? (
                                                             <span className="text-[8px] font-bold text-emerald-500 uppercase tracking-widest">● Sincronizado</span>
                                                         ) : (
-                                                            <span className="text-[8px] font-bold text-indigo-400 uppercase tracking-widest">● Simulação</span>
+                                                            <span className="text-[8px] font-bold text-indigo-400 uppercase tracking-widest">● Simulação livre</span>
                                                         )}
                                                     </div>
                                                 </td>
@@ -402,31 +479,37 @@ const Calculators: React.FC = () => {
                                                 <td className="py-2 px-1"><input type="number" value={m.winRate} onChange={e => updateSimMethod(m.id, 'winRate', e.target.value)} className={inputClass} /></td>
                                                 <td className="py-2 px-1"><input type="number" step="0.01" value={m.avgOdd} onChange={e => updateSimMethod(m.id, 'avgOdd', e.target.value)} className={inputClass} /></td>
                                                 
+                                                {/* 🔥 A COLUNA DE ENTRADAS RESTAURADA 🔥 */}
+                                                <td className="py-2 px-1"><input type="number" min="1" value={m.entries} onChange={e => updateSimMethod(m.id, 'entries', e.target.value)} className={inputClass} /></td>
+
+                                                {/* EV Calculator */}
                                                 <td className="py-2 px-1 text-center">
                                                     <span className={`text-[10px] font-black uppercase tracking-widest px-2 py-1 rounded border ${m.ev > 0 ? 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-200 dark:border-emerald-500/20' : 'bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-400 border-red-200 dark:border-red-500/20'}`}>
                                                         {m.ev > 0 ? '+' : ''}{m.ev.toFixed(1)}%
                                                     </span>
                                                 </td>
 
+                                                {/* 🌟 STAKE RECOMENDADA (KELLY) 🌟 */}
                                                 <td className="py-2 px-1 text-center">
                                                     <div className="flex flex-col items-center">
                                                         <span className="font-mono font-bold text-slate-600 dark:text-slate-400 text-xs">{m.recommendedStake > 0 ? m.recommendedStake.toFixed(2) + '%' : '0.00%'}</span>
                                                         {m.recommendedStake > 0 && (
                                                             <button onClick={() => applyKellyStake(m.id, m.recommendedStake)} className="text-[8px] uppercase tracking-widest text-indigo-500 hover:text-indigo-600 dark:hover:text-indigo-400 mt-0.5 flex items-center gap-1">
-                                                                Aplicar
+                                                                <MousePointerClick size={10}/> Usar
                                                             </button>
                                                         )}
                                                     </div>
                                                 </td>
 
+                                                {/* Stake Manual e Métrica de Risco */}
                                                 <td className="py-2 px-1">
-                                                    <input 
-                                                        type="number" step="0.1" value={m.stake} 
-                                                        onChange={e => updateSimMethod(m.id, 'stake', e.target.value)} 
-                                                        className={`${inputClass} ${m.stake > 5 ? 'text-red-500 dark:text-red-400 font-black' : ''}`} 
-                                                    />
+                                                    <div className="flex flex-col items-center">
+                                                        <input type="number" step="0.1" value={m.stake} onChange={e => updateSimMethod(m.id, 'stake', e.target.value)} className={inputClass} />
+                                                        <div className="mt-1">{m.riskBadge}</div>
+                                                    </div>
                                                 </td>
                                                 
+                                                {/* Cálculo Automático da Stake em R$ */}
                                                 <td className="py-2 px-1 text-center">
                                                     <div className="bg-indigo-50 dark:bg-indigo-500/10 text-indigo-700 dark:text-indigo-400 py-1.5 px-2 rounded-lg font-black font-mono text-sm border border-indigo-100 dark:border-indigo-500/20">
                                                         R$ {m.stakeValue.toFixed(2)}
@@ -616,20 +699,20 @@ const Calculators: React.FC = () => {
             <div className="bg-white dark:bg-[#0f172a] rounded-[1.5rem] md:rounded-[2rem] border border-slate-200 dark:border-slate-800 p-6 md:p-8 shadow-sm sticky top-6">
                 <h4 className="font-black text-slate-900 dark:text-white mb-6 uppercase tracking-widest text-xs">Informação PRO</h4>
                 <div className="p-4 bg-slate-50 dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800">
-                    <p className="text-[10px] text-slate-500 dark:text-slate-400 mb-2 uppercase font-bold tracking-wider">Mente Fria, Matemática Quente</p>
+                    <p className="text-[10px] text-slate-500 dark:text-slate-400 mb-2 uppercase font-bold tracking-wider">Como funciona?</p>
                     <p className="text-xs sm:text-sm font-medium text-slate-700 dark:text-slate-300 leading-relaxed mb-4">
-                        Nós removemos a variável "Dias" da equação. O mercado não te deve vitórias diárias.
+                        Comece a digitar o nome de um método na tabela. Se ele já existir, o sistema <strong className="text-emerald-500">Sincroniza</strong> o seu Win Rate automaticamente.
                     </p>
                     <p className="text-xs sm:text-sm font-medium text-slate-700 dark:text-slate-300 leading-relaxed">
-                        Foque no <strong>Volume de Entradas</strong>. Quantas operações de EV Positivo você precisa fazer para bater sua meta? Se não houver oportunidade hoje, não opere. A matemática de Juros Compostos protege o seu capital a longo prazo.
+                        Se for um método novo, ele entra em modo <strong className="text-indigo-500">Simulação</strong>. Preencha o Win Rate que você espera ter, e o motor te dará a <strong>Stake Sugerida</strong> baseada no Critério de Kelly.
                     </p>
                 </div>
 
                 <div className="mt-6 pt-6 border-t border-slate-100 dark:border-slate-800">
                     <div className="flex items-start gap-3">
-                       <AlertTriangle size={16} className="text-yellow-500 mt-0.5 shrink-0" />
+                       <Cpu size={20} className="text-indigo-500 mt-0.5 shrink-0" />
                        <p className="text-[10px] text-slate-500 dark:text-slate-400 leading-relaxed font-medium">
-                         Alerta Visual: Se a sua Stake na tabela ultrapassar 5% da banca, o sistema alertará em vermelho. É o "Limiar da Ruína".
+                         O <strong>Alerta de Ruína</strong> vai avisar se a sua Stake for matematicamente maior que a segurança do método permite. O Critério de Kelly sugerido é fracionado para evitar Drawdowns severos.
                        </p>
                     </div>
                 </div>
