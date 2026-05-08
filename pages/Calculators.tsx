@@ -6,7 +6,8 @@ import {
   Crosshair, DollarSign, Goal,
   Clock, ShieldAlert, FileText,
   PiggyBank, LineChart, Calendar, Zap, CheckCircle2,
-  TrendingDown, PlusCircle, Trash2, RefreshCcw, LayoutGrid, BarChart4
+  TrendingDown, PlusCircle, Trash2, RefreshCcw, LayoutGrid, BarChart4,
+  ChevronDown
 } from 'lucide-react';
 import { useBetStore } from '../store/useBetStore';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -86,7 +87,8 @@ const runMonteCarloV10 = (data: any, type: 'corner' | 'goal', targetAdd: number,
 // COMPONENTE PRINCIPAL
 // ==========================================
 const Calculators: React.FC = () => {
-  const { user, currentBankrollBalance, isPro, bets } = useBetStore();
+  // 🔥 ADICIONADO: Extração dos métodos e settings do Zustand
+  const { user, currentBankrollBalance, isPro, bets = [], methods = [], settings } = useBetStore();
   const navigate = useNavigate();
 
   const [activeTab, setActiveTab] = useState<'dutching'|'kelly'|'value'|'arb'|'stake'|'odds'|'compound'>('compound');
@@ -110,12 +112,28 @@ const Calculators: React.FC = () => {
   );
 
   // ==============================================
-  // 🔥 MOTOR EXTRATOR DE DADOS (PROTEGIDO CONTRA NULL)
+  // 🔥 MOTOR DE LISTAGEM UNIVERSAL (Varre todo o sistema)
+  // ==============================================
+  const availableMethodsList = useMemo(() => {
+      const list = new Set<string>();
+      
+      // 1. Puxa os métodos cadastrados nas configurações do usuário
+      if (Array.isArray(methods)) methods.forEach(m => list.add(typeof m === 'string' ? m : m.name));
+      if (settings?.methods && Array.isArray(settings.methods)) settings.methods.forEach((m: any) => list.add(typeof m === 'string' ? m : m.name));
+      if (user?.methods && Array.isArray(user.methods)) user.methods.forEach((m: any) => list.add(typeof m === 'string' ? m : m.name));
+      
+      // 2. Puxa do histórico de apostas (garante que tudo que já foi usado apareça)
+      (bets || []).forEach(b => { if (b.method) list.add(b.method); });
+      
+      return Array.from(list).sort();
+  }, [bets, methods, settings, user]);
+
+  // ==============================================
+  // 🔥 MOTOR EXTRATOR DE ESTATÍSTICAS REAIS
   // ==============================================
   const extractedMethods = useMemo(() => {
       const stats: Record<string, { wins: number, resolved: number, totalOdds: number }> = {};
       
-      // Proteção: se 'bets' não existir ainda, usa array vazio
       (bets || []).forEach(bet => {
           const mName = bet.method || 'Sem Método';
           if (!stats[mName]) stats[mName] = { wins: 0, resolved: 0, totalOdds: 0 };
@@ -132,7 +150,7 @@ const Calculators: React.FC = () => {
           winRate: data.resolved > 0 ? (data.wins / data.resolved) * 100 : 0, 
           avgOdd: data.resolved > 0 ? data.totalOdds / data.resolved : 0,
           resolved: data.resolved
-      })).filter(m => m.resolved > 0);
+      }));
   }, [bets]);
 
   // ==============================================
@@ -142,27 +160,68 @@ const Calculators: React.FC = () => {
   const [compTarget, setCompTarget] = useState(currentBankrollBalance > 0 ? String(currentBankrollBalance * 2) : '2000');
   const [compDays, setCompDays] = useState('30');
 
-  // Matriz de Métodos Editável
+  // Tabela Editável Inicial (Usa o primeiro método disponível, se existir)
   const [simMethods, setSimMethods] = useState([
-      { id: 1, name: 'Estratégia A', winRate: 65, avgOdd: 1.80, stake: 2, entries: 3 }
+      { 
+        id: 1, 
+        name: availableMethodsList.length > 0 ? availableMethodsList[0] : '', 
+        winRate: extractedMethods.find(e => e.name === availableMethodsList[0])?.winRate || 65, 
+        avgOdd: extractedMethods.find(e => e.name === availableMethodsList[0])?.avgOdd || 1.80, 
+        stake: 2, 
+        entries: 3 
+      }
   ]);
 
-  const addSimMethod = () => setSimMethods([...simMethods, { id: Date.now(), name: `Estratégia ${simMethods.length + 1}`, winRate: 60, avgOdd: 1.85, stake: 2, entries: 2 }]);
-  const removeSimMethod = (id: number) => setSimMethods(simMethods.filter(m => m.id !== id));
-  const updateSimMethod = (id: number, field: string, value: string) => {
-      setSimMethods(simMethods.map(m => m.id === id ? { ...m, [field]: field === 'name' ? value : Number(value) } : m));
+  const addSimMethod = () => {
+      // Descobre um método da lista que ainda não foi adicionado na tabela
+      const usedNames = simMethods.map(m => m.name);
+      const nextAvailable = availableMethodsList.find(name => !usedNames.includes(name)) || availableMethodsList[0] || '';
+      
+      const history = extractedMethods.find(ex => ex.name === nextAvailable);
+      
+      setSimMethods([...simMethods, { 
+          id: Date.now(), 
+          name: nextAvailable, 
+          winRate: history ? Number(history.winRate.toFixed(1)) : 60, 
+          avgOdd: history ? Number(history.avgOdd.toFixed(2)) : 1.85, 
+          stake: 2, 
+          entries: 2 
+      }]);
   };
 
-  // Botão Mágico: Puxar do Histórico
+  const removeSimMethod = (id: number) => setSimMethods(simMethods.filter(m => m.id !== id));
+
+  // 🔥 UPDATE INTELIGENTE (Auto-Fill ao mudar o select) 🔥
+  const updateSimMethod = (id: number, field: string, value: string) => {
+      setSimMethods(simMethods.map(m => {
+          if (m.id !== id) return m;
+          
+          let updatedMethod = { ...m, [field]: field === 'name' ? value : Number(value) };
+          
+          // Se o usuário mudou o Nome no Dropdown, busca o histórico e altera WinRate e Odd sozinhos!
+          if (field === 'name') {
+              const history = extractedMethods.find(ex => ex.name === value);
+              if (history && history.resolved > 0) {
+                  updatedMethod.winRate = Number(history.winRate.toFixed(1));
+                  updatedMethod.avgOdd = Number(history.avgOdd.toFixed(2));
+              }
+          }
+          return updatedMethod;
+      }));
+  };
+
+  // Botão Mágico: Puxar Todo o Histórico
   const syncWithHistory = () => {
-      if (extractedMethods.length === 0) return alert("Nenhum dado real encontrado no histórico.");
-      const synced = extractedMethods.map((m, i) => ({
+      const validHistory = extractedMethods.filter(m => m.resolved > 0);
+      if (validHistory.length === 0) return alert("Nenhum dado real concluído encontrado no histórico.");
+      
+      const synced = validHistory.map((m, i) => ({
           id: Date.now() + i,
           name: m.name,
           winRate: Number(m.winRate.toFixed(1)),
           avgOdd: Number(m.avgOdd.toFixed(2)),
-          stake: 2, // Padrão Inicial
-          entries: 2 // Padrão Inicial
+          stake: 2, // Padrão
+          entries: 2 // Padrão
       }));
       setSimMethods(synced);
   };
@@ -174,21 +233,17 @@ const Calculators: React.FC = () => {
   const targetNum = parseFloat(compTarget) || 0;
   const daysNum = parseFloat(compDays) || 1;
 
-  // Processa a matriz para achar o crescimento agregado
   const processedMethods = simMethods.map(m => {
       const ev = (m.winRate / 100 * m.avgOdd) - 1;
-      const dailyGrowth = ev * (m.stake / 100) * m.entries; // Crescimento deste método ao dia
-      const stakeValue = bankrollNum * (m.stake / 100); // Stake exata em R$ agora
+      const dailyGrowth = ev * (m.stake / 100) * m.entries; 
+      const stakeValue = bankrollNum * (m.stake / 100); 
       return { ...m, ev: ev * 100, dailyGrowth: dailyGrowth * 100, stakeValue };
   });
 
-  // Somatório do crescimento de todos os métodos juntos
   const aggregateDailyGrowth = processedMethods.reduce((acc, m) => acc + m.dailyGrowth, 0);
   const projectedBankroll = bankrollNum * Math.pow(1 + (aggregateDailyGrowth / 100), daysNum);
-  
   const dailyGrowthNeededRaw = bankrollNum > 0 && targetNum > bankrollNum ? (Math.pow(targetNum / bankrollNum, 1 / daysNum) - 1) : 0;
   const dailyGrowthNeeded = dailyGrowthNeededRaw * 100;
-  
   const isGoalAchievable = aggregateDailyGrowth >= dailyGrowthNeeded && targetNum > bankrollNum;
 
   // ==============================================
@@ -335,27 +390,27 @@ const Calculators: React.FC = () => {
                         </div>
                     </div>
 
-                    {/* CARD 3: A PLANILHA DE MÉTODOS EDITÁVEL */}
+                    {/* CARD 3: A PLANILHA DE MÉTODOS EDITÁVEL COM DROPDOWN */}
                     <div className="bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-800 rounded-[2rem] p-6 shadow-sm overflow-hidden">
                         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
                             <h3 className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-widest flex items-center gap-2"><BarChart4 size={16} className="text-indigo-500"/> Matriz Operacional</h3>
                             <div className="flex gap-2">
-                                <button onClick={syncWithHistory} className="text-[10px] font-black uppercase tracking-widest text-slate-600 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 px-3 py-2 rounded-lg transition-colors flex items-center gap-1.5"><RefreshCcw size={12}/> Puxar do Histórico</button>
+                                <button onClick={syncWithHistory} className="text-[10px] font-black uppercase tracking-widest text-slate-600 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 px-3 py-2 rounded-lg transition-colors flex items-center gap-1.5"><RefreshCcw size={12}/> Auto-Preencher</button>
                                 <button onClick={addSimMethod} className="text-[10px] font-black uppercase tracking-widest text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-500/10 hover:bg-indigo-100 dark:hover:bg-indigo-500/20 px-3 py-2 rounded-lg transition-colors flex items-center gap-1.5"><PlusCircle size={14}/> Método</button>
                             </div>
                         </div>
                         
                         <div className="overflow-x-auto custom-scrollbar pb-2">
-                            <table className="w-full text-left min-w-[750px]">
+                            <table className="w-full text-left min-w-[850px]">
                                 <thead>
                                     <tr className="border-b border-slate-200 dark:border-slate-800 text-[9px] uppercase tracking-widest text-slate-500 font-bold">
-                                        <th className="pb-3 pl-2">Nome do Método</th>
-                                        <th className="pb-3 text-center">Win Rate (%)</th>
-                                        <th className="pb-3 text-center">Odd Média</th>
-                                        <th className="pb-3 text-center">Entradas/Dia</th>
-                                        <th className="pb-3 text-center">Stake (%)</th>
-                                        <th className="pb-3 text-center text-indigo-500">Valor Atual (R$)</th>
-                                        <th className="pb-3 text-center">EV Real</th>
+                                        <th className="pb-3 pl-2 w-48">Selecione o Método</th>
+                                        <th className="pb-3 text-center w-24">Win Rate (%)</th>
+                                        <th className="pb-3 text-center w-24">Odd Média</th>
+                                        <th className="pb-3 text-center w-24">Entradas/Dia</th>
+                                        <th className="pb-3 text-center w-20">Stake (%)</th>
+                                        <th className="pb-3 text-center text-indigo-500 w-28">Valor (R$)</th>
+                                        <th className="pb-3 text-center w-24">EV Real</th>
                                         <th className="pb-3 text-center"></th>
                                     </tr>
                                 </thead>
@@ -363,20 +418,37 @@ const Calculators: React.FC = () => {
                                     <AnimatePresence>
                                         {processedMethods.map((m) => (
                                             <motion.tr initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, height: 0 }} key={m.id} className="border-b border-slate-100 dark:border-slate-800/50 hover:bg-slate-50 dark:hover:bg-slate-900/30 transition-colors group">
-                                                <td className="py-2 pl-2"><input type="text" value={m.name} onChange={e => updateSimMethod(m.id, 'name', e.target.value)} className={`${inputClass} text-left font-black`} placeholder="Ex: Over HT" /></td>
+                                                
+                                                {/* 🌟 CAMPO DE MÉTODO TRANSFORMADO EM DROPDOWN (SELECT) 🌟 */}
+                                                <td className="py-2 pl-2 relative">
+                                                    <select 
+                                                        value={m.name} 
+                                                        onChange={e => updateSimMethod(m.id, 'name', e.target.value)} 
+                                                        className={`${inputClass} text-left font-black cursor-pointer appearance-none bg-slate-50 dark:bg-slate-800/50 pr-8`}
+                                                    >
+                                                        <option value="" disabled>Selecionar...</option>
+                                                        {availableMethodsList.map(methodName => (
+                                                            <option key={methodName} value={methodName}>{methodName}</option>
+                                                        ))}
+                                                        {/* Caso o método que estava na tabela não exista mais nas configs, mantém ele visível */}
+                                                        {m.name && !availableMethodsList.includes(m.name) && (
+                                                            <option value={m.name}>{m.name}</option>
+                                                        )}
+                                                    </select>
+                                                    <ChevronDown size={14} className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+                                                </td>
+
                                                 <td className="py-2 px-1"><input type="number" value={m.winRate} onChange={e => updateSimMethod(m.id, 'winRate', e.target.value)} className={inputClass} /></td>
                                                 <td className="py-2 px-1"><input type="number" step="0.01" value={m.avgOdd} onChange={e => updateSimMethod(m.id, 'avgOdd', e.target.value)} className={inputClass} /></td>
                                                 <td className="py-2 px-1"><input type="number" value={m.entries} onChange={e => updateSimMethod(m.id, 'entries', e.target.value)} className={inputClass} /></td>
                                                 <td className="py-2 px-1"><input type="number" step="0.5" value={m.stake} onChange={e => updateSimMethod(m.id, 'stake', e.target.value)} className={inputClass} /></td>
                                                 
-                                                {/* Cálculo Automático da Próxima Stake em R$ */}
                                                 <td className="py-2 px-1 text-center">
                                                     <div className="bg-indigo-50 dark:bg-indigo-500/10 text-indigo-700 dark:text-indigo-400 py-1.5 px-2 rounded-lg font-black font-mono text-sm border border-indigo-100 dark:border-indigo-500/20">
                                                         R$ {m.stakeValue.toFixed(2)}
                                                     </div>
                                                 </td>
 
-                                                {/* EV Calculator */}
                                                 <td className="py-2 px-1 text-center">
                                                     <span className={`text-[10px] font-black uppercase tracking-widest px-2 py-1 rounded border ${m.ev > 0 ? 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-200 dark:border-emerald-500/20' : 'bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-400 border-red-200 dark:border-red-500/20'}`}>
                                                         {m.ev > 0 ? '+' : ''}{m.ev.toFixed(1)}%
@@ -392,7 +464,7 @@ const Calculators: React.FC = () => {
                             </table>
                             {simMethods.length === 0 && (
                                 <div className="text-center py-8 text-slate-400 text-xs font-bold uppercase tracking-widest">
-                                    Nenhum método na planilha. Adicione um manualmente ou puxe do histórico.
+                                    Nenhum método na planilha. Adicione um para iniciar a simulação.
                                 </div>
                             )}
                         </div>
@@ -563,18 +635,11 @@ const Calculators: React.FC = () => {
         {/* SIDEBAR DE INFORMAÇÕES */}
         <div className="lg:col-span-1 space-y-6 w-full min-w-0">
             <div className="bg-white dark:bg-[#0f172a] rounded-[1.5rem] md:rounded-[2rem] border border-slate-200 dark:border-slate-800 p-6 md:p-8 shadow-sm sticky top-6">
-                <h4 className="font-black text-slate-900 dark:text-white mb-6 uppercase tracking-widest text-xs">A Máquina de Gestão</h4>
-                
+                <h4 className="font-black text-slate-900 dark:text-white mb-6 uppercase tracking-widest text-xs">Informação PRO</h4>
                 <div className="p-4 bg-slate-50 dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800">
-                    <p className="text-[10px] text-slate-500 dark:text-slate-400 mb-2 uppercase font-bold tracking-wider">Como Operar:</p>
-                    <p className="text-xs sm:text-sm font-medium text-slate-700 dark:text-slate-300 leading-relaxed mb-4">
-                        1. Digite o valor que você deseja atingir no final do mês.
-                    </p>
-                    <p className="text-xs sm:text-sm font-medium text-slate-700 dark:text-slate-300 leading-relaxed mb-4">
-                        2. Adicione seus métodos na tabela, ou clique em <strong className="text-indigo-500">"Puxar do Histórico"</strong> para o sistema auto-preencher seu Win Rate real.
-                    </p>
+                    <p className="text-[10px] text-slate-500 dark:text-slate-400 mb-2 uppercase font-bold tracking-wider">Como funciona?</p>
                     <p className="text-xs sm:text-sm font-medium text-slate-700 dark:text-slate-300 leading-relaxed">
-                        3. Ajuste o <strong className="text-emerald-500">Volume de Entradas</strong> e veja a data da sua meta se aproximar matematicamente.
+                        Selecione um método cadastrado na tabela. O sistema vai puxar automaticamente o seu Win Rate e Odd Média. Se o EV for positivo, a máquina calcula se o volume de entradas é suficiente para bater a sua meta em X dias.
                     </p>
                 </div>
 
@@ -582,7 +647,7 @@ const Calculators: React.FC = () => {
                     <div className="flex items-start gap-3">
                        <AlertTriangle size={16} className="text-yellow-500 mt-0.5 shrink-0" />
                        <p className="text-[10px] text-slate-500 dark:text-slate-400 leading-relaxed font-medium">
-                         Alerta: Essa projeção não garante lucro futuro. O crescimento agregado considera que você terá controle emocional para manter sua Taxa de Acerto constante.
+                         Lembre-se: Você pode alterar manualmente o Win Rate e Odd na tabela para testar "E se?". Mas clicar em "Auto-Preencher" força o sistema a usar a sua realidade matemática exata extraída do histórico.
                        </p>
                     </div>
                 </div>
