@@ -7,7 +7,7 @@ import {
   Clock, ShieldAlert, FileText,
   PiggyBank, LineChart, Calendar, Zap, CheckCircle2,
   TrendingDown, PlusCircle, Trash2, RefreshCcw, LayoutGrid, BarChart4,
-  ChevronDown, Cpu, MousePointerClick, Info, Navigation, Trophy, Skull
+  ChevronDown, Cpu, MousePointerClick, Info, Navigation, Trophy, Skull, Coins
 } from 'lucide-react';
 import { useBetStore } from '../store/useBetStore';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -117,12 +117,12 @@ const Calculators: React.FC = () => {
   // 🔥 ESTADOS DO PLANEJADOR (COM PERSISTÊNCIA ABSOLUTA)
   // ==============================================
   const [autoSyncBankroll, setAutoSyncBankroll] = useState(() => localStorage.getItem('autoSyncBankroll') === 'true');
+  const [useAvailableBankroll, setUseAvailableBankroll] = useState(() => localStorage.getItem('useAvailableBankroll') === 'true');
   
   const [compBankroll, setCompBankroll] = useState(() => localStorage.getItem('compBankroll') || (currentBankrollBalance > 0 ? String(currentBankrollBalance) : '1000'));
   const [compTarget, setCompTarget] = useState(() => localStorage.getItem('compTarget') || (currentBankrollBalance > 0 ? String(currentBankrollBalance * 2) : '2000'));
   const [compDays, setCompDays] = useState(() => localStorage.getItem('compDays') || '30');
 
-  // Inicialização segura dos métodos simulados
   const [simMethods, setSimMethods] = useState(() => {
       const saved = localStorage.getItem('proPlannerMethods');
       if (saved) {
@@ -131,14 +131,14 @@ const Calculators: React.FC = () => {
       return [ { id: 1, name: '', winRate: 60, avgOdd: 1.85, entries: 3, stake: 2, badRun: 7, isSynced: false } ];
   });
 
-  // Efeito de Persistência (Salva tudo instantaneamente ao alterar)
   useEffect(() => {
       localStorage.setItem('compBankroll', compBankroll);
       localStorage.setItem('compTarget', compTarget);
       localStorage.setItem('compDays', compDays);
       localStorage.setItem('proPlannerMethods', JSON.stringify(simMethods));
       localStorage.setItem('autoSyncBankroll', String(autoSyncBankroll));
-  }, [compBankroll, compTarget, compDays, simMethods, autoSyncBankroll]);
+      localStorage.setItem('useAvailableBankroll', String(useAvailableBankroll));
+  }, [compBankroll, compTarget, compDays, simMethods, autoSyncBankroll, useAvailableBankroll]);
 
   useEffect(() => {
       if (autoSyncBankroll) {
@@ -151,12 +151,23 @@ const Calculators: React.FC = () => {
       setAutoSyncBankroll(false); 
   };
 
+  // 🔥 LÓGICA DE BANCA LIVRE (APOSTAS SIMULTÂNEAS) 🔥
   const bankrollNum = parseFloat(compBankroll) || 0;
+  
+  const pendingExposure = useMemo(() => {
+      return (history || [])
+        .filter(b => b.status === 'pending')
+        .reduce((acc, b) => acc + Number(b.stake || 0), 0);
+  }, [history]);
+
+  const availableBankroll = Math.max(0, bankrollNum - pendingExposure);
+  const calculationBankroll = useAvailableBankroll ? availableBankroll : bankrollNum;
+
   const targetNum = parseFloat(compTarget) || 0;
   const daysNum = parseFloat(compDays) || 1;
 
-  // LÓGICA DE EVENTOS EXTREMOS (QUEBRA DE BANCA E META BATIDA)
-  const isBankrollBusted = bankrollNum <= 1 && compBankroll !== ''; // Banca menor ou igual a 1 real (Quebrado)
+  // 🔥 LÓGICA DE EVENTOS EXTREMOS (QUEBRA DE BANCA E META BATIDA) E PROGRESSO
+  const isBankrollBusted = bankrollNum <= 1 && compBankroll !== ''; 
   const isTargetReached = bankrollNum >= targetNum && targetNum > 0;
   const progressPercent = targetNum > 0 ? Math.min(100, Math.max(0, (bankrollNum / targetNum) * 100)) : 0;
 
@@ -177,7 +188,6 @@ const Calculators: React.FC = () => {
               updatedMethod.name = cleanValue;
 
               const historicalData = extractedMethods.find(ex => ex.name.toLowerCase() === cleanValue.toLowerCase());
-              
               if (historicalData && historicalData.resolved >= 10) {
                   updatedMethod.winRate = Number(historicalData.winRate.toFixed(1));
                   updatedMethod.avgOdd = Number(historicalData.avgOdd.toFixed(2));
@@ -226,7 +236,7 @@ const Calculators: React.FC = () => {
       setSimMethods(updatedMethods);
 
       if (smallSampleWarnings > 0) {
-          alert(`Alguns métodos possuem menos de 10 entradas concluídas no Diário.\n\nPara evitar distorções de curto prazo, o sistema respeitou a validação externa (manual) que você digitou.\nContinue registrando suas entradas!`);
+          alert(`Alguns métodos possuem menos de 10 entradas concluídas no Diário.\n\nPara evitar distorções de variância de curto prazo, o sistema preservou a sua validação externa manual nessas linhas.\nContinue registrando suas entradas para ter dados 100% fiéis!`);
       }
   };
 
@@ -252,7 +262,8 @@ const Calculators: React.FC = () => {
           requiredStakePct = (dailyGrowthNeededRaw / (evRaw * m.entries)) * 100;
       }
 
-      const currentStakeValue = bankrollNum * (m.stake / 100);
+      // 🔥 CÁLCULO DE VALOR REAL (Usa calculationBankroll: Total ou Livre dependendo do modo)
+      const currentStakeValue = calculationBankroll * (m.stake / 100);
       const evMoney = currentStakeValue * evRaw;
 
       const drawdownRiskMoney = currentStakeValue * (m.badRun || 5);
@@ -374,11 +385,7 @@ const Calculators: React.FC = () => {
   const tabs = [
     { id: 'compound', label: 'Plano de Metas', pro: true, highlight: true }, 
     { id: 'dutching', label: 'Dutching', pro: false }, 
-    { id: 'kelly', label: 'Kelly', pro: false },
-    { id: 'value', label: 'Value Bet', pro: true }, 
-    { id: 'arb', label: 'Arbitragem', pro: true },
-    { id: 'stake', label: 'Stake %', pro: false }, 
-    { id: 'odds', label: 'Odds Conv.', pro: false }
+    { id: 'odds', label: 'Conversor', pro: false }
   ];
 
   const inputClass = "bg-transparent border-b border-transparent hover:border-slate-300 dark:hover:border-slate-700 focus:border-indigo-500 text-slate-900 dark:text-white px-2 py-1 outline-none font-mono text-sm w-full text-center transition-colors";
@@ -399,21 +406,13 @@ const Calculators: React.FC = () => {
             Strategic Math Engine
           </div>
           <h1 className="text-3xl font-black text-slate-900 dark:text-white tracking-tighter uppercase italic">
-            Calculadoras Pro <span className="text-slate-300 dark:text-slate-700 text-lg">///</span>
+            Planejador Pro <span className="text-slate-300 dark:text-slate-700 text-lg">///</span>
           </h1>
       </div>
       
-      <div className="flex flex-wrap md:grid md:grid-cols-4 xl:grid-cols-7 gap-2 mb-6 px-4 md:px-0">
+      <div className="flex flex-wrap md:grid md:grid-cols-3 gap-2 mb-6 px-4 md:px-0">
         {tabs.map(tab => (
-          <button
-            key={tab.id}
-            onClick={() => setActiveTab(tab.id as any)}
-            className={`relative flex-1 min-w-[90px] flex items-center justify-center px-2 py-3 rounded-xl font-bold text-[10px] uppercase tracking-wider transition-all gap-1.5 ${
-              activeTab === tab.id
-                ? (tab.highlight ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/20' : 'bg-emerald-600 dark:bg-emerald-500 text-white shadow-lg shadow-emerald-500/20')
-                : 'bg-white dark:bg-[#0f172a] text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-900'
-            }`}
-          >
+          <button key={tab.id} onClick={() => setActiveTab(tab.id as any)} className={`relative flex-1 min-w-[90px] flex items-center justify-center px-2 py-3 rounded-xl font-bold text-[10px] uppercase tracking-wider transition-all gap-1.5 ${activeTab === tab.id ? (tab.highlight ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/20' : 'bg-emerald-600 text-white shadow-lg') : 'bg-white dark:bg-[#0f172a] text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-900'}`}>
             {tab.pro && !isPro && <Lock size={12} className="opacity-50" />}
             {tab.label}
           </button>
@@ -451,7 +450,7 @@ const Calculators: React.FC = () => {
                                         <p className="text-[9px] uppercase font-bold text-slate-500 mb-1 flex items-center gap-1">
                                             Banca (Base para Juros Compostos)
                                         </p>
-                                        <input type="number" value={compBankroll} onChange={e => handleBankrollManualChange(e.target.value)} className={`bg-slate-50 dark:bg-[#020617] border border-slate-200 dark:border-slate-800 text-2xl font-black rounded-xl px-4 py-2 w-full outline-none focus:border-indigo-500 transition-colors ${autoSyncBankroll && !isTargetReached && !isBankrollBusted ? 'text-emerald-600 dark:text-emerald-400 shadow-[0_0_10px_rgba(16,185,129,0.1)]' : 'text-slate-900 dark:text-white'}`} />
+                                        <input type="number" value={compBankroll} onChange={e => handleBankrollManualChange(e.target.value)} disabled={isTargetReached || isBankrollBusted} className={`bg-slate-50 dark:bg-[#020617] border border-slate-200 dark:border-slate-800 text-2xl font-black rounded-xl px-4 py-2 w-full outline-none focus:border-indigo-500 transition-colors ${autoSyncBankroll && !isTargetReached && !isBankrollBusted ? 'text-emerald-600 dark:text-emerald-400 shadow-[0_0_10px_rgba(16,185,129,0.1)]' : 'text-slate-900 dark:text-white disabled:opacity-50'}`} />
                                     </div>
                                 </div>
 
@@ -465,11 +464,11 @@ const Calculators: React.FC = () => {
                             <div className="flex gap-4">
                                 <div className="bg-slate-50 dark:bg-slate-900/50 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 flex-1">
                                     <label className="text-[9px] font-black text-slate-500 uppercase block mb-1">Meta Desejada</label>
-                                    <input type="number" value={compTarget} onChange={e => setCompTarget(e.target.value)} className="bg-transparent text-xl font-black text-amber-500 outline-none w-full" />
+                                    <input type="number" value={compTarget} onChange={e => setCompTarget(e.target.value)} disabled={isTargetReached || isBankrollBusted} className="bg-transparent text-xl font-black text-amber-500 outline-none w-full disabled:opacity-50" />
                                 </div>
                                 <div className="bg-slate-50 dark:bg-slate-900/50 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 flex-1">
                                     <label className="text-[9px] font-black text-slate-500 uppercase block mb-1">Prazo (Dias)</label>
-                                    <input type="number" value={compDays} onChange={e => setCompDays(e.target.value)} className="bg-transparent text-xl font-black text-emerald-600 dark:text-emerald-400 outline-none w-full" />
+                                    <input type="number" value={compDays} onChange={e => setCompDays(e.target.value)} disabled={isTargetReached || isBankrollBusted} className="bg-transparent text-xl font-black text-emerald-600 dark:text-emerald-400 outline-none w-full disabled:opacity-50" />
                                 </div>
                             </div>
                         </div>
@@ -534,18 +533,42 @@ const Calculators: React.FC = () => {
                                 </div>
                             </div>
 
-                            {/* CARD 3: A PLANILHA DE MÉTODOS EDITÁVEL */}
+                            {/* CARD 3: A PLANILHA DE MÉTODOS EDITÁVEL COM MODO SIMULTÂNEO */}
                             <div className="bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-800 rounded-[2rem] p-6 shadow-sm overflow-hidden">
-                                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+                                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
                                     <div>
                                         <h3 className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-widest flex items-center gap-2"><BarChart4 size={16} className="text-indigo-500"/> Simulador de Cenários & Risco</h3>
                                         <p className="text-[10px] text-slate-500 mt-1">A coluna "Aposte Isso" te diz o valor exato da Próxima Entrada.</p>
                                     </div>
-                                    <div className="flex gap-2">
-                                        <button onClick={handleAutoFill} className="text-[10px] font-black uppercase tracking-widest text-slate-600 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 px-3 py-2 rounded-lg transition-colors flex items-center gap-1.5"><RefreshCcw size={12}/> Auditar Dados</button>
-                                        <button onClick={addSimMethod} className="text-[10px] font-black uppercase tracking-widest text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-500/10 hover:bg-indigo-100 dark:hover:bg-indigo-500/20 px-3 py-2 rounded-lg transition-colors flex items-center gap-1.5"><PlusCircle size={14}/> Add Método</button>
+                                    <div className="flex flex-col sm:flex-row items-end sm:items-center gap-3">
+                                        {/* 🔥 SWITCH DE GESTÃO SIMULTÂNEA 🔥 */}
+                                        <div className="flex items-center gap-2 bg-slate-50 dark:bg-slate-900 px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700">
+                                            <span className="text-[9px] font-bold text-slate-500 uppercase tracking-widest flex items-center gap-1" title="Se ligado, as próximas stakes descontam o valor que já está investido no mercado (Risco Exposto)."><Coins size={10}/> Modo Simultâneo</span>
+                                            <button 
+                                                onClick={() => setUseAvailableBankroll(!useAvailableBankroll)}
+                                                className={`relative inline-flex h-4 w-8 items-center rounded-full transition-colors ${useAvailableBankroll ? 'bg-emerald-500' : 'bg-slate-300 dark:bg-slate-600'}`}
+                                            >
+                                                <span className={`inline-block h-3 w-3 transform rounded-full bg-white transition-transform ${useAvailableBankroll ? 'translate-x-4' : 'translate-x-1'}`}/>
+                                            </button>
+                                        </div>
+                                        <div className="flex gap-2">
+                                            <button onClick={handleAutoFill} className="text-[10px] font-black uppercase tracking-widest text-slate-600 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 px-3 py-2 rounded-lg transition-colors flex items-center gap-1.5"><RefreshCcw size={12}/> Auditar</button>
+                                            <button onClick={addSimMethod} className="text-[10px] font-black uppercase tracking-widest text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-500/10 hover:bg-indigo-100 dark:hover:bg-indigo-500/20 px-3 py-2 rounded-lg transition-colors flex items-center gap-1.5"><PlusCircle size={14}/> Método</button>
+                                        </div>
                                     </div>
                                 </div>
+
+                                {/* Banner de Aviso de Risco Exposto se o modo estiver ON */}
+                                <AnimatePresence>
+                                    {useAvailableBankroll && pendingExposure > 0 && (
+                                        <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} className="bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/20 rounded-xl p-3 mb-4 flex items-center gap-3">
+                                            <AlertTriangle size={16} className="text-amber-500 shrink-0" />
+                                            <p className="text-[10px] sm:text-xs text-amber-700 dark:text-amber-400 font-medium">
+                                                Você possui <strong>R$ {pendingExposure.toFixed(2)}</strong> investidos no mercado neste momento. A coluna "Aposte Isso" abaixo já está calculando as stakes sobre a sua Banca Livre (<strong className="font-mono">R$ {availableBankroll.toFixed(2)}</strong>) para evitar alavancagem excessiva.
+                                            </p>
+                                        </motion.div>
+                                    )}
+                                </AnimatePresence>
                                 
                                 <div className="overflow-x-auto custom-scrollbar pb-2">
                                     <table className="w-full text-left min-w-[1050px]">
@@ -649,6 +672,11 @@ const Calculators: React.FC = () => {
                                             </AnimatePresence>
                                         </tbody>
                                     </table>
+                                    {simMethods.length === 0 && (
+                                        <div className="text-center py-8 text-slate-400 text-xs font-bold uppercase tracking-widest">
+                                            Nenhum método na matriz. Adicione um para iniciar a simulação.
+                                        </div>
+                                    )}
                                 </div>
                             </div>
 
@@ -679,9 +707,7 @@ const Calculators: React.FC = () => {
                 </div>
             )}
 
-            {/* ========================================== */}
-            {/* OUTRAS CALCULADORAS MANTIDAS INTACTAS      */}
-            {/* ========================================== */}
+            {/* OUTRAS CALCULADORAS MANTIDAS NO CÓDIGO MAS OCULTADAS NA UI */}
             {activeTab === 'dutching' && (
                 <div className="bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-800 rounded-[2rem] p-6 shadow-sm w-full overflow-hidden">
                     <h2 className="text-lg font-black text-slate-900 dark:text-white uppercase tracking-tighter italic mb-4">Calculadora Dutching</h2>
@@ -706,114 +732,6 @@ const Calculators: React.FC = () => {
                         <button onClick={addDutchSelection} className="flex-1 py-3 rounded-xl border border-dashed border-slate-300 dark:border-slate-700 text-slate-600 dark:text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-800/50 text-xs font-bold uppercase transition-colors"><Plus size={14} className="inline mr-1"/> Add Seleção</button>
                         <button onClick={calculateDutching} className="flex-1 py-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold uppercase shadow-lg shadow-emerald-600/20 transition-all active:scale-95">Calcular</button>
                     </div>
-                </div>
-            )}
-
-            {activeTab === 'kelly' && (
-                <div className="bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-800 rounded-[2rem] p-6 shadow-sm w-full overflow-hidden">
-                    <h2 className="text-lg font-black text-slate-900 dark:text-white uppercase tracking-tighter italic mb-6">Critério de Kelly</h2>
-                    <div className="grid grid-cols-2 gap-4 mb-6">
-                        <div>
-                             <label className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase block mb-2">Banca</label>
-                             <div className="p-3 bg-slate-50 dark:bg-slate-900 rounded-xl font-mono font-bold text-slate-900 dark:text-white border border-slate-200 dark:border-transparent">R$ {currentBankrollBalance.toFixed(2)}</div>
-                        </div>
-                        <div>
-                             <label className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase block mb-2">Fração</label>
-                             <select value={kellyFraction} onChange={e => setKellyFraction(e.target.value)} className="w-full p-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-transparent text-slate-900 dark:text-white rounded-xl font-bold text-sm outline-none">
-                                <option value="1">100%</option>
-                                <option value="0.5">50%</option>
-                                <option value="0.25">25%</option>
-                               </select>
-                        </div>
-                        <div>
-                             <label className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase block mb-2">Odds</label>
-                             <input type="number" value={kellyOdds} onChange={e => setKellyOdds(e.target.value)} className="w-full p-3 bg-slate-50 dark:bg-slate-900 rounded-xl font-mono font-bold outline-none border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white" />
-                        </div>
-                        <div>
-                             <label className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase block mb-2">Probabilidade %</label>
-                             <input type="number" value={kellyProb} onChange={e => setKellyProb(e.target.value)} className="w-full p-3 bg-slate-50 dark:bg-slate-900 rounded-xl font-mono font-bold outline-none border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white" />
-                        </div>
-                    </div>
-                    <div className="bg-purple-50 dark:bg-purple-900/10 p-6 rounded-2xl text-center border border-purple-200 dark:border-purple-500/20">
-                        <p className="text-xs font-bold text-purple-700 dark:text-purple-400 uppercase tracking-widest mb-1">Stake Recomendada</p>
-                        <h3 className="text-4xl font-black text-purple-700 dark:text-purple-400">{parseFloat(kellyResult) > 0 ? kellyResult : '0.00'}%</h3>
-                        <p className="text-sm font-mono text-purple-800 dark:text-purple-300 mt-2 bg-purple-100 dark:bg-purple-500/20 inline-block px-3 py-1 rounded font-bold">R$ {parseFloat(kellyResult) > 0 ? kellyMoney.toFixed(2) : '0.00'}</p>
-                    </div>
-                </div>
-            )}
-
-            {activeTab === 'value' && !isPro && <ProLockScreen />}
-            {activeTab === 'value' && isPro && (
-                <div className="bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-800 rounded-[2rem] p-6 shadow-sm">
-                   <h2 className="text-lg font-black text-slate-900 dark:text-white uppercase tracking-tighter italic mb-6 flex items-center gap-2"><Target size={20} className="text-emerald-500"/> Value Bet Finder</h2>
-                   <div className="grid grid-cols-2 gap-4 mb-6">
-                      <div>
-                          <label className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase block mb-2">Sua Odds</label>
-                          <input type="number" value={valOdds} onChange={e => setValOdds(e.target.value)} className="w-full p-3 bg-slate-50 dark:bg-slate-900 rounded-xl font-mono font-bold outline-none border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white" />
-                      </div>
-                      <div>
-                          <label className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase block mb-2">Probabilidade Real %</label>
-                          <input type="number" value={valProb} onChange={e => setValProb(e.target.value)} className="w-full p-3 bg-slate-50 dark:bg-slate-900 rounded-xl font-mono font-bold outline-none border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white" />
-                      </div>
-                   </div>
-                   <div className={`p-6 rounded-2xl border text-center ${valEV > 0 ? 'bg-emerald-50 dark:bg-emerald-900/10 border-emerald-200 dark:border-emerald-500/20' : 'bg-red-50 dark:bg-red-900/10 border-red-200 dark:border-red-500/20'}`}>
-                      <p className="text-xs font-bold uppercase tracking-widest mb-1 opacity-70 text-slate-700 dark:text-slate-300">Valor Esperado (EV)</p>
-                      <h3 className={`text-4xl font-black ${valEV > 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-500'}`}>
-                        {valEV > 0 ? '+' : ''}{valEVPercent.toFixed(2)}%
-                      </h3>
-                      <p className={`text-xs mt-2 font-bold ${valEV > 0 ? 'text-emerald-700 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'}`}>
-                          {valEV > 0 ? '✅ Aposta de Valor Encontrada' : '❌ Odds sem valor estatístico'}
-                      </p>
-                   </div>
-                </div>
-            )}
-
-            {activeTab === 'arb' && !isPro && <ProLockScreen />}
-            {activeTab === 'arb' && isPro && (
-                <div className="bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-800 rounded-[2rem] p-6 shadow-sm">
-                   <h2 className="text-lg font-black text-slate-900 dark:text-white uppercase tracking-tighter italic mb-6 flex items-center gap-2"><Scale size={20} className="text-blue-500"/> Arbitragem (2-Way)</h2>
-                   <div className="mb-4">
-                      <label className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase block mb-2">Investimento Total (R$)</label>
-                      <input type="number" value={arbTotalStake} onChange={e => setArbTotalStake(e.target.value)} className="w-full p-3 bg-slate-50 dark:bg-slate-900 rounded-xl font-mono font-bold outline-none border border-slate-200 dark:border-slate-800 text-lg text-slate-900 dark:text-white" />
-                   </div>
-                   <div className="grid grid-cols-2 gap-4 mb-6">
-                      <div className="bg-slate-50 dark:bg-slate-900 p-4 rounded-xl border border-slate-200 dark:border-slate-800">
-                          <label className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase block mb-2">Casa A (Odds)</label>
-                          <input type="number" value={arbOdds1} onChange={e => setArbOdds1(e.target.value)} className="w-full bg-transparent font-mono font-black text-xl outline-none text-slate-900 dark:text-white" />
-                          <div className="mt-2 pt-2 border-t border-slate-200 dark:border-slate-700">
-                             <p className="text-[10px] uppercase text-slate-500 dark:text-slate-400">Apostar:</p>
-                             <p className="text-emerald-600 dark:text-emerald-500 font-bold">R$ {isFinite(arbStake1) ? arbStake1.toFixed(2) : '0.00'}</p>
-                          </div>
-                      </div>
-                      <div className="bg-slate-50 dark:bg-slate-900 p-4 rounded-xl border border-slate-200 dark:border-slate-800">
-                          <label className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase block mb-2">Casa B (Odds)</label>
-                          <input type="number" value={arbOdds2} onChange={e => setArbOdds2(e.target.value)} className="w-full bg-transparent font-mono font-black text-xl outline-none text-slate-900 dark:text-white" />
-                          <div className="mt-2 pt-2 border-t border-slate-200 dark:border-slate-700">
-                             <p className="text-[10px] uppercase text-slate-500 dark:text-slate-400">Apostar:</p>
-                             <p className="text-emerald-600 dark:text-emerald-500 font-bold">R$ {isFinite(arbStake2) ? arbStake2.toFixed(2) : '0.00'}</p>
-                          </div>
-                      </div>
-                   </div>
-                   <div className={`p-4 rounded-xl flex justify-between items-center ${arbRoi > 0 ? 'bg-emerald-500 text-white' : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400'}`}>
-                      <span className="font-bold uppercase text-xs tracking-widest">Lucro Garantido (ROI)</span>
-                      <span className="font-black text-xl">{arbRoi.toFixed(2)}%</span>
-                   </div>
-                   {arbRoi > 0 && <p className="text-center text-xs text-slate-500 dark:text-slate-400 mt-2">Lucro líquido: R$ {arbProfit.toFixed(2)}</p>}
-                </div>
-            )}
-
-            {activeTab === 'stake' && (
-                <div className="bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-800 rounded-[2rem] p-6 shadow-sm">
-                   <h2 className="text-lg font-black text-slate-900 dark:text-white uppercase tracking-tighter italic mb-6 flex items-center gap-2"><Percent size={20} className="text-orange-500"/> Calculadora Stake Fixa</h2>
-                   <div className="mb-6">
-                      <label className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase block mb-2">Porcentagem da Banca (%)</label>
-                      <input type="number" value={stakePercentState} onChange={e => setStakePercentState(e.target.value)} className="w-full p-4 bg-slate-50 dark:bg-slate-900 rounded-xl font-mono font-black text-3xl outline-none border border-slate-200 dark:border-slate-800 text-center text-orange-500" />
-                   </div>
-                   <div className="bg-slate-50 dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 text-center">
-                      <p className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-1">Valor da Aposta</p>
-                      <h3 className="text-4xl font-black text-slate-900 dark:text-white">R$ {stakeValue.toFixed(2)}</h3>
-                      <p className="text-xs text-slate-500 dark:text-slate-400 mt-2">Baseado na banca atual de R$ {currentBankrollBalance.toFixed(2)}</p>
-                   </div>
                 </div>
             )}
 
@@ -850,7 +768,7 @@ const Calculators: React.FC = () => {
                         1. Ative o botão <strong className="text-emerald-500">Auto-Sync</strong> no Dashboard para que a banca base mude sempre que você tomar um Green ou Red.
                     </p>
                     <p className="text-xs sm:text-sm font-medium text-slate-700 dark:text-slate-300 leading-relaxed mb-4">
-                        2. Digite sua Bad Run esperada (ex: 5). O motor avalia se a sua stake vai causar <strong className="text-red-500">Risco de Ruína</strong> (-R$) consumindo sua banca.
+                        2. Se usar a gestão institucional ligue o <strong className="text-indigo-500">Modo Simultâneo</strong>. Ele impede que você se alavanque em apostas juntas descontando o Risco Exposto.
                     </p>
                     <p className="text-xs sm:text-sm font-medium text-slate-700 dark:text-slate-300 leading-relaxed">
                         3. Pegue o valor exato na coluna <strong className="text-emerald-500">"Aposte Isso"</strong>. Como a banca auto-sincroniza, esse valor muda a cada nova aposta. Você está operando juros compostos reais.
