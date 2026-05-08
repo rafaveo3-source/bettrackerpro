@@ -5,11 +5,100 @@ import {
   Target, TrendingUp, AlertTriangle, Lock, Crown, 
   Crosshair, DollarSign, Goal,
   Clock, ShieldAlert, FileText,
-  PiggyBank, LineChart, Calendar, Zap, CheckCircle2
+  PiggyBank, LineChart, Calendar, Zap, CheckCircle2,
+  TrendingDown, ArrowUpRight, ChevronRight, BarChart4
 } from 'lucide-react';
 import { useBetStore } from '../store/useBetStore';
 import { motion, AnimatePresence } from 'framer-motion';
 
+// ==========================================
+// MÓDULOS MATEMÁTICOS & MONTE CARLO V10 (PRESERVADO)
+// ==========================================
+const factorial = (n: number): number => {
+  if (n < 0) return 0;
+  if (n === 0 || n === 1) return 1;
+  let result = 1; for (let i = 2; i <= n; i++) result *= i;
+  return result;
+};
+
+const poissonExact = (k: number, lambda: number): number => {
+  if (lambda <= 0) return k === 0 ? 1 : 0;
+  return (Math.pow(lambda, k) * Math.exp(-lambda)) / factorial(k);
+};
+
+const runMonteCarloV10 = (data: any, type: 'corner' | 'goal', targetAdd: number, textData: string = "", iterations = 20000) => {
+    let hits = 0;
+  
+    const minute = Math.max(1, Math.min(95, data.min || 1));
+    const isHT = minute <= 45;
+    const maxTime = isHT ? 48 : 96;
+    const timeLeft = Math.max(1, maxTime - minute);
+  
+    const totalCorners = data.totalCorners || 0;
+    const totalGoals = data.totalGoals || 0;
+  
+    let ap = data.apPress || 0;
+    let sot = data.sot || 0;
+  
+    const scoreDiff = (() => {
+      if (!data.score || !data.score.includes('-')) return 0;
+      const [h, a] = data.score.split('-').map(Number);
+      return Math.abs(h - a); 
+    })();
+  
+    const target = (type === 'corner' ? totalCorners : totalGoals) + targetAdd;
+  
+    const sourceWeight = textData.includes("SofaScore") || textData.includes("sofascore") ? 1.0 :
+                         textData.includes("Flashscore") || textData.includes("flashscore") ? 0.95 :
+                         textData.includes("CornerPro") || textData.includes("Tempo das Estatísticas") ? 0.98 :
+                         0.85; 
+  
+    for (let i = 0; i < iterations; i++) {
+      let sim = type === 'corner' ? totalCorners : totalGoals;
+  
+      let localAP = ap;
+      let localSOT = sot;
+  
+      for (let t = 0; t < timeLeft; t++) {
+        const momentumShift = (Math.random() - 0.5) * 4;
+        localAP = Math.max(0, localAP + momentumShift);
+  
+        let prob = type === 'corner' ? (localAP / 100) * 0.15 : (localAP / 100) * 0.025; 
+  
+        const efficiency = (localSOT + 1) / (localAP + 10);
+        prob *= (0.6 + (efficiency * (type === 'goal' ? 3 : 1)));
+  
+        if (minute + t > 75) prob *= 1.25;
+        if (minute + t > 85) prob *= 1.40;
+  
+        if (scoreDiff !== 0) {
+          if (data.needsGoal) prob *= 1.3;
+          else prob *= 0.85; 
+        }
+  
+        if (localAP < 20 && localSOT < 2) prob *= 0.5;
+  
+        prob = Math.max(0.001, Math.min(prob, type === 'corner' ? 0.35 : 0.12));
+  
+        if (Math.random() < prob) {
+          sim++;
+          localAP += type === 'corner' ? 4 : 2;
+          localSOT += Math.random() < (type === 'goal' ? 0.8 : 0.3) ? 1 : 0;
+        }
+      }
+  
+      if (sim >= target) hits++;
+    }
+  
+    let probFinal = hits / iterations;
+    probFinal *= sourceWeight;
+  
+    return { probReal: probFinal * 100, fairOdd: probFinal > 0 ? 1 / probFinal : 0 };
+};
+
+// ==========================================
+// COMPONENTE PRINCIPAL
+// ==========================================
 const Calculators: React.FC = () => {
   const { user, currentBankrollBalance, isPro, bets = [] } = useBetStore();
   const navigate = useNavigate();
@@ -17,7 +106,7 @@ const Calculators: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'dutching'|'kelly'|'value'|'arb'|'stake'|'odds'|'compound'>('compound');
 
   const ProLockScreen = () => (
-      <div className="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-[2rem] p-8 text-center flex flex-col items-center justify-center min-h-[300px] relative overflow-hidden shadow-sm mt-6">
+      <div className="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-[2rem] p-8 text-center flex flex-col items-center justify-center min-h-[300px] relative overflow-hidden shadow-sm mt-6 w-full">
           <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/5 to-purple-500/5 dark:from-indigo-500/10 dark:to-purple-500/10 opacity-50" />
           <div className="bg-white dark:bg-slate-800 p-4 rounded-full mb-4 relative z-10 shadow-sm border border-slate-200 dark:border-slate-700">
               <Crown size={32} className="text-amber-500 dark:text-amber-400" />
@@ -33,6 +122,63 @@ const Calculators: React.FC = () => {
           </button>
       </div>
   );
+
+  // ==============================================
+  // 🔥 MOTOR EXTRATOR DE DADOS REAIS DO USUÁRIO
+  // ==============================================
+  const methodAnalytics = useMemo(() => {
+      const stats: Record<string, { wins: number, resolved: number, totalOdds: number, profit: number }> = {};
+      
+      bets.forEach(bet => {
+          const mName = bet.method || 'Sem Método';
+          if (!stats[mName]) stats[mName] = { wins: 0, resolved: 0, totalOdds: 0, profit: 0 };
+          
+          if (['won', 'half-won', 'lost', 'half-lost', 'refunded'].includes(bet.status)) {
+              stats[mName].resolved++;
+              stats[mName].totalOdds += Number(bet.odds || 0);
+              
+              // Cálculo de Lucro Real baseado no histórico
+              const s = Number(bet.stake || 0);
+              const o = Number(bet.odds || 0);
+              if (bet.status === 'won') stats[mName].profit += (s * o) - s;
+              else if (bet.status === 'lost') stats[mName].profit -= s;
+              else if (bet.status === 'half-won') stats[mName].profit += ((s * o) - s) / 2;
+              else if (bet.status === 'half-lost') stats[mName].profit -= s / 2;
+
+              if (bet.status === 'won' || bet.status === 'half-won') stats[mName].wins++;
+          }
+      });
+
+      const processed = Object.entries(stats).map(([name, data]) => {
+          const winRate = data.resolved > 0 ? (data.wins / data.resolved) * 100 : 0;
+          const avgOdd = data.resolved > 0 ? data.totalOdds / data.resolved : 0;
+          const ev = (winRate / 100 * avgOdd) - 1;
+          return { name, winRate, avgOdd, profit: data.profit, ev: ev * 100, count: data.resolved };
+      }).filter(m => m.count >= 1); // Pega qualquer método que tenha pelo menos 1 aposta resolvida
+
+      return processed.sort((a, b) => b.count - a.count);
+  }, [bets]);
+
+  // Estados do Planejamento PRO
+  const [compTarget, setCompTarget] = useState(currentBankrollBalance > 0 ? String(currentBankrollBalance * 2) : '2000');
+  const [compDays, setCompDays] = useState('30');
+  const [simStakePercent, setSimStakePercent] = useState('2'); // Stake sugerida padrão 2%
+  
+  // Variáveis Matemáticas do Dashboard
+  const targetNum = parseFloat(compTarget) || 1;
+  const daysNum = parseFloat(compDays) || 1;
+  const stakeNum = parseFloat(simStakePercent) || 2;
+  
+  // Pega o melhor método ou um fallback se o usuário não tiver apostas
+  const currentMethod = methodAnalytics.length > 0 
+      ? methodAnalytics[0] 
+      : { name: 'Insira Apostas Reais', winRate: 0, avgOdd: 0, ev: 0, profit: 0, count: 0 };
+
+  const dailyGrowthNeeded = currentBankrollBalance > 0 && targetNum > currentBankrollBalance
+      ? (Math.pow(targetNum / currentBankrollBalance, 1 / daysNum) - 1) * 100 
+      : 0;
+
+  const nextStakeValue = currentBankrollBalance * (stakeNum / 100);
 
   // ==============================================
   // ESTADOS DAS CALCULADORAS ANTIGAS
@@ -67,135 +213,6 @@ const Calculators: React.FC = () => {
   const [convDec, setConvDec] = useState('2.00'); const [convAm, setConvAm] = useState('+100'); const [convProb, setConvProb] = useState('50.00');
   const handleDecChange = (val: string) => { setConvDec(val); const d = parseFloat(val); if (d > 1) { setConvProb(((1 / d) * 100).toFixed(2)); setConvAm(d >= 2 ? '+' + ((d - 1) * 100).toFixed(0) : (( -100 / (d - 1) )).toFixed(0)); } };
 
-  // ==============================================
-  // 🔥 NOVO: MOTOR EXTRATOR DE DADOS REAIS DO USUÁRIO
-  // ==============================================
-  const userMethodsStats = useMemo(() => {
-      const stats: Record<string, { wins: number, resolved: number, totalOdds: number, count: number }> = {};
-      
-      bets.forEach(bet => {
-          const method = bet.method || 'Sem Método';
-          if (!stats[method]) stats[method] = { wins: 0, resolved: 0, totalOdds: 0, count: 0 };
-          
-          stats[method].count++;
-          if (bet.odds && bet.odds > 1) {
-              stats[method].totalOdds += Number(bet.odds);
-          }
-          
-          if (['won', 'half-won', 'lost', 'half-lost'].includes(bet.status)) {
-              stats[method].resolved++;
-              if (bet.status === 'won' || bet.status === 'half-won') {
-                  stats[method].wins++;
-              }
-          }
-      });
-
-      const processed = Object.entries(stats).map(([name, data]) => {
-          const winRate = data.resolved > 0 ? (data.wins / data.resolved) * 100 : 0;
-          const avgOdd = data.count > 0 ? data.totalOdds / data.count : 0;
-          const ev = (winRate / 100) * avgOdd - 1;
-          return { name, winRate, avgOdd, count: data.count, resolved: data.resolved, ev: ev * 100 };
-      }).filter(m => m.resolved >= 3); // Só mostra métodos com pelo menos 3 apostas resolvidas para ter relevância estatística
-
-      // Se o usuário não tiver métodos suficientes, cria um método de exemplo (Mock)
-      if (processed.length === 0) {
-          return [{ name: "Método Exemplo (Insira Dados Reais)", winRate: 60, avgOdd: 1.85, count: 0, resolved: 0, ev: 11.0 }];
-      }
-
-      return processed.sort((a, b) => b.count - a.count);
-  }, [bets]);
-
-  // Estados do Simulador PRO
-  const [compBankroll, setCompBankroll] = useState(currentBankrollBalance > 0 ? String(currentBankrollBalance) : '1000');
-  const [compTarget, setCompTarget] = useState(currentBankrollBalance > 0 ? String(currentBankrollBalance * 2) : '2000');
-  const [compDays, setCompDays] = useState('30');
-  
-  const [selectedMethodName, setSelectedMethodName] = useState<string>(userMethodsStats[0]?.name || '');
-  const selectedMethod = userMethodsStats.find(m => m.name === selectedMethodName) || userMethodsStats[0];
-
-  // O usuário pode sobrescrever a realidade para fazer "E se?"
-  const [simWinRate, setSimWinRate] = useState<string>(selectedMethod?.winRate.toFixed(1) || '60');
-  const [simAvgOdd, setSimAvgOdd] = useState<string>(selectedMethod?.avgOdd.toFixed(2) || '1.85');
-  const [simStake, setSimStake] = useState<string>('2');
-  const [simEntries, setSimEntries] = useState<string>('3');
-
-  // Toda vez que ele muda de método no Dropdown, atualiza os inputs com os dados reais
-  const handleMethodChange = (name: string) => {
-      setSelectedMethodName(name);
-      const m = userMethodsStats.find(x => x.name === name);
-      if (m) {
-          setSimWinRate(m.winRate.toFixed(1));
-          setSimAvgOdd(m.avgOdd.toFixed(2));
-      }
-  };
-
-  // Cálculos do Dashboard de Ação
-  const bankrollNum = parseFloat(compBankroll) || 0;
-  const targetNum = parseFloat(compTarget) || 0;
-  const daysNum = parseFloat(compDays) || 1;
-  const wRate = parseFloat(simWinRate) / 100 || 0;
-  const avgOdd = parseFloat(simAvgOdd) || 0;
-  const stakePct = parseFloat(simStake) / 100 || 0;
-  const entriesPerDay = parseFloat(simEntries) || 0;
-
-  // Valor Esperado Real (EV) da simulação atual
-  const methodEV = (wRate * avgOdd) - 1; 
-
-  // Crescimento Diário (%) = EV * Stake% * Entradas
-  // Ex: EV de 5%, Stake 2%, 3 entradas = 0.05 * 0.02 * 3 = 0.003 = 0.3% ao dia
-  const expectedDailyGrowthPct = methodEV > 0 ? (methodEV * stakePct * entriesPerDay * 100) : (methodEV * stakePct * entriesPerDay * 100);
-  const projectedBankroll = bankrollNum * Math.pow(1 + (expectedDailyGrowthPct / 100), daysNum);
-
-  // Crescimento Diário Necessário para bater a meta
-  const reqDailyGrowthRaw = targetNum > bankrollNum && bankrollNum > 0 ? (Math.pow(targetNum / bankrollNum, 1 / daysNum) - 1) : 0;
-  const requiredDailyGrowthPct = reqDailyGrowthRaw * 100;
-
-  const isGoalAchievable = expectedDailyGrowthPct >= requiredDailyGrowthPct && targetNum > bankrollNum;
-
-  // GERAÇÃO DO PLANO DE AÇÃO (A Máquina da Verdade)
-  const generateActionPlan = () => {
-      if (bankrollNum >= targetNum) return { title: 'Meta Inválida', text: 'A meta deve ser maior que a banca inicial.', color: 'text-slate-500' };
-      if (methodEV <= 0) return { title: '⚠️ EV NEGATIVO DETECTADO', text: 'O seu Win Rate e Odd Média não geram lucro matemático a longo prazo. Pare de apostar neste método imediatamente e revise sua estratégia.', color: 'text-red-500' };
-      
-      if (isGoalAchievable) {
-          return { 
-              title: '🎯 PLANO REALISTA. VOCÊ VAI BATER A META!', 
-              text: `Mantenha a disciplina. Executando ${entriesPerDay} entradas/dia com ${simStake}% de stake, sua banca chegará em R$ ${projectedBankroll.toFixed(2)}, superando sua meta de R$ ${targetNum}.`, 
-              color: 'text-emerald-500' 
-          };
-      }
-
-      // Se não for alcançável, calcula o que falta
-      const reqEntries = reqDailyGrowthRaw / (methodEV * stakePct);
-      const reqStake = reqDailyGrowthRaw / (entriesPerDay * methodEV);
-      const reqEV = reqDailyGrowthRaw / (stakePct * entriesPerDay);
-      const reqWinRate = (reqEV + 1) / avgOdd;
-
-      let planText = `Você precisa crescer ${requiredDailyGrowthPct.toFixed(2)}% ao dia, mas seu método atual gera apenas ${expectedDailyGrowthPct.toFixed(2)}%. Para alcançar os R$ ${targetNum}, escolha UMA das opções abaixo:\n\n`;
-      
-      let options = 0;
-      if (reqEntries <= 20) {
-          planText += `📌 Opção A: Aumentar seu volume para ${Math.ceil(reqEntries)} entradas por dia, mantendo a stake de ${simStake}%.\n`;
-          options++;
-      }
-      if (reqStake <= 0.05) { // Stake segura <= 5%
-          planText += `📌 Opção B: Subir sua stake para ${(reqStake * 100).toFixed(1)}% por entrada, mantendo as ${entriesPerDay} entradas.\n`;
-          options++;
-      }
-      if (reqWinRate <= 0.85) { // Win rate humano <= 85%
-          planText += `📌 Opção C: Melhorar seu método para acertar ${(reqWinRate * 100).toFixed(1)}% das apostas (na odd de @${avgOdd}).\n`;
-          options++;
-      }
-
-      if (options === 0) {
-          planText = `🚨 ALERTA VERMELHO: A sua meta é uma utopia matemática. Para atingi-la em apenas ${daysNum} dias, você teria que usar uma Stake Suicida de ${(reqStake * 100).toFixed(1)}% ou fazer ${Math.ceil(reqEntries)} apostas por dia. Aumente o prazo ou diminua a meta para proteger seu capital.`;
-      }
-
-      return { title: '⚠️ CHOQUE DE REALIDADE (Falta Edge)', text: planText, color: 'text-amber-500' };
-  };
-
-  const actionPlan = generateActionPlan();
-
   const sidebarInfo = (() => {
     switch(activeTab) {
       case 'dutching': return { title: 'Gestão de Risco', text: 'O Dutching divide a sua exposição entre múltiplas seleções, diluindo o risco do investimento em um único evento.' };
@@ -213,8 +230,6 @@ const Calculators: React.FC = () => {
     { id: 'stake', label: 'Stake %', pro: false }, 
     { id: 'odds', label: 'Odds Conv.', pro: false }
   ];
-
-  const inputClass = "bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white rounded-lg px-3 py-2 outline-none focus:border-indigo-500 font-mono text-sm w-full";
 
   return (
     <div className="space-y-6 pb-20 w-full overflow-x-hidden">
@@ -251,121 +266,117 @@ const Calculators: React.FC = () => {
         <div className="lg:col-span-2 space-y-6 min-w-0 w-full">
             
             {/* ========================================== */}
-            {/* 🔥 NOVA ABA: PLANILHA DE GESTÃO PRO 🔥 */}
+            {/* 🔥 ABA: GESTÃO PRO (ORÁCULO) 🔥 */}
             {/* ========================================== */}
             {activeTab === 'compound' && !isPro && <ProLockScreen />}
             {activeTab === 'compound' && isPro && (
-                <div className="bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-800 rounded-[2rem] p-6 shadow-sm w-full overflow-hidden">
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
-                        <div className="flex items-center gap-3">
-                            <LineChart size={24} className="text-indigo-500" />
-                            <h2 className="text-xl font-black text-slate-900 dark:text-white uppercase tracking-tighter italic">Simulador Automático</h2>
-                        </div>
-                        <div className="bg-indigo-50 dark:bg-indigo-500/10 border border-indigo-200 dark:border-indigo-500/30 text-indigo-600 dark:text-indigo-400 px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest flex items-center gap-1.5 w-fit">
-                            <Zap size={12} fill="currentColor"/> Dados sincronizados
-                        </div>
-                    </div>
-
-                    {/* SESSÃO 1: OBJETIVO */}
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8 bg-slate-50 dark:bg-[#09090b] p-5 rounded-2xl border border-slate-200 dark:border-slate-800/50">
-                        <div>
-                            <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest flex items-center gap-1.5 mb-2"><PiggyBank size={12}/> Banca Atual</label>
-                            <div className="relative">
-                                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 font-bold">R$</span>
-                                <input type="number" value={compBankroll} onChange={e => setCompBankroll(e.target.value)} className={`${inputClass} pl-8 font-black text-slate-700 dark:text-slate-300`} />
-                            </div>
-                        </div>
-                        <div>
-                            <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest flex items-center gap-1.5 mb-2"><Target size={12}/> Meta Desejada</label>
-                            <div className="relative">
-                                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 font-bold">R$</span>
-                                <input type="number" value={compTarget} onChange={e => setCompTarget(e.target.value)} className={`${inputClass} pl-8 font-black text-indigo-600 dark:text-indigo-400 focus:border-indigo-500`} />
-                            </div>
-                        </div>
-                        <div>
-                            <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest flex items-center gap-1.5 mb-2"><Calendar size={12}/> Em Quantos Dias?</label>
-                            <input type="number" value={compDays} onChange={e => setCompDays(e.target.value)} className={`${inputClass} font-black text-indigo-600 dark:text-indigo-400 focus:border-indigo-500`} />
-                        </div>
-                    </div>
-
-                    {/* SESSÃO 2: MOTOR DE VALIDAÇÃO (SEUS MÉTODOS) */}
-                    <h3 className="text-xs font-black text-slate-800 dark:text-white uppercase tracking-widest mb-4 flex items-center gap-2 border-b border-slate-200 dark:border-slate-800 pb-2"><Crosshair size={14} className="text-slate-400"/> Validador de Estratégia</h3>
-                    
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 mb-8">
-                        {/* Seletor de Método Sincronizado */}
-                        <div className="bg-slate-50 dark:bg-slate-900/50 p-4 rounded-xl border border-slate-200 dark:border-slate-800">
-                            <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2 block">Escolha seu Método Validado:</label>
-                            <select 
-                                value={selectedMethodName} 
-                                onChange={e => handleMethodChange(e.target.value)}
-                                className="w-full bg-white dark:bg-[#020617] border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-white rounded-lg p-2.5 font-bold text-sm outline-none focus:border-indigo-500 shadow-sm"
-                            >
-                                {userMethodsStats.map(m => (
-                                    <option key={m.name} value={m.name}>{m.name} ({m.resolved} registros)</option>
-                                ))}
-                            </select>
-                            
-                            <div className="flex gap-4 mt-4">
-                                <div className="flex-1">
-                                    <label className="text-[9px] font-bold text-slate-500 uppercase tracking-widest mb-1 block">Win Rate Real %</label>
-                                    <input type="number" step="0.1" value={simWinRate} onChange={e => setSimWinRate(e.target.value)} className={`${inputClass} text-center font-bold text-emerald-600 dark:text-emerald-400`} />
-                                </div>
-                                <div className="flex-1">
-                                    <label className="text-[9px] font-bold text-slate-500 uppercase tracking-widest mb-1 block">Odd Média Real</label>
-                                    <input type="number" step="0.01" value={simAvgOdd} onChange={e => setSimAvgOdd(e.target.value)} className={`${inputClass} text-center font-bold text-emerald-600 dark:text-emerald-400`} />
+                <div className="space-y-6">
+                    {/* CARD 1: O ALVO (SINCRONIZADO) */}
+                    <div className="bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-800 rounded-[2rem] p-6 shadow-sm relative overflow-hidden">
+                        <div className="flex flex-col md:flex-row justify-between gap-6 relative z-10">
+                            <div className="flex-1">
+                                <p className="text-[10px] font-black text-indigo-600 dark:text-indigo-400 uppercase tracking-widest mb-2">Sua Banca em Tempo Real</p>
+                                <h2 className="text-4xl font-black text-slate-900 dark:text-white italic">R$ {currentBankrollBalance.toFixed(2)}</h2>
+                                <div className="mt-4 flex items-center gap-2 text-xs font-bold text-slate-500 dark:text-slate-400">
+                                    <Clock size={14}/> Sincronizado com {bets.length} apostas
                                 </div>
                             </div>
-                            <p className="text-[9px] text-slate-400 mt-2 text-center">*(Campos editáveis para simulações)*</p>
-                        </div>
-
-                        {/* Variáveis de Controle */}
-                        <div className="bg-slate-50 dark:bg-slate-900/50 p-4 rounded-xl border border-slate-200 dark:border-slate-800 flex flex-col justify-center">
-                            <div className="mb-4">
-                                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2 flex justify-between"><span>Stake Fixa (%)</span> <span className="text-indigo-500 font-black">{simStake}%</span></label>
-                                <input type="range" min="0.5" max="10" step="0.5" value={simStake} onChange={e => setSimStake(e.target.value)} className="w-full h-1.5 bg-slate-300 dark:bg-slate-700 rounded-lg appearance-none cursor-pointer accent-indigo-500" />
-                            </div>
-                            <div>
-                                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2 flex justify-between"><span>Entradas por Dia</span> <span className="text-indigo-500 font-black">{simEntries} apostas</span></label>
-                                <input type="range" min="1" max="20" step="1" value={simEntries} onChange={e => setSimEntries(e.target.value)} className="w-full h-1.5 bg-slate-300 dark:bg-slate-700 rounded-lg appearance-none cursor-pointer accent-indigo-500" />
+                            <div className="flex gap-4">
+                                <div className="bg-slate-50 dark:bg-slate-900/50 p-4 rounded-2xl border border-slate-200 dark:border-slate-800">
+                                    <label className="text-[9px] font-black text-slate-500 uppercase block mb-1">Meta Desejada (R$)</label>
+                                    <input type="number" value={compTarget} onChange={e => setCompTarget(e.target.value)} className="bg-transparent text-xl font-black text-amber-500 outline-none w-full" />
+                                </div>
+                                <div className="bg-slate-50 dark:bg-slate-900/50 p-4 rounded-2xl border border-slate-200 dark:border-slate-800">
+                                    <label className="text-[9px] font-black text-slate-500 uppercase block mb-1">Prazo (Dias)</label>
+                                    <input type="number" value={compDays} onChange={e => setCompDays(e.target.value)} className="bg-transparent text-xl font-black text-emerald-600 dark:text-emerald-400 outline-none w-full" />
+                                </div>
                             </div>
                         </div>
                     </div>
 
-                    {/* SESSÃO 3: O VEREDITO E PLANO DE AÇÃO */}
-                    <div className={`p-6 rounded-2xl border shadow-lg relative overflow-hidden transition-colors duration-500 ${
-                        actionPlan.color === 'text-emerald-500' ? 'bg-emerald-50 dark:bg-emerald-500/10 border-emerald-200 dark:border-emerald-500/30' :
-                        actionPlan.color === 'text-red-500' ? 'bg-red-50 dark:bg-red-500/10 border-red-200 dark:border-red-500/30' :
-                        'bg-amber-50 dark:bg-amber-500/10 border-amber-200 dark:border-amber-500/30'
-                    }`}>
-                        <div className="absolute top-0 right-0 w-40 h-40 rounded-full blur-3xl opacity-20 bg-current pointer-events-none -mr-10 -mt-10" style={{ color: actionPlan.color }}></div>
-                        
-                        <h3 className={`text-sm sm:text-base font-black uppercase tracking-widest mb-4 flex items-center gap-2 relative z-10 ${actionPlan.color}`}>
-                            {actionPlan.color === 'text-emerald-500' ? <CheckCircle2 size={20}/> : <AlertTriangle size={20}/>} 
-                            {actionPlan.title}
-                        </h3>
-                        
-                        <div className="text-xs sm:text-sm text-slate-700 dark:text-slate-300 leading-relaxed whitespace-pre-wrap font-medium relative z-10">
-                            {actionPlan.text}
+                    {/* CARD 2: RECOMENDAÇÃO DE PRÓXIMA ENTRADA E CRESCIMENTO */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="bg-indigo-600 rounded-[2rem] p-6 text-white shadow-xl shadow-indigo-500/20 relative overflow-hidden">
+                            <Zap className="absolute top-0 right-0 w-32 h-32 text-white/10 -mr-8 -mt-8" />
+                            <h3 className="text-xs font-black uppercase tracking-widest mb-6 flex items-center gap-2"><ArrowUpRight size={16}/> Próxima Stake</h3>
+                            <div className="flex justify-between items-end">
+                                <div>
+                                    <p className="text-white/60 text-[10px] uppercase font-bold mb-1">Valor Calculado</p>
+                                    <p className="text-3xl font-black">R$ {nextStakeValue.toFixed(2)}</p>
+                                </div>
+                                <div className="text-right">
+                                    <p className="text-white/60 text-[10px] uppercase font-bold mb-1">Gestão</p>
+                                    <input 
+                                        type="number" step="0.5" max="10" min="0.5" 
+                                        value={simStakePercent} 
+                                        onChange={(e) => setSimStakePercent(e.target.value)} 
+                                        className="bg-transparent text-lg font-bold text-white text-right w-16 outline-none border-b border-white/20 focus:border-white transition-colors"
+                                    />
+                                    <span className="text-lg font-bold ml-1">%</span>
+                                </div>
+                            </div>
+                            <div className="mt-6 pt-4 border-t border-white/10 text-[10px] font-medium leading-relaxed text-indigo-100">
+                                Baseado nos juros compostos. Atualize este valor a cada operação finalizada no seu diário.
+                            </div>
                         </div>
 
-                        {/* Comparativo Matemático (HUD) */}
-                        <div className="mt-6 pt-4 border-t border-current opacity-80 grid grid-cols-2 sm:grid-cols-4 gap-4 text-center relative z-10" style={{ borderColor: 'inherit' }}>
-                            <div>
-                                <p className="text-[9px] uppercase font-bold tracking-widest mb-1">EV do Método</p>
-                                <p className={`font-mono font-black ${methodEV > 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'}`}>{(methodEV * 100).toFixed(2)}%</p>
-                            </div>
-                            <div>
-                                <p className="text-[9px] uppercase font-bold tracking-widest mb-1">Banca Final Estimada</p>
-                                <p className="font-mono font-black text-slate-900 dark:text-white">R$ {projectedBankroll.toFixed(0)}</p>
-                            </div>
-                            <div>
-                                <p className="text-[9px] uppercase font-bold tracking-widest mb-1">Cresc. Diário Real</p>
-                                <p className={`font-mono font-black ${expectedDailyGrowthPct > 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'}`}>{expectedDailyGrowthPct.toFixed(2)}%</p>
-                            </div>
-                            <div>
-                                <p className="text-[9px] uppercase font-bold tracking-widest mb-1">Cresc. Diário P/ Meta</p>
-                                <p className="font-mono font-black text-slate-900 dark:text-white">{requiredDailyGrowthPct.toFixed(2)}%</p>
-                            </div>
+                        <div className="bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-800 rounded-[2rem] p-6 shadow-sm flex flex-col justify-center">
+                            <p className="text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-2">Esforço Diário Necessário</p>
+                            <h3 className="text-3xl font-black text-slate-900 dark:text-white mb-2">+{dailyGrowthNeeded.toFixed(2)}% <span className="text-sm text-slate-400 font-normal">/ dia</span></h3>
+                            <p className="text-xs text-slate-600 dark:text-slate-500 leading-relaxed font-medium">
+                                Para transformar R$ {currentBankrollBalance.toFixed(0)} em R$ {targetNum} em {daysNum} dias, sua banca precisa bater esse crescimento diário.
+                            </p>
+                        </div>
+                    </div>
+
+                    {/* CARD 3: LISTA DE MÉTODOS SINCRONIZADOS */}
+                    <div className="bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-800 rounded-[2rem] p-6 shadow-sm">
+                        <h3 className="text-xs font-black text-slate-900 dark:text-white uppercase tracking-widest mb-6 flex items-center gap-2"><BarChart4 size={16} className="text-indigo-500"/> Seus Métodos em Atividade</h3>
+                        
+                        <div className="space-y-3">
+                            {methodAnalytics.length === 0 ? (
+                                <div className="p-8 text-center border-2 border-dashed border-slate-200 dark:border-slate-800 rounded-2xl">
+                                    <p className="text-sm text-slate-500 font-medium">Você ainda não possui métodos com dados suficientes. Comece a registrar suas apostas!</p>
+                                </div>
+                            ) : (
+                                methodAnalytics.map((m, i) => (
+                                    <div key={i} className="group bg-slate-50 dark:bg-slate-900/50 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 flex items-center justify-between hover:border-indigo-500/30 transition-all cursor-default">
+                                        <div className="flex items-center gap-4">
+                                            <div className={`w-10 h-10 rounded-full flex items-center justify-center font-black text-xs ${m.ev > 0 ? 'bg-emerald-100 text-emerald-600 dark:bg-emerald-500/10 dark:text-emerald-400' : 'bg-red-100 text-red-600 dark:bg-red-500/10 dark:text-red-400'}`}>
+                                                {m.ev > 0 ? <TrendingUp size={18}/> : <TrendingDown size={18}/>}
+                                            </div>
+                                            <div>
+                                                <h4 className="text-sm font-black text-slate-800 dark:text-white uppercase italic truncate max-w-[120px] sm:max-w-[200px]">{m.name}</h4>
+                                                <p className="text-[10px] font-bold text-slate-500 uppercase">{m.count} entradas · Odd Média @{m.avgOdd.toFixed(2)}</p>
+                                            </div>
+                                        </div>
+                                        <div className="flex gap-4 sm:gap-8 items-center">
+                                            <div className="text-center hidden sm:block">
+                                                <p className="text-[9px] font-black text-slate-400 uppercase mb-1">Win Rate</p>
+                                                <p className="text-sm font-mono font-black text-slate-700 dark:text-slate-200">{m.winRate.toFixed(1)}%</p>
+                                            </div>
+                                            <div className="text-center">
+                                                <p className="text-[9px] font-black text-slate-400 uppercase mb-1">Valor (EV)</p>
+                                                <p className={`text-sm font-mono font-black ${m.ev > 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'}`}>{m.ev > 0 ? '+' : ''}{m.ev.toFixed(1)}%</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                ))
+                            )}
+                        </div>
+                    </div>
+
+                    {/* CARD 4: CONSELHO DO ANALISTA */}
+                    <div className={`p-6 rounded-[2rem] border flex gap-4 items-start ${currentMethod.ev > dailyGrowthNeeded ? 'bg-emerald-50 border-emerald-200 text-emerald-800 dark:bg-slate-900/80 dark:border-emerald-500/20 dark:text-emerald-400' : 'bg-amber-50 border-amber-200 text-amber-800 dark:bg-slate-900/80 dark:border-amber-500/20 dark:text-amber-400'}`}>
+                        <ShieldAlert size={24} className="shrink-0 mt-1" />
+                        <div>
+                            <h4 className="text-sm font-black uppercase mb-1 tracking-widest">Veredito do Oráculo</h4>
+                            <p className="text-xs leading-relaxed opacity-90 font-medium">
+                                {currentMethod.ev > dailyGrowthNeeded 
+                                    ? `Excelente. O Edge (Valor Esperado) do seu melhor método atual ("${currentMethod.name}") é de ${currentMethod.ev.toFixed(1)}%. Isso é superior ao crescimento diário exigido pela sua meta. Mantenha a disciplina de execução.`
+                                    : `Sua meta exige um crescimento de ${dailyGrowthNeeded.toFixed(1)}% ao dia, mas seu método com mais entradas ("${currentMethod.name}") entrega um EV de ${currentMethod.ev.toFixed(1)}%. Matematicamente, você precisará aumentar seu volume de apostas diárias ou estender o prazo para não quebrar a banca alavancando a stake.`
+                                }
+                            </p>
                         </div>
                     </div>
                 </div>
