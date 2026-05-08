@@ -7,7 +7,7 @@ import {
   Clock, ShieldAlert, FileText,
   PiggyBank, LineChart, Calendar, Zap, CheckCircle2,
   TrendingDown, PlusCircle, Trash2, RefreshCcw, LayoutGrid, BarChart4,
-  ChevronDown, Cpu, MousePointerClick, Info, Navigation, Trophy, Skull, Coins
+  ChevronDown, Cpu, MousePointerClick, Info, Navigation, Trophy, Skull, Coins, Lightbulb
 } from 'lucide-react';
 import { useBetStore } from '../store/useBetStore';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -50,7 +50,7 @@ const Calculators: React.FC = () => {
   );
 
   // ==============================================
-  // 🔥 MOTOR EXTRATOR DE ESTATÍSTICAS REAIS (COM BAD RUN E VOLUME)
+  // 🔥 MOTOR EXTRATOR DE ESTATÍSTICAS REAIS
   // ==============================================
   const extractedMethods = useMemo(() => {
       const stats: Record<string, { wins: number, resolved: number, totalOdds: number, dates: string[], currentLosingStreak: number, maxLosingStreak: number }> = {};
@@ -166,7 +166,7 @@ const Calculators: React.FC = () => {
   const targetNum = parseFloat(compTarget) || 0;
   const daysNum = parseFloat(compDays) || 1;
 
-  // 🔥 LÓGICA DE EVENTOS EXTREMOS (QUEBRA DE BANCA E META BATIDA) E PROGRESSO
+  // LÓGICA DE EVENTOS EXTREMOS
   const isBankrollBusted = bankrollNum <= 1 && compBankroll !== ''; 
   const isTargetReached = bankrollNum >= targetNum && targetNum > 0;
   const progressPercent = targetNum > 0 ? Math.min(100, Math.max(0, (bankrollNum / targetNum) * 100)) : 0;
@@ -188,6 +188,7 @@ const Calculators: React.FC = () => {
               updatedMethod.name = cleanValue;
 
               const historicalData = extractedMethods.find(ex => ex.name.toLowerCase() === cleanValue.toLowerCase());
+              
               if (historicalData && historicalData.resolved >= 10) {
                   updatedMethod.winRate = Number(historicalData.winRate.toFixed(1));
                   updatedMethod.avgOdd = Number(historicalData.avgOdd.toFixed(2));
@@ -205,9 +206,6 @@ const Calculators: React.FC = () => {
       }));
   };
 
-  // ==============================================
-  // 🔥 BOTÃO DE CHOQUE DE REALIDADE (SYNC INTELIGENTE)
-  // ==============================================
   const handleAutoFill = () => {
       let smallSampleWarnings = 0;
 
@@ -236,7 +234,7 @@ const Calculators: React.FC = () => {
       setSimMethods(updatedMethods);
 
       if (smallSampleWarnings > 0) {
-          alert(`Alguns métodos possuem menos de 10 entradas concluídas no Diário.\n\nPara evitar distorções de variância de curto prazo, o sistema preservou a sua validação externa manual nessas linhas.\nContinue registrando suas entradas para ter dados 100% fiéis!`);
+          alert(`Alguns métodos possuem menos de 10 entradas concluídas no Diário.\n\nPara evitar distorções de curto prazo, o sistema respeitou a validação externa (manual) que você digitou.\nContinue registrando suas entradas!`);
       }
   };
 
@@ -262,7 +260,6 @@ const Calculators: React.FC = () => {
           requiredStakePct = (dailyGrowthNeededRaw / (evRaw * m.entries)) * 100;
       }
 
-      // 🔥 CÁLCULO DE VALOR REAL (Usa calculationBankroll: Total ou Livre dependendo do modo)
       const currentStakeValue = calculationBankroll * (m.stake / 100);
       const evMoney = currentStakeValue * evRaw;
 
@@ -438,7 +435,7 @@ const Calculators: React.FC = () => {
                                         <button 
                                             onClick={() => setAutoSyncBankroll(!autoSyncBankroll)} 
                                             className={`flex items-center gap-1.5 px-2 py-1 rounded-lg border text-[9px] transition-colors ${autoSyncBankroll ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-600 dark:text-emerald-400' : 'bg-slate-100 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-500'}`}
-                                            title="Sincronizará a banca da calculadora com sua banca real sempre que houver um green ou red."
+                                            title="Sincronizará a banca da calculadora com sua banca real."
                                         >
                                             <RefreshCcw size={10} className={autoSyncBankroll ? 'animate-spin-slow' : ''} /> 
                                             {autoSyncBankroll ? 'Auto-Sync ON' : 'Auto-Sync OFF'}
@@ -533,8 +530,20 @@ const Calculators: React.FC = () => {
                                 </div>
                             </div>
 
-                            {/* CARD 3: A PLANILHA DE MÉTODOS EDITÁVEL COM MODO SIMULTÂNEO */}
+                            {/* CARD 3: A PLANILHA DE MÉTODOS EDITÁVEL */}
                             <div className="bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-800 rounded-[2rem] p-6 shadow-sm overflow-hidden">
+                                
+                                {/* ALERTA DIDÁTICO DO FALSO MARTINGALE (REQUERIDO NA UX) */}
+                                <div className="bg-indigo-50 dark:bg-indigo-500/10 border border-indigo-200 dark:border-indigo-500/30 rounded-xl p-4 mb-6 flex items-start gap-3">
+                                    <Lightbulb size={20} className="text-indigo-500 shrink-0 mt-0.5" />
+                                    <div className="space-y-1">
+                                        <p className="text-[10px] font-black uppercase tracking-widest text-indigo-700 dark:text-indigo-400">Regra de Ouro (Aviso Importante)</p>
+                                        <p className="text-xs text-indigo-900/80 dark:text-indigo-200/80 font-medium leading-relaxed">
+                                            A <strong>Sua Stake (%)</strong> é um Plano Inicial. Defina ela hoje e não altere a cada Red/Green. O que deve variar é o <strong>Valor em R$</strong>. Recalcular a porcentagem para cima após um Red é fazer Martingale, e isso vai quebrar sua banca.
+                                        </p>
+                                    </div>
+                                </div>
+
                                 <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
                                     <div>
                                         <h3 className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-widest flex items-center gap-2"><BarChart4 size={16} className="text-indigo-500"/> Simulador de Cenários & Risco</h3>
@@ -645,7 +654,7 @@ const Calculators: React.FC = () => {
                                                                 </span>
                                                                 {m.evPct > 0 && (
                                                                     <button onClick={() => updateSimMethod(m.id, 'stake', String(m.requiredStakePct.toFixed(1)))} className="text-[8px] uppercase tracking-widest text-slate-400 hover:text-indigo-500 mt-0.5 flex items-center gap-1">
-                                                                        <MousePointerClick size={10}/> Aplicar
+                                                                        <MousePointerClick size={10}/> Fixar no Plano
                                                                     </button>
                                                                 )}
                                                             </div>
@@ -672,11 +681,6 @@ const Calculators: React.FC = () => {
                                             </AnimatePresence>
                                         </tbody>
                                     </table>
-                                    {simMethods.length === 0 && (
-                                        <div className="text-center py-8 text-slate-400 text-xs font-bold uppercase tracking-widest">
-                                            Nenhum método na matriz. Adicione um para iniciar a simulação.
-                                        </div>
-                                    )}
                                 </div>
                             </div>
 
