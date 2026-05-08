@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
   Plus, Scale, Percent, ArrowRightLeft, 
@@ -20,67 +20,6 @@ const factorial = (n: number): number => {
   if (n === 0 || n === 1) return 1;
   let result = 1; for (let i = 2; i <= n; i++) result *= i;
   return result;
-};
-
-const poissonExact = (k: number, lambda: number): number => {
-  if (lambda <= 0) return k === 0 ? 1 : 0;
-  return (Math.pow(lambda, k) * Math.exp(-lambda)) / factorial(k);
-};
-
-const runMonteCarloV10 = (data: any, type: 'corner' | 'goal', targetAdd: number, textData: string = "", iterations = 20000) => {
-    let hits = 0;
-    const minute = Math.max(1, Math.min(95, data.min || 1));
-    const isHT = minute <= 45;
-    const maxTime = isHT ? 48 : 96;
-    const timeLeft = Math.max(1, maxTime - minute);
-    const totalCorners = data.totalCorners || 0;
-    const totalGoals = data.totalGoals || 0;
-    let ap = data.apPress || 0;
-    let sot = data.sot || 0;
-  
-    const scoreDiff = (() => {
-      if (!data.score || !data.score.includes('-')) return 0;
-      const [h, a] = data.score.split('-').map(Number);
-      return Math.abs(h - a); 
-    })();
-  
-    const target = (type === 'corner' ? totalCorners : totalGoals) + targetAdd;
-  
-    const sourceWeight = textData.includes("SofaScore") || textData.includes("sofascore") ? 1.0 :
-                         textData.includes("Flashscore") || textData.includes("flashscore") ? 0.95 :
-                         textData.includes("CornerPro") || textData.includes("Tempo das Estatísticas") ? 0.98 :
-                         0.85; 
-  
-    for (let i = 0; i < iterations; i++) {
-      let sim = type === 'corner' ? totalCorners : totalGoals;
-      let localAP = ap;
-      let localSOT = sot;
-      for (let t = 0; t < timeLeft; t++) {
-        const momentumShift = (Math.random() - 0.5) * 4;
-        localAP = Math.max(0, localAP + momentumShift);
-        let prob = type === 'corner' ? (localAP / 100) * 0.15 : (localAP / 100) * 0.025; 
-        const efficiency = (localSOT + 1) / (localAP + 10);
-        prob *= (0.6 + (efficiency * (type === 'goal' ? 3 : 1)));
-        if (minute + t > 75) prob *= 1.25;
-        if (minute + t > 85) prob *= 1.40;
-        if (scoreDiff !== 0) {
-          if (data.needsGoal) prob *= 1.3;
-          else prob *= 0.85; 
-        }
-        if (localAP < 20 && localSOT < 2) prob *= 0.5;
-        prob = Math.max(0.001, Math.min(prob, type === 'corner' ? 0.35 : 0.12));
-  
-        if (Math.random() < prob) {
-          sim++;
-          localAP += type === 'corner' ? 4 : 2;
-          localSOT += Math.random() < (type === 'goal' ? 0.8 : 0.3) ? 1 : 0;
-        }
-      }
-      if (sim >= target) hits++;
-    }
-    let probFinal = hits / iterations;
-    probFinal *= sourceWeight;
-    return { probReal: probFinal * 100, fairOdd: probFinal > 0 ? 1 / probFinal : 0 };
 };
 
 // ==========================================
@@ -152,23 +91,47 @@ const Calculators: React.FC = () => {
   }, [methods, settings, user, extractedMethods]);
 
   // ==============================================
-  // 🔥 ESTADOS DO PLANEJADOR (O ALVO)
+  // 🔥 ESTADOS DO PLANEJADOR (COM PERSISTÊNCIA LOCALSTORAGE)
   // ==============================================
-  const [compBankroll, setCompBankroll] = useState(currentBankrollBalance > 0 ? String(currentBankrollBalance) : '1000');
-  const [compTarget, setCompTarget] = useState(currentBankrollBalance > 0 ? String(currentBankrollBalance * 2) : '2000');
-  const [compDays, setCompDays] = useState('30');
+  
+  // Funções seguras para carregar do localStorage
+  const loadState = (key: string, defaultVal: string) => localStorage.getItem(key) || defaultVal;
+  const loadMethods = () => {
+      const saved = localStorage.getItem('proPlannerMethods');
+      if (saved) {
+          try { return JSON.parse(saved); } catch (e) { return null; }
+      }
+      return null;
+  };
 
-  // Matriz de Simulação (Inicia em Branco)
-  const [simMethods, setSimMethods] = useState([
-      { id: 1, name: '', winRate: 60, avgOdd: 1.85, entries: 3, stake: 2, isSynced: false }
+  const [compBankroll, setCompBankroll] = useState(loadState('compBankroll', currentBankrollBalance > 0 ? String(currentBankrollBalance) : '1000'));
+  const [compTarget, setCompTarget] = useState(loadState('compTarget', currentBankrollBalance > 0 ? String(currentBankrollBalance * 2) : '2000'));
+  const [compDays, setCompDays] = useState(loadState('compDays', '30'));
+
+  // Tabela Editável Inicial
+  const [simMethods, setSimMethods] = useState(loadMethods() || [
+      { id: 1, name: '', winRate: 60, avgOdd: 1.85, entries: 3, stake: 2, badRun: 7, isSynced: false }
   ]);
+
+  // Efeito para salvar automaticamente qualquer alteração no LocalStorage
+  useEffect(() => {
+      localStorage.setItem('compBankroll', compBankroll);
+      localStorage.setItem('compTarget', compTarget);
+      localStorage.setItem('compDays', compDays);
+      localStorage.setItem('proPlannerMethods', JSON.stringify(simMethods));
+  }, [compBankroll, compTarget, compDays, simMethods]);
+
+  // Botão para forçar atualização com a banca real de agora
+  const syncBankroll = () => {
+      setCompBankroll(String(currentBankrollBalance));
+  };
 
   const bankrollNum = parseFloat(compBankroll) || 0;
   const targetNum = parseFloat(compTarget) || 0;
   const daysNum = parseFloat(compDays) || 1;
 
   const addSimMethod = () => {
-      setSimMethods([...simMethods, { id: Date.now(), name: '', winRate: 60, avgOdd: 1.85, entries: 2, stake: 2, isSynced: false }]);
+      setSimMethods([...simMethods, { id: Date.now(), name: '', winRate: 60, avgOdd: 1.85, entries: 2, stake: 2, badRun: 7, isSynced: false }]);
   };
   
   const removeSimMethod = (id: number) => setSimMethods(simMethods.filter(m => m.id !== id));
@@ -208,7 +171,7 @@ const Calculators: React.FC = () => {
       let smallSampleWarnings = 0;
 
       const updatedMethods = simMethods.map(m => {
-          if (!m.name || m.name.trim() === '') return m; // Ignora linhas vazias
+          if (!m.name || m.name.trim() === '') return m; 
 
           const historyData = extractedMethods.find(ex => ex.name.toLowerCase() === m.name.toLowerCase().trim());
 
@@ -233,12 +196,12 @@ const Calculators: React.FC = () => {
       setSimMethods(updatedMethods);
 
       if (smallSampleWarnings > 0) {
-          alert(`Alguns métodos possuem menos de 10 entradas concluídas no Diário. Para evitar distorções de curto prazo, o sistema preservou a validação externa (manual) que você digitou.`);
+          alert(`Alguns métodos possuem menos de 10 entradas concluídas. Para evitar distorções de variância, o sistema preservou a sua validação externa manual nessas linhas.`);
       }
   };
 
   // ==============================================
-  // 🔥 MOTOR DE CÁLCULO E PROJEÇÃO
+  // 🔥 MOTOR DE CÁLCULO, PROJEÇÃO E RISCO
   // ==============================================
   const dailyGrowthNeededRaw = bankrollNum > 0 && targetNum > bankrollNum ? (Math.pow(targetNum / bankrollNum, 1 / daysNum) - 1) : 0;
   const dailyGrowthNeededPct = dailyGrowthNeededRaw * 100;
@@ -254,19 +217,26 @@ const Calculators: React.FC = () => {
           safeStakePct = Math.min((kellyRaw / 4) * 100, 5.0); 
       }
 
+      // Stake Necessária
       let requiredStakePct = 0;
-      let riskBadge = null;
-
       if (evRaw > 0 && m.entries > 0) {
           requiredStakePct = (dailyGrowthNeededRaw / (evRaw * m.entries)) * 100;
       }
 
-      const fullKellyPct = evRaw > 0 && m.avgOdd > 1 ? (evRaw / (m.avgOdd - 1)) * 100 : 0;
+      // Valor EV em R$
+      const currentStakeValue = bankrollNum * (m.stake / 100);
+      const evMoney = currentStakeValue * evRaw;
+
+      // Análise de Risco com BAD RUN
+      const maxDrawdownRisk = m.stake * (m.badRun || 5); // Porcentagem da banca consumida pela Bad Run
       
+      let riskBadge = null;
       if (evRaw <= 0) {
           riskBadge = <span className="text-[9px] font-black text-red-500 uppercase bg-red-500/10 px-1 py-0.5 rounded">EV Negativo</span>;
-      } else if (m.stake > fullKellyPct) {
-          riskBadge = <span className="text-[9px] font-black text-red-500 uppercase bg-red-500/10 px-1 py-0.5 rounded flex items-center gap-0.5"><AlertTriangle size={8}/> Risco Ruína</span>;
+      } else if (maxDrawdownRisk >= 100) {
+          riskBadge = <span className="text-[9px] font-black text-red-500 uppercase bg-red-500/10 px-1 py-0.5 rounded flex items-center justify-center gap-0.5"><AlertTriangle size={8}/> Ruína 100%</span>;
+      } else if (maxDrawdownRisk >= 50) {
+          riskBadge = <span className="text-[9px] font-black text-amber-500 uppercase bg-amber-500/10 px-1 py-0.5 rounded">Drawdown Crítico</span>;
       } else if (m.stake > safeStakePct * 2) {
           riskBadge = <span className="text-[9px] font-black text-amber-500 uppercase bg-amber-500/10 px-1 py-0.5 rounded">Risco Alto</span>;
       } else {
@@ -274,9 +244,8 @@ const Calculators: React.FC = () => {
       }
 
       const dailyGrowth = evRaw * (m.stake / 100) * m.entries * 100;
-      const stakeValue = bankrollNum * (m.stake / 100);
 
-      return { ...m, evPct, safeStakePct, requiredStakePct, dailyGrowth, stakeValue, riskBadge };
+      return { ...m, evPct, evMoney, safeStakePct, requiredStakePct, dailyGrowth, stakeValue: currentStakeValue, riskBadge };
   });
 
   const aggregateDailyGrowth = processedMethods.reduce((acc, m) => acc + m.dailyGrowth, 0);
@@ -284,7 +253,7 @@ const Calculators: React.FC = () => {
   const isGoalAchievable = aggregateDailyGrowth >= dailyGrowthNeededPct && targetNum > bankrollNum;
 
   // ==============================================
-  // 🔥 GRÁFICO DE PROJEÇÃO SVG NATIVO 🔥
+  // 🔥 GRÁFICO DE PROJEÇÃO SVG NATIVO
   // ==============================================
   const generateChartPoints = () => {
       const pointsTarget = [];
@@ -299,12 +268,10 @@ const Calculators: React.FC = () => {
       for (let day = 0; day <= daysNum; day++) {
           const x = (day / daysNum) * width;
           
-          // Alvo: Crescimento Exponencial
           const yTVal = bankrollNum * Math.pow(1 + dailyGrowthNeededRaw, day);
           const yT = height - ((yTVal - minY) / rangeY) * height;
           pointsTarget.push(`${x},${yT}`);
 
-          // Projetado: Juros Compostos
           const yPVal = bankrollNum * Math.pow(1 + (aggregateDailyGrowth / 100), day);
           const yP = height - ((yPVal - minY) / rangeY) * height;
           pointsProjected.push(`${x},${yP}`);
@@ -349,7 +316,7 @@ const Calculators: React.FC = () => {
       <datalist id="methods-list">
           {availableMethodsList.map(name => {
               const hist = extractedMethods.find(ex => ex.name.toLowerCase() === name.toLowerCase());
-              return <option key={name} value={name}>{hist ? ` (${hist.resolved} entradas)` : ''}</option>;
+              return <option key={name} value={name}>{hist && hist.resolved >= 10 ? ` (${hist.resolved} entradas)` : ''}</option>;
           })}
       </datalist>
 
@@ -388,7 +355,10 @@ const Calculators: React.FC = () => {
                                 <p className="text-[10px] font-black text-indigo-600 dark:text-indigo-400 uppercase tracking-widest mb-2 flex items-center gap-2"><LayoutGrid size={14}/> Dashboard de Planejamento</p>
                                 <div className="flex items-end gap-3 mt-4">
                                     <div>
-                                        <p className="text-[9px] uppercase font-bold text-slate-500 mb-1">Banca Inicial (R$)</p>
+                                        <p className="text-[9px] uppercase font-bold text-slate-500 mb-1 flex items-center gap-1">
+                                            Banca Base de Simulação 
+                                            <button onClick={syncBankroll} className="text-indigo-500 hover:text-indigo-600" title="Usar banca real de hoje"><RefreshCcw size={10}/></button>
+                                        </p>
                                         <input type="number" value={compBankroll} onChange={e => setCompBankroll(e.target.value)} className="bg-slate-50 dark:bg-[#020617] border border-slate-200 dark:border-slate-800 text-2xl font-black text-slate-900 dark:text-white rounded-xl px-4 py-2 w-full outline-none focus:border-indigo-500" />
                                     </div>
                                 </div>
@@ -411,7 +381,7 @@ const Calculators: React.FC = () => {
                         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
                             <div>
                                 <h3 className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-widest flex items-center gap-2"><BarChart4 size={16} className="text-indigo-500"/> Simulador de Cenários</h3>
-                                <p className="text-[10px] text-slate-500 mt-1">Preencha sua estratégia. Clique em Auto-Preencher para auditar com seus resultados reais.</p>
+                                <p className="text-[10px] text-slate-500 mt-1">Sua Próxima Stake é ditada pelo valor em R$ abaixo (Ajusta-se automaticamente com Greens/Reds).</p>
                             </div>
                             <div className="flex gap-2">
                                 <button onClick={handleAutoFill} className="text-[10px] font-black uppercase tracking-widest text-slate-600 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 px-3 py-2 rounded-lg transition-colors flex items-center gap-1.5"><RefreshCcw size={12}/> Auto-Preencher</button>
@@ -420,17 +390,18 @@ const Calculators: React.FC = () => {
                         </div>
                         
                         <div className="overflow-x-auto custom-scrollbar pb-2">
-                            <table className="w-full text-left min-w-[950px]">
+                            <table className="w-full text-left min-w-[1050px]">
                                 <thead>
                                     <tr className="border-b border-slate-200 dark:border-slate-800 text-[9px] uppercase tracking-widest text-slate-500 font-bold">
                                         <th className="pb-3 pl-2 w-48">Método (Digite ou Selecione)</th>
                                         <th className="pb-3 text-center w-20">Win Rate (%)</th>
                                         <th className="pb-3 text-center w-20">Odd Média</th>
                                         <th className="pb-3 text-center w-20">Entr./Dia</th>
-                                        <th className="pb-3 text-center w-20">EV</th>
-                                        <th className="pb-3 text-center w-28 text-indigo-500">Stake Necessária p/ Meta</th>
+                                        <th className="pb-3 text-center w-20" title="Expectativa de Reds Seguidos">Max Bad Run</th>
+                                        <th className="pb-3 text-center w-28 text-indigo-500">EV Esperado em R$</th>
+                                        <th className="pb-3 text-center w-24">Stake p/ Meta (%)</th>
                                         <th className="pb-3 text-center w-20">Sua Stake (%)</th>
-                                        <th className="pb-3 text-center text-emerald-500 w-24">Valor em R$</th>
+                                        <th className="pb-3 text-center text-emerald-500 w-28">Aposte Isso (R$)</th>
                                         <th className="pb-3 text-center"></th>
                                     </tr>
                                 </thead>
@@ -454,11 +425,17 @@ const Calculators: React.FC = () => {
                                                 <td className="py-3 px-1"><input type="number" value={m.winRate} onChange={e => updateSimMethod(m.id, 'winRate', e.target.value)} className={inputClass} /></td>
                                                 <td className="py-3 px-1"><input type="number" step="0.01" value={m.avgOdd} onChange={e => updateSimMethod(m.id, 'avgOdd', e.target.value)} className={inputClass} /></td>
                                                 <td className="py-3 px-1"><input type="number" min="1" value={m.entries} onChange={e => updateSimMethod(m.id, 'entries', e.target.value)} className={inputClass} /></td>
+                                                <td className="py-3 px-1"><input type="number" min="1" value={m.badRun} onChange={e => updateSimMethod(m.id, 'badRun', e.target.value)} className={`${inputClass} text-red-400`} title="Insira a Bad Run (Reds seguidos) esperada" /></td>
 
                                                 <td className="py-3 px-1 text-center">
-                                                    <span className={`text-[10px] font-black uppercase tracking-widest px-2 py-1 rounded border ${m.evPct > 0 ? 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-200 dark:border-emerald-500/20' : 'bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-400 border-red-200 dark:border-red-500/20'}`}>
-                                                        {m.evPct > 0 ? '+' : ''}{m.evPct.toFixed(1)}%
-                                                    </span>
+                                                    <div className="flex flex-col items-center justify-center">
+                                                        <span className={`text-[10px] font-black uppercase tracking-widest px-2 py-1 rounded border ${m.evPct > 0 ? 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-200 dark:border-emerald-500/20' : 'bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-400 border-red-200 dark:border-red-500/20'}`}>
+                                                            {m.evPct > 0 ? '+' : ''}{m.evPct.toFixed(1)}%
+                                                        </span>
+                                                        <span className="text-[9px] text-slate-500 font-bold mt-1 tracking-widest">
+                                                            + R$ {m.evMoney.toFixed(2)}/bet
+                                                        </span>
+                                                    </div>
                                                 </td>
 
                                                 {/* STAKE REQUERIDA PARA BATER A META */}
@@ -475,16 +452,16 @@ const Calculators: React.FC = () => {
                                                     </div>
                                                 </td>
 
-                                                {/* Stake Manual do Usuário e Badge */}
+                                                {/* Stake Manual do Usuário e Badge de Risco (Drawdown) */}
                                                 <td className="py-3 px-1">
                                                     <div className="flex flex-col items-center">
                                                         <input type="number" step="0.1" value={m.stake} onChange={e => updateSimMethod(m.id, 'stake', e.target.value)} className={inputClass} />
-                                                        <div className="mt-1 w-full text-center">{m.riskBadge}</div>
+                                                        <div className="mt-1 w-full text-center flex justify-center">{m.riskBadge}</div>
                                                     </div>
                                                 </td>
                                                 
                                                 <td className="py-3 px-1 text-center">
-                                                    <div className="bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 py-1.5 px-2 rounded-lg font-black font-mono text-sm border border-emerald-100 dark:border-emerald-500/20">
+                                                    <div className="bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 py-1.5 px-2 rounded-lg font-black font-mono text-sm border border-emerald-100 dark:border-emerald-500/20 shadow-inner">
                                                         R$ {m.stakeValue.toFixed(2)}
                                                     </div>
                                                 </td>
@@ -500,7 +477,7 @@ const Calculators: React.FC = () => {
                         </div>
                     </div>
 
-                    {/* CARD 4: GRÁFICO E RESULTADO */}
+                    {/* CARD 3: GRÁFICO E RESULTADO */}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         {/* Gráfico SVG Responsivo e Leve */}
                         <div className="bg-slate-900 rounded-[2rem] p-6 text-white shadow-xl relative overflow-hidden flex flex-col justify-between min-h-[220px]">
@@ -511,7 +488,7 @@ const Calculators: React.FC = () => {
                                 </div>
                                 <div className="text-right">
                                     <p className="text-[9px] uppercase font-bold text-slate-400 flex items-center justify-end gap-1"><span className="w-2 h-2 rounded-full bg-amber-500"></span> Linha da Meta</p>
-                                    <p className="text-[9px] uppercase font-bold text-slate-400 flex items-center justify-end gap-1 mt-1"><span className="w-2 h-2 rounded-full bg-indigo-500"></span> Projeção Real</p>
+                                    <p className="text-[9px] uppercase font-bold text-slate-400 flex items-center justify-end gap-1 mt-1"><span className="w-2 h-2 rounded-full bg-indigo-500"></span> Projeção (Sua Stake)</p>
                                 </div>
                             </div>
                             
@@ -532,11 +509,11 @@ const Calculators: React.FC = () => {
                         }`}>
                             <p className={`text-[10px] font-bold uppercase tracking-widest mb-1 ${isGoalAchievable ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'}`}>Status da Meta ({daysNum} dias)</p>
                             <h3 className={`text-2xl font-black mb-2 ${isGoalAchievable ? 'text-emerald-700 dark:text-emerald-300' : 'text-red-700 dark:text-red-300'}`}>
-                                {isGoalAchievable ? 'Meta Realista ✅' : 'Meta Irrealizável ❌'}
+                                {isGoalAchievable ? 'Meta Realista ✅' : 'Meta Impossível ❌'}
                             </h3>
                             <p className={`text-xs font-medium leading-relaxed ${isGoalAchievable ? 'text-emerald-600/80 dark:text-emerald-400/80' : 'text-red-600/80 dark:text-red-400/80'}`}>
                                 Sua meta exige crescimento de <strong>{dailyGrowthNeededPct.toFixed(2)}% ao dia</strong>. 
-                                {isGoalAchievable ? ` A projeção matemática baseada nos métodos da tabela entrega ${aggregateDailyGrowth.toFixed(2)}% ao dia.` : ` A projeção da tabela entrega apenas ${aggregateDailyGrowth.toFixed(2)}% ao dia. Aumente o prazo, o volume ou melhore a odd.`}
+                                {isGoalAchievable ? ` A projeção matemática baseada nas stakes escolhidas entrega ${aggregateDailyGrowth.toFixed(2)}% ao dia.` : ` A projeção atual entrega apenas ${aggregateDailyGrowth.toFixed(2)}% ao dia. Aumente o volume ou aplique a Stake da Meta para o gráfico cruzar a linha laranja.`}
                             </p>
                         </div>
                     </div>
@@ -598,12 +575,12 @@ const Calculators: React.FC = () => {
             <div className="bg-white dark:bg-[#0f172a] rounded-[1.5rem] md:rounded-[2rem] border border-slate-200 dark:border-slate-800 p-6 md:p-8 shadow-sm sticky top-6">
                 <h4 className="font-black text-slate-900 dark:text-white mb-6 uppercase tracking-widest text-xs">Informação PRO</h4>
                 <div className="p-4 bg-slate-50 dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800">
-                    <p className="text-[10px] text-slate-500 dark:text-slate-400 mb-2 uppercase font-bold tracking-wider">Como Operar</p>
+                    <p className="text-[10px] text-slate-500 dark:text-slate-400 mb-2 uppercase font-bold tracking-wider">A Stake Inteligente</p>
                     <p className="text-xs sm:text-sm font-medium text-slate-700 dark:text-slate-300 leading-relaxed mb-4">
-                        Adicione um método para simular. A máquina irá dizer exatamente qual <strong>Stake Necessária (%)</strong> você precisa usar para bater sua meta nos dias estipulados.
+                        A tabela agora dita o ritmo do seu dia. A coluna <strong className="text-emerald-500">Valor em R$</strong> calcula automaticamente quanto dinheiro você deve investir na sua próxima aposta.
                     </p>
                     <p className="text-xs sm:text-sm font-medium text-slate-700 dark:text-slate-300 leading-relaxed">
-                        Clicar em <strong>"Auto-Preencher"</strong> fará o robô varrer seu diário de apostas e substituir suas simulações pela Taxa de Acerto e Odd Média que você está <i>realmente</i> alcançando.
+                        Clicar em <strong>"Aplicar"</strong> transfere a Stake necessária para bater a meta diretamente para a sua gestão. Se der Green hoje e a banca subir, a Stake de amanhã será maior.
                     </p>
                 </div>
 
@@ -611,7 +588,7 @@ const Calculators: React.FC = () => {
                     <div className="flex items-start gap-3">
                        <Info size={20} className="text-indigo-500 mt-0.5 shrink-0" />
                        <p className="text-[10px] text-slate-500 dark:text-slate-400 leading-relaxed font-medium">
-                         O <strong>Gráfico de Projeção</strong> compara a evolução exigida pela sua meta (Linha Laranja) com a sua evolução real provável (Linha Roxa) dia após dia. Se a roxa cruzar a laranja, você vai chegar no alvo antes do prazo.
+                         <strong>Alerta de Ruína:</strong> Multiplicamos a Stake pela Bad Run. Se um red prolongado consumir mais de 50% da sua banca, a máquina considerará a estratégia inviável.
                        </p>
                     </div>
                 </div>
