@@ -1,37 +1,23 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom'; // <-- ADICIONADO
 import { useBetStore } from '../store/useBetStore';
 import { ChevronLeft, ChevronRight, Activity, CircleDollarSign, Target, Trophy, Calendar as CalendarIcon } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 const PerformanceCalendar: React.FC = () => {
-  // 🔥 activeBankrollId adicionado
-  const { history, currency, bankrolls, methods, displayMode, unitSize, isPro, activeBankrollId } = useBetStore(); 
+  const { history, currency, bankrolls, methods, displayMode, unitSize, activeBankrollId } = useBetStore(); 
   const [currentDate, setCurrentDate] = useState(new Date());
   
-  const navigate = useNavigate(); 
-
-  useEffect(() => {
-    if (!isPro) {
-      navigate('/pro'); 
-    }
-  }, [isPro, navigate]);
-
-  if (!isPro) return null; 
   const [selectedDate, setSelectedDate] = useState<Date | null>(new Date());
   
-  // 🔥 Estado inicial agora puxa a banca global
   const [selectedBankroll, setSelectedBankroll] = useState(activeBankrollId || 'all');
   const [selectedMethod, setSelectedMethod] = useState('all');
 
-  // 🔥 Mantém sincronizado se a banca mudar em outro lugar
   useEffect(() => {
     if (activeBankrollId) {
       setSelectedBankroll(activeBankrollId);
     }
   }, [activeBankrollId]);
 
-  // ✅ Helper de Formatação (Moeda vs Unidade)
   const formatValue = (val: number) => {
     if (displayMode === 'units') {
       const units = val / (unitSize || 100);

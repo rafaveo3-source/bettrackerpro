@@ -1,10 +1,12 @@
 import React, { useState, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useBetStore, Bet } from '../store/useBetStore';
-import { Search, Filter, Download, ArrowUpDown, ChevronDown, RefreshCcw, Trash2, Pencil } from 'lucide-react';
+import { Search, Filter, Download, ArrowUpDown, ChevronDown, RefreshCcw, Trash2, Pencil, Lock } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 const History: React.FC = () => {
-  const { history, removeBet, activeBankrollId, getMetrics, displayMode, unitSize, bankrolls } = useBetStore();
+  const { history, removeBet, activeBankrollId, getMetrics, displayMode, unitSize, bankrolls, isPro } = useBetStore();
+  const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [sportFilter, setSportFilter] = useState<string>('all');
@@ -79,6 +81,14 @@ const History: React.FC = () => {
   };
 
   const exportCSV = () => {
+    // 🔥 O SEQUESTRO DE RETENÇÃO (CADEADO PRO) 🔥
+    if (!isPro) {
+        if(window.confirm('A exportação profissional de dados para Excel é um recurso exclusivo do Plano PRO. Deseja fazer o upgrade agora?')) {
+            navigate('/pro');
+        }
+        return;
+    }
+
     if (filteredHistory.length === 0) return;
 
     const headers = ['Data', 'Ativo/Evento', 'Posição/Seleção', 'Mercado Base', 'Setup/Mercado', 'Odd(Cotação)', 'Montante(Stake)', 'Lucro Líquido', 'Status'];
@@ -176,7 +186,9 @@ const History: React.FC = () => {
                 onClick={exportCSV} 
                 className="flex-1 md:flex-none flex items-center justify-center gap-2 bg-slate-900 hover:bg-slate-800 dark:bg-white dark:hover:bg-slate-200 text-white dark:text-slate-900 px-4 py-3 rounded-xl transition-colors text-[10px] font-black uppercase tracking-widest shadow-lg shadow-slate-900/10"
             >
-                <Download size={14} /> Exportar CSV
+                {/* Ícone condicional (Cadeado se for Free) */}
+                {isPro ? <Download size={14} /> : <Lock size={14} className="text-emerald-500 dark:text-emerald-600" />} 
+                Exportar CSV
             </button>
         </div>
 
@@ -371,11 +383,12 @@ const History: React.FC = () => {
           <table className="w-full text-left text-sm text-slate-500 dark:text-slate-400">
             <thead className="bg-slate-50 dark:bg-[#020617] text-slate-700 dark:text-slate-200 font-bold uppercase text-[9px] tracking-widest border-b border-slate-200 dark:border-slate-800">
               <tr>
-                {[{ label: 'Data', key: 'date' }, { label: 'Ativo / Evento', key: 'event' }, { label: 'Cotação', key: 'odds' }, { label: `Risco (Stake)`, key: 'stake' }, { label: 'Resultado Líquido', key: 'profit' }, { label: 'Liquidação', key: 'status' }].map((header) => (
+                {/* Ajuste de Nome da Coluna Stake para evitar quebra de linha */}
+                {[{ label: 'Data', key: 'date' }, { label: 'Ativo / Evento', key: 'event' }, { label: 'Cotação', key: 'odds' }, { label: 'Stake Alocada', key: 'stake' }, { label: 'Resultado Líquido', key: 'profit' }, { label: 'Liquidação', key: 'status' }].map((header) => (
                   <th 
                     key={header.key}
                     onClick={() => handleSort(header.key as keyof Bet)}
-                    className="px-6 py-5 cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors select-none group"
+                    className="px-6 py-5 cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors select-none group whitespace-nowrap"
                   >
                     <div className="flex items-center gap-1">
                       {header.label}
@@ -383,7 +396,7 @@ const History: React.FC = () => {
                     </div>
                   </th>
                 ))}
-                <th className="px-6 py-5 text-right">Ações</th>
+                <th className="px-6 py-5 text-right whitespace-nowrap">Ações</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-200 dark:divide-slate-800">
@@ -397,24 +410,24 @@ const History: React.FC = () => {
                 filteredHistory.map((bet) => (
                   <tr key={bet.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
                     <td className="px-6 py-4 whitespace-nowrap font-mono text-[11px] font-medium text-slate-600 dark:text-slate-400">{bet.date.split('-').reverse().join('/')}</td>
-                    <td className="px-6 py-4">
-                      <div className="text-slate-900 dark:text-white font-bold text-xs leading-tight mb-1 pr-4">{bet.event}</div>
-                      <div className="text-[9px] text-slate-500 uppercase tracking-widest font-bold mt-0.5">{bet.sport} • {bet.market} • {bet.selection}</div>
+                    <td className="px-6 py-4 min-w-[250px]">
+                      <div className="text-slate-900 dark:text-white font-bold text-xs leading-tight mb-1 pr-4 truncate max-w-[300px]">{bet.event}</div>
+                      <div className="text-[9px] text-slate-500 uppercase tracking-widest font-bold mt-0.5 truncate max-w-[300px]">{bet.sport} • {bet.market} • {bet.selection}</div>
                     </td>
                     <td className="px-6 py-4 font-mono font-bold text-[11px] text-slate-700 dark:text-slate-300">@{bet.odds.toFixed(2)}</td>
-                    <td className="px-6 py-4 font-mono font-medium text-[11px] text-slate-900 dark:text-white">{formatCurrency(bet.stake)}</td>
-                    <td className={`px-6 py-4 font-mono font-black text-[13px] tracking-tight ${bet.profit > 0 ? 'text-emerald-600 dark:text-emerald-500' : bet.profit < 0 ? 'text-red-600 dark:text-red-500' : 'text-slate-500'}`}>
+                    <td className="px-6 py-4 font-mono font-medium text-[11px] text-slate-900 dark:text-white whitespace-nowrap">{formatCurrency(bet.stake)}</td>
+                    <td className={`px-6 py-4 font-mono font-black text-[13px] tracking-tight whitespace-nowrap ${bet.profit > 0 ? 'text-emerald-600 dark:text-emerald-500' : bet.profit < 0 ? 'text-red-600 dark:text-red-500' : 'text-slate-500'}`}>
                       {bet.profit > 0 ? '+' : ''}{formatCurrency(bet.profit)}
                     </td>
-                    <td className="px-6 py-4">
+                    <td className="px-6 py-4 whitespace-nowrap">
                       <StatusBadge status={bet.status} />
                     </td>
-                    <td className="px-6 py-4 text-right">
+                    <td className="px-6 py-4 text-right whitespace-nowrap">
                         <div className="flex justify-end gap-2">
-                            <button onClick={() => handleEdit(bet)} className="text-slate-400 hover:text-emerald-500 p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
+                            <button onClick={() => handleEdit(bet)} className="text-slate-400 hover:text-emerald-500 p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors" title="Modificar">
                                 <Pencil size={14} />
                             </button>
-                            <button onClick={() => confirm('Isso apagará o registro do banco de dados permanentemente. Continuar?') && removeBet(bet.id)} className="text-slate-400 hover:text-red-500 transition-colors p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800">
+                            <button onClick={() => confirm('Isso apagará o registro do banco de dados permanentemente. Continuar?') && removeBet(bet.id)} className="text-slate-400 hover:text-red-500 transition-colors p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800" title="Apagar">
                                 <Trash2 size={14} />
                             </button>
                         </div>
