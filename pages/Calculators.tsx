@@ -7,9 +7,9 @@ import {
   Clock, ShieldAlert, FileText,
   PiggyBank, LineChart, Calendar, Zap, CheckCircle2,
   TrendingDown, PlusCircle, Trash2, RefreshCcw, LayoutGrid, BarChart4,
-  ChevronDown, Cpu, MousePointerClick, Info, Navigation, Trophy, Skull, Coins, Lightbulb
+  ChevronDown, Cpu, MousePointerClick, Info, Navigation, Trophy, Skull, Coins, Lightbulb, CloudLightning
 } from 'lucide-react';
-import { useBetStore } from '../store/useBetStore';
+import { useBetStore, supabase } from '../store/useBetStore';
 import { motion, AnimatePresence } from 'framer-motion';
 
 // ==========================================
@@ -30,6 +30,7 @@ const Calculators: React.FC = () => {
   const navigate = useNavigate();
 
   const [activeTab, setActiveTab] = useState<'compound'|'dutching'|'kelly'|'value'|'arb'|'stake'|'odds'>('compound');
+  const [isCloudSyncing, setIsCloudSyncing] = useState(false);
 
   const ProLockScreen = () => (
       <div className="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-[2rem] p-8 text-center flex flex-col items-center justify-center min-h-[300px] relative overflow-hidden shadow-sm mt-6 w-full">
@@ -38,10 +39,10 @@ const Calculators: React.FC = () => {
               <Crown size={32} className="text-amber-500 dark:text-amber-400" />
           </div>
           <h2 className="text-2xl font-black text-slate-900 dark:text-white uppercase italic tracking-tighter mb-2 relative z-10">
-              Ferramenta Quantitativa PRO
+              Planejamento Quantitativo PRO
           </h2>
           <p className="text-slate-600 dark:text-slate-400 max-w-md mx-auto mb-6 text-sm relative z-10">
-              Desbloqueie o Planejador de Metas, Value Bet Finder e Calculadora de Arbitragem para profissionalizar sua gestão.
+              Construa um plano de metas, simule seu crescimento e audite sua estratégia com dados reais do seu histórico para saber exatamente qual stake usar amanhã.
           </p>
           <button onClick={() => navigate('/pro')} className="bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 text-slate-900 font-black py-3 px-8 rounded-xl shadow-lg shadow-amber-500/20 transition-all active:scale-95 relative z-10 uppercase tracking-widest text-xs">
               Quero ser PRO
@@ -54,7 +55,6 @@ const Calculators: React.FC = () => {
   // ==============================================
   const extractedMethods = useMemo(() => {
       const stats: Record<string, { wins: number, resolved: number, totalOdds: number, dates: string[], currentLosingStreak: number, maxLosingStreak: number }> = {};
-      
       const sortedHistory = [...(history || [])].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
 
       sortedHistory.forEach(bet => {
@@ -89,7 +89,6 @@ const Calculators: React.FC = () => {
       return Object.entries(stats).map(([name, data]) => {
           const uniqueDays = data.dates.length;
           const realEntriesPerDay = uniqueDays > 0 ? (data.resolved / uniqueDays) : 0;
-
           return {
               name, 
               winRate: data.resolved > 0 ? (data.wins / data.resolved) * 100 : 0, 
@@ -101,9 +100,6 @@ const Calculators: React.FC = () => {
       });
   }, [history]);
 
-  // ==============================================
-  // 🔥 AUTOCOMPLETE: Lista de métodos do sistema
-  // ==============================================
   const availableMethodsList = useMemo(() => {
       const list = new Set<string>();
       if (Array.isArray(methods)) methods.forEach(m => list.add(typeof m === 'string' ? m : m.name));
@@ -114,49 +110,97 @@ const Calculators: React.FC = () => {
   }, [methods, settings, user, extractedMethods]);
 
   // ==============================================
-  // 🔥 ESTADOS DO PLANEJADOR (COM PERSISTÊNCIA ABSOLUTA)
+  // 🔥 ESTADOS DO PLANEJADOR E CLOUD SYNC
   // ==============================================
-  const [autoSyncBankroll, setAutoSyncBankroll] = useState(() => localStorage.getItem('autoSyncBankroll') === 'true');
-  const [useAvailableBankroll, setUseAvailableBankroll] = useState(() => localStorage.getItem('useAvailableBankroll') === 'true'); 
-  
-  const [compBankroll, setCompBankroll] = useState(() => localStorage.getItem('compBankroll') || (currentBankrollBalance > 0 ? String(currentBankrollBalance) : '1000'));
-  const [compTarget, setCompTarget] = useState(() => localStorage.getItem('compTarget') || (currentBankrollBalance > 0 ? String(currentBankrollBalance * 2) : '2000'));
-  const [compDays, setCompDays] = useState(() => localStorage.getItem('compDays') || '30');
+  const [autoSyncBankroll, setAutoSyncBankroll] = useState(false);
+  const [useAvailableBankroll, setUseAvailableBankroll] = useState(true);
+  const [compBankroll, setCompBankroll] = useState(currentBankrollBalance > 0 ? String(currentBankrollBalance) : '1000');
+  const [compTarget, setCompTarget] = useState(currentBankrollBalance > 0 ? String(currentBankrollBalance * 2) : '2000');
+  const [compDays, setCompDays] = useState('30');
+  const [simMethods, setSimMethods] = useState([ { id: 1, name: '', winRate: 60, avgOdd: 1.85, entries: 3, stake: 2, badRun: 7, isSynced: false } ]);
+  const [isInitialized, setIsInitialized] = useState(false);
 
-  const [simMethods, setSimMethods] = useState(() => {
-      const saved = localStorage.getItem('proPlannerMethods');
-      if (saved) {
-          try { return JSON.parse(saved); } catch (e) { return null; }
-      }
-      return [ { id: 1, name: '', winRate: 60, avgOdd: 1.85, entries: 3, stake: 2, badRun: 7, isSynced: false } ];
-  });
-
+  // 1. Carrega os dados da Nuvem (Supabase) ou LocalStorage na inicialização
   useEffect(() => {
+      const loadState = async () => {
+          if (!user) return;
+          try {
+              // Tenta puxar da nuvem primeiro
+              const { data } = await supabase.from('user_settings').select('planner_state').eq('user_id', user.id).single();
+              
+              if (data && data.planner_state) {
+                  const ps = data.planner_state;
+                  if (ps.compBankroll) setCompBankroll(ps.compBankroll);
+                  if (ps.compTarget) setCompTarget(ps.compTarget);
+                  if (ps.compDays) setCompDays(ps.compDays);
+                  if (ps.simMethods) setSimMethods(ps.simMethods);
+                  if (ps.autoSyncBankroll !== undefined) setAutoSyncBankroll(ps.autoSyncBankroll);
+                  if (ps.useAvailableBankroll !== undefined) setUseAvailableBankroll(ps.useAvailableBankroll);
+              } else {
+                  // Fallback para LocalStorage se a nuvem estiver vazia
+                  setCompBankroll(localStorage.getItem('compBankroll') || (currentBankrollBalance > 0 ? String(currentBankrollBalance) : '1000'));
+                  setCompTarget(localStorage.getItem('compTarget') || (currentBankrollBalance > 0 ? String(currentBankrollBalance * 2) : '2000'));
+                  setCompDays(localStorage.getItem('compDays') || '30');
+                  const localMethods = localStorage.getItem('proPlannerMethods');
+                  if (localMethods) setSimMethods(JSON.parse(localMethods));
+                  setAutoSyncBankroll(localStorage.getItem('autoSyncBankroll') === 'true');
+                  setUseAvailableBankroll(localStorage.getItem('useAvailableBankroll') !== 'false');
+              }
+          } catch (e) {
+              console.log("Fallback para LocalStorage via Catch");
+          } finally {
+              setIsInitialized(true);
+          }
+      };
+      loadState();
+  }, [user]);
+
+  // 2. Salva os dados no LocalStorage E na Nuvem (Debounced)
+  useEffect(() => {
+      if (!isInitialized || !user) return;
+
+      // Salva instantâneo no local
       localStorage.setItem('compBankroll', compBankroll);
       localStorage.setItem('compTarget', compTarget);
       localStorage.setItem('compDays', compDays);
       localStorage.setItem('proPlannerMethods', JSON.stringify(simMethods));
       localStorage.setItem('autoSyncBankroll', String(autoSyncBankroll));
       localStorage.setItem('useAvailableBankroll', String(useAvailableBankroll));
-  }, [compBankroll, compTarget, compDays, simMethods, autoSyncBankroll, useAvailableBankroll]);
 
+      // Salva na nuvem com um delay de 1.5s (Debounce) para não spammar o banco
+      const saveToCloud = async () => {
+          setIsCloudSyncing(true);
+          try {
+              const state = { compBankroll, compTarget, compDays, simMethods, autoSyncBankroll, useAvailableBankroll };
+              await supabase.from('user_settings').update({ planner_state: state }).eq('user_id', user.id);
+          } catch (e) {
+              console.log("Erro ao salvar na nuvem. Mantido apenas no LocalStorage.");
+          } finally {
+              setIsCloudSyncing(false);
+          }
+      };
+
+      const timeoutId = setTimeout(saveToCloud, 1500);
+      return () => clearTimeout(timeoutId);
+  }, [compBankroll, compTarget, compDays, simMethods, autoSyncBankroll, useAvailableBankroll, isInitialized, user]);
+
+  // Auto-Sync da Banca Ativa
   useEffect(() => {
-      if (autoSyncBankroll) {
+      if (autoSyncBankroll && isInitialized) {
           setCompBankroll(String(currentBankrollBalance));
       }
-  }, [currentBankrollBalance, autoSyncBankroll]);
+  }, [currentBankrollBalance, autoSyncBankroll, isInitialized]);
 
   const handleBankrollManualChange = (val: string) => {
       setCompBankroll(val);
       setAutoSyncBankroll(false); 
   };
 
+  // 🔥 LÓGICA DE BANCA LIVRE E EXTREMOS 🔥
   const bankrollNum = parseFloat(compBankroll) || 0;
   
   const pendingExposure = useMemo(() => {
-      return (history || [])
-        .filter(b => b.status === 'pending')
-        .reduce((acc, b) => acc + Number(b.stake || 0), 0);
+      return (history || []).filter(b => b.status === 'pending').reduce((acc, b) => acc + Number(b.stake || 0), 0);
   }, [history]);
 
   const availableBankroll = Math.max(0, bankrollNum - pendingExposure);
@@ -165,26 +209,21 @@ const Calculators: React.FC = () => {
   const targetNum = parseFloat(compTarget) || 0;
   const daysNum = parseFloat(compDays) || 1;
 
+  // Variáveis de Exibição
   const isBankrollBusted = bankrollNum <= 1 && compBankroll !== ''; 
   const isTargetReached = bankrollNum >= targetNum && targetNum > 0;
   const progressPercent = targetNum > 0 ? Math.min(100, Math.max(0, (bankrollNum / targetNum) * 100)) : 0;
 
-  const addSimMethod = () => {
-      setSimMethods([...simMethods, { id: Date.now(), name: '', winRate: 60, avgOdd: 1.85, entries: 2, stake: 2, badRun: 7, isSynced: false }]);
-  };
-  
+  const addSimMethod = () => setSimMethods([...simMethods, { id: Date.now(), name: '', winRate: 60, avgOdd: 1.85, entries: 2, stake: 2, badRun: 7, isSynced: false }]);
   const removeSimMethod = (id: number) => setSimMethods(simMethods.filter(m => m.id !== id));
 
   const updateSimMethod = (id: number, field: string, value: string) => {
       setSimMethods(simMethods.map(m => {
           if (m.id !== id) return m;
-          
           let updatedMethod = { ...m, [field]: field === 'name' ? value : Number(value) };
-          
           if (field === 'name') {
               const cleanValue = value.replace(/ \(\d+ entr.*\)/g, '').trim();
               updatedMethod.name = cleanValue;
-
               const historicalData = extractedMethods.find(ex => ex.name.toLowerCase() === cleanValue.toLowerCase());
               if (historicalData && historicalData.resolved >= 10) {
                   updatedMethod.winRate = Number(historicalData.winRate.toFixed(1));
@@ -198,26 +237,20 @@ const Calculators: React.FC = () => {
           } else if (['winRate', 'avgOdd', 'entries', 'badRun'].includes(field)) {
               updatedMethod.isSynced = false;
           }
-
           return updatedMethod;
       }));
   };
 
   const handleAutoFill = () => {
       let smallSampleWarnings = 0;
-
       const updatedMethods = simMethods.map(m => {
           if (!m.name || m.name.trim() === '') return m; 
-
           const historyData = extractedMethods.find(ex => ex.name.toLowerCase() === m.name.toLowerCase().trim());
-
           if (!historyData || historyData.resolved === 0) return { ...m, isSynced: false };
-
           if (historyData.resolved < 10) {
               smallSampleWarnings++;
               return { ...m, isSynced: false }; 
           }
-
           return {
               ...m,
               winRate: Number(historyData.winRate.toFixed(1)),
@@ -227,14 +260,15 @@ const Calculators: React.FC = () => {
               isSynced: true
           };
       });
-
       setSimMethods(updatedMethods);
-
       if (smallSampleWarnings > 0) {
-          alert(`Alguns métodos possuem menos de 10 entradas concluídas no Diário.\n\nPara evitar distorções de curto prazo, o sistema respeitou a validação externa (manual) que você digitou.\nContinue registrando suas entradas!`);
+          alert(`Alguns métodos possuem menos de 10 entradas concluídas no Diário.\n\nPara evitar distorções de curto prazo, o sistema respeitou a validação externa (manual) que você digitou.`);
       }
   };
 
+  // ==============================================
+  // 🔥 MOTOR DE CÁLCULO, PROJEÇÃO E RISCO DE RUÍNA
+  // ==============================================
   const dailyGrowthNeededRaw = bankrollNum > 0 && targetNum > bankrollNum && !isTargetReached ? (Math.pow(targetNum / bankrollNum, 1 / daysNum) - 1) : 0;
   const dailyGrowthNeededPct = dailyGrowthNeededRaw * 100;
   const dailyTargetMoney = bankrollNum * dailyGrowthNeededRaw;
@@ -274,8 +308,7 @@ const Calculators: React.FC = () => {
       const dailyGrowth = evRaw * (m.stake / 100) * m.entries * 100;
 
       return { 
-          ...m, 
-          evPct, evMoney, safeStakePct, requiredStakePct, dailyGrowth, 
+          ...m, evPct, evMoney, safeStakePct, requiredStakePct, dailyGrowth, 
           stakeValue: currentStakeValue, riskBadge, drawdownRiskMoney, drawdownRiskPct 
       };
   });
@@ -312,7 +345,6 @@ const Calculators: React.FC = () => {
       const pointsProjected = [];
       const width = 1000;
       const height = 200;
-      
       const maxY = Math.max(targetNum, projectedBankroll) * 1.1;
       const minY = bankrollNum * 0.9;
       const rangeY = maxY - minY || 1;
@@ -332,7 +364,7 @@ const Calculators: React.FC = () => {
   const chartPaths = generateChartPoints();
 
   // ==============================================
-  // 🔥 ESTADOS DAS OUTRAS CALCULADORAS
+  // OUTRAS CALCULADORAS MANTIDAS
   // ==============================================
   const [dutchTotalStake, setDutchTotalStake] = useState('100');
   const [dutchSelections, setDutchSelections] = useState([{ id: 1, name: 'Seleção A', odds: '2.50', stake: 0, profit: 0 }, { id: 2, name: 'Seleção B', odds: '3.20', stake: 0, profit: 0 }]);
@@ -352,13 +384,12 @@ const Calculators: React.FC = () => {
   const [kellyProb, setKellyProb] = useState('55'); 
   const [kellyFraction, setKellyFraction] = useState('1'); 
   const kellyResult = (() => { const b = parseFloat(kellyOdds) - 1; const p = parseFloat(kellyProb) / 100; if (b <= 0) return "0.00"; return (((b * p - (1 - p)) / b) * parseFloat(kellyFraction) * 100).toFixed(2); })();
-  const kellyMoney = (parseFloat(kellyResult) / 100) * calculationBankroll; // Usa a Banca Sincronizada!
+  const kellyMoney = (parseFloat(kellyResult) / 100) * calculationBankroll;
 
   const [valOdds, setValOdds] = useState('2.10'); 
   const [valProb, setValProb] = useState('50'); 
   const valEVRaw = (parseFloat(valProb) / 100 * parseFloat(valOdds)) - 1; 
   const valEVPercent = valEVRaw * 100;
-  // 🔥 NOVO: Sugestão de Kelly no Value Bet Finder
   const valueKellySuggestion = valEVRaw > 0 && parseFloat(valOdds) > 1 ? ((valEVRaw / (parseFloat(valOdds) - 1)) / 4) * 100 : 0; 
 
   const [arbOdds1, setArbOdds1] = useState('2.05'); 
@@ -371,14 +402,13 @@ const Calculators: React.FC = () => {
   const arbProfit = (arbStake1 * parseFloat(arbOdds1)) - parseFloat(arbTotalStake);
 
   const [stakePercentState, setStakePercentState] = useState('1'); 
-  const stakeValue = (parseFloat(stakePercentState) / 100) * calculationBankroll; // Usa a Banca Sincronizada!
+  const stakeValue = (parseFloat(stakePercentState) / 100) * calculationBankroll;
 
   const [convDec, setConvDec] = useState('2.00'); 
   const [convAm, setConvAm] = useState('+100'); 
   const [convProb, setConvProb] = useState('50.00');
   const handleDecChange = (val: string) => { setConvDec(val); const d = parseFloat(val); if (d > 1) { setConvProb(((1 / d) * 100).toFixed(2)); setConvAm(d >= 2 ? '+' + ((d - 1) * 100).toFixed(0) : (( -100 / (d - 1) )).toFixed(0)); } };
 
-  // O ARSENAL COMPLETO RESTAURADO!
   const tabs = [
     { id: 'compound', label: 'Plano de Metas', pro: true, highlight: true }, 
     { id: 'dutching', label: 'Dutching', pro: false }, 
@@ -391,48 +421,13 @@ const Calculators: React.FC = () => {
 
   const inputClass = "bg-transparent border-b border-transparent hover:border-slate-300 dark:hover:border-slate-700 focus:border-indigo-500 text-slate-900 dark:text-white px-2 py-1 outline-none font-mono text-sm w-full text-center transition-colors";
 
-  // Lógica da Sidebar Dinâmica
   const sidebarContent = useMemo(() => {
       switch(activeTab) {
-          case 'dutching': return {
-              title: "O que é Dutching?",
-              rules: [
-                  "O Dutching é uma técnica de gestão de risco onde você divide sua Stake Total entre várias seleções.",
-                  "O objetivo é garantir o mesmo lucro líquido, não importa qual das suas seleções seja a vencedora.",
-                  "Muito útil em corridas de cavalos ou apostas de múltiplos resultados."
-              ]
-          };
-          case 'kelly': return {
-              title: "Critério de Kelly",
-              rules: [
-                  "A fórmula matemática criada em 1956 que define a proporção exata da banca a ser apostada para maximizar o crescimento a longo prazo.",
-                  "Sempre use Frações de Kelly (1/4 ou 1/2) na vida real para suportar a variância e não quebrar em uma Bad Run."
-              ]
-          };
-          case 'value': return {
-              title: "Value Bet (Aposta de Valor)",
-              rules: [
-                  "Se você jogar uma moeda para cima, a Odd justa é @2.00 (50%). Se a casa te pagar @2.10, você achou uma Aposta de Valor.",
-                  "Esta ferramenta cruza a Odd oferecida com a sua estimativa de probabilidade real para achar o seu +EV.",
-                  "A longo prazo, apostar apenas em +EV é o único caminho matemático para ser lucrativo."
-              ]
-          };
-          case 'arb': return {
-              title: "Arbitragem (Surebet)",
-              rules: [
-                  "A Arbitragem ocorre quando diferentes casas de apostas oferecem Odds divergentes para o mesmo evento.",
-                  "Você aposta em todos os resultados possíveis em casas diferentes, cobrindo todo o mercado e garantindo lucro independente do resultado final.",
-                  "Insira o Total que quer investir e o motor divide a stake exata para as duas casas."
-              ]
-          };
-          default: return {
-              title: "A Máquina de Gestão",
-              rules: [
-                  `Ative o botão Auto-Sync no Dashboard para que a banca base mude sempre que você tomar um Green ou Red.`,
-                  `Se usar a gestão institucional ligue o Modo Simultâneo. Ele impede que você se alavanque em apostas juntas descontando o Risco Exposto.`,
-                  `Pegue o valor exato na coluna "Aposte Isso". Como a banca auto-sincroniza, esse valor muda a cada nova aposta. Você está operando juros compostos reais.`
-              ]
-          };
+          case 'dutching': return { title: "O que é Dutching?", rules: ["Técnica de gestão de risco onde divide-se a Stake Total entre várias seleções para garantir o mesmo lucro líquido."] };
+          case 'kelly': return { title: "Critério de Kelly", rules: ["A fórmula matemática que define a proporção exata da banca para maximizar crescimento a longo prazo.", "Sempre use Frações (1/4 ou 1/2) na vida real."] };
+          case 'value': return { title: "Value Bet (Aposta de Valor)", rules: ["Cruza a Odd oferecida com a sua estimativa de probabilidade real para achar o seu +EV."] };
+          case 'arb': return { title: "Arbitragem (Surebet)", rules: ["Aposte em todos os resultados possíveis em casas diferentes garantindo lucro independente do resultado final."] };
+          default: return { title: "A Máquina de Gestão", rules: ["A coluna 'Aposte Isso' te diz o valor da Próxima Entrada.", "Recalcular a Stake(%) para cima após um Red é fazer Martingale, e isso vai quebrar sua banca."] };
       }
   }, [activeTab]);
 
@@ -451,22 +446,17 @@ const Calculators: React.FC = () => {
             <span className="w-1.5 h-1.5 bg-emerald-600 dark:bg-emerald-500 rounded-full animate-pulse shadow-[0_0_8px_#10b981]"></span>
             Strategic Math Engine
           </div>
-          <h1 className="text-3xl font-black text-slate-900 dark:text-white tracking-tighter uppercase italic">
-            Calculadoras Pro <span className="text-slate-300 dark:text-slate-700 text-lg">///</span>
-          </h1>
+          <div className="flex items-center gap-3">
+              <h1 className="text-3xl font-black text-slate-900 dark:text-white tracking-tighter uppercase italic">
+                Calculadoras Pro <span className="text-slate-300 dark:text-slate-700 text-lg">///</span>
+              </h1>
+              {isCloudSyncing && <CloudLightning size={16} className="text-indigo-500 animate-pulse" title="Sincronizando com a Nuvem" />}
+          </div>
       </div>
       
       <div className="flex flex-wrap md:grid md:grid-cols-4 xl:grid-cols-7 gap-2 mb-6 px-4 md:px-0">
         {tabs.map(tab => (
-          <button
-            key={tab.id}
-            onClick={() => setActiveTab(tab.id as any)}
-            className={`relative flex-1 min-w-[90px] flex items-center justify-center px-2 py-3 rounded-xl font-bold text-[10px] uppercase tracking-wider transition-all gap-1.5 ${
-              activeTab === tab.id
-                ? (tab.highlight ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/20' : 'bg-emerald-600 dark:bg-emerald-500 text-white shadow-lg shadow-emerald-500/20')
-                : 'bg-white dark:bg-[#0f172a] text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-900'
-            }`}
-          >
+          <button key={tab.id} onClick={() => setActiveTab(tab.id as any)} className={`relative flex-1 min-w-[90px] flex items-center justify-center px-2 py-3 rounded-xl font-bold text-[10px] uppercase tracking-wider transition-all gap-1.5 ${activeTab === tab.id ? (tab.highlight ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/20' : 'bg-emerald-600 dark:bg-emerald-500 text-white shadow-lg shadow-emerald-500/20') : 'bg-white dark:bg-[#0f172a] text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-900'}`}>
             {tab.pro && !isPro && <Lock size={12} className="opacity-50" />}
             {tab.label}
           </button>
@@ -476,9 +466,6 @@ const Calculators: React.FC = () => {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 px-4 md:px-0">
         <div className="lg:col-span-2 space-y-6 min-w-0 w-full">
             
-            {/* ========================================== */}
-            {/* 🔥 ABA: PLANEJADOR DE METAS PRO 🔥 */}
-            {/* ========================================== */}
             {activeTab === 'compound' && !isPro && <ProLockScreen />}
             {activeTab === 'compound' && isPro && (
                 <div className="space-y-6">
@@ -488,27 +475,25 @@ const Calculators: React.FC = () => {
                             <div className="flex-1">
                                 <p className="text-[10px] font-black text-indigo-600 dark:text-indigo-400 uppercase tracking-widest mb-2 flex items-center justify-between gap-2">
                                     <span className="flex items-center gap-1.5"><LayoutGrid size={14}/> Dashboard Base</span>
-                                    {!isTargetReached && !isBankrollBusted && (
-                                        <button 
-                                            onClick={() => setAutoSyncBankroll(!autoSyncBankroll)} 
-                                            className={`flex items-center gap-1.5 px-2 py-1 rounded-lg border text-[9px] transition-colors ${autoSyncBankroll ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-600 dark:text-emerald-400' : 'bg-slate-100 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-500'}`}
-                                            title="Sincronizará a banca da calculadora com sua banca real."
-                                        >
-                                            <RefreshCcw size={10} className={autoSyncBankroll ? 'animate-spin-slow' : ''} /> 
-                                            {autoSyncBankroll ? 'Auto-Sync ON' : 'Auto-Sync OFF'}
-                                        </button>
-                                    )}
+                                    <button 
+                                        onClick={() => setAutoSyncBankroll(!autoSyncBankroll)} 
+                                        className={`flex items-center gap-1.5 px-2 py-1 rounded-lg border text-[9px] transition-colors ${autoSyncBankroll ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-600 dark:text-emerald-400' : 'bg-slate-100 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-500'}`}
+                                        title="Sincronizará a banca da calculadora com sua banca real."
+                                    >
+                                        <RefreshCcw size={10} className={autoSyncBankroll ? 'animate-spin-slow' : ''} /> 
+                                        {autoSyncBankroll ? 'Auto-Sync ON' : 'Auto-Sync OFF'}
+                                    </button>
                                 </p>
                                 <div className="flex items-end gap-3 mt-4">
                                     <div className="w-full">
                                         <p className="text-[9px] uppercase font-bold text-slate-500 mb-1 flex items-center gap-1">
                                             Banca (Base para Juros Compostos)
                                         </p>
-                                        <input type="number" value={compBankroll} onChange={e => handleBankrollManualChange(e.target.value)} disabled={isTargetReached || isBankrollBusted} className={`bg-slate-50 dark:bg-[#020617] border border-slate-200 dark:border-slate-800 text-2xl font-black rounded-xl px-4 py-2 w-full outline-none focus:border-indigo-500 transition-colors ${autoSyncBankroll && !isTargetReached && !isBankrollBusted ? 'text-emerald-600 dark:text-emerald-400 shadow-[0_0_10px_rgba(16,185,129,0.1)]' : 'text-slate-900 dark:text-white disabled:opacity-50'}`} />
+                                        {/* 🔥 TRAVA REMOVIDA: Inputs sempre ativos permitindo correção fácil 🔥 */}
+                                        <input type="number" value={compBankroll} onChange={e => handleBankrollManualChange(e.target.value)} className={`bg-slate-50 dark:bg-[#020617] border border-slate-200 dark:border-slate-800 text-2xl font-black rounded-xl px-4 py-2 w-full outline-none focus:border-indigo-500 transition-colors ${autoSyncBankroll && !isTargetReached && !isBankrollBusted ? 'text-emerald-600 dark:text-emerald-400 shadow-[0_0_10px_rgba(16,185,129,0.1)]' : 'text-slate-900 dark:text-white'}`} />
                                     </div>
                                 </div>
 
-                                {/* Barra de Progresso Visual */}
                                 <div className="w-full bg-slate-100 dark:bg-slate-800 h-2 rounded-full mt-4 overflow-hidden shadow-inner">
                                     <div className={`h-full transition-all duration-1000 ${isBankrollBusted ? 'bg-red-500 w-full' : isTargetReached ? 'bg-emerald-500' : 'bg-indigo-500'}`} style={{ width: isBankrollBusted ? '100%' : `${progressPercent}%` }}></div>
                                 </div>
@@ -518,11 +503,11 @@ const Calculators: React.FC = () => {
                             <div className="flex gap-4">
                                 <div className="bg-slate-50 dark:bg-slate-900/50 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 flex-1">
                                     <label className="text-[9px] font-black text-slate-500 uppercase block mb-1">Meta Desejada</label>
-                                    <input type="number" value={compTarget} onChange={e => setCompTarget(e.target.value)} disabled={isTargetReached || isBankrollBusted} className="bg-transparent text-xl font-black text-amber-500 outline-none w-full disabled:opacity-50" />
+                                    <input type="number" value={compTarget} onChange={e => setCompTarget(e.target.value)} className="bg-transparent text-xl font-black text-amber-500 outline-none w-full" />
                                 </div>
                                 <div className="bg-slate-50 dark:bg-slate-900/50 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 flex-1">
                                     <label className="text-[9px] font-black text-slate-500 uppercase block mb-1">Prazo (Dias)</label>
-                                    <input type="number" value={compDays} onChange={e => setCompDays(e.target.value)} disabled={isTargetReached || isBankrollBusted} className="bg-transparent text-xl font-black text-emerald-600 dark:text-emerald-400 outline-none w-full disabled:opacity-50" />
+                                    <input type="number" value={compDays} onChange={e => setCompDays(e.target.value)} className="bg-transparent text-xl font-black text-emerald-600 dark:text-emerald-400 outline-none w-full" />
                                 </div>
                             </div>
                         </div>
@@ -532,24 +517,30 @@ const Calculators: React.FC = () => {
                     <AnimatePresence>
                         {isTargetReached && (
                             <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="bg-emerald-500 text-white rounded-[2rem] p-8 shadow-xl shadow-emerald-500/20 flex flex-col sm:flex-row items-center gap-6 mb-6">
-                                <div className="bg-white/20 p-4 rounded-full">
+                                <div className="bg-white/20 p-4 rounded-full shrink-0">
                                     <Trophy size={48} className="text-white" />
                                 </div>
-                                <div>
+                                <div className="flex-1">
                                     <h3 className="text-2xl font-black uppercase italic tracking-tighter mb-2">Meta Batida com Sucesso!</h3>
-                                    <p className="text-emerald-50 font-medium leading-relaxed">Você transformou sua banca e atingiu o objetivo. A magia dos Juros Compostos terminou o ciclo. Saque seus lucros, redefina a Meta Desejada e inicie um novo plano para voltar a simular.</p>
+                                    <p className="text-emerald-50 font-medium leading-relaxed mb-4">Você transformou sua banca e atingiu o objetivo. A magia dos Juros Compostos terminou o ciclo. Saque seus lucros e redefina a meta.</p>
+                                    <button onClick={() => setCompTarget(String(bankrollNum * 2))} className="bg-white text-emerald-600 px-6 py-2 rounded-xl font-black uppercase tracking-widest text-xs hover:bg-emerald-50 transition-colors shadow-sm active:scale-95">
+                                        Dobrar a Meta e Continuar
+                                    </button>
                                 </div>
                             </motion.div>
                         )}
 
                         {isBankrollBusted && (
                             <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="bg-red-600 text-white rounded-[2rem] p-8 shadow-xl shadow-red-500/20 flex flex-col sm:flex-row items-center gap-6 mb-6">
-                                <div className="bg-white/20 p-4 rounded-full">
+                                <div className="bg-white/20 p-4 rounded-full shrink-0">
                                     <Skull size={48} className="text-white" />
                                 </div>
-                                <div>
+                                <div className="flex-1">
                                     <h3 className="text-2xl font-black uppercase italic tracking-tighter mb-2">Banca Quebrada 💥</h3>
-                                    <p className="text-red-100 font-medium leading-relaxed">O capital atual não possui liquidez matemática para sustentar a projeção desta meta. Você foi pego por uma Bad Run severa ou usou stakes fora da gestão. Faça um novo aporte para reiniciar a estratégia.</p>
+                                    <p className="text-red-100 font-medium leading-relaxed mb-4">O capital atual não possui liquidez matemática para sustentar a projeção. Faça um novo aporte para reiniciar a estratégia.</p>
+                                    <button onClick={() => { setCompBankroll(String(targetNum / 2)); setAutoSyncBankroll(false); }} className="bg-white text-red-600 px-6 py-2 rounded-xl font-black uppercase tracking-widest text-xs hover:bg-red-50 transition-colors shadow-sm active:scale-95">
+                                        Simular Novo Aporte
+                                    </button>
                                 </div>
                             </motion.div>
                         )}
@@ -590,7 +581,6 @@ const Calculators: React.FC = () => {
                             {/* CARD 3: A PLANILHA DE MÉTODOS EDITÁVEL */}
                             <div className="bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-800 rounded-[2rem] p-6 shadow-sm overflow-hidden">
                                 
-                                {/* ALERTA DIDÁTICO DO FALSO MARTINGALE */}
                                 <div className="bg-indigo-50 dark:bg-indigo-500/10 border border-indigo-200 dark:border-indigo-500/30 rounded-xl p-4 mb-6 flex items-start gap-3">
                                     <Lightbulb size={20} className="text-indigo-500 shrink-0 mt-0.5" />
                                     <div className="space-y-1">
@@ -607,7 +597,6 @@ const Calculators: React.FC = () => {
                                         <p className="text-[10px] text-slate-500 mt-1">A coluna "Aposte Isso" te diz o valor exato da Próxima Entrada.</p>
                                     </div>
                                     <div className="flex flex-col sm:flex-row items-end sm:items-center gap-3">
-                                        {/* 🔥 SWITCH DE GESTÃO SIMULTÂNEA 🔥 */}
                                         <div className="flex items-center gap-2 bg-slate-50 dark:bg-slate-900 px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700">
                                             <span className="text-[9px] font-bold text-slate-500 uppercase tracking-widest flex items-center gap-1" title="Se ligado, as próximas stakes descontam o valor que já está investido no mercado (Risco Exposto)."><Coins size={10}/> Modo Simultâneo</span>
                                             <button 
@@ -624,7 +613,6 @@ const Calculators: React.FC = () => {
                                     </div>
                                 </div>
 
-                                {/* Banner de Aviso de Risco Exposto se o modo estiver ON */}
                                 <AnimatePresence>
                                     {useAvailableBankroll && pendingExposure > 0 && (
                                         <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} className="bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/20 rounded-xl p-3 mb-4 flex items-center gap-3">
@@ -768,9 +756,7 @@ const Calculators: React.FC = () => {
                 </div>
             )}
 
-            {/* ========================================== */}
-            {/* OUTRAS CALCULADORAS REINSERIDAS E MODERNIZADAS  */}
-            {/* ========================================== */}
+            {/* OUTRAS CALCULADORAS MANTIDAS NO CÓDIGO MAS OCULTADAS NA UI */}
             {activeTab === 'dutching' && (
                 <div className="bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-800 rounded-[2rem] p-6 shadow-sm w-full overflow-hidden">
                     <h2 className="text-lg font-black text-slate-900 dark:text-white uppercase tracking-tighter italic mb-4">Calculadora Dutching</h2>
@@ -854,7 +840,6 @@ const Calculators: React.FC = () => {
                           {valEVRaw > 0 ? '✅ Aposta de Valor Encontrada' : '❌ Odds sem valor estatístico'}
                       </p>
                       
-                      {/* 🔥 INTEGRAÇÃO DE KELLY DENTRO DO VALUE BET 🔥 */}
                       {valEVRaw > 0 && (
                           <div className="mt-4 pt-4 border-t border-emerald-500/20 flex flex-col items-center">
                               <p className="text-[10px] font-bold uppercase text-emerald-800 dark:text-emerald-500 tracking-widest mb-1">Kelly Seguro (1/4) Sugerido</p>
@@ -944,7 +929,7 @@ const Calculators: React.FC = () => {
                 </h4>
                 
                 <div className="p-4 bg-slate-50 dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800">
-                    <p className="text-[10px] text-slate-500 dark:text-slate-400 mb-2 uppercase font-bold tracking-wider">Como Operar:</p>
+                    <p className="text-[10px] text-slate-500 dark:text-slate-400 mb-2 uppercase font-bold tracking-wider">Instruções:</p>
                     {sidebarContent.rules.map((rule, idx) => (
                         <p key={idx} className="text-xs sm:text-sm font-medium text-slate-700 dark:text-slate-300 leading-relaxed mb-4 last:mb-0">
                             {rule}
