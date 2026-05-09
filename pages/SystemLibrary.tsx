@@ -9,7 +9,8 @@ import {
   Target, 
   CheckCircle2,
   ChevronDown,
-  Lock
+  Lock,
+  Crown
 } from 'lucide-react';
 import { useBetStore } from '../store/useBetStore';
 
@@ -31,7 +32,7 @@ const SystemLibrary: React.FC = () => {
     customMarkets, 
     customStrategies, 
     methods: userMethods,
-    isPro // 🔥 Pegue o estado isPro
+    isPro
   } = useBetStore();
 
   const tabs = [
@@ -42,14 +43,25 @@ const SystemLibrary: React.FC = () => {
     { id: 'methods', label: 'Métodos/Setups', icon: Target, count: userMethods.length, pro: true },
   ];
 
-  // Intercepta o clique na aba: se for PRO e não tiver acesso, manda pra página de upgrade
-  const handleTabClick = (tabId: string, isProTab: boolean) => {
-    if (isProTab && !isPro) {
-        navigate('/pro');
-        return;
-    }
-    setActiveTab(tabId as any);
-  };
+  // 🔥 OVERLAY DE VITRINE (EFEITO BLUR) PARA USUÁRIOS FREE 🔥
+  const ProBlurOverlay = ({ title, desc }: { title: string, desc: string }) => (
+      <div className="absolute inset-0 z-50 flex items-center justify-center bg-white/40 dark:bg-[#020617]/50 backdrop-blur-md rounded-[2rem]">
+          <div className="bg-white dark:bg-slate-900 border border-emerald-500/30 p-8 rounded-3xl max-w-md text-center shadow-2xl flex flex-col items-center mx-4">
+              <div className="bg-emerald-500/10 p-4 rounded-full mb-4">
+                  <Crown size={32} className="text-emerald-500 dark:text-emerald-400" />
+              </div>
+              <h2 className="text-xl font-black text-slate-900 dark:text-white uppercase italic tracking-tighter mb-2">
+                  {title} <span className="text-emerald-500">PRO</span>
+              </h2>
+              <p className="text-slate-600 dark:text-slate-400 mb-6 text-sm leading-relaxed">
+                  {desc}
+              </p>
+              <button onClick={() => navigate('/pro')} className="w-full bg-slate-900 text-white dark:bg-gradient-to-r dark:from-emerald-500 dark:to-emerald-400 dark:text-slate-950 font-black py-4 px-8 rounded-xl shadow-lg shadow-slate-900/20 dark:shadow-emerald-500/20 transition-all hover:scale-105 active:scale-95 text-xs tracking-widest uppercase">
+                  Desbloquear Acesso
+              </button>
+          </div>
+      </div>
+  );
 
   return (
     <div className="min-h-screen bg-[#F8FAFC] dark:bg-[#020617] text-slate-900 dark:text-slate-200 pb-20 md:pl-20 pt-20 md:pt-8 px-4 md:px-8 transition-colors duration-300 font-sans">
@@ -83,10 +95,7 @@ const SystemLibrary: React.FC = () => {
             </div>
             <select
               value={activeTab}
-              onChange={(e) => {
-                  const selectedTab = tabs.find(t => t.id === e.target.value);
-                  handleTabClick(e.target.value, selectedTab?.pro || false);
-              }}
+              onChange={(e) => setActiveTab(e.target.value as any)}
               className="w-full appearance-none bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white py-3 pl-10 pr-10 rounded-xl font-bold focus:outline-none focus:ring-2 focus:ring-emerald-500 shadow-sm transition-colors"
             >
               {tabs.map(tab => (
@@ -109,7 +118,7 @@ const SystemLibrary: React.FC = () => {
               return (
                 <button
                   key={tab.id}
-                  onClick={() => handleTabClick(tab.id, tab.pro)}
+                  onClick={() => setActiveTab(tab.id as any)}
                   className={`
                     flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-sm whitespace-nowrap transition-all duration-200 shrink-0
                     ${isActive 
@@ -151,53 +160,64 @@ const SystemLibrary: React.FC = () => {
             )}
 
             {activeTab === 'teams' && (
-              <motion.div key="teams" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-                <ManageTeams />
+              <motion.div key="teams" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="relative">
+                {!isPro && <ProBlurOverlay title="Gestão de Clubes" desc="Cataloge times com perfis comportamentais específicos (Ex: Over 2.5, Alta Posse, Retranqueiros) para buscar as melhores odds." />}
+                <div className={!isPro ? 'pointer-events-none select-none blur-[4px] opacity-60' : ''}>
+                    <ManageTeams />
+                </div>
               </motion.div>
             )}
 
             {activeTab === 'markets' && (
-              <motion.div key="markets" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-                <ManageMarkets />
+              <motion.div key="markets" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="relative">
+                {!isPro && <ProBlurOverlay title="Gestão de Mercados" desc="Organize mercados avançados (Asiáticos, Minutos, Combos) para ter estatísticas hiper segmentadas do seu histórico." />}
+                <div className={!isPro ? 'pointer-events-none select-none blur-[4px] opacity-60' : ''}>
+                    <ManageMarkets />
+                </div>
               </motion.div>
             )}
 
             {/* ABA ESTRATÉGIAS OTIMIZADA */}
             {activeTab === 'strategies' && (
-              <motion.div key="strategies" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="space-y-8">
+              <motion.div key="strategies" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="relative space-y-8">
+                {!isPro && <ProBlurOverlay title="Planos de Gestão" desc="Importe e gerencie planos institucionais de alocação de banca, juros compostos e controle de volatilidade." />}
                 
-                {/* 1. SEÇÃO: MINHAS ESTRATÉGIAS */}
-                <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm">
-                  <h3 className="text-lg font-black text-slate-800 dark:text-white mb-6 flex items-center gap-2 uppercase tracking-tight">
-                    <CheckCircle2 size={18} className="text-emerald-500" /> Meus Planos de Gestão Ativos
-                  </h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {customStrategies.length === 0 ? (
-                      <div className="col-span-full text-center py-8 text-slate-400 text-sm bg-slate-50 dark:bg-slate-950/50 rounded-xl border border-dashed border-slate-200 dark:border-slate-800">
-                        Nenhum plano de gestão de caixa importado no momento.
-                      </div>
-                    ) : (
-                      customStrategies.map(s => (
-                        <div key={s.id} className="px-5 py-4 bg-slate-50 dark:bg-slate-950 border border-slate-100 dark:border-slate-800 rounded-xl flex justify-between items-center shadow-sm">
-                          <span className="text-sm font-bold text-slate-700 dark:text-slate-200">{s.name}</span>
-                          <div className="flex items-center gap-2">
-                            <span className="text-[10px] bg-emerald-100 text-emerald-600 px-2 py-0.5 rounded font-bold uppercase">Ativa</span>
+                <div className={!isPro ? 'pointer-events-none select-none blur-[4px] opacity-60 space-y-8' : 'space-y-8'}>
+                    {/* 1. SEÇÃO: MINHAS ESTRATÉGIAS */}
+                    <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm">
+                      <h3 className="text-lg font-black text-slate-800 dark:text-white mb-6 flex items-center gap-2 uppercase tracking-tight">
+                        <CheckCircle2 size={18} className="text-emerald-500" /> Meus Planos de Gestão Ativos
+                      </h3>
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        {customStrategies.length === 0 ? (
+                          <div className="col-span-full text-center py-8 text-slate-400 text-sm bg-slate-50 dark:bg-slate-950/50 rounded-xl border border-dashed border-slate-200 dark:border-slate-800">
+                            Nenhum plano de gestão de caixa importado no momento.
                           </div>
-                        </div>
-                      ))
-                    )}
-                  </div>
+                        ) : (
+                          customStrategies.map(s => (
+                            <div key={s.id} className="px-5 py-4 bg-slate-50 dark:bg-slate-950 border border-slate-100 dark:border-slate-800 rounded-xl flex justify-between items-center shadow-sm">
+                              <span className="text-sm font-bold text-slate-700 dark:text-slate-200">{s.name}</span>
+                              <div className="flex items-center gap-2">
+                                <span className="text-[10px] bg-emerald-100 text-emerald-600 px-2 py-0.5 rounded font-bold uppercase">Ativa</span>
+                              </div>
+                            </div>
+                          ))
+                        )}
+                      </div>
+                    </div>
+
+                    {/* 2. SEÇÃO: MENU DE MODELOS */}
+                    <ManageStrategies />
                 </div>
-
-                {/* 2. SEÇÃO: MENU DE MODELOS */}
-                <ManageStrategies />
-
               </motion.div>
             )}
 
             {activeTab === 'methods' && (
-              <motion.div key="methods" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-                <ManageMethods />
+              <motion.div key="methods" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="relative">
+                {!isPro && <ProBlurOverlay title="Setup & Validação" desc="O laboratório de testes do sistema. Cadastre novas teses de apostas (Setups) e deixe a ferramenta dizer, baseado no seu histórico, qual é matematicamente lucrativa." />}
+                <div className={!isPro ? 'pointer-events-none select-none blur-[4px] opacity-60' : ''}>
+                    <ManageMethods />
+                </div>
               </motion.div>
             )}
 

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
@@ -84,6 +84,26 @@ const ScoutIA: React.FC = () => {
 
   const scoutGridInputRef = useRef<HTMLInputElement>(null);
   const VALID_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
+
+  // 🔥 OVERLAY DE VITRINE (EFEITO BLUR) PARA USUÁRIOS FREE 🔥
+  const ProBlurOverlay = ({ title, desc }: { title: string, desc: string }) => (
+      <div className="absolute inset-0 z-50 flex items-center justify-center bg-white/40 dark:bg-[#020617]/50 backdrop-blur-md rounded-[2rem]">
+          <div className="bg-white dark:bg-slate-900 border border-indigo-500/30 p-8 rounded-3xl max-w-md text-center shadow-2xl flex flex-col items-center mx-4">
+              <div className="bg-indigo-500/10 p-4 rounded-full mb-4">
+                  <Crown size={32} className="text-indigo-500 dark:text-indigo-400" />
+              </div>
+              <h2 className="text-xl font-black text-slate-900 dark:text-white uppercase italic tracking-tighter mb-2">
+                  {title} <span className="text-indigo-500">PRO</span>
+              </h2>
+              <p className="text-slate-600 dark:text-slate-400 mb-6 text-sm leading-relaxed">
+                  {desc}
+              </p>
+              <button onClick={() => navigate('/pro')} className="w-full bg-slate-900 text-white dark:bg-gradient-to-r dark:from-indigo-600 dark:to-indigo-500 font-black py-4 px-8 rounded-xl shadow-lg shadow-slate-900/20 dark:shadow-indigo-500/20 transition-all hover:scale-105 active:scale-95 text-xs tracking-widest uppercase">
+                  Desbloquear Acesso
+              </button>
+          </div>
+      </div>
+  );
 
   useEffect(() => {
     if (scoutMode === 'grid') {
@@ -245,32 +265,12 @@ const ScoutIA: React.FC = () => {
       }
   }
 
-  if (!isPro) {
-      return (
-          <div className="w-full h-full flex items-center justify-center p-6 mt-10">
-              <div className="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-[2rem] p-10 text-center flex flex-col items-center justify-center max-w-2xl w-full shadow-sm relative overflow-hidden">
-                  <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/5 to-purple-500/5 opacity-50" />
-                  <div className="bg-white dark:bg-slate-800 p-5 rounded-full mb-6 relative z-10 shadow-sm border border-slate-100 dark:border-slate-700">
-                      <Crown size={40} className="text-amber-500 dark:text-amber-400" />
-                  </div>
-                  <h2 className="text-3xl font-black text-slate-900 dark:text-white uppercase italic tracking-tighter mb-3 relative z-10">
-                      Scout Pré-Live HFT
-                  </h2>
-                  <p className="text-slate-600 dark:text-slate-400 max-w-md mx-auto mb-8 text-base relative z-10 leading-relaxed">
-                      O Motor NLP lê textos estatísticos, analisa risco, covariância e monta apostas múltiplas de alto valor matemático. Exclusivo PRO.
-                  </p>
-                  <button onClick={() => navigate('/pro')} className="bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 text-slate-900 font-black py-4 px-10 rounded-xl shadow-lg shadow-amber-500/20 transition-all active:scale-95 relative z-10 text-sm tracking-widest uppercase">
-                      Desbloquear Agora
-                  </button>
-              </div>
-          </div>
-      );
-  }
-
   return (
-    <div className="space-y-6 pb-20 w-full overflow-x-hidden px-4 md:px-0">
+    <div className="space-y-6 pb-20 w-full overflow-x-hidden px-4 md:px-0 relative">
         
-        <div className="flex flex-col gap-2">
+        {!isPro && <ProBlurOverlay title="Scout IA" desc="O Motor NLP lê textos estatísticos, analisa risco, covariância e monta apostas múltiplas de alto valor matemático. Exclusivo para assinantes PRO." />}
+
+        <div className={`flex flex-col gap-2 ${!isPro ? 'pointer-events-none select-none blur-[4px] opacity-60' : ''}`}>
           <div className="flex items-center gap-2 text-indigo-500 dark:text-indigo-400 text-[9px] font-mono font-bold uppercase tracking-widest">
             <span className="w-1.5 h-1.5 bg-indigo-500 dark:bg-indigo-400 rounded-full animate-pulse shadow-[0_0_8px_#6366f1]"></span>
             HFT ENGINE ATIVO
@@ -282,7 +282,7 @@ const ScoutIA: React.FC = () => {
           </div>
         </div>
 
-        <div className="bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-800 rounded-[2.5rem] p-4 sm:p-8 shadow-sm relative overflow-hidden">
+        <div className={`bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-800 rounded-[2.5rem] p-4 sm:p-8 shadow-sm relative overflow-hidden ${!isPro ? 'pointer-events-none select-none blur-[4px] opacity-60' : ''}`}>
             
            <div className="flex bg-slate-100 dark:bg-[#09090b] p-1.5 rounded-2xl border border-slate-200 dark:border-slate-800 mb-6 shadow-inner">
               <button onClick={() => setScoutMode('grid')} className={`flex-1 py-3 text-[10px] sm:text-xs font-black uppercase tracking-widest rounded-xl transition-all ${scoutMode === 'grid' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/20 scale-[1.02]' : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 hover:bg-white dark:hover:bg-slate-800/50'}`}>
