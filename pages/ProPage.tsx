@@ -17,11 +17,11 @@ const ProPage: React.FC = () => {
         'Apenas 1 Portfólio Ativo',
         'Máximo de 50 operações/mês',
         'Dashboard Analítico Básico',
-        'Calculadoras Simples',
-        'Exportação de Dados em CSV'
+        'Calculadoras Simples'
       ],
       missing: [
-        'Planejador de Metas & Oráculo', // 🔥 NOVIDADE ADICIONADA AQUI
+        'Planejador de Metas & Oráculo',
+        'Exportação de Relatórios CSV', // 🔥 MOVIDO PARA O BLOQUEIO (X VERMELHO)
         'Modelos Matemáticos Avançados',
         'ExC Analytics (Motor de Cantos)',
         'ExG Analytics (Motor de Gols)',
@@ -42,7 +42,7 @@ const ProPage: React.FC = () => {
       period: 'a cada 3 meses',
       monthlyEquivalent: 'R$ 29,96/mês',
       features: [
-        'Planejador de Metas & Oráculo', // 🔥 NOVIDADE ADICIONADA AQUI
+        'Planejador de Metas & Oráculo',
         'Gestão de Múltiplos Portfólios',
         'Operações Ilimitadas no Mês',
         'Calculadoras EV+, Arb e Kelly',
@@ -67,7 +67,7 @@ const ProPage: React.FC = () => {
       monthlyEquivalent: 'R$ 16,49/mês',
       savings: 'Economize R$ 160 no ano',
       features: [
-        'Planejador de Metas & Oráculo', // 🔥 NOVIDADE ADICIONADA AQUI
+        'Planejador de Metas & Oráculo',
         'Todas as features do Semestral',
         'Motor de Inteligência Artificial HFT',
         'Acesso VITALÍCIO a atualizações',
@@ -88,7 +88,7 @@ const ProPage: React.FC = () => {
       period: 'a cada 6 meses',
       monthlyEquivalent: 'R$ 24,98/mês',
       features: [
-        'Planejador de Metas & Oráculo', // 🔥 NOVIDADE ADICIONADA AQUI
+        'Planejador de Metas & Oráculo',
         'Gestão de Múltiplos Portfólios',
         'Operações Ilimitadas no Mês',
         'Calculadoras EV+, Arb e Kelly',
