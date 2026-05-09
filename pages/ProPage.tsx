@@ -18,9 +18,10 @@ const ProPage: React.FC = () => {
         'Máximo de 50 operações/mês',
         'Dashboard Analítico Básico',
         'Calculadoras Simples',
-        'Exportação de Dados em CSV' // MOVIDO PARA O FREE
+        'Exportação de Dados em CSV'
       ],
       missing: [
+        'Planejador de Metas & Oráculo', // 🔥 NOVIDADE ADICIONADA AQUI
         'Modelos Matemáticos Avançados',
         'ExC Analytics (Motor de Cantos)',
         'ExG Analytics (Motor de Gols)',
@@ -41,6 +42,7 @@ const ProPage: React.FC = () => {
       period: 'a cada 3 meses',
       monthlyEquivalent: 'R$ 29,96/mês',
       features: [
+        'Planejador de Metas & Oráculo', // 🔥 NOVIDADE ADICIONADA AQUI
         'Gestão de Múltiplos Portfólios',
         'Operações Ilimitadas no Mês',
         'Calculadoras EV+, Arb e Kelly',
@@ -52,7 +54,6 @@ const ProPage: React.FC = () => {
         'Suporte Prioritário'
       ],
       missing: [],
-      // SEU LINK OFICIAL DA LASTLINK - TRIMESTRAL
       link: 'https://lastlink.com/p/C184F4DD2/checkout-payment/', 
       recommended: false,
       color: 'blue',
@@ -66,7 +67,8 @@ const ProPage: React.FC = () => {
       monthlyEquivalent: 'R$ 16,49/mês',
       savings: 'Economize R$ 160 no ano',
       features: [
-        'Todas as features do Semestral e Trimestral', // ATUALIZADO
+        'Planejador de Metas & Oráculo', // 🔥 NOVIDADE ADICIONADA AQUI
+        'Todas as features do Semestral',
         'Motor de Inteligência Artificial HFT',
         'Acesso VITALÍCIO a atualizações',
         'Acesso Antecipado a Novas Metas',
@@ -74,7 +76,6 @@ const ProPage: React.FC = () => {
         'Selo VIP no Perfil de Operador'
       ],
       missing: [],
-      // SEU LINK OFICIAL DA LASTLINK - ANUAL
       link: 'https://lastlink.com/p/CFBECA72D/checkout-payment/', 
       recommended: true,
       color: 'emerald',
@@ -87,6 +88,7 @@ const ProPage: React.FC = () => {
       period: 'a cada 6 meses',
       monthlyEquivalent: 'R$ 24,98/mês',
       features: [
+        'Planejador de Metas & Oráculo', // 🔥 NOVIDADE ADICIONADA AQUI
         'Gestão de Múltiplos Portfólios',
         'Operações Ilimitadas no Mês',
         'Calculadoras EV+, Arb e Kelly',
@@ -98,7 +100,6 @@ const ProPage: React.FC = () => {
         'Suporte Prioritário'
       ],
       missing: [],
-      // SEU LINK OFICIAL DA LASTLINK - SEMESTRAL
       link: 'https://lastlink.com/p/CFBF0E56B/checkout-payment/', 
       recommended: false,
       color: 'purple',

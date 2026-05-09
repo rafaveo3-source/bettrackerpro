@@ -282,7 +282,42 @@ const LandingPage = () => {
                </div>
             </div>
 
-            {/* 6. MOBILE FIRST */}
+            {/* 6. 🔥 NOVO: PLANEJADOR QUANTITATIVO (ORÁCULO) 🔥 */}
+            <div className="md:col-span-6 lg:col-span-8 bg-[#0b101e] border border-white/5 rounded-[2rem] overflow-hidden group hover:border-emerald-500/50 transition-all duration-500 flex flex-col md:flex-row relative z-10">
+              <div className="p-8 md:p-10 flex flex-col justify-between relative z-20 md:w-1/2 bg-gradient-to-b md:bg-gradient-to-r from-[#0b101e] via-[#0b101e]/95 to-[#0b101e]/50">
+                 <div>
+                    <div className="w-10 h-10 bg-emerald-500/10 rounded-lg flex items-center justify-center mb-4 text-emerald-500 border border-emerald-500/20">
+                       <Target size={20} />
+                    </div>
+                    <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/20 border border-emerald-500/30 text-[10px] font-black text-emerald-400 uppercase tracking-widest mb-3">
+                        <Sparkles size={12} /> Exclusivo Plano PRO
+                    </div>
+                    <h3 className="text-2xl font-bold text-white mb-2">O Oráculo da Gestão</h3>
+                    <p className="text-slate-400 text-sm leading-relaxed">
+                        Pare de adivinhar. Diga quanto quer lucrar. O sistema varre seu histórico de apostas, audita seu Win Rate e te diz exatamente <strong>quantos Reais (R$)</strong> investir na próxima aposta para bater a meta sem risco de ruína.
+                    </p>
+                 </div>
+              </div>
+              <div className="relative flex-1 h-64 md:h-auto overflow-hidden md:rounded-tl-2xl border-t md:border-l border-white/10 z-10 bg-[#020617] flex items-center justify-center">
+                 {/* Visual Mockup do Oráculo */}
+                 <div className="absolute inset-0 bg-emerald-500/10 blur-[80px] group-hover:bg-emerald-500/20 transition-colors duration-500" />
+                 <div className="p-6 w-full max-w-[280px] relative z-10 transform group-hover:scale-105 transition-transform duration-500">
+                     <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-2xl">
+                         <div className="flex justify-between items-center mb-4">
+                            <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Aposte Isso</p>
+                            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                         </div>
+                         <h4 className="text-4xl font-black text-emerald-400 mb-4 tracking-tighter">R$ 24,50</h4>
+                         <div className="w-full bg-slate-800 h-1.5 rounded-full overflow-hidden mb-2">
+                             <div className="bg-emerald-500 w-[65%] h-full rounded-full" />
+                         </div>
+                         <p className="text-[9px] text-slate-400 text-right font-bold tracking-widest uppercase">Meta: 65% concluída</p>
+                     </div>
+                 </div>
+              </div>
+            </div>
+
+            {/* 7. MOBILE FIRST */}
             <div className="md:col-span-6 lg:col-span-12 min-h-[500px] md:h-[500px] bg-gradient-to-br from-[#0b101e] to-emerald-950/20 border border-white/5 rounded-[2rem] p-8 md:p-12 relative overflow-hidden flex flex-col md:flex-row items-center gap-10 group">
                 
                 {/* Content */}
