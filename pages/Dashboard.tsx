@@ -1,5 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { useBetStore, Bet } from '../store/useBetStore';
+import { useNavigate } from 'react-router-dom';
 import {
   Wallet,
   Target,
@@ -13,7 +14,9 @@ import {
   Layers,
   BarChart4,
   AlertOctagon,
-  Scale
+  Scale,
+  Crown,
+  AlertTriangle
 } from 'lucide-react';
 import {
   AreaChart,
@@ -31,12 +34,14 @@ const Dashboard: React.FC = () => {
     bankrolls,
     activeBankrollId,
     getMetrics,
-    history,
+    history = [],
     removeBet,
     displayMode,
-    unitSize
+    unitSize,
+    isPro
   } = useBetStore();
 
+  const navigate = useNavigate();
   const [period, setPeriod] = useState<'1S' | '1M' | '3M' | 'YTD' | 'ALL'>('ALL');
 
   /* -----------------------------
@@ -54,7 +59,6 @@ const Dashboard: React.FC = () => {
     return () => observer.disconnect();
   }, []);
 
-  // Cores ajustadas para máximo contraste no Light/Dark mode
   const axisColor = isDark ? '#94a3b8' : '#64748b';
   const gridColor = isDark ? '#1e293b' : '#cbd5e1';
   const tooltipBg = isDark ? '#0f172a' : '#ffffff';
@@ -143,6 +147,21 @@ const Dashboard: React.FC = () => {
   }, [bankrollHistory]);
 
   /* -----------------------------
+      BARRA DE ESCASSEZ (FREE ONLY)
+  ----------------------------- */
+  const currentMonth = new Date().getMonth();
+  const currentYear = new Date().getFullYear();
+  const monthlyBetsCount = history.filter(b => {
+      const d = new Date(b.date);
+      return d.getMonth() === currentMonth && d.getFullYear() === currentYear;
+  }).length;
+  
+  const MAX_FREE_BETS = 50;
+  const isNearingLimit = monthlyBetsCount >= 40;
+  const isAtLimit = monthlyBetsCount >= MAX_FREE_BETS;
+  const progressPercent = Math.min((monthlyBetsCount / MAX_FREE_BETS) * 100, 100);
+
+  /* -----------------------------
       KPI CARD PREMIUM
   ----------------------------- */
   const KPICard = ({ title, value, subtext, icon: Icon, color, trend, extraInfo }: any) => (
@@ -185,10 +204,6 @@ const Dashboard: React.FC = () => {
     </div>
   );
 
-  const initialBal = activeBR?.initialBalance || 1;
-  const growth = ((currentBankrollBalance - initialBal) / initialBal) * 100;
-
-  // Customização robusta do Tooltip (Resolve o erro do TS)
   const CustomTooltip = ({ active, payload, label }: any) => {
     if (active && payload && payload.length) {
       return (
@@ -204,7 +219,7 @@ const Dashboard: React.FC = () => {
   return (
     <div className="space-y-8 pb-12 w-full overflow-x-hidden">
 
-      {/* HEADER */}
+      {/* HEADER E BARRA DE CONSUMO */}
       <header className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 border-b border-slate-200 dark:border-slate-800 pb-6">
         <div>
           <div className="flex items-center gap-2 text-emerald-600 dark:text-emerald-500 text-[10px] font-mono font-bold uppercase tracking-widest mb-2">
@@ -231,46 +246,45 @@ const Dashboard: React.FC = () => {
         </div>
       </header>
 
+      {/* 🔥 MÓDULO DE ESCASSEZ (FREE USERS) 🔥 */}
+      {!isPro && (
+          <div className={`p-5 rounded-[1.5rem] border flex flex-col md:flex-row items-center gap-6 justify-between transition-colors shadow-sm ${
+              isAtLimit ? 'bg-red-50 dark:bg-red-500/10 border-red-200 dark:border-red-500/20' : 
+              isNearingLimit ? 'bg-amber-50 dark:bg-amber-500/10 border-amber-200 dark:border-amber-500/20' : 
+              'bg-blue-50 dark:bg-blue-500/5 border-blue-200 dark:border-blue-500/20'
+          }`}>
+              <div className="flex-1 w-full">
+                  <div className="flex items-center justify-between mb-2">
+                      <h4 className={`text-xs font-black uppercase tracking-widest flex items-center gap-2 ${isAtLimit ? 'text-red-600 dark:text-red-400' : isNearingLimit ? 'text-amber-600 dark:text-amber-400' : 'text-blue-600 dark:text-blue-400'}`}>
+                          {isAtLimit ? <AlertTriangle size={16}/> : isNearingLimit ? <AlertOctagon size={16}/> : <Activity size={16}/>}
+                          Entradas do Mês (Plano Free)
+                      </h4>
+                      <span className={`text-xs font-black font-mono ${isAtLimit ? 'text-red-600 dark:text-red-400' : 'text-slate-600 dark:text-slate-400'}`}>{monthlyBetsCount} / {MAX_FREE_BETS}</span>
+                  </div>
+                  <div className="w-full bg-black/5 dark:bg-white/5 h-2 rounded-full overflow-hidden">
+                      <div className={`h-full transition-all duration-1000 ${isAtLimit ? 'bg-red-500' : isNearingLimit ? 'bg-amber-500' : 'bg-blue-500'}`} style={{ width: `${progressPercent}%` }} />
+                  </div>
+                  <p className={`text-[10px] mt-2 font-medium ${isAtLimit ? 'text-red-600 dark:text-red-400 font-bold' : 'text-slate-500 dark:text-slate-400'}`}>
+                      {isAtLimit 
+                          ? "Você atingiu o limite gratuito deste mês. Faça o upgrade para continuar registrando seu histórico sem interrupções." 
+                          : isNearingLimit 
+                              ? `Faltam apenas ${MAX_FREE_BETS - monthlyBetsCount} entradas. Faça o Upgrade PRO para não interromper seu histórico de greens esta semana.`
+                              : "O plano gratuito permite até 50 registros por mês."}
+                  </p>
+              </div>
+              <button onClick={() => navigate('/pro')} className="shrink-0 bg-slate-900 dark:bg-emerald-500 text-white dark:text-slate-950 px-6 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center gap-2 hover:scale-105 transition-transform shadow-lg shadow-slate-900/10 dark:shadow-emerald-500/20 whitespace-nowrap">
+                  <Crown size={14} className={!isDark ? 'text-emerald-400' : ''}/> Desbloquear Ilimitado
+              </button>
+          </div>
+      )}
+
       {/* KPI GRID */}
       <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-5">
-        <KPICard
-          title="Equity"
-          value={formatValue(currentBankrollBalance)}
-          subtext="Ativos Totais"
-          icon={Wallet}
-          color="text-emerald-500"
-          trend={growth}
-        />
-        <KPICard
-          title="Sharpe Ratio"
-          value={metrics.sharpeRatio.toFixed(2)}
-          subtext="Retorno / Risco"
-          icon={Scale}
-          color="text-indigo-500"
-          extraInfo={metrics.sharpeRatio > 2 ? 'Excelente' : 'Moderado'}
-        />
-        <KPICard
-          title="Max Drawdown"
-          value={formatValue(metrics.maxDrawdown)}
-          subtext="Queda Máxima"
-          icon={AlertOctagon}
-          color="text-red-500"
-          extraInfo={`Risco ${(metrics.maxDrawdown / initialBal * 100).toFixed(1)}%`}
-        />
-        <KPICard
-          title="Win Rate"
-          value={`${metrics.winRate.toFixed(0)}%`}
-          subtext={`N = ${metrics.totalBets}`}
-          icon={Target}
-          color="text-blue-500"
-        />
-        <KPICard
-          title="P&L"
-          value={formatValue(metrics.totalProfit)}
-          subtext="Lucro Líquido"
-          icon={DollarSign}
-          color={metrics.totalProfit >= 0 ? 'text-emerald-500' : 'text-red-500'}
-        />
+        <KPICard title="Equity" value={formatValue(currentBankrollBalance)} subtext="Ativos Totais" icon={Wallet} color="text-emerald-500" trend={((currentBankrollBalance - (activeBR?.initialBalance || 1)) / (activeBR?.initialBalance || 1)) * 100} />
+        <KPICard title="Sharpe Ratio" value={metrics.sharpeRatio.toFixed(2)} subtext="Retorno / Risco" icon={Scale} color="text-indigo-500" extraInfo={metrics.sharpeRatio > 2 ? 'Excelente' : 'Moderado'} />
+        <KPICard title="Max Drawdown" value={formatValue(metrics.maxDrawdown)} subtext="Queda Máxima" icon={AlertOctagon} color="text-red-500" extraInfo={`Risco ${(metrics.maxDrawdown / (activeBR?.initialBalance || 1) * 100).toFixed(1)}%`} />
+        <KPICard title="Win Rate" value={`${metrics.winRate.toFixed(0)}%`} subtext={`N = ${metrics.totalBets}`} icon={Target} color="text-blue-500" />
+        <KPICard title="P&L" value={formatValue(metrics.totalProfit)} subtext="Lucro Líquido" icon={DollarSign} color={metrics.totalProfit >= 0 ? 'text-emerald-500' : 'text-red-500'} />
       </div>
 
       {/* CHART + SIDE */}
