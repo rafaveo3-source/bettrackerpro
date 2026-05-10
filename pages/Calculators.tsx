@@ -117,7 +117,6 @@ const Calculators: React.FC = () => {
   const [autoSyncBankroll, setAutoSyncBankroll] = useState(() => localStorage.getItem('autoSyncBankroll') === 'true');
   const [useAvailableBankroll, setUseAvailableBankroll] = useState(() => localStorage.getItem('useAvailableBankroll') === 'true'); 
   
-  // 🔥 FIX MATEMÁTICO: Garantindo .toFixed(2) no momento da montagem 🔥
   const [compBankroll, setCompBankroll] = useState(() => localStorage.getItem('compBankroll') || (currentBankrollBalance > 0 ? Number(currentBankrollBalance).toFixed(2) : '1000.00'));
   const [compTarget, setCompTarget] = useState(() => localStorage.getItem('compTarget') || (currentBankrollBalance > 0 ? Number(currentBankrollBalance * 2).toFixed(2) : '2000.00'));
   const [compDays, setCompDays] = useState(() => localStorage.getItem('compDays') || '30');
@@ -186,7 +185,6 @@ const Calculators: React.FC = () => {
       return () => clearTimeout(timeoutId);
   }, [compBankroll, compTarget, compDays, simMethods, autoSyncBankroll, useAvailableBankroll, isInitialized, user]);
 
-  // 🔥 FIX MATEMÁTICO: .toFixed(2) ao receber dados vivos da banca 🔥
   useEffect(() => {
       if (autoSyncBankroll && isInitialized) {
           setCompBankroll(Number(currentBankrollBalance).toFixed(2));
@@ -295,7 +293,6 @@ const Calculators: React.FC = () => {
       const drawdownRiskMoney = currentStakeValue * (m.badRun || 5);
       const drawdownRiskPct = bankrollNum > 0 ? (drawdownRiskMoney / bankrollNum) * 100 : 0;
       
-      // 🔥 FIX UI: Crachás super compactos com whitespace-nowrap 🔥
       let riskBadge = null;
       if (evRaw <= 0) {
           riskBadge = <span className="text-[8px] font-black text-red-500 uppercase bg-red-500/10 px-1 py-0.5 rounded whitespace-nowrap">EV Negativo</span>;
@@ -421,7 +418,6 @@ const Calculators: React.FC = () => {
     { id: 'odds', label: 'Odds Conv.', pro: false }
   ];
 
-  // 🔥 FIX UI: Input ultracompacto para caber perfeitamente na tabela sem scroll no PC 🔥
   const inputClass = "bg-transparent border-b border-transparent hover:border-slate-300 dark:hover:border-slate-700 focus:border-indigo-500 text-slate-900 dark:text-white px-1 py-1 outline-none font-mono text-xs w-full text-center transition-colors";
 
   const sidebarContent = useMemo(() => {
@@ -565,7 +561,7 @@ const Calculators: React.FC = () => {
                         {/* OCULTA AS OPERAÇÕES SE A META BATEU OU QUEBROU */}
                         {!isTargetReached && !isBankrollBusted && (
                             <>
-                                {/* CARD 2: RESULTADO MATEMÁTICO E GPS */}
+                                {/* CARD 2: RESULTADO MATEMÁTICO (PLANO DE AÇÃO) E GPS */}
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                     <div className="bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-800 rounded-[2rem] p-6 shadow-sm flex flex-col justify-center relative overflow-hidden">
                                         <Navigation className="absolute bottom-0 right-0 w-40 h-40 text-slate-100 dark:text-slate-800/50 -mb-10 -mr-10 pointer-events-none" />
@@ -640,8 +636,10 @@ const Calculators: React.FC = () => {
                                         )}
                                     </AnimatePresence>
                                     
-                                    {/* 🔥 FIX UI: Tabela Compacta sem scroll no desktop 🔥 */}
-                                    <div className="overflow-x-auto custom-scrollbar pb-2">
+                                    {/* 🔥 UI HÍBRIDA: Tabela no PC, Cards no Mobile 🔥 */}
+                                    
+                                    {/* VISÃO DESKTOP (TABELA) */}
+                                    <div className="hidden md:block overflow-x-auto custom-scrollbar pb-2">
                                         <table className="w-full text-left min-w-[768px]">
                                             <thead>
                                                 <tr className="border-b border-slate-200 dark:border-slate-800 text-[8px] sm:text-[9px] uppercase tracking-widest text-slate-500 font-bold">
@@ -660,7 +658,7 @@ const Calculators: React.FC = () => {
                                             <tbody>
                                                 <AnimatePresence>
                                                     {processedMethods.map((m) => (
-                                                        <motion.tr initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, height: 0 }} key={m.id} className="border-b border-slate-100 dark:border-slate-800/50 hover:bg-slate-50 dark:hover:bg-slate-900/30 transition-colors group">
+                                                        <motion.tr initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, height: 0 }} key={`desktop-${m.id}`} className="border-b border-slate-100 dark:border-slate-800/50 hover:bg-slate-50 dark:hover:bg-slate-900/30 transition-colors group">
                                                             
                                                             <td className="py-2 pl-1 pr-2">
                                                                 <div className="flex flex-col gap-1">
@@ -742,6 +740,95 @@ const Calculators: React.FC = () => {
                                                 </AnimatePresence>
                                             </tbody>
                                         </table>
+                                    </div>
+
+                                    {/* VISÃO MOBILE (CARDS) */}
+                                    <div className="md:hidden space-y-4">
+                                        <AnimatePresence>
+                                            {processedMethods.map((m) => (
+                                                <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} key={`mobile-${m.id}`} className="bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-[1.5rem] p-4 relative shadow-sm">
+                                                    
+                                                    {/* Botão Deletar Mobile */}
+                                                    <button onClick={() => removeSimMethod(m.id)} className="absolute top-4 right-4 p-2 text-slate-400 hover:text-red-500 transition-colors bg-white dark:bg-slate-900 rounded-lg shadow-sm border border-slate-100 dark:border-slate-800">
+                                                        <Trash2 size={14}/>
+                                                    </button>
+
+                                                    {/* Nome do Método */}
+                                                    <div className="pr-12 mb-4">
+                                                        <p className="text-[10px] font-black uppercase text-slate-500 dark:text-slate-400 tracking-widest mb-1.5">Método / Estratégia</p>
+                                                        <div className="relative">
+                                                            <input list="methods-list" value={m.name} onChange={e => updateSimMethod(m.id, 'name', e.target.value)} className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white px-3 py-2 rounded-xl text-xs font-black outline-none focus:border-indigo-500" placeholder="Ex: Oportunista..." />
+                                                        </div>
+                                                        <div className="mt-1.5">
+                                                            {m.isSynced ? (
+                                                                <span className="text-[9px] font-bold text-emerald-500 uppercase tracking-widest flex items-center gap-1"><CheckCircle2 size={10}/> Histórico Validado</span>
+                                                            ) : (
+                                                                <span className="text-[9px] font-bold text-indigo-400 uppercase tracking-widest">● Simulação Manual</span>
+                                                            )}
+                                                        </div>
+                                                    </div>
+
+                                                    {/* Grid de Stats (WR, ODD, ENTRADAS) */}
+                                                    <div className="grid grid-cols-3 gap-2 mb-4 p-3 bg-white dark:bg-slate-900 rounded-xl border border-slate-100 dark:border-slate-800">
+                                                        <div>
+                                                            <p className="text-[9px] text-slate-400 dark:text-slate-500 uppercase font-black tracking-widest text-center mb-1">WR %</p>
+                                                            <input type="number" value={m.winRate} onChange={e => updateSimMethod(m.id, 'winRate', e.target.value)} className={inputClass} />
+                                                        </div>
+                                                        <div className="border-l border-r border-slate-100 dark:border-slate-800 px-1">
+                                                            <p className="text-[9px] text-slate-400 dark:text-slate-500 uppercase font-black tracking-widest text-center mb-1">Odd</p>
+                                                            <input type="number" step="0.01" value={m.avgOdd} onChange={e => updateSimMethod(m.id, 'avgOdd', e.target.value)} className={inputClass} />
+                                                        </div>
+                                                        <div>
+                                                            <p className="text-[9px] text-slate-400 dark:text-slate-500 uppercase font-black tracking-widest text-center mb-1">Entr/Dia</p>
+                                                            <input type="number" min="1" value={m.entries} onChange={e => updateSimMethod(m.id, 'entries', e.target.value)} className={inputClass} />
+                                                        </div>
+                                                    </div>
+
+                                                    {/* Grid de Risco e EV */}
+                                                    <div className="grid grid-cols-2 gap-3 mb-4">
+                                                        <div className="p-3 bg-white dark:bg-slate-900 rounded-xl border border-slate-100 dark:border-slate-800 text-center flex flex-col items-center justify-center">
+                                                            <p className="text-[9px] text-slate-400 dark:text-slate-500 uppercase font-black tracking-widest mb-1">Max Bad Run</p>
+                                                            <div className="flex items-center justify-center gap-1 mb-1">
+                                                                <input type="number" min="1" value={m.badRun || 5} onChange={e => updateSimMethod(m.id, 'badRun', e.target.value)} className={`${inputClass} !text-red-500 dark:!text-red-400 !px-0 !py-0 !w-8`} />
+                                                                <span className="text-[9px] font-bold text-slate-500">Reds</span>
+                                                            </div>
+                                                            <span className="text-[9px] font-bold text-red-500 bg-red-50 dark:bg-red-500/10 px-2 py-0.5 rounded">-R$ {m.drawdownRiskMoney.toFixed(0)} ({m.drawdownRiskPct.toFixed(0)}%)</span>
+                                                        </div>
+                                                        <div className="p-3 bg-white dark:bg-slate-900 rounded-xl border border-slate-100 dark:border-slate-800 text-center flex flex-col justify-center">
+                                                            <p className="text-[9px] text-slate-400 dark:text-slate-500 uppercase font-black tracking-widest mb-1">EV Esperado</p>
+                                                            <span className={`text-[10px] font-black uppercase tracking-widest px-1.5 py-0.5 rounded border inline-block mx-auto mb-1 ${m.evPct > 0 ? 'bg-emerald-50 text-emerald-600 border-emerald-200 dark:bg-emerald-500/10 dark:text-emerald-400 dark:border-emerald-500/20' : 'bg-red-50 text-red-600 border-red-200 dark:bg-red-500/10 dark:text-red-400 dark:border-red-500/20'}`}>{m.evPct > 0 ? '+' : ''}{m.evPct.toFixed(1)}%</span>
+                                                            <span className="text-[9px] text-slate-500 font-bold">{m.evMoney > 0 ? '+' : ''} R$ {m.evMoney.toFixed(2)}/bet</span>
+                                                        </div>
+                                                    </div>
+
+                                                    {/* Painel de Ação de Stake */}
+                                                    <div className="flex items-center justify-between gap-2 p-3 bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm">
+                                                        <div className="flex-1 text-center">
+                                                            <p className="text-[9px] text-slate-400 dark:text-slate-500 uppercase font-black tracking-widest mb-1">Sua Stake</p>
+                                                            <input type="number" step="0.1" value={m.stake} onChange={e => updateSimMethod(m.id, 'stake', e.target.value)} className={inputClass} />
+                                                            <div className="mt-1 flex justify-center">{m.riskBadge}</div>
+                                                        </div>
+                                                        <div className="flex-1 text-center border-l border-r border-slate-100 dark:border-slate-800 px-1">
+                                                            <p className="text-[9px] text-slate-400 dark:text-slate-500 uppercase font-black tracking-widest mb-1">Stake Meta</p>
+                                                            <span className={`font-mono font-black text-[11px] block mb-1 ${m.requiredStakePct > m.safeStakePct ? 'text-red-500' : 'text-indigo-600 dark:text-indigo-400'}`}>{m.evPct > 0 ? m.requiredStakePct.toFixed(1) + '%' : 'N/A'}</span>
+                                                            {m.evPct > 0 && <button onClick={() => updateSimMethod(m.id, 'stake', String(m.requiredStakePct.toFixed(1)))} className="text-[8px] uppercase font-bold tracking-widest text-indigo-500 flex items-center justify-center gap-1 mx-auto bg-indigo-50 dark:bg-indigo-500/10 px-2 py-0.5 rounded"><MousePointerClick size={10}/> Fixar</button>}
+                                                        </div>
+                                                        <div className="flex-[1.2] text-center">
+                                                            <p className="text-[9px] text-emerald-600 dark:text-emerald-500 uppercase font-black tracking-widest mb-1">Aposte Isso</p>
+                                                            <div className="bg-emerald-50 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-400 py-2 px-1 rounded-lg font-black font-mono text-xs border border-emerald-200 dark:border-emerald-500/30">
+                                                                R$ {m.stakeValue.toFixed(2)}
+                                                            </div>
+                                                        </div>
+                                                    </div>
+
+                                                </motion.div>
+                                            ))}
+                                        </AnimatePresence>
+                                        
+                                        {/* Botão de Adicionar no final da lista mobile */}
+                                        <button onClick={addSimMethod} className="w-full mt-4 py-4 rounded-xl border-2 border-dashed border-slate-300 dark:border-slate-700 text-slate-500 dark:text-slate-400 font-black uppercase tracking-widest text-xs flex items-center justify-center gap-2 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors">
+                                            <PlusCircle size={16} /> Adicionar Nova Simulação
+                                        </button>
                                     </div>
                                 </div>
 
@@ -875,6 +962,54 @@ const Calculators: React.FC = () => {
                         <button onClick={addDutchSelection} className="flex-1 py-3 rounded-xl border border-dashed border-slate-300 dark:border-slate-700 text-slate-600 dark:text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-800/50 text-xs font-bold uppercase transition-colors"><Plus size={14} className="inline mr-1"/> Add Seleção</button>
                         <button onClick={calculateDutching} className="flex-1 py-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold uppercase shadow-lg shadow-emerald-600/20 transition-all active:scale-95">Calcular</button>
                     </div>
+                </div>
+            )}
+
+            {activeTab === 'kelly' && (
+                <div className="bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-800 rounded-[2rem] p-6 shadow-sm w-full overflow-hidden">
+                    <h2 className="text-lg font-black text-slate-900 dark:text-white uppercase tracking-tighter italic mb-6">Critério de Kelly</h2>
+                    <div className="grid grid-cols-2 gap-4 mb-6">
+                        <div>
+                             <label className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase block mb-2">Banca (Auto-Sync)</label>
+                             <div className="p-3 bg-slate-50 dark:bg-slate-900 rounded-xl font-mono font-bold text-slate-900 dark:text-white border border-slate-200 dark:border-transparent">R$ {calculationBankroll.toFixed(2)}</div>
+                        </div>
+                        <div>
+                             <label className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase block mb-2">Fração de Risco</label>
+                             <select value={kellyFraction} onChange={e => setKellyFraction(e.target.value)} className="w-full p-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-transparent text-slate-900 dark:text-white rounded-xl font-bold text-sm outline-none">
+                                <option value="1">100% (Pleno)</option>
+                                <option value="0.5">50% (Half)</option>
+                                <option value="0.25">25% (Quarter)</option>
+                               </select>
+                        </div>
+                        <div>
+                             <label className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase block mb-2">Odds</label>
+                             <input type="number" value={kellyOdds} onChange={e => setKellyOdds(e.target.value)} className="w-full p-3 bg-slate-50 dark:bg-slate-900 rounded-xl font-mono font-bold outline-none border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white" />
+                        </div>
+                        <div>
+                             <label className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase block mb-2">Probabilidade Real %</label>
+                             <input type="number" value={kellyProb} onChange={e => setKellyProb(e.target.value)} className="w-full p-3 bg-slate-50 dark:bg-slate-900 rounded-xl font-mono font-bold outline-none border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white" />
+                        </div>
+                    </div>
+                    <div className="bg-purple-50 dark:bg-purple-900/10 p-6 rounded-2xl text-center border border-purple-200 dark:border-purple-500/20">
+                        <p className="text-xs font-bold text-purple-700 dark:text-purple-400 uppercase tracking-widest mb-1">Stake Recomendada</p>
+                        <h3 className="text-4xl font-black text-purple-700 dark:text-purple-400">{parseFloat(kellyResult) > 0 ? kellyResult : '0.00'}%</h3>
+                        <p className="text-sm font-mono text-purple-800 dark:text-purple-300 mt-2 bg-purple-100 dark:bg-purple-500/20 inline-block px-3 py-1 rounded font-bold">R$ {parseFloat(kellyResult) > 0 ? kellyMoney.toFixed(2) : '0.00'}</p>
+                    </div>
+                </div>
+            )}
+
+            {activeTab === 'stake' && (
+                <div className="bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-800 rounded-[2rem] p-6 shadow-sm">
+                   <h2 className="text-lg font-black text-slate-900 dark:text-white uppercase tracking-tighter italic mb-6 flex items-center gap-2"><Percent size={20} className="text-orange-500"/> Calculadora Stake Fixa</h2>
+                   <div className="mb-6">
+                      <label className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase block mb-2">Porcentagem da Banca (%)</label>
+                      <input type="number" value={stakePercentState} onChange={e => setStakePercentState(e.target.value)} className="w-full p-4 bg-slate-50 dark:bg-slate-900 rounded-xl font-mono font-black text-3xl outline-none border border-slate-200 dark:border-slate-800 text-center text-orange-500" />
+                   </div>
+                   <div className="bg-slate-50 dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 text-center">
+                      <p className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-1">Valor da Aposta</p>
+                      <h3 className="text-4xl font-black text-slate-900 dark:text-white">R$ {stakeValue.toFixed(2)}</h3>
+                      <p className="text-xs text-slate-500 dark:text-slate-400 mt-2">Baseado na banca sincronizada de R$ {calculationBankroll.toFixed(2)}</p>
+                   </div>
                 </div>
             )}
 
