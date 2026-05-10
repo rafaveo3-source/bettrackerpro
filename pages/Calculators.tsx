@@ -339,25 +339,51 @@ const Calculators: React.FC = () => {
      }
   }
 
+  // ==============================================
+  // 🔥 FIX GRÁFICO SVG: Escala Dinâmica Absoluta 🔥
+  // ==============================================
   const generateChartPoints = () => {
       const pointsTarget = [];
       const pointsProjected = [];
       const width = 1000;
       const height = 200;
-      const maxY = Math.max(targetNum, projectedBankroll) * 1.1;
-      const minY = bankrollNum * 0.9;
-      const rangeY = maxY - minY || 1;
+      
+      const allTargetVals = [];
+      const allProjectedVals = [];
+
+      // Coleta todos os pontos para achar os limites matemáticos exatos
+      for (let day = 0; day <= daysNum; day++) {
+          const yTVal = bankrollNum * Math.pow(1 + dailyGrowthNeededRaw, day);
+          const yPVal = bankrollNum * Math.pow(1 + (aggregateDailyGrowth / 100), day);
+          allTargetVals.push(yTVal);
+          allProjectedVals.push(yPVal);
+      }
+
+      const actualMax = Math.max(...allTargetVals, ...allProjectedVals);
+      const actualMin = Math.min(...allTargetVals, ...allProjectedVals);
+
+      // 15% de "respiro" na renderização para não colar nas bordas
+      const padding = (actualMax - actualMin) * 0.15;
+      let maxY = actualMax + padding;
+      let minY = actualMin - padding;
+
+      // Previne falha matemática se o gráfico for uma linha perfeitamente reta (Banca = Meta)
+      if (maxY === minY) {
+          maxY += 10;
+          minY -= 10;
+      }
+
+      const rangeY = maxY - minY;
 
       for (let day = 0; day <= daysNum; day++) {
           const x = (day / daysNum) * width;
-          const yTVal = bankrollNum * Math.pow(1 + dailyGrowthNeededRaw, day);
-          const yT = height - ((yTVal - minY) / rangeY) * height;
+          const yT = height - ((allTargetVals[day] - minY) / rangeY) * height;
           pointsTarget.push(`${x},${yT}`);
 
-          const yPVal = bankrollNum * Math.pow(1 + (aggregateDailyGrowth / 100), day);
-          const yP = height - ((yPVal - minY) / rangeY) * height;
+          const yP = height - ((allProjectedVals[day] - minY) / rangeY) * height;
           pointsProjected.push(`${x},${yP}`);
       }
+
       return { target: pointsTarget.join(' '), projected: pointsProjected.join(' ') };
   };
   const chartPaths = generateChartPoints();
@@ -826,12 +852,12 @@ const Calculators: React.FC = () => {
                                     </div>
                                 </div>
 
-                                {/* CARD 4: GRÁFICO SVG NATIVO (REFINADO PARA MOBILE COM DEGRADÊ) */}
+                                {/* CARD 4: GRÁFICO SVG NATIVO (REFINADO PARA MOBILE COM DEGRADÊ) E ESCALA DINÂMICA */}
                                 <div className="bg-slate-900 rounded-[2rem] p-5 sm:p-6 text-white shadow-xl relative overflow-hidden flex flex-col justify-between min-h-[260px] sm:min-h-[300px]">
                                     <div className="relative z-10 flex flex-col sm:flex-row justify-between items-start gap-4 sm:gap-0 mb-4 sm:mb-6">
                                         <div>
                                             <p className="text-[10px] font-black text-indigo-200 uppercase tracking-widest mb-1">Crescimento Exponencial</p>
-                                            <h3 className="text-2xl sm:text-3xl font-black text-white flex flex-col sm:block">
+                                            <h3 className={`text-2xl sm:text-3xl font-black flex flex-col sm:block ${aggregateDailyGrowth < 0 ? 'text-red-400' : 'text-white'}`}>
                                                 R$ {projectedBankroll.toFixed(2)} 
                                                 <span className="text-xs sm:text-sm text-indigo-300 font-medium sm:ml-2 mt-1 sm:mt-0">projetado em {daysNum} dias</span>
                                             </h3>
@@ -850,9 +876,15 @@ const Calculators: React.FC = () => {
                                                     <stop offset="100%" stopColor="#6366f1" stopOpacity="0" />
                                                 </linearGradient>
                                             </defs>
+                                            
+                                            {/* Linhas de Grade de fundo para visual Institucional */}
+                                            {[0, 0.25, 0.5, 0.75, 1].map(ratio => (
+                                                <line key={ratio} x1="0" y1={200 * ratio} x2="1000" y2={200 * ratio} stroke="#1e293b" strokeWidth="1" strokeDasharray="4,4" />
+                                            ))}
+                                            
                                             <polygon fill="url(#chartFill)" points={`0,200 ${chartPaths.projected} 1000,200`} />
                                             <polyline fill="none" stroke="#f59e0b" strokeWidth="2" strokeDasharray="5,5" points={chartPaths.target} />
-                                            <polyline fill="none" stroke="#6366f1" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" points={chartPaths.projected} />
+                                            <polyline fill="none" stroke="#6366f1" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" points={chartPaths.projected} />
                                         </svg>
                                     </div>
                                 </div>
