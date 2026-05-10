@@ -748,12 +748,10 @@ const Calculators: React.FC = () => {
                                             {processedMethods.map((m) => (
                                                 <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} key={`mobile-${m.id}`} className="bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-[1.5rem] p-4 relative shadow-sm">
                                                     
-                                                    {/* Botão Deletar Mobile */}
                                                     <button onClick={() => removeSimMethod(m.id)} className="absolute top-4 right-4 p-2 text-slate-400 hover:text-red-500 transition-colors bg-white dark:bg-slate-900 rounded-lg shadow-sm border border-slate-100 dark:border-slate-800">
                                                         <Trash2 size={14}/>
                                                     </button>
 
-                                                    {/* Nome do Método */}
                                                     <div className="pr-12 mb-4">
                                                         <p className="text-[10px] font-black uppercase text-slate-500 dark:text-slate-400 tracking-widest mb-1.5">Método / Estratégia</p>
                                                         <div className="relative">
@@ -768,7 +766,6 @@ const Calculators: React.FC = () => {
                                                         </div>
                                                     </div>
 
-                                                    {/* Grid de Stats (WR, ODD, ENTRADAS) */}
                                                     <div className="grid grid-cols-3 gap-2 mb-4 p-3 bg-white dark:bg-slate-900 rounded-xl border border-slate-100 dark:border-slate-800">
                                                         <div>
                                                             <p className="text-[9px] text-slate-400 dark:text-slate-500 uppercase font-black tracking-widest text-center mb-1">WR %</p>
@@ -784,7 +781,6 @@ const Calculators: React.FC = () => {
                                                         </div>
                                                     </div>
 
-                                                    {/* Grid de Risco e EV */}
                                                     <div className="grid grid-cols-2 gap-3 mb-4">
                                                         <div className="p-3 bg-white dark:bg-slate-900 rounded-xl border border-slate-100 dark:border-slate-800 text-center flex flex-col items-center justify-center">
                                                             <p className="text-[9px] text-slate-400 dark:text-slate-500 uppercase font-black tracking-widest mb-1">Max Bad Run</p>
@@ -801,7 +797,6 @@ const Calculators: React.FC = () => {
                                                         </div>
                                                     </div>
 
-                                                    {/* Painel de Ação de Stake */}
                                                     <div className="flex items-center justify-between gap-2 p-3 bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm">
                                                         <div className="flex-1 text-center">
                                                             <p className="text-[9px] text-slate-400 dark:text-slate-500 uppercase font-black tracking-widest mb-1">Sua Stake</p>
@@ -825,32 +820,39 @@ const Calculators: React.FC = () => {
                                             ))}
                                         </AnimatePresence>
                                         
-                                        {/* Botão de Adicionar no final da lista mobile */}
                                         <button onClick={addSimMethod} className="w-full mt-4 py-4 rounded-xl border-2 border-dashed border-slate-300 dark:border-slate-700 text-slate-500 dark:text-slate-400 font-black uppercase tracking-widest text-xs flex items-center justify-center gap-2 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors">
                                             <PlusCircle size={16} /> Adicionar Nova Simulação
                                         </button>
                                     </div>
                                 </div>
 
-                                {/* CARD 4: GRÁFICO SVG NATIVO */}
-                                <div className="bg-slate-900 rounded-[2rem] p-6 text-white shadow-xl relative overflow-hidden flex flex-col justify-between min-h-[300px]">
-                                    <div className="relative z-10 flex justify-between items-start mb-6">
+                                {/* CARD 4: GRÁFICO SVG NATIVO (REFINADO PARA MOBILE COM DEGRADÊ) */}
+                                <div className="bg-slate-900 rounded-[2rem] p-5 sm:p-6 text-white shadow-xl relative overflow-hidden flex flex-col justify-between min-h-[260px] sm:min-h-[300px]">
+                                    <div className="relative z-10 flex flex-col sm:flex-row justify-between items-start gap-4 sm:gap-0 mb-4 sm:mb-6">
                                         <div>
                                             <p className="text-[10px] font-black text-indigo-200 uppercase tracking-widest mb-1">Crescimento Exponencial</p>
-                                            <h3 className="text-3xl font-black text-white">R$ {projectedBankroll.toFixed(2)} <span className="text-sm text-indigo-300 font-medium">projetado em {daysNum} dias</span></h3>
+                                            <h3 className="text-2xl sm:text-3xl font-black text-white flex flex-col sm:block">
+                                                R$ {projectedBankroll.toFixed(2)} 
+                                                <span className="text-xs sm:text-sm text-indigo-300 font-medium sm:ml-2 mt-1 sm:mt-0">projetado em {daysNum} dias</span>
+                                            </h3>
                                         </div>
-                                        <div className="text-right">
-                                            <p className="text-[9px] uppercase font-bold text-slate-400 flex items-center justify-end gap-1"><span className="w-2 h-2 rounded-full bg-amber-500"></span> Curva da Meta</p>
-                                            <p className="text-[9px] uppercase font-bold text-slate-400 flex items-center justify-end gap-1 mt-1"><span className="w-2 h-2 rounded-full bg-indigo-500"></span> Projeção Real</p>
+                                        <div className="flex flex-row sm:flex-col gap-3 sm:gap-0 w-full sm:w-auto justify-start sm:justify-end border-t border-slate-800 sm:border-0 pt-3 sm:pt-0">
+                                            <p className="text-[9px] uppercase font-bold text-slate-400 flex items-center sm:justify-end gap-1"><span className="w-2 h-2 rounded-full bg-amber-500"></span> Curva da Meta</p>
+                                            <p className="text-[9px] uppercase font-bold text-slate-400 flex items-center sm:justify-end gap-1 sm:mt-1"><span className="w-2 h-2 rounded-full bg-indigo-500"></span> Projeção Real</p>
                                         </div>
                                     </div>
                                     
-                                    <div className="relative w-full h-[150px] mt-auto">
+                                    <div className="relative w-full h-[120px] sm:h-[150px] mt-auto">
                                         <svg viewBox="0 0 1000 200" preserveAspectRatio="none" className="w-full h-full overflow-visible">
-                                            {/* Linha da Meta (Amber) */}
+                                            <defs>
+                                                <linearGradient id="chartFill" x1="0" y1="0" x2="0" y2="1">
+                                                    <stop offset="0%" stopColor="#6366f1" stopOpacity="0.3" />
+                                                    <stop offset="100%" stopColor="#6366f1" stopOpacity="0" />
+                                                </linearGradient>
+                                            </defs>
+                                            <polygon fill="url(#chartFill)" points={`0,200 ${chartPaths.projected} 1000,200`} />
                                             <polyline fill="none" stroke="#f59e0b" strokeWidth="2" strokeDasharray="5,5" points={chartPaths.target} />
-                                            {/* Linha da Projeção Real (Indigo) */}
-                                            <polyline fill="none" stroke="#6366f1" strokeWidth="4" points={chartPaths.projected} />
+                                            <polyline fill="none" stroke="#6366f1" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" points={chartPaths.projected} />
                                         </svg>
                                     </div>
                                 </div>
