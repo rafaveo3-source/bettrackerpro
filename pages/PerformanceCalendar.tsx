@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useBetStore } from '../store/useBetStore';
-import { ChevronLeft, ChevronRight, Activity, CircleDollarSign, Target, Trophy, Calendar as CalendarIcon } from 'lucide-react';
+// 🔥 FIX: ChevronDown importado corretamente aqui embaixo 👇
+import { ChevronLeft, ChevronRight, Activity, CircleDollarSign, Target, Trophy, Calendar as CalendarIcon, ChevronDown } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 const PerformanceCalendar: React.FC = () => {
