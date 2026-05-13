@@ -415,9 +415,6 @@ const Calculators: React.FC = () => {
   };
   const chartPaths = generateChartPoints();
 
-  // ==============================================
-  // OUTRAS CALCULADORAS MANTIDAS
-  // ==============================================
   const [dutchTotalStake, setDutchTotalStake] = useState('100');
   const [dutchSelections, setDutchSelections] = useState([{ id: 1, name: 'Seleção A', odds: '2.50', stake: 0, profit: 0 }, { id: 2, name: 'Seleção B', odds: '3.20', stake: 0, profit: 0 }]);
   const addDutchSelection = () => setDutchSelections([...dutchSelections, { id: Date.now(), name: `Seleção ${String.fromCharCode(65 + dutchSelections.length)}`, odds: '', stake: 0, profit: 0 }]);
@@ -474,6 +471,17 @@ const Calculators: React.FC = () => {
   const inputClass = "bg-transparent border-b border-transparent hover:border-slate-300 dark:hover:border-[#3A3A3C] focus:border-indigo-500 text-slate-900 dark:text-white px-1 py-1 outline-none font-mono text-xs w-full text-center transition-colors";
   const cardClass = "bg-white dark:bg-[#1C1C1E] border border-slate-200 dark:border-[#2C2C2E] rounded-2xl p-6 shadow-sm";
   const sectionTitleClass = "text-lg font-bold text-slate-900 dark:text-white uppercase tracking-tight mb-6 flex items-center gap-2";
+
+  // 🔥 RESTAURAÇÃO DA SIDEBAR CONTENT 🔥
+  const sidebarContent = useMemo(() => {
+      switch(activeTab) {
+          case 'dutching': return { title: "O que é Dutching?", rules: ["Técnica de gestão de risco onde divide-se a Stake Total entre várias seleções para garantir o mesmo lucro líquido."] };
+          case 'kelly': return { title: "Critério de Kelly", rules: ["A fórmula matemática que define a proporção exata da banca para maximizar crescimento a longo prazo.", "Sempre use Frações (1/4 ou 1/2) na vida real."] };
+          case 'value': return { title: "Value Bet (Aposta de Valor)", rules: ["Cruza a Odd oferecida com a sua estimativa de probabilidade real para achar o seu +EV."] };
+          case 'arb': return { title: "Arbitragem (Surebet)", rules: ["Aposte em todos os resultados possíveis em casas diferentes garantindo lucro independente do resultado final."] };
+          default: return { title: "A Máquina de Gestão", rules: ["A coluna 'Aposte Isso' te diz o valor da Próxima Entrada.", "Recalcular a Stake(%) para cima após um Red é fazer Martingale, e isso vai quebrar sua banca."] };
+      }
+  }, [activeTab]);
 
   return (
     <div className="space-y-6 pb-20 w-full overflow-x-hidden font-sans">
