@@ -468,8 +468,7 @@ const Calculators: React.FC = () => {
     { id: 'odds', label: 'Odds Conv.', pro: false }
   ];
 
-  // 🔥 Design System Fixes 🔥
-  const inputClass = "bg-transparent border-b border-transparent hover:border-slate-300 dark:hover:border-[#3A3A3C] focus:border-indigo-500 text-slate-900 dark:text-white px-1 py-1.5 md:py-1 outline-none font-mono text-base md:text-xs w-full text-center transition-colors";
+  const inputClass = "bg-transparent border-b border-transparent hover:border-slate-300 dark:hover:border-[#3A3A3C] focus:border-indigo-500 text-slate-900 dark:text-white px-1 py-1 outline-none font-mono text-xs w-full text-center transition-colors";
   const cardClass = "bg-white dark:bg-[#1C1C1E] border border-slate-200 dark:border-[#2C2C2E] rounded-2xl p-6 shadow-sm";
   const sectionTitleClass = "text-lg font-bold text-slate-900 dark:text-white uppercase tracking-tight mb-6 flex items-center gap-2";
 
@@ -506,7 +505,6 @@ const Calculators: React.FC = () => {
           </div>
       </div>
       
-      {/* 🔥 FIX: Navegação Horizontal Responsiva (Snap-scroll Mobile) 🔥 */}
       <div className="flex w-full overflow-x-auto bg-slate-100 dark:bg-[#000000] p-1.5 rounded-xl border border-slate-200 dark:border-[#2C2C2E] px-4 md:px-1 snap-x snap-mandatory mx-4 md:mx-0 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:'none'] [scrollbar-width:'none']">
         {tabs.map(tab => (
           <button
@@ -544,7 +542,6 @@ const Calculators: React.FC = () => {
                                             <LayoutGrid size={14}/> Dashboard Base
                                         </p>
                                         <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full sm:w-auto">
-                                            {/* 🔥 FIX: Segmented Control ocupando espaço certo no Mobile 🔥 */}
                                             <div className="flex bg-slate-50 dark:bg-[#000000] p-1 rounded-lg border border-slate-200 dark:border-[#2C2C2E] shadow-sm w-full sm:w-auto">
                                                 <button onClick={() => setGrowthMode('compound')} className={`flex-1 sm:flex-none px-4 py-2 sm:px-3 sm:py-1.5 text-[10px] font-bold uppercase tracking-wider rounded-md transition-all ${growthMode === 'compound' ? 'bg-white dark:bg-[#2C2C2E] text-slate-900 dark:text-white shadow-sm' : 'text-slate-500 dark:text-[#8E8E93] hover:text-slate-700 dark:hover:text-slate-300'}`}>Compostos</button>
                                                 <button onClick={() => setGrowthMode('fixed')} className={`flex-1 sm:flex-none px-4 py-2 sm:px-3 sm:py-1.5 text-[10px] font-bold uppercase tracking-wider rounded-md transition-all ${growthMode === 'fixed' ? 'bg-white dark:bg-[#2C2C2E] text-slate-900 dark:text-white shadow-sm' : 'text-slate-500 dark:text-[#8E8E93] hover:text-slate-700 dark:hover:text-slate-300'}`}>Fixa</button>
@@ -652,7 +649,7 @@ const Calculators: React.FC = () => {
 
                                 {/* CARD 3: A PLANILHA DE MÉTODOS EDITÁVEL */}
                                 <div className={`${cardClass} overflow-hidden p-0 md:p-0`}>
-                                    <div className="p-5 md:p-8">
+                                    <div className="p-6 md:p-8">
                                         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-6 mb-6">
                                             <div>
                                                 <h3 className="text-lg font-bold text-slate-900 dark:text-white tracking-tight flex items-center gap-2"><BarChart4 size={18} className="text-indigo-500"/> Simulador de Cenários</h3>
@@ -838,11 +835,11 @@ const Calculators: React.FC = () => {
                                                                     <input type="number" min="1" value={m.badRun || 5} onChange={e => updateSimMethod(m.id, 'badRun', e.target.value)} className="w-12 bg-slate-50 dark:bg-[#000000] rounded-lg text-center font-mono font-bold text-base py-1.5 outline-none text-red-600 dark:text-red-500 focus:border-red-500 border border-transparent transition-colors" />
                                                                     <span className="text-[10px] font-bold text-slate-500 dark:text-[#8E8E93]">Reds</span>
                                                                 </div>
-                                                                <span className="text-[10px] font-bold text-red-600 dark:text-red-500 bg-red-50 dark:bg-red-500/10 px-2 py-1 rounded-md">-R$ {m.drawdownRiskMoney.toFixed(0)} ({m.drawdownRiskPct.toFixed(0)}%)</span>
+                                                                <span className="text-[10px] font-medium text-slate-500 dark:text-[#8E8E93]">-R$ {m.drawdownRiskMoney.toFixed(0)} ({m.drawdownRiskPct.toFixed(0)}%)</span>
                                                             </div>
                                                             <div className="bg-white dark:bg-[#1C1C1E] border border-slate-200 dark:border-[#2C2C2E] rounded-xl p-4 shadow-sm flex flex-col justify-center items-center">
-                                                                <p className="text-[10px] text-slate-500 dark:text-[#8E8E93] uppercase font-bold tracking-widest mb-2">EV Esperado</p>
-                                                                <span className={`text-sm font-bold uppercase tracking-widest px-3 py-1 rounded-lg border mb-2 ${m.evPct > 0 ? 'bg-emerald-50 text-emerald-600 border-emerald-200 dark:bg-emerald-500/10 dark:text-emerald-400 dark:border-emerald-500/20' : 'bg-red-50 text-red-600 border-red-200 dark:bg-red-500/10 dark:text-red-400 dark:border-red-500/20'}`}>{m.evPct > 0 ? '+' : ''}{m.evPct.toFixed(1)}%</span>
+                                                                <p className="text-[10px] text-slate-500 dark:text-[#8E8E93] uppercase font-bold tracking-widest mb-1.5">EV Esperado</p>
+                                                                <span className={`text-[11px] font-bold uppercase tracking-widest px-3 py-1 rounded-lg border mb-2 ${m.evPct > 0 ? 'bg-emerald-50 text-emerald-600 border-emerald-200 dark:bg-emerald-500/10 dark:text-emerald-400 dark:border-emerald-500/20' : 'bg-red-50 text-red-600 border-red-200 dark:bg-red-500/10 dark:text-red-400 dark:border-red-500/20'}`}>{m.evPct > 0 ? '+' : ''}{m.evPct.toFixed(1)}%</span>
                                                                 <span className="text-[10px] text-slate-500 dark:text-[#8E8E93] font-bold">{m.evMoney > 0 ? '+' : ''} R$ {m.evMoney.toFixed(2)}/bet</span>
                                                             </div>
                                                         </div>
