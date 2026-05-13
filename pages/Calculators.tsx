@@ -200,6 +200,7 @@ const Calculators: React.FC = () => {
       setAutoSyncBankroll(false); 
   };
 
+  // 🔥 LÓGICA DE BANCA LIVRE E EXTREMOS 🔥
   const bankrollNum = parseFloat(compBankroll) || 0;
   const targetNum = parseFloat(compTarget) || 0;
   const daysNum = parseFloat(compDays) || 1;
@@ -268,6 +269,9 @@ const Calculators: React.FC = () => {
       }
   };
 
+  // ==============================================
+  // 🔥 MOTOR DE CÁLCULO E PROJEÇÃO
+  // ==============================================
   const dailyGrowthNeededRaw = bankrollNum > 0 && targetNum > bankrollNum && !isTargetReached 
       ? (isCompound 
           ? (Math.pow(targetNum / bankrollNum, 1 / daysNum) - 1)
@@ -464,7 +468,7 @@ const Calculators: React.FC = () => {
     { id: 'odds', label: 'Odds Conv.', pro: false }
   ];
 
-  const inputClass = "bg-transparent border-b border-transparent hover:border-slate-300 dark:hover:border-[#3A3A3C] focus:border-indigo-500 text-slate-900 dark:text-white px-1 py-1.5 md:py-1 outline-none font-mono text-sm md:text-xs w-full text-center transition-colors";
+  const inputClass = "bg-transparent border-b border-transparent hover:border-slate-300 dark:hover:border-[#3A3A3C] focus:border-indigo-500 text-slate-900 dark:text-white px-1 py-1.5 md:py-1 outline-none font-mono text-base md:text-xs w-full text-center transition-colors";
   const cardClass = "bg-white dark:bg-[#1C1C1E] border border-slate-200 dark:border-[#2C2C2E] rounded-2xl p-6 shadow-sm";
   const sectionTitleClass = "text-lg font-bold text-slate-900 dark:text-white uppercase tracking-tight mb-6 flex items-center gap-2";
 
@@ -782,84 +786,83 @@ const Calculators: React.FC = () => {
                                             </table>
                                         </div>
 
-                                        {/* 🔥 VISÃO MOBILE (CARDS) 🔥 */}
-                                        <div className="md:hidden space-y-5 mt-4 px-6 pb-6 pt-2">
+                                        {/* 🔥 VISÃO MOBILE (CARDS CORRIGIDOS - MIN-W-0) 🔥 */}
+                                        <div className="md:hidden space-y-4 mt-4 px-3 pb-4 pt-2">
                                             <AnimatePresence>
                                                 {processedMethods.map((m) => (
-                                                    <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} key={`mobile-${m.id}`} className="bg-slate-50 dark:bg-[#000000] border border-slate-200 dark:border-[#2C2C2E] rounded-3xl p-5 relative shadow-sm">
+                                                    <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} key={`mobile-${m.id}`} className="bg-slate-50 dark:bg-[#000000] border border-slate-200 dark:border-[#2C2C2E] rounded-3xl p-4 relative shadow-sm">
                                                         
-                                                        <div className="flex justify-between items-start mb-5">
-                                                            <div className="flex-1 pr-6">
-                                                                <p className="text-[10px] font-bold uppercase text-slate-500 dark:text-[#8E8E93] tracking-widest mb-1.5">Método / Estratégia</p>
-                                                                <div className="relative">
-                                                                    <input list="methods-list" value={m.name} onChange={e => updateSimMethod(m.id, 'name', e.target.value)} className="w-full bg-white dark:bg-[#1C1C1E] border border-slate-200 dark:border-[#2C2C2E] text-slate-900 dark:text-white px-4 py-3 rounded-xl text-sm font-bold outline-none focus:border-indigo-500 shadow-sm" placeholder="Ex: Oportunista..." />
-                                                                </div>
-                                                                <div className="mt-2 pl-1">
-                                                                    {m.isSynced ? (
-                                                                        <span className="text-[10px] font-bold text-emerald-500 uppercase tracking-widest flex items-center gap-1.5"><CheckCircle2 size={12}/> Histórico Validado</span>
-                                                                    ) : (
-                                                                        <span className="text-[10px] font-bold text-slate-400 dark:text-[#636366] uppercase tracking-widest">● Simulação Manual</span>
-                                                                    )}
-                                                                </div>
+                                                        <button onClick={() => removeSimMethod(m.id)} className="absolute top-4 right-4 p-2 text-slate-400 hover:text-red-500 transition-colors bg-white dark:bg-[#1C1C1E] rounded-lg shadow-sm border border-slate-100 dark:border-[#2C2C2E]">
+                                                            <Trash2 size={14}/>
+                                                        </button>
+
+                                                        <div className="pr-12 mb-5">
+                                                            <p className="text-[10px] font-bold uppercase text-slate-500 dark:text-[#8E8E93] tracking-widest mb-1.5">Método / Estratégia</p>
+                                                            <div className="relative">
+                                                                <input list="methods-list" value={m.name} onChange={e => updateSimMethod(m.id, 'name', e.target.value)} className="w-full bg-white dark:bg-[#1C1C1E] border border-slate-200 dark:border-[#2C2C2E] text-slate-900 dark:text-white px-3 py-2.5 rounded-xl text-sm font-bold outline-none focus:border-indigo-500 shadow-sm" placeholder="Ex: Oportunista..." />
                                                             </div>
-                                                            <button onClick={() => removeSimMethod(m.id)} className="p-3 text-red-400 hover:text-red-500 transition-colors bg-white dark:bg-[#1C1C1E] rounded-xl shadow-sm border border-slate-200 dark:border-[#2C2C2E] shrink-0 mt-5">
-                                                                <Trash2 size={16}/>
-                                                            </button>
+                                                            <div className="mt-2 pl-1">
+                                                                {m.isSynced ? (
+                                                                    <span className="text-[9px] font-bold text-emerald-500 uppercase tracking-widest flex items-center gap-1.5"><CheckCircle2 size={12}/> Histórico Validado</span>
+                                                                ) : (
+                                                                    <span className="text-[9px] font-bold text-slate-400 dark:text-[#636366] uppercase tracking-widest">● Simulação Manual</span>
+                                                                )}
+                                                            </div>
                                                         </div>
 
-                                                        {/* GRID DE PARÂMETROS BASE (THUMB FRIENDLY) */}
-                                                        <div className="grid grid-cols-3 gap-3 mb-5">
-                                                            <div className="bg-white dark:bg-[#1C1C1E] border border-slate-200 dark:border-[#2C2C2E] rounded-xl p-3 shadow-sm">
-                                                                <p className="text-[9px] text-slate-500 dark:text-[#8E8E93] uppercase font-bold tracking-widest text-center mb-2">WR %</p>
-                                                                <input type="number" value={m.winRate} onChange={e => updateSimMethod(m.id, 'winRate', e.target.value)} className="w-full bg-slate-50 dark:bg-[#000000] rounded-lg text-center font-mono font-bold text-sm py-2 px-1 outline-none text-slate-900 dark:text-white focus:border-indigo-500 border border-transparent transition-colors" />
+                                                        {/* GRID DE PARÂMETROS BASE (THUMB FRIENDLY COMPACTO) */}
+                                                        <div className="grid grid-cols-3 gap-2 mb-5 min-w-0">
+                                                            <div className="bg-white dark:bg-[#1C1C1E] border border-slate-200 dark:border-[#2C2C2E] rounded-xl p-2.5 shadow-sm min-w-0">
+                                                                <p className="text-[8px] text-slate-500 dark:text-[#8E8E93] uppercase font-bold tracking-widest text-center mb-1.5">WR %</p>
+                                                                <input type="number" value={m.winRate} onChange={e => updateSimMethod(m.id, 'winRate', e.target.value)} className="w-full min-w-0 bg-slate-50 dark:bg-[#000000] rounded-lg text-center font-mono font-bold text-[13px] py-2 px-0.5 outline-none text-slate-900 dark:text-white focus:border-indigo-500 border border-transparent transition-colors" />
                                                             </div>
-                                                            <div className="bg-white dark:bg-[#1C1C1E] border border-slate-200 dark:border-[#2C2C2E] rounded-xl p-3 shadow-sm">
-                                                                <p className="text-[9px] text-slate-500 dark:text-[#8E8E93] uppercase font-bold tracking-widest text-center mb-2">Odd</p>
-                                                                <input type="number" step="0.01" value={m.avgOdd} onChange={e => updateSimMethod(m.id, 'avgOdd', e.target.value)} className="w-full bg-slate-50 dark:bg-[#000000] rounded-lg text-center font-mono font-bold text-sm py-2 px-1 outline-none text-slate-900 dark:text-white focus:border-indigo-500 border border-transparent transition-colors" />
+                                                            <div className="bg-white dark:bg-[#1C1C1E] border border-slate-200 dark:border-[#2C2C2E] rounded-xl p-2.5 shadow-sm min-w-0">
+                                                                <p className="text-[8px] text-slate-500 dark:text-[#8E8E93] uppercase font-bold tracking-widest text-center mb-1.5">ODD</p>
+                                                                <input type="number" step="0.01" value={m.avgOdd} onChange={e => updateSimMethod(m.id, 'avgOdd', e.target.value)} className="w-full min-w-0 bg-slate-50 dark:bg-[#000000] rounded-lg text-center font-mono font-bold text-[13px] py-2 px-0.5 outline-none text-slate-900 dark:text-white focus:border-indigo-500 border border-transparent transition-colors" />
                                                             </div>
-                                                            <div className="bg-white dark:bg-[#1C1C1E] border border-slate-200 dark:border-[#2C2C2E] rounded-xl p-3 shadow-sm">
-                                                                <p className="text-[9px] text-slate-500 dark:text-[#8E8E93] uppercase font-bold tracking-widest text-center mb-2">Entr/Dia</p>
-                                                                <input type="number" min="1" value={m.entries} onChange={e => updateSimMethod(m.id, 'entries', e.target.value)} className="w-full bg-slate-50 dark:bg-[#000000] rounded-lg text-center font-mono font-bold text-sm py-2 px-1 outline-none text-slate-900 dark:text-white focus:border-indigo-500 border border-transparent transition-colors" />
+                                                            <div className="bg-white dark:bg-[#1C1C1E] border border-slate-200 dark:border-[#2C2C2E] rounded-xl p-2.5 shadow-sm min-w-0">
+                                                                <p className="text-[8px] text-slate-500 dark:text-[#8E8E93] uppercase font-bold tracking-widest text-center mb-1.5">ENTR/DIA</p>
+                                                                <input type="number" min="1" value={m.entries} onChange={e => updateSimMethod(m.id, 'entries', e.target.value)} className="w-full min-w-0 bg-slate-50 dark:bg-[#000000] rounded-lg text-center font-mono font-bold text-[13px] py-2 px-0.5 outline-none text-slate-900 dark:text-white focus:border-indigo-500 border border-transparent transition-colors" />
                                                             </div>
                                                         </div>
 
                                                         {/* RESULTADOS (RISCO E EV) */}
-                                                        <div className="grid grid-cols-2 gap-3 mb-5">
-                                                            <div className="bg-white dark:bg-[#1C1C1E] border border-slate-200 dark:border-[#2C2C2E] rounded-xl p-4 shadow-sm flex flex-col items-center justify-center">
-                                                                <p className="text-[10px] text-slate-500 dark:text-[#8E8E93] uppercase font-bold tracking-widest mb-2">Max Bad Run</p>
-                                                                <div className="flex items-center justify-center gap-1.5 mb-2">
-                                                                    <input type="number" min="1" value={m.badRun || 5} onChange={e => updateSimMethod(m.id, 'badRun', e.target.value)} className="w-10 bg-slate-50 dark:bg-[#000000] rounded-lg text-center font-mono font-bold text-sm py-1.5 px-1 outline-none text-red-600 dark:text-red-500 focus:border-red-500 border border-transparent transition-colors" />
-                                                                    <span className="text-[10px] font-bold text-slate-500">Reds</span>
+                                                        <div className="grid grid-cols-2 gap-2 mb-5 min-w-0">
+                                                            <div className="bg-white dark:bg-[#1C1C1E] border border-slate-200 dark:border-[#2C2C2E] rounded-xl p-3 shadow-sm flex flex-col items-center justify-center min-w-0">
+                                                                <p className="text-[9px] text-slate-500 dark:text-[#8E8E93] uppercase font-bold tracking-widest mb-2 text-center w-full truncate">Max Bad Run</p>
+                                                                <div className="flex items-center justify-center gap-1 mb-2 w-full min-w-0">
+                                                                    <input type="number" min="1" value={m.badRun || 5} onChange={e => updateSimMethod(m.id, 'badRun', e.target.value)} className="w-full max-w-[48px] min-w-0 bg-slate-50 dark:bg-[#000000] rounded-lg text-center font-mono font-bold text-[13px] py-1.5 px-1 outline-none text-red-600 dark:text-red-500 focus:border-red-500 border border-transparent transition-colors" />
+                                                                    <span className="text-[9px] font-bold text-slate-500 shrink-0">Reds</span>
                                                                 </div>
-                                                                <span className="text-[10px] font-medium text-slate-500 dark:text-[#8E8E93]">-R$ {m.drawdownRiskMoney.toFixed(0)} ({m.drawdownRiskPct.toFixed(0)}%)</span>
+                                                                <span className="text-[9px] font-medium text-slate-500 dark:text-[#8E8E93] truncate">-R$ {m.drawdownRiskMoney.toFixed(0)} ({m.drawdownRiskPct.toFixed(0)}%)</span>
                                                             </div>
-                                                            <div className="bg-white dark:bg-[#1C1C1E] border border-slate-200 dark:border-[#2C2C2E] rounded-xl p-4 shadow-sm flex flex-col justify-center items-center">
-                                                                <p className="text-[10px] text-slate-500 dark:text-[#8E8E93] uppercase font-bold tracking-widest mb-1.5">EV Esperado</p>
-                                                                <span className={`text-[11px] font-bold uppercase tracking-widest px-2 py-0.5 rounded border inline-block mx-auto mb-1.5 ${m.evPct > 0 ? 'bg-emerald-50 text-emerald-600 border-emerald-200 dark:bg-emerald-500/10 dark:text-emerald-400 dark:border-emerald-500/20' : 'bg-red-50 text-red-600 border-red-200 dark:bg-red-500/10 dark:text-red-400 dark:border-red-500/20'}`}>{m.evPct > 0 ? '+' : ''}{m.evPct.toFixed(1)}%</span>
-                                                                <span className="text-[10px] text-slate-500 dark:text-[#8E8E93] font-bold">{m.evMoney > 0 ? '+' : ''} R$ {m.evMoney.toFixed(2)}/bet</span>
+                                                            <div className="bg-white dark:bg-[#1C1C1E] border border-slate-200 dark:border-[#2C2C2E] rounded-xl p-3 shadow-sm flex flex-col justify-center items-center min-w-0">
+                                                                <p className="text-[9px] text-slate-500 dark:text-[#8E8E93] uppercase font-bold tracking-widest mb-2 text-center w-full truncate">EV Esperado</p>
+                                                                <span className={`text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 rounded border inline-block mx-auto mb-1.5 truncate ${m.evPct > 0 ? 'bg-emerald-50 text-emerald-600 border-emerald-200 dark:bg-emerald-500/10 dark:text-emerald-400 dark:border-emerald-500/20' : 'bg-red-50 text-red-600 border-red-200 dark:bg-red-500/10 dark:text-red-400 dark:border-red-500/20'}`}>{m.evPct > 0 ? '+' : ''}{m.evPct.toFixed(1)}%</span>
+                                                                <span className="text-[9px] text-slate-500 dark:text-[#8E8E93] font-bold truncate">{m.evMoney > 0 ? '+' : ''} R$ {m.evMoney.toFixed(2)}/bet</span>
                                                             </div>
                                                         </div>
 
                                                         {/* STAKE E APOSTE ISSO EM DESTAQUE */}
                                                         <div className="bg-white dark:bg-[#1C1C1E] border border-slate-200 dark:border-[#2C2C2E] rounded-xl shadow-sm overflow-hidden flex flex-col">
                                                             <div className="flex items-stretch border-b border-slate-100 dark:border-[#2C2C2E]">
-                                                                <div className="flex-1 p-4 flex flex-col items-center justify-center border-r border-slate-100 dark:border-[#2C2C2E]">
-                                                                    <p className="text-[10px] text-slate-500 dark:text-[#8E8E93] uppercase font-bold tracking-widest mb-2">Stake Meta</p>
-                                                                    <span className={`font-mono font-bold text-sm block mb-1 ${m.requiredStakePct > m.safeStakePct ? 'text-red-500' : 'text-slate-900 dark:text-white'}`}>{m.evPct > 0 ? m.requiredStakePct.toFixed(1) + '%' : 'N/A'}</span>
-                                                                    {m.evPct > 0 && <button onClick={() => updateSimMethod(m.id, 'stake', String(m.requiredStakePct.toFixed(1)))} className="text-[9px] uppercase font-bold tracking-widest text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-500/10 px-3 py-1 rounded-md mt-1">Fixar Meta</button>}
+                                                                <div className="flex-1 p-3 flex flex-col items-center justify-center border-r border-slate-100 dark:border-[#2C2C2E] min-w-0">
+                                                                    <p className="text-[9px] text-slate-500 dark:text-[#8E8E93] uppercase font-bold tracking-widest mb-2 truncate w-full text-center">Stake Meta</p>
+                                                                    <span className={`font-mono font-bold text-[13px] block mb-1 truncate ${m.requiredStakePct > m.safeStakePct ? 'text-red-500' : 'text-slate-900 dark:text-white'}`}>{m.evPct > 0 ? m.requiredStakePct.toFixed(1) + '%' : 'N/A'}</span>
+                                                                    {m.evPct > 0 && <button onClick={() => updateSimMethod(m.id, 'stake', String(m.requiredStakePct.toFixed(1)))} className="text-[8px] uppercase font-bold tracking-widest text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-500/10 px-2 py-1 rounded-md mt-1 truncate max-w-full">Fixar Meta</button>}
                                                                 </div>
-                                                                <div className="flex-1 p-4 flex flex-col items-center justify-center">
-                                                                    <p className="text-[10px] text-slate-500 dark:text-[#8E8E93] uppercase font-bold tracking-widest mb-2">Sua Stake</p>
-                                                                    <div className="flex items-center justify-center gap-1.5 w-full">
-                                                                        <input type="number" step="0.1" value={m.stake} onChange={e => updateSimMethod(m.id, 'stake', e.target.value)} className="w-16 bg-slate-50 dark:bg-[#000000] border border-slate-200 dark:border-[#3A3A3C] text-slate-900 dark:text-white rounded-lg px-1 py-1.5 font-mono font-bold text-sm text-center outline-none focus:border-indigo-500 transition-colors" />
-                                                                        <span className="text-sm font-bold text-slate-500">%</span>
+                                                                <div className="flex-1 p-3 flex flex-col items-center justify-center min-w-0">
+                                                                    <p className="text-[9px] text-slate-500 dark:text-[#8E8E93] uppercase font-bold tracking-widest mb-2 truncate w-full text-center">Sua Stake</p>
+                                                                    <div className="flex items-center justify-center gap-1 w-full min-w-0">
+                                                                        <input type="number" step="0.1" value={m.stake} onChange={e => updateSimMethod(m.id, 'stake', e.target.value)} className="flex-1 min-w-0 max-w-[72px] bg-slate-50 dark:bg-[#000000] border border-slate-200 dark:border-[#3A3A3C] text-slate-900 dark:text-white rounded-lg px-1 py-1.5 font-mono font-bold text-[13px] text-center outline-none focus:border-indigo-500 transition-colors" />
+                                                                        <span className="text-xs font-bold text-slate-500 shrink-0">%</span>
                                                                     </div>
-                                                                    <div className="mt-2 w-full flex justify-center">{m.riskBadge}</div>
+                                                                    <div className="mt-2 w-full flex justify-center truncate">{m.riskBadge}</div>
                                                                 </div>
                                                             </div>
-                                                            <div className="bg-emerald-50 dark:bg-emerald-500/10 p-5 flex flex-col items-center justify-center">
-                                                                <p className="text-[10px] text-emerald-700 dark:text-emerald-500 uppercase font-black tracking-widest mb-1.5">Aposte Isso na Próxima</p>
-                                                                <div className="text-2xl font-black font-mono text-emerald-600 dark:text-emerald-400 tracking-tight">
+                                                            <div className="bg-emerald-50 dark:bg-emerald-500/10 p-4 flex flex-col items-center justify-center min-w-0">
+                                                                <p className="text-[10px] text-emerald-700 dark:text-emerald-500 uppercase font-black tracking-widest mb-1.5 truncate w-full text-center">Aposte Isso na Próxima</p>
+                                                                <div className="text-2xl font-black font-mono text-emerald-600 dark:text-emerald-400 tracking-tight truncate w-full text-center">
                                                                     R$ {m.stakeValue.toFixed(2)}
                                                                 </div>
                                                             </div>
@@ -869,8 +872,8 @@ const Calculators: React.FC = () => {
                                                 ))}
                                             </AnimatePresence>
                                             
-                                            <button onClick={addSimMethod} className="w-full mt-2 py-4 rounded-xl border-2 border-dashed border-slate-300 dark:border-[#3A3A3C] text-slate-500 dark:text-[#8E8E93] hover:text-slate-900 dark:hover:text-white font-bold uppercase tracking-widest text-xs flex items-center justify-center gap-2 hover:bg-slate-50 dark:hover:bg-[#1C1C1E] transition-colors shadow-sm">
-                                                <Plus size={16} /> Nova Simulação
+                                            <button onClick={addSimMethod} className="w-full mt-2 py-4 rounded-xl border-2 border-dashed border-slate-300 dark:border-[#3A3A3C] text-slate-500 dark:text-[#8E8E93] hover:text-slate-900 dark:hover:text-white font-bold uppercase tracking-widest text-xs flex items-center justify-center gap-2 hover:bg-slate-50 dark:hover:bg-[#1C1C1E] transition-colors bg-white dark:bg-[#1C1C1E] shadow-sm">
+                                                <Plus size={16} /> Adicionar Nova Simulação
                                             </button>
                                         </div>
                                     </div>
