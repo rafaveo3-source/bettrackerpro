@@ -101,18 +101,25 @@ const Settings: React.FC = () => {
     }
   };
 
+  // 🔥 Design System Apple PRO: Classes base reutilizáveis 🔥
+  const cardClass = "bg-white dark:bg-[#1C1C1E] border border-slate-200 dark:border-[#2C2C2E] rounded-2xl p-6 md:p-8 shadow-sm transition-all";
+  const inputClass = "bg-slate-50 dark:bg-[#000000] border border-slate-200 dark:border-[#3A3A3C] text-slate-900 dark:text-white rounded-xl px-4 py-3 text-sm focus:border-indigo-500 dark:focus:border-indigo-500 outline-none transition-colors w-full placeholder:text-slate-400 dark:placeholder:text-[#636366]";
+  const sectionTitleClass = "text-xl font-bold text-slate-900 dark:text-white tracking-tight mb-6 flex items-center gap-3";
+
   return (
-    <div className="space-y-10 max-w-6xl mx-auto pb-20 w-full overflow-x-hidden transition-colors duration-300">
-        <div className="border-b border-slate-200 dark:border-slate-800 pb-8 flex flex-col md:flex-row md:items-end md:justify-between gap-6">
+    <div className="space-y-8 max-w-5xl mx-auto pb-20 w-full overflow-x-hidden font-sans">
+        
+        {/* --- HEADER CLEAN & SOBRIO --- */}
+        <div className="border-b border-slate-200 dark:border-[#2C2C2E] pb-8 flex flex-col md:flex-row md:items-end md:justify-between gap-6">
           <div>
-            <div className="flex items-center gap-2 text-emerald-600 dark:text-emerald-500 text-[9px] font-mono font-bold uppercase tracking-widest mb-1">
-              <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse shadow-[0_0_8px_#10b981]"></span>
-              System Control Engine
+            <div className="flex items-center gap-2 text-indigo-600 dark:text-indigo-400 text-[10px] font-bold uppercase tracking-widest mb-2">
+              <span className="w-2 h-2 bg-indigo-500 rounded-full animate-pulse shadow-[0_0_8px_#6366f1]"></span>
+              System Control
             </div>
-            <h1 className="text-3xl font-black text-slate-900 dark:text-white tracking-tighter uppercase italic">
-              Configurações <span className="text-slate-400 dark:text-slate-700 text-lg">///</span>
+            <h1 className="text-3xl md:text-4xl font-black text-slate-900 dark:text-white tracking-tight">
+              Configurações
             </h1>
-            <p className="text-slate-500 dark:text-slate-400 text-xs font-bold mt-2 uppercase tracking-widest">
+            <p className="text-slate-500 dark:text-[#8E8E93] text-sm mt-2 font-medium">
               Controle total da interface, preferências e arquitetura do sistema.
             </p>
           </div>
@@ -123,7 +130,7 @@ const Settings: React.FC = () => {
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0 }}
-                className="flex items-center gap-2 bg-emerald-100 dark:bg-emerald-500/10 border border-emerald-200 dark:border-emerald-500/20 text-emerald-700 dark:text-emerald-500 px-6 py-3 rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] shadow-xl"
+                className="flex items-center gap-2 bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-200 dark:border-emerald-500/20 text-emerald-700 dark:text-emerald-400 px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wider shadow-sm"
               >
                 <CheckCircle size={16} /> Configurações Salvas
               </motion.div>
@@ -131,317 +138,235 @@ const Settings: React.FC = () => {
           </AnimatePresence>
         </div>
 
-        {/* --- NOVO CARD DE ASSINATURA --- */}
-        <section className="bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-800 rounded-[2.5rem] p-6 md:p-10 shadow-sm flex flex-col md:flex-row items-center justify-between gap-6">
-            <div className="flex items-center gap-5 w-full md:w-auto">
-                <div className={`p-4 rounded-2xl shadow-inner ${isPro ? 'bg-emerald-100 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-500' : 'bg-slate-100 dark:bg-slate-800 text-slate-500'}`}>
-                    <Crown size={28} />
+        {/* --- CARD DE ASSINATURA (ESTILO CARTÃO DE CRÉDITO / MEMBERSHIP) --- */}
+        <section className={`border rounded-2xl p-6 md:p-8 flex flex-col md:flex-row items-center justify-between gap-6 shadow-sm relative overflow-hidden ${isPro ? 'bg-gradient-to-r from-indigo-50 to-white dark:from-[#1C1C1E] dark:to-[#2C2C2E] border-indigo-200 dark:border-indigo-500/30' : 'bg-white dark:bg-[#1C1C1E] border-slate-200 dark:border-[#2C2C2E]'}`}>
+            {isPro && <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-500/5 dark:bg-indigo-500/10 rounded-full blur-[80px] pointer-events-none" />}
+            
+            <div className="flex items-center gap-5 w-full md:w-auto relative z-10">
+                <div className={`p-4 rounded-xl ${isPro ? 'bg-indigo-500 text-white shadow-lg shadow-indigo-500/20' : 'bg-slate-100 dark:bg-[#2C2C2E] text-slate-500 dark:text-[#8E8E93]'}`}>
+                    <Crown size={24} />
                 </div>
                 <div>
-                    <h3 className="text-xl font-black text-slate-900 dark:text-white uppercase tracking-tighter italic mb-1">
-                        Status da Assinatura
+                    <h3 className="text-lg font-bold text-slate-900 dark:text-white tracking-tight mb-0.5">
+                        {isPro ? 'Assinatura PRO' : 'Plano Básico'}
                     </h3>
                     {isPro ? (
-                        <div className="flex items-center gap-2 text-sm text-emerald-600 dark:text-emerald-400 font-bold">
-                            <span className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></span>
-                            Plano PRO Ativo
+                        <div className="flex items-center gap-2 text-xs text-indigo-600 dark:text-indigo-400 font-bold uppercase tracking-wider">
+                            <span className="w-1.5 h-1.5 bg-indigo-500 rounded-full animate-pulse"></span>
+                            Ativa e Operante
                         </div>
                     ) : (
-                        <div className="flex items-center gap-2 text-sm text-slate-500 font-bold">
-                            <span className="w-2 h-2 bg-slate-400 rounded-full"></span>
-                            Plano Gratuito (Limitado)
+                        <div className="text-xs text-slate-500 dark:text-[#8E8E93] font-medium">
+                            Acesso limitado às ferramentas essenciais.
                         </div>
                     )}
                 </div>
             </div>
 
-            <div className="w-full md:w-auto flex flex-col md:items-end gap-4 border-t md:border-t-0 md:border-l border-slate-200 dark:border-slate-800 pt-6 md:pt-0 md:pl-8">
+            <div className="w-full md:w-auto flex flex-col md:items-end gap-3 relative z-10">
                 {isPro && validUntil ? (
                     <>
-                        <div className="flex items-center gap-2 text-slate-600 dark:text-slate-300 font-medium bg-slate-50 dark:bg-slate-900/50 px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-800 w-full md:w-auto justify-center">
-                            <Calendar size={16} className="text-slate-400" />
+                        <div className="flex items-center gap-2 text-slate-600 dark:text-[#8E8E93] text-sm font-medium">
+                            <Calendar size={14} />
                             Válido até: <span className="font-bold text-slate-900 dark:text-white">{validUntil.toLocaleDateString('pt-BR')}</span>
                         </div>
                         
                         {daysRemaining !== null && daysRemaining <= 15 && (
-                            <div className="flex items-start gap-2 bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/20 text-amber-700 dark:text-amber-400 p-3 rounded-xl max-w-sm">
-                                <AlertCircle size={16} className="shrink-0 mt-0.5" />
-                                <p className="text-[10px] font-bold leading-relaxed">
-                                    Faltam apenas {daysRemaining} dias. O pagamento na Lastlink costuma ser automático, garanta o limite na conta/cartão para não perder o acesso!
+                            <div className="flex items-start gap-2 bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/20 text-amber-700 dark:text-amber-400 p-3 rounded-lg text-xs max-w-sm mt-1">
+                                <AlertCircle size={14} className="shrink-0 mt-0.5" />
+                                <p className="leading-relaxed">
+                                    Faltam {daysRemaining} dias. O pagamento na Lastlink costuma ser automático, garanta o limite para não perder o acesso.
                                 </p>
                             </div>
                         )}
 
-                        <div className="flex gap-2 w-full mt-1">
-                            <button 
-                                onClick={() => navigate('/pro')}
-                                className="flex-1 md:flex-none bg-emerald-500 hover:bg-emerald-400 text-white dark:text-slate-950 px-4 py-2.5 rounded-xl font-bold text-[10px] uppercase tracking-widest transition-all shadow-lg shadow-emerald-500/20 active:scale-95 text-center"
-                            >
-                                Estender Plano
+                        <div className="flex gap-2 w-full mt-2">
+                            <button onClick={() => navigate('/pro')} className="flex-1 md:flex-none bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2 rounded-lg font-bold text-xs uppercase tracking-widest transition-colors shadow-sm text-center">
+                                Estender
                             </button>
-                            <a 
-                                href="https://lastlink.com/login"
-                                target="_blank"
-                                rel="noreferrer"
-                                className="flex-1 md:flex-none bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 px-4 py-2.5 rounded-xl font-bold text-[10px] uppercase tracking-widest transition-all active:scale-95 text-center border border-slate-200 dark:border-slate-700 flex items-center justify-center gap-1.5"
-                            >
-                                Gerenciar Assinatura <ExternalLink size={12} />
+                            <a href="https://lastlink.com/login" target="_blank" rel="noreferrer" className="flex-1 md:flex-none bg-white hover:bg-slate-50 dark:bg-[#2C2C2E] dark:hover:bg-[#3A3A3C] text-slate-700 dark:text-white border border-slate-200 dark:border-[#3A3A3C] px-4 py-2 rounded-lg font-bold text-xs uppercase tracking-widest transition-colors text-center flex items-center justify-center gap-1.5">
+                                Lastlink <ExternalLink size={12} />
                             </a>
                         </div>
                     </>
                 ) : (
-                    <button 
-                        onClick={() => navigate('/pro')}
-                        className="bg-emerald-500 hover:bg-emerald-400 text-white dark:text-slate-950 font-black py-3 px-8 rounded-xl shadow-lg shadow-emerald-500/20 transition-all active:scale-95 flex items-center justify-center gap-2 uppercase tracking-widest text-xs w-full md:w-auto"
-                    >
-                        Quero ser PRO <ArrowRight size={16} />
+                    <button onClick={() => navigate('/pro')} className="bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-3 px-6 rounded-xl shadow-sm transition-all flex items-center justify-center gap-2 tracking-widest text-xs uppercase w-full md:w-auto">
+                        Fazer Upgrade <ArrowRight size={14} />
                     </button>
                 )}
             </div>
         </section>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-            {/* Identity Card - Otimizado */}
-            <section className="bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-800 rounded-[2.5rem] p-6 md:p-10 shadow-sm transition-shadow hover:shadow-md">
-                <div className="flex items-center gap-4 mb-10">
-                    <div className="p-3 bg-blue-100 dark:bg-blue-500/10 rounded-2xl text-blue-600 dark:text-blue-500 shadow-inner"><User size={24} /></div>
-                    <h2 className="text-xl font-black text-slate-900 dark:text-white uppercase tracking-tighter italic">Perfil & Preferências</h2>
-                </div>
+            
+            {/* --- IDENTITY CARD --- */}
+            <section className={cardClass}>
+                <h2 className={sectionTitleClass}>
+                  <User className="text-indigo-500" size={24} /> Identidade
+                </h2>
                 
-                <form onSubmit={handleUpdateProfile} className="space-y-8">
-                    <div className="flex flex-col gap-8">
-                        {/* Visualização de Perfil (Read Only) */}
-                        <div className="flex items-center gap-5 p-6 bg-slate-50 dark:bg-slate-900/50 rounded-[2rem] border border-slate-200 dark:border-slate-800 border-dashed">
-                            <div className="w-20 h-20 rounded-[1.5rem] overflow-hidden border-4 border-white dark:border-slate-800 shadow-xl shrink-0">
-                                <img src={profileAvatar || `https://ui-avatars.com/api/?name=${profileName}`} alt="" className="w-full h-full object-cover" />
-                            </div>
-                            <div className="flex-1 min-w-0">
-                                <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Operador Autenticado</p>
-                                <h4 className="text-xl font-black text-slate-900 dark:text-white truncate">{profileName}</h4>
-                                <p className="text-[10px] text-emerald-500 font-bold uppercase tracking-tighter">Identidade Gerenciada via Cloud</p>
-                            </div>
+                <form onSubmit={handleUpdateProfile} className="space-y-6">
+                    <div className="flex items-center gap-4 p-4 bg-slate-50 dark:bg-[#000000] border border-slate-200 dark:border-[#2C2C2E] rounded-xl">
+                        <div className="w-16 h-16 rounded-full overflow-hidden border border-slate-200 dark:border-[#3A3A3C] shrink-0">
+                            <img src={profileAvatar || `https://ui-avatars.com/api/?name=${profileName}`} alt="" className="w-full h-full object-cover" />
                         </div>
-
-                        {/* Gestão de Unidade e Exibição */}
-                        <div className="p-6 bg-slate-50 dark:bg-slate-900/30 rounded-[2rem] border border-slate-200 dark:border-slate-800/50">
-                             <h3 className="text-xs font-black text-slate-600 dark:text-slate-400 uppercase tracking-widest mb-6 flex items-center gap-2">
-                                <PieChart size={14} /> Definição de Stake & Display
-                             </h3>
-                             
-                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 mb-8">
-                                 <div className="flex-1">
-                                     <label className="block text-[10px] font-bold text-slate-500 dark:text-slate-400 mb-2 ml-1 uppercase tracking-widest">Valor de 1 Unidade ({currency})</label>
-                                     <div className="relative">
-                                         <Hash size={14} className="absolute left-4 top-4 text-slate-400" />
-                                         <input 
-                                             type="number" 
-                                             value={tempUnitSize} 
-                                             onChange={(e) => setTempUnitSize(e.target.value)} 
-                                             className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl pl-10 pr-4 py-4 font-mono font-black text-emerald-600 dark:text-emerald-500 outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all text-lg" 
-                                         />
-                                     </div>
-                                 </div>
-                                 <div className="flex-1">
-                                     <label className="block text-[10px] font-bold text-slate-500 dark:text-slate-400 mb-2 ml-1 uppercase tracking-widest">Modo de Exibição Principal</label>
-                                     <div className="flex bg-white dark:bg-slate-900 rounded-xl p-1.5 border border-slate-200 dark:border-slate-800 h-[60px]">
-                                         <button 
-                                            type="button"
-                                            onClick={async () => {
-                                              await setDisplayMode('currency');
-                                              setShowSavedToast(true);
-                                              setTimeout(() => setShowSavedToast(false), 2000);
-                                            }}
-                                            className={`flex-1 rounded-lg text-xs font-black transition-all flex flex-col items-center justify-center gap-0.5 ${displayMode === 'currency' ? 'bg-emerald-500 text-white shadow-lg' : 'text-slate-500 hover:text-slate-700 dark:text-slate-400'}`}
-                                         >
-                                            <span className="text-[9px] uppercase opacity-60">Financeiro</span>
-                                            {currency}
-                                         </button>
-                                         <button 
-                                            type="button"
-                                            onClick={async () => {
-                                              await setDisplayMode('units');
-                                              setShowSavedToast(true);
-                                              setTimeout(() => setShowSavedToast(false), 2000);
-                                            }}
-                                            className={`flex-1 rounded-lg text-xs font-black transition-all flex flex-col items-center justify-center gap-0.5 ${displayMode === 'units' ? 'bg-blue-500 text-white shadow-lg' : 'text-slate-500 hover:text-slate-700 dark:text-slate-400'}`}
-                                         >
-                                            <span className="text-[9px] uppercase opacity-60">Escalar</span>
-                                            Unidades
-                                         </button>
-                                     </div>
-                                 </div>
-                             </div>
-
-                             {/* --- NOVO: PRÉVIA DE GESTÃO MATEMÁTICA --- */}
-                             <div className="space-y-3 pt-6 border-t border-slate-200 dark:border-slate-800/60">
-                                <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-4">Prévia da sua Gestão de Unidade:</p>
-                                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                                    {[
-                                        { label: '1/4 Unidade', mult: 0.25, color: 'text-slate-500' },
-                                        { label: '1/2 Unidade', mult: 0.5, color: 'text-slate-500' },
-                                        { label: '1.5 Unidade', mult: 1.5, color: 'text-emerald-500' },
-                                        { label: '2.0 Unidades', mult: 2.0, color: 'text-emerald-600 dark:text-emerald-400' },
-                                    ].map((item) => (
-                                        <div key={item.label} className="bg-white dark:bg-slate-950 p-3 rounded-xl border border-slate-200 dark:border-slate-800">
-                                            <p className="text-[9px] font-bold text-slate-400 uppercase mb-1">{item.label}</p>
-                                            <p className={`text-sm font-black font-mono ${item.color}`}>
-                                                {currency} {(parseFloat(tempUnitSize || '0') * item.mult).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                                            </p>
-                                        </div>
-                                    ))}
-                                </div>
-                                <div className="mt-4 p-4 bg-emerald-500/5 rounded-xl border border-emerald-500/10 flex justify-between items-center">
-                                    <span className="text-[10px] font-black text-emerald-600 dark:text-emerald-500 uppercase italic">Referência Full Stake (1.0):</span>
-                                    <span className="text-lg font-black text-emerald-600 dark:text-emerald-500 font-mono">{currency} {parseFloat(tempUnitSize || '0').toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
-                                </div>
-                             </div>
+                        <div className="flex-1 min-w-0">
+                            <p className="text-[10px] font-bold text-slate-500 dark:text-[#8E8E93] uppercase tracking-wider mb-1">Nome do Operador</p>
+                            <input
+                              type="text"
+                              value={profileName}
+                              onChange={(e) => setProfileName(e.target.value)}
+                              className="w-full bg-transparent text-lg font-bold text-slate-900 dark:text-white outline-none"
+                              placeholder="Seu Nome"
+                            />
                         </div>
                     </div>
-                    <button type="submit" className="w-full bg-emerald-500 hover:bg-emerald-400 text-white dark:text-[#020617] font-black py-5 rounded-2xl transition-all shadow-xl shadow-emerald-500/20 flex items-center justify-center gap-3 group active:scale-[0.98] uppercase tracking-widest text-xs">
-                        <Save size={18} className="group-hover:rotate-12 transition-transform" /> 
-                        ATUALIZAR ARQUITETURA DE BANCA
+
+                    <div className="pt-4 border-t border-slate-100 dark:border-[#2C2C2E]">
+                         <h3 className="text-xs font-bold text-slate-600 dark:text-[#8E8E93] uppercase tracking-wider mb-4 flex items-center gap-2">
+                            <PieChart size={14} /> Configuração de Stake
+                         </h3>
+                         
+                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                             <div>
+                                 <label className="block text-[10px] font-bold text-slate-500 dark:text-[#8E8E93] mb-1.5 uppercase tracking-wider">Valor da Unidade ({currency})</label>
+                                 <div className="relative">
+                                     <Hash size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 dark:text-[#636366]" />
+                                     <input 
+                                         type="number" 
+                                         value={tempUnitSize} 
+                                         onChange={(e) => setTempUnitSize(e.target.value)} 
+                                         className={`${inputClass} pl-9 font-mono font-bold text-indigo-600 dark:text-indigo-400`} 
+                                     />
+                                 </div>
+                             </div>
+                             <div>
+                                 <label className="block text-[10px] font-bold text-slate-500 dark:text-[#8E8E93] mb-1.5 uppercase tracking-wider">Modo de Exibição</label>
+                                 <div className="flex bg-slate-50 dark:bg-[#000000] border border-slate-200 dark:border-[#2C2C2E] rounded-xl p-1 h-[46px]">
+                                     <button 
+                                        type="button"
+                                        onClick={async () => { await setDisplayMode('currency'); setShowSavedToast(true); setTimeout(() => setShowSavedToast(false), 2000); }}
+                                        className={`flex-1 rounded-lg text-[11px] font-bold transition-all ${displayMode === 'currency' ? 'bg-white dark:bg-[#2C2C2E] text-slate-900 dark:text-white shadow-sm' : 'text-slate-500 dark:text-[#8E8E93]'}`}
+                                     >
+                                        Moeda ({currency})
+                                     </button>
+                                     <button 
+                                        type="button"
+                                        onClick={async () => { await setDisplayMode('units'); setShowSavedToast(true); setTimeout(() => setShowSavedToast(false), 2000); }}
+                                        className={`flex-1 rounded-lg text-[11px] font-bold transition-all ${displayMode === 'units' ? 'bg-white dark:bg-[#2C2C2E] text-slate-900 dark:text-white shadow-sm' : 'text-slate-500 dark:text-[#8E8E93]'}`}
+                                     >
+                                        Unidades (u)
+                                     </button>
+                                 </div>
+                             </div>
+                         </div>
+                    </div>
+                    <button type="submit" className="w-full bg-slate-900 hover:bg-slate-800 text-white dark:bg-white dark:hover:bg-slate-200 dark:text-slate-900 font-bold py-3.5 rounded-xl transition-all shadow-sm flex items-center justify-center gap-2 uppercase tracking-widest text-xs">
+                        <Save size={16} /> Salvar Preferências
                     </button>
                 </form>
             </section>
-            {/* Methods Card */}
-            <section className="bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-800 rounded-[2.5rem] p-6 md:p-10 shadow-sm transition-shadow hover:shadow-md">
-                 <div className="flex items-center gap-4 mb-10">
-                    <div className="p-3 bg-indigo-100 dark:bg-indigo-500/10 rounded-2xl text-indigo-600 dark:text-indigo-500 shadow-inner"><Layers size={24} /></div>
-                    <h2 className="text-xl font-black text-slate-900 dark:text-white uppercase tracking-tighter italic">Arquitetura de Métodos</h2>
+
+            {/* --- METHODS CARD --- */}
+            <section className={cardClass}>
+                <h2 className={sectionTitleClass}>
+                  <Layers className="text-indigo-500" size={24} /> Métodos Base
+                </h2>
+                <div className="flex gap-2 mb-6">
+                    <input 
+                      type="text" 
+                      value={newMethodName} 
+                      onChange={(e) => setNewMethodName(e.target.value)} 
+                      placeholder="Ex: Back Favorito" 
+                      className={inputClass} 
+                    />
+                    <button onClick={handleAddMethod} className="bg-indigo-600 hover:bg-indigo-500 text-white px-5 rounded-xl text-xs font-bold transition-colors uppercase tracking-wider shadow-sm">
+                        Add
+                    </button>
                 </div>
-                <div className="flex flex-col sm:flex-row gap-3 mb-8">
-                    <input type="text" value={newMethodName} onChange={(e) => setNewMethodName(e.target.value)} placeholder="Ex: Back Favorito, Over 1.5 HT..." className="flex-1 bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 rounded-2xl px-6 py-4 outline-none focus:border-indigo-500 transition-all text-slate-900 dark:text-white font-bold shadow-inner placeholder:text-slate-400" />
-                    <button onClick={handleAddMethod} className="bg-indigo-600 hover:bg-indigo-500 text-white px-8 py-4 sm:py-0 rounded-2xl font-black text-xs transition-all shadow-lg active:scale-95 uppercase tracking-widest">ADD</button>
-                </div>
-                <div className="grid grid-cols-1 gap-3 max-h-[250px] overflow-y-auto pr-2 custom-scrollbar">
+                <div className="space-y-2 max-h-[220px] overflow-y-auto pr-2 custom-scrollbar">
                     {methods.map(method => (
-                      <div
-                        key={method.id}
-                        className="flex justify-between items-center p-4 bg-slate-50 dark:bg-slate-900/30 rounded-2xl border border-slate-200 dark:border-slate-800/50 group hover:border-indigo-500/30 transition-all shadow-sm"
-                      >
-                        <span className="text-slate-700 dark:text-slate-200 font-bold text-sm flex items-center gap-3">
-                          <div className="w-2 h-2 rounded-full bg-indigo-500"></div>
+                      <div key={method.id} className="flex justify-between items-center p-3.5 bg-slate-50 dark:bg-[#000000] rounded-xl border border-slate-200 dark:border-[#2C2C2E] group hover:border-indigo-500/30 transition-colors">
+                        <span className="text-slate-700 dark:text-[#E5E5EA] font-medium text-sm">
                           {method.name}
                         </span>
-                        <button
-                          onClick={() => {
-                            if (window.confirm('Deseja realmente excluir este método?')) {
-                              removeMethod(method.id);
-                            }
-                          }}
-                          className="text-slate-400 hover:text-red-500 transition-colors p-2"
-                        >
+                        <button onClick={() => { if (window.confirm('Excluir método?')) removeMethod(method.id); }} className="text-slate-400 hover:text-red-500 transition-colors">
                           <Trash2 size={16} />
                         </button>
                       </div>
                     ))}
                     {methods.length === 0 && (
-                        <p className="text-center py-10 text-slate-400 text-[10px] font-black uppercase tracking-widest italic">Nenhum método cadastrado</p>
+                        <p className="text-center py-6 text-slate-400 dark:text-[#636366] text-xs font-medium">Nenhum método cadastrado</p>
                     )}
                 </div>
             </section>
 
-            {/* Custom Markets */}
-            <section className="bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-800 rounded-[2.5rem] p-6 md:p-10 shadow-sm flex flex-col">
-              <div className="flex items-center gap-4 mb-8">
-                <h2 className="text-xl font-black text-slate-900 dark:text-white uppercase italic">
-                  Mercados Personalizados
-                </h2>
-              </div>
-              <div className="flex gap-3 mb-6">
+            {/* --- CUSTOM MARKETS --- */}
+            <section className={`${cardClass} flex flex-col`}>
+              <h2 className={sectionTitleClass}>
+                  <Target className="text-indigo-500" size={24} /> Mercados Cust.
+              </h2>
+              <div className="flex gap-2 mb-6">
                 <input
                   type="text"
                   value={newMarketName}
                   onChange={(e) => setNewMarketName(e.target.value)}
                   placeholder="Ex: Escanteios HT"
-                  className="flex-1 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl px-4 py-3 outline-none focus:border-emerald-500 transition-colors text-slate-900 dark:text-white"
+                  className={inputClass}
                 />
-                <button
-                  onClick={() => {
-                    if (newMarketName.trim()) {
-                      addCustomMarket(newMarketName.trim());
-                      setNewMarketName('');
-                    }
-                  }}
-                  className="bg-emerald-600 hover:bg-emerald-500 text-white px-6 rounded-2xl text-xs font-bold transition-colors"
-                >
-                  ADD
+                <button onClick={() => { if (newMarketName.trim()) { addCustomMarket(newMarketName.trim()); setNewMarketName(''); } }} className="bg-slate-800 hover:bg-slate-700 dark:bg-[#3A3A3C] dark:hover:bg-[#48484A] text-white px-5 rounded-xl text-xs font-bold transition-colors uppercase tracking-wider shadow-sm">
+                  Add
                 </button>
               </div>
               <div className="space-y-2 flex-1 max-h-[200px] overflow-y-auto pr-2 custom-scrollbar">
                 {customMarkets.map((m) => (
-                  <div key={m.id} className="flex justify-between items-center p-3 bg-slate-50 dark:bg-slate-900 rounded-xl border border-slate-100 dark:border-slate-800">
-                    <span className="text-slate-700 dark:text-slate-300 text-sm font-medium">{m.name}</span>
-                    <button
-                      onClick={() => {
-                        if (window.confirm('Deseja realmente excluir este mercado?')) {
-                          removeCustomMarket(m.id);
-                        }
-                      }}
-                      className="text-slate-400 hover:text-red-500 transition-colors p-1"
-                    >
-                      <Trash2 size={14} />
+                  <div key={m.id} className="flex justify-between items-center p-3.5 bg-slate-50 dark:bg-[#000000] rounded-xl border border-slate-100 dark:border-[#2C2C2E]">
+                    <span className="text-slate-700 dark:text-[#E5E5EA] font-medium text-sm">{m.name}</span>
+                    <button onClick={() => { if (window.confirm('Excluir mercado?')) removeCustomMarket(m.id); }} className="text-slate-400 hover:text-red-500 transition-colors">
+                      <Trash2 size={16} />
                     </button>
                   </div>
                 ))}
               </div>
             </section>
 
-            {/* Strategies */}
-            <section className="bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-800 rounded-[2.5rem] p-6 md:p-10 shadow-sm flex flex-col">
-              <div className="flex items-center gap-4 mb-8">
-                <h2 className="text-xl font-black text-slate-900 dark:text-white uppercase italic">
-                  Estratégias de Progressão
-                </h2>
-              </div>
-              <div className="flex gap-3 mb-6">
+            {/* --- STRATEGIES --- */}
+            <section className={`${cardClass} flex flex-col`}>
+              <h2 className={sectionTitleClass}>
+                  <TrendingUp className="text-indigo-500" size={24} /> Gestão / Progressão
+              </h2>
+              <div className="flex gap-2 mb-6">
                 <input
                   type="text"
                   value={newStrategyName}
                   onChange={(e) => setNewStrategyName(e.target.value)}
                   placeholder="Ex: Martingale Adaptativo"
-                  className="flex-1 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl px-4 py-3 outline-none focus:border-blue-500 transition-colors text-slate-900 dark:text-white"
+                  className={inputClass}
                 />
-                <button
-                  onClick={() => {
-                    if (newStrategyName.trim()) {
-                      addCustomStrategy(newStrategyName.trim());
-                      setNewStrategyName('');
-                    }
-                  }}
-                  className="bg-blue-600 hover:bg-blue-500 text-white px-6 rounded-2xl text-xs font-bold transition-colors"
-                >
-                  ADD
+                <button onClick={() => { if (newStrategyName.trim()) { addCustomStrategy(newStrategyName.trim()); setNewStrategyName(''); } }} className="bg-slate-800 hover:bg-slate-700 dark:bg-[#3A3A3C] dark:hover:bg-[#48484A] text-white px-5 rounded-xl text-xs font-bold transition-colors uppercase tracking-wider shadow-sm">
+                  Add
                 </button>
               </div>
               <div className="space-y-2 flex-1 max-h-[200px] overflow-y-auto pr-2 custom-scrollbar">
                 {customStrategies.map((s) => (
-                  <div key={s.id} className="flex justify-between items-center p-3 bg-slate-50 dark:bg-slate-900 rounded-xl border border-slate-100 dark:border-slate-800">
-                    <span className="text-slate-700 dark:text-slate-300 text-sm font-medium">{s.name}</span>
-                    <button
-                      onClick={() => {
-                        if (window.confirm('Deseja realmente excluir esta estratégia?')) {
-                          removeCustomStrategy(s.id);
-                        }
-                      }}
-                      className="text-slate-400 hover:text-red-500 transition-colors p-1"
-                    >
-                      <Trash2 size={14} />
+                  <div key={s.id} className="flex justify-between items-center p-3.5 bg-slate-50 dark:bg-[#000000] rounded-xl border border-slate-100 dark:border-[#2C2C2E]">
+                    <span className="text-slate-700 dark:text-[#E5E5EA] font-medium text-sm">{s.name}</span>
+                    <button onClick={() => { if (window.confirm('Excluir estratégia?')) removeCustomStrategy(s.id); }} className="text-slate-400 hover:text-red-500 transition-colors">
+                      <Trash2 size={16} />
                     </button>
                   </div>
                 ))}
               </div>
             </section>
 
-             {/* Preferences Colors */}
-            <section className="bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-800 rounded-[2.5rem] p-6 md:p-10 lg:col-span-2 shadow-sm transition-shadow hover:shadow-md">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-16">
-                    <div className="space-y-8">
-                        <div className="flex items-center gap-4">
-                            <div className="p-3 bg-amber-100 dark:bg-amber-500/10 rounded-2xl text-amber-600 dark:text-amber-500"><PaintBucket size={22} /></div>
-                            <h3 className="font-black text-slate-900 dark:text-white uppercase tracking-tighter text-lg italic">Acentuação Visual</h3>
-                        </div>
-                        <div className="flex gap-4 flex-wrap">
+             {/* --- SYSTEM PREFERENCES --- */}
+            <section className={`${cardClass} lg:col-span-2`}>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
+                    <div>
+                        <h2 className={sectionTitleClass}>
+                          <PaintBucket className="text-indigo-500" size={24} /> Identidade Visual
+                        </h2>
+                        <div className="flex gap-3 flex-wrap">
                             {[
                                 { id: 'emerald', color: '#10b981' },
                                 { id: 'blue', color: '#3b82f6' },
@@ -451,37 +376,26 @@ const Settings: React.FC = () => {
                             ].map(c => (
                                 <button 
                                     key={c.id} 
-                                    onClick={async () => {
-                                      await setPrimaryColor(c.id);
-                                      setShowSavedToast(true);
-                                      setTimeout(() => setShowSavedToast(false), 2000);
-                                    }} 
-                                    className={`w-14 h-14 rounded-2xl border-4 transition-all flex items-center justify-center ${primaryColor === c.id ? 'border-slate-900 dark:border-white scale-110 shadow-xl' : 'border-transparent opacity-50 hover:opacity-100'}`} 
+                                    onClick={async () => { await setPrimaryColor(c.id); setShowSavedToast(true); setTimeout(() => setShowSavedToast(false), 2000); }} 
+                                    className={`w-12 h-12 rounded-full border-2 transition-all flex items-center justify-center ${primaryColor === c.id ? 'border-slate-900 dark:border-white ring-2 ring-offset-2 dark:ring-offset-[#1C1C1E] ring-slate-400 dark:ring-slate-600' : 'border-transparent opacity-60 hover:opacity-100'}`} 
                                     style={{ backgroundColor: c.color }}
-                                >
-                                    {primaryColor === c.id && <div className="w-2 h-2 rounded-full bg-white shadow-lg animate-pulse"></div>}
-                                </button>
+                                />
                             ))}
                         </div>
                     </div>
-                    <div className="space-y-8">
-                        <div className="flex items-center gap-4">
-                            <div className="p-3 bg-purple-100 dark:bg-purple-500/10 rounded-2xl text-purple-600 dark:text-purple-500"><Coins size={22} /></div>
-                            <h3 className="font-black text-slate-900 dark:text-white uppercase tracking-tighter text-lg italic">Moeda do Sistema</h3>
-                        </div>
-                        <div className="flex flex-wrap gap-3">
+                    <div>
+                        <h2 className={sectionTitleClass}>
+                          <Coins className="text-indigo-500" size={24} /> Câmbio (Moeda)
+                        </h2>
+                        <div className="flex gap-2 flex-wrap">
                             {['BRL', 'USD', 'EUR', 'GBP'].map(curr => (
                                 <button 
                                     key={curr} 
-                                    onClick={async () => {
-                                      await setCurrency(curr);
-                                      setShowSavedToast(true);
-                                      setTimeout(() => setShowSavedToast(false), 2000);
-                                    }} 
-                                    className={`px-8 py-4 rounded-2xl font-black text-xs transition-all border ${
+                                    onClick={async () => { await setCurrency(curr); setShowSavedToast(true); setTimeout(() => setShowSavedToast(false), 2000); }} 
+                                    className={`px-6 py-2.5 rounded-lg font-bold text-sm transition-all border ${
                                         currency === curr 
-                                        ? 'bg-slate-900 dark:bg-white text-white dark:text-black border-slate-900 dark:border-white shadow-xl transform scale-105' 
-                                        : 'bg-white dark:bg-transparent border-slate-200 dark:border-white/10 text-slate-500 hover:border-slate-300 dark:hover:border-white/30'
+                                        ? 'bg-slate-900 dark:bg-white text-white dark:text-black border-slate-900 dark:border-white shadow-sm' 
+                                        : 'bg-white dark:bg-[#000000] border-slate-200 dark:border-[#3A3A3C] text-slate-600 dark:text-[#8E8E93] hover:border-slate-300 dark:hover:border-slate-500'
                                     }`}
                                 >
                                     {curr}
@@ -492,40 +406,34 @@ const Settings: React.FC = () => {
                 </div>
             </section>
 
-            {/* Danger Zone */}
-            <section className="bg-red-50 dark:bg-red-500/5 rounded-[2.5rem] p-6 md:p-10 border border-red-200 dark:border-red-500/10 lg:col-span-2 flex flex-col md:flex-row justify-between items-center gap-10 shadow-sm">
-                <div className="flex items-center gap-6 text-center md:text-left">
-                    <div className="p-5 bg-red-100 dark:bg-red-500/10 rounded-3xl text-red-600 dark:text-red-500 shadow-sm"><Skull size={36} /></div>
-                    <div>
-                        <h3 className="text-2xl font-black text-slate-900 dark:text-white uppercase tracking-tighter italic">Zona de Perigo</h3>
-                        <p className="text-red-600 dark:text-red-400 text-sm font-bold uppercase tracking-widest mt-1">Excluir conta e todos os dados permanentemente.</p>
-                    </div>
+            {/* --- DANGER ZONE --- */}
+            <section className="bg-red-50/50 dark:bg-red-500/5 rounded-2xl p-6 md:p-8 border border-red-200/50 dark:border-red-500/10 lg:col-span-2 flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+                <div>
+                    <h3 className="text-lg font-bold text-red-700 dark:text-red-400 mb-1 flex items-center gap-2">
+                        <Skull size={20} /> Zona de Perigo
+                    </h3>
+                    <p className="text-red-600/70 dark:text-red-500/60 text-sm font-medium">Excluir conta e dados permanentemente. Irreversível.</p>
                 </div>
-                <div className="flex flex-col sm:flex-row gap-4 w-full md:w-auto">
+                <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto">
                   <button 
                       onClick={handleResetData}
                       disabled={isResetting}
-                      className="bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 px-8 py-5 rounded-2xl font-bold text-xs active:scale-95 transition-all flex justify-center items-center gap-3 tracking-widest uppercase disabled:opacity-50"
+                      className="bg-white dark:bg-[#1C1C1E] text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-[#3A3A3C] hover:bg-slate-50 dark:hover:bg-[#2C2C2E] px-6 py-3 rounded-xl font-bold text-xs active:scale-95 transition-all flex justify-center items-center gap-2 uppercase tracking-wider disabled:opacity-50"
                   >
-                      {isResetting ? <Loader2 className="animate-spin" size={16} /> : "Limpar Dados"}
+                      {isResetting ? <Loader2 className="animate-spin" size={14} /> : "Limpar Dados"}
                   </button>
                   <button 
                       onClick={handleDeleteAccount} 
-                      className="bg-red-600 hover:bg-red-500 text-white px-10 py-5 rounded-2xl font-black text-xs shadow-lg shadow-red-600/20 active:scale-95 transition-all flex justify-center items-center gap-3 group tracking-widest uppercase"
+                      className="bg-red-600 hover:bg-red-500 text-white px-6 py-3 rounded-xl font-bold text-xs shadow-sm active:scale-95 transition-all flex justify-center items-center gap-2 uppercase tracking-wider"
                   >
-                      EXCLUIR CONTA
-                      <Trash2 size={16} className="group-hover:animate-bounce" />
+                      EXCLUIR CONTA <Trash2 size={14} />
                   </button>
                 </div>
             </section>
         </div>
 
-        <div className="text-center text-[9px] uppercase tracking-widest text-emerald-600 dark:text-emerald-500 font-bold">
-          Cloud Sync Active
-        </div>
-        
-        <footer className="pt-10 text-center">
-             <p className="text-[10px] text-slate-500 dark:text-slate-600 font-black uppercase tracking-[0.5em]">BetTracker Cloud Ecosystem • Build 5.0.0</p>
+        <footer className="pt-8 text-center opacity-40">
+             <p className="text-[10px] text-slate-900 dark:text-white font-medium uppercase tracking-[0.2em]">System Version 5.0.0</p>
         </footer>
     </div>
   );
