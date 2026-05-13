@@ -468,11 +468,11 @@ const Calculators: React.FC = () => {
     { id: 'odds', label: 'Odds Conv.', pro: false }
   ];
 
-  const inputClass = "bg-transparent border-b border-transparent hover:border-slate-300 dark:hover:border-[#3A3A3C] focus:border-indigo-500 text-slate-900 dark:text-white px-1 py-1 outline-none font-mono text-xs w-full text-center transition-colors";
+  // 🔥 Design System Fixes 🔥
+  const inputClass = "bg-transparent border-b border-transparent hover:border-slate-300 dark:hover:border-[#3A3A3C] focus:border-indigo-500 text-slate-900 dark:text-white px-1 py-1.5 md:py-1 outline-none font-mono text-base md:text-xs w-full text-center transition-colors";
   const cardClass = "bg-white dark:bg-[#1C1C1E] border border-slate-200 dark:border-[#2C2C2E] rounded-2xl p-6 shadow-sm";
   const sectionTitleClass = "text-lg font-bold text-slate-900 dark:text-white uppercase tracking-tight mb-6 flex items-center gap-2";
 
-  // 🔥 RESTAURAÇÃO DA SIDEBAR CONTENT 🔥
   const sidebarContent = useMemo(() => {
       switch(activeTab) {
           case 'dutching': return { title: "O que é Dutching?", rules: ["Técnica de gestão de risco onde divide-se a Stake Total entre várias seleções para garantir o mesmo lucro líquido."] };
@@ -506,12 +506,13 @@ const Calculators: React.FC = () => {
           </div>
       </div>
       
-      <div className="flex w-full overflow-x-auto bg-slate-100 dark:bg-[#000000] p-1 rounded-xl border border-slate-200 dark:border-[#2C2C2E] px-4 md:px-1 custom-scrollbar mx-4 md:mx-0">
+      {/* 🔥 FIX: Navegação Horizontal Responsiva (Snap-scroll Mobile) 🔥 */}
+      <div className="flex w-full overflow-x-auto bg-slate-100 dark:bg-[#000000] p-1.5 rounded-xl border border-slate-200 dark:border-[#2C2C2E] px-4 md:px-1 snap-x snap-mandatory mx-4 md:mx-0 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:'none'] [scrollbar-width:'none']">
         {tabs.map(tab => (
           <button
             key={tab.id}
             onClick={() => setActiveTab(tab.id as any)}
-            className={`flex-1 min-w-[100px] flex items-center justify-center px-4 py-2.5 rounded-lg text-xs font-bold uppercase tracking-wider transition-all gap-1.5 whitespace-nowrap ${
+            className={`flex-1 min-w-[120px] md:min-w-[100px] snap-center flex items-center justify-center px-4 py-3 md:py-2.5 rounded-lg text-xs font-bold uppercase tracking-wider transition-all gap-1.5 whitespace-nowrap ${
               activeTab === tab.id
                 ? 'bg-white dark:bg-[#1C1C1E] text-slate-900 dark:text-white shadow-sm border border-slate-200 dark:border-[#3A3A3C]'
                 : 'text-slate-500 dark:text-[#8E8E93] hover:text-slate-700 dark:hover:text-slate-300'
@@ -538,20 +539,21 @@ const Calculators: React.FC = () => {
                         <div className={`${cardClass} relative overflow-hidden`}>
                             <div className="flex flex-col md:flex-row justify-between gap-6 relative z-10">
                                 <div className="flex-1">
-                                    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-6">
+                                    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
                                         <p className="text-[10px] font-bold text-slate-500 dark:text-[#8E8E93] uppercase tracking-widest flex items-center gap-1.5">
                                             <LayoutGrid size={14}/> Dashboard Base
                                         </p>
-                                        <div className="flex flex-wrap items-center gap-2">
-                                            <div className="flex bg-slate-50 dark:bg-[#000000] p-1 rounded-lg border border-slate-200 dark:border-[#2C2C2E] shadow-sm">
-                                                <button onClick={() => setGrowthMode('compound')} className={`px-3 py-1.5 text-[9px] font-bold uppercase tracking-wider rounded-md transition-all ${growthMode === 'compound' ? 'bg-white dark:bg-[#2C2C2E] text-slate-900 dark:text-white shadow-sm' : 'text-slate-500 dark:text-[#8E8E93] hover:text-slate-700 dark:hover:text-slate-300'}`}>Compostos</button>
-                                                <button onClick={() => setGrowthMode('fixed')} className={`px-3 py-1.5 text-[9px] font-bold uppercase tracking-wider rounded-md transition-all ${growthMode === 'fixed' ? 'bg-white dark:bg-[#2C2C2E] text-slate-900 dark:text-white shadow-sm' : 'text-slate-500 dark:text-[#8E8E93] hover:text-slate-700 dark:hover:text-slate-300'}`}>Fixa</button>
+                                        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full sm:w-auto">
+                                            {/* 🔥 FIX: Segmented Control ocupando espaço certo no Mobile 🔥 */}
+                                            <div className="flex bg-slate-50 dark:bg-[#000000] p-1 rounded-lg border border-slate-200 dark:border-[#2C2C2E] shadow-sm w-full sm:w-auto">
+                                                <button onClick={() => setGrowthMode('compound')} className={`flex-1 sm:flex-none px-4 py-2 sm:px-3 sm:py-1.5 text-[10px] font-bold uppercase tracking-wider rounded-md transition-all ${growthMode === 'compound' ? 'bg-white dark:bg-[#2C2C2E] text-slate-900 dark:text-white shadow-sm' : 'text-slate-500 dark:text-[#8E8E93] hover:text-slate-700 dark:hover:text-slate-300'}`}>Compostos</button>
+                                                <button onClick={() => setGrowthMode('fixed')} className={`flex-1 sm:flex-none px-4 py-2 sm:px-3 sm:py-1.5 text-[10px] font-bold uppercase tracking-wider rounded-md transition-all ${growthMode === 'fixed' ? 'bg-white dark:bg-[#2C2C2E] text-slate-900 dark:text-white shadow-sm' : 'text-slate-500 dark:text-[#8E8E93] hover:text-slate-700 dark:hover:text-slate-300'}`}>Fixa</button>
                                             </div>
                                             <button 
                                                 onClick={() => setAutoSyncBankroll(!autoSyncBankroll)} 
-                                                className={`flex items-center gap-1.5 px-3 py-2 rounded-lg border text-[9px] font-bold uppercase tracking-wider transition-colors ${autoSyncBankroll ? 'bg-emerald-50 dark:bg-emerald-500/10 border-emerald-200 dark:border-emerald-500/30 text-emerald-600 dark:text-emerald-400' : 'bg-slate-50 dark:bg-[#000000] border-slate-200 dark:border-[#2C2C2E] text-slate-500 dark:text-[#8E8E93]'}`}
+                                                className={`flex items-center justify-center gap-2 px-4 py-2 rounded-lg border text-[10px] font-bold uppercase tracking-wider transition-colors w-full sm:w-auto ${autoSyncBankroll ? 'bg-emerald-50 dark:bg-emerald-500/10 border-emerald-200 dark:border-emerald-500/30 text-emerald-600 dark:text-emerald-400' : 'bg-slate-50 dark:bg-[#000000] border-slate-200 dark:border-[#2C2C2E] text-slate-500 dark:text-[#8E8E93]'}`}
                                             >
-                                                <RefreshCcw size={10} className={autoSyncBankroll ? 'animate-spin-slow' : ''} /> 
+                                                <RefreshCcw size={12} className={autoSyncBankroll ? 'animate-spin-slow' : ''} /> 
                                                 {autoSyncBankroll ? 'Auto-Sync ON' : 'Auto-Sync OFF'}
                                             </button>
                                         </div>
@@ -561,23 +563,23 @@ const Calculators: React.FC = () => {
                                         <p className="text-[10px] uppercase font-bold text-slate-500 dark:text-[#8E8E93] mb-2 flex items-center gap-1">
                                             {isCompound ? 'Banca Base (Juros Compostos)' : 'Banca Base Inicial (Fixa)'}
                                         </p>
-                                        <input type="number" value={compBankroll} onChange={e => handleBankrollManualChange(e.target.value)} className={`bg-slate-50 dark:bg-[#000000] border border-slate-200 dark:border-[#2C2C2E] text-2xl font-bold tracking-tight rounded-xl px-4 py-3 w-full outline-none focus:border-indigo-500 transition-colors ${autoSyncBankroll && !isTargetReached && !isBankrollBusted ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-900 dark:text-white'}`} />
+                                        <input type="number" value={compBankroll} onChange={e => handleBankrollManualChange(e.target.value)} className={`bg-slate-50 dark:bg-[#000000] border border-slate-200 dark:border-[#2C2C2E] text-3xl font-bold tracking-tight rounded-xl px-4 py-4 md:py-3 w-full outline-none focus:border-indigo-500 transition-colors ${autoSyncBankroll && !isTargetReached && !isBankrollBusted ? 'text-emerald-600 dark:text-emerald-400 shadow-sm' : 'text-slate-900 dark:text-white'}`} />
                                     </div>
 
-                                    <div className="w-full bg-slate-100 dark:bg-[#2C2C2E] h-1.5 rounded-full mt-5 overflow-hidden">
+                                    <div className="w-full bg-slate-100 dark:bg-[#2C2C2E] h-1.5 rounded-full mt-6 overflow-hidden">
                                         <div className={`h-full transition-all duration-1000 ${isBankrollBusted ? 'bg-red-500 w-full' : isTargetReached ? 'bg-emerald-500' : 'bg-indigo-500'}`} style={{ width: isBankrollBusted ? '100%' : `${progressPercent}%` }}></div>
                                     </div>
                                     <p className="text-[10px] font-bold text-slate-400 dark:text-[#8E8E93] mt-2 text-right">{progressPercent.toFixed(1)}% concluído</p>
                                 </div>
 
-                                <div className="flex gap-4">
-                                    <div className="bg-slate-50 dark:bg-[#000000] border border-slate-200 dark:border-[#2C2C2E] p-4 rounded-xl flex-1 flex flex-col justify-center">
+                                <div className="flex flex-col sm:flex-row gap-4">
+                                    <div className="bg-slate-50 dark:bg-[#000000] border border-slate-200 dark:border-[#2C2C2E] p-5 md:p-4 rounded-xl flex-1 flex flex-col justify-center">
                                         <label className="text-[10px] font-bold text-slate-500 dark:text-[#8E8E93] uppercase block mb-1">Meta Desejada</label>
-                                        <input type="number" value={compTarget} onChange={e => setCompTarget(e.target.value)} className="bg-transparent text-xl font-bold text-slate-900 dark:text-white outline-none w-full" />
+                                        <input type="number" value={compTarget} onChange={e => setCompTarget(e.target.value)} className="bg-transparent text-2xl md:text-xl font-bold text-slate-900 dark:text-white outline-none w-full" />
                                     </div>
-                                    <div className="bg-slate-50 dark:bg-[#000000] border border-slate-200 dark:border-[#2C2C2E] p-4 rounded-xl flex-1 flex flex-col justify-center">
+                                    <div className="bg-slate-50 dark:bg-[#000000] border border-slate-200 dark:border-[#2C2C2E] p-5 md:p-4 rounded-xl flex-1 flex flex-col justify-center">
                                         <label className="text-[10px] font-bold text-slate-500 dark:text-[#8E8E93] uppercase block mb-1">Prazo (Dias)</label>
-                                        <input type="number" value={compDays} onChange={e => setCompDays(e.target.value)} className="bg-transparent text-xl font-bold text-slate-900 dark:text-white outline-none w-full" />
+                                        <input type="number" value={compDays} onChange={e => setCompDays(e.target.value)} className="bg-transparent text-2xl md:text-xl font-bold text-slate-900 dark:text-white outline-none w-full" />
                                     </div>
                                 </div>
                             </div>
@@ -587,13 +589,13 @@ const Calculators: React.FC = () => {
                         <AnimatePresence>
                             {isTargetReached && (
                                 <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-200 dark:border-emerald-500/20 text-emerald-700 dark:text-emerald-400 rounded-2xl p-6 flex flex-col sm:flex-row items-center gap-6 mb-6">
-                                    <div className="bg-emerald-100 dark:bg-emerald-500/20 p-4 rounded-full shrink-0">
+                                    <div className="bg-emerald-100 dark:bg-emerald-500/20 p-4 rounded-full shrink-0 mx-auto sm:mx-0">
                                         <Trophy size={32} />
                                     </div>
-                                    <div className="flex-1">
+                                    <div className="flex-1 text-center sm:text-left">
                                         <h3 className="text-xl font-bold tracking-tight mb-2">Meta Batida com Sucesso!</h3>
                                         <p className="text-sm font-medium leading-relaxed mb-4 opacity-90">Você transformou sua banca e atingiu o objetivo. Saque seus lucros e redefina a meta acima.</p>
-                                        <button onClick={() => setCompTarget(String(bankrollNum * 2))} className="bg-emerald-600 hover:bg-emerald-500 text-white px-6 py-2.5 rounded-lg font-bold uppercase tracking-wider text-xs transition-colors shadow-sm">
+                                        <button onClick={() => setCompTarget(String(bankrollNum * 2))} className="w-full sm:w-auto bg-emerald-600 hover:bg-emerald-500 text-white px-6 py-3 rounded-lg font-bold uppercase tracking-wider text-xs transition-colors shadow-sm">
                                             Dobrar a Meta
                                         </button>
                                     </div>
@@ -602,13 +604,13 @@ const Calculators: React.FC = () => {
 
                             {isBankrollBusted && (
                                 <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/20 text-red-700 dark:text-red-400 rounded-2xl p-6 flex flex-col sm:flex-row items-center gap-6 mb-6">
-                                    <div className="bg-red-100 dark:bg-red-500/20 p-4 rounded-full shrink-0">
+                                    <div className="bg-red-100 dark:bg-red-500/20 p-4 rounded-full shrink-0 mx-auto sm:mx-0">
                                         <Skull size={32} />
                                     </div>
-                                    <div className="flex-1">
+                                    <div className="flex-1 text-center sm:text-left">
                                         <h3 className="text-xl font-bold tracking-tight mb-2">Banca Quebrada</h3>
                                         <p className="text-sm font-medium leading-relaxed mb-4 opacity-90">O capital atual não possui liquidez matemática para sustentar a projeção. Faça um novo aporte.</p>
-                                        <button onClick={() => { setCompBankroll(String(targetNum / 2)); setAutoSyncBankroll(false); }} className="bg-red-600 hover:bg-red-500 text-white px-6 py-2.5 rounded-lg font-bold uppercase tracking-wider text-xs transition-colors shadow-sm">
+                                        <button onClick={() => { setCompBankroll(String(targetNum / 2)); setAutoSyncBankroll(false); }} className="w-full sm:w-auto bg-red-600 hover:bg-red-500 text-white px-6 py-3 rounded-lg font-bold uppercase tracking-wider text-xs transition-colors shadow-sm">
                                             Novo Aporte
                                         </button>
                                     </div>
@@ -623,7 +625,7 @@ const Calculators: React.FC = () => {
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                     <div className={`${cardClass} flex flex-col justify-center relative overflow-hidden`}>
                                         <p className="text-[10px] font-bold text-slate-500 dark:text-[#8E8E93] uppercase tracking-widest mb-2 flex items-center gap-1.5"><Navigation size={14} className="text-indigo-500"/> GPS de Crescimento</p>
-                                        <h3 className={`text-xl sm:text-2xl font-bold tracking-tight mb-2 relative z-10 ${etaColor}`}>
+                                        <h3 className={`text-2xl font-bold tracking-tight mb-2 relative z-10 ${etaColor}`}>
                                             {etaText}
                                         </h3>
                                         <p className="text-sm font-medium leading-relaxed text-slate-600 dark:text-slate-400 relative z-10">
@@ -650,35 +652,34 @@ const Calculators: React.FC = () => {
 
                                 {/* CARD 3: A PLANILHA DE MÉTODOS EDITÁVEL */}
                                 <div className={`${cardClass} overflow-hidden p-0 md:p-0`}>
-                                    <div className="p-6 md:p-8">
-                                        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+                                    <div className="p-5 md:p-8">
+                                        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-6 mb-6">
                                             <div>
                                                 <h3 className="text-lg font-bold text-slate-900 dark:text-white tracking-tight flex items-center gap-2"><BarChart4 size={18} className="text-indigo-500"/> Simulador de Cenários</h3>
-                                                <p className="text-[10px] text-slate-500 dark:text-[#8E8E93] uppercase font-bold tracking-wider mt-1">A coluna "Aposte Isso" te diz o valor da Próxima Entrada.</p>
+                                                <p className="text-[10px] text-slate-500 dark:text-[#8E8E93] uppercase font-bold tracking-wider mt-1.5">A coluna "Aposte Isso" te diz o valor da Próxima Entrada.</p>
                                             </div>
-                                            <div className="flex flex-col sm:flex-row items-end sm:items-center gap-3">
-                                                <div className="flex items-center gap-2 bg-slate-50 dark:bg-[#000000] px-3 py-1.5 rounded-lg border border-slate-200 dark:border-[#2C2C2E]">
-                                                    <span className="text-[9px] font-bold text-slate-500 dark:text-[#8E8E93] uppercase tracking-widest flex items-center gap-1" title="Se ligado, as próximas stakes descontam o valor que já está investido no mercado (Risco Exposto)."><Coins size={12}/> Simultâneo</span>
+                                            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full sm:w-auto">
+                                                <div className="flex items-center justify-between gap-4 bg-slate-50 dark:bg-[#000000] px-4 py-3 sm:py-2 rounded-xl border border-slate-200 dark:border-[#2C2C2E]">
+                                                    <span className="text-[10px] font-bold text-slate-500 dark:text-[#8E8E93] uppercase tracking-widest flex items-center gap-1.5"><Coins size={14}/> Simultâneo</span>
                                                     <button 
                                                         onClick={() => setUseAvailableBankroll(!useAvailableBankroll)}
-                                                        className={`relative inline-flex h-4 w-8 items-center rounded-full transition-colors ${useAvailableBankroll ? 'bg-indigo-500' : 'bg-slate-300 dark:bg-[#3A3A3C]'}`}
+                                                        className={`relative inline-flex h-5 w-10 items-center rounded-full transition-colors ${useAvailableBankroll ? 'bg-indigo-500' : 'bg-slate-300 dark:bg-[#3A3A3C]'}`}
                                                     >
-                                                        <span className={`inline-block h-3 w-3 transform rounded-full bg-white transition-transform ${useAvailableBankroll ? 'translate-x-4' : 'translate-x-1'}`}/>
+                                                        <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${useAvailableBankroll ? 'translate-x-5' : 'translate-x-1'}`}/>
                                                     </button>
                                                 </div>
                                                 <div className="flex gap-2">
-                                                    <button onClick={handleAutoFill} className="text-[10px] font-bold uppercase tracking-widest text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-[#2C2C2E] hover:bg-slate-200 dark:hover:bg-[#3A3A3C] px-3 py-2 rounded-lg transition-colors flex items-center gap-1.5"><RefreshCcw size={12}/> Auditar</button>
-                                                    <button onClick={addSimMethod} className="text-[10px] font-bold uppercase tracking-widest text-white bg-indigo-600 hover:bg-indigo-500 px-3 py-2 rounded-lg transition-colors flex items-center gap-1.5"><Plus size={14}/> Método</button>
+                                                    <button onClick={handleAutoFill} className="flex-1 sm:flex-none text-[10px] font-bold uppercase tracking-widest text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-[#2C2C2E] hover:bg-slate-200 dark:hover:bg-[#3A3A3C] px-4 py-3 sm:py-2 rounded-xl transition-colors flex items-center justify-center gap-1.5"><RefreshCcw size={14}/> Auditar</button>
                                                 </div>
                                             </div>
                                         </div>
 
                                         <AnimatePresence>
                                             {useAvailableBankroll && pendingExposure > 0 && (
-                                                <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} className="bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/20 rounded-xl p-3 mb-6 flex items-center gap-3">
-                                                    <AlertTriangle size={16} className="text-amber-600 dark:text-amber-500 shrink-0" />
-                                                    <p className="text-xs text-amber-800 dark:text-amber-400 font-medium">
-                                                        Você possui <strong>R$ {pendingExposure.toFixed(2)}</strong> investidos no mercado. Stakes calculadas sobre a Banca Livre (<strong className="font-mono">R$ {availableBankroll.toFixed(2)}</strong>).
+                                                <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} className="bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/20 rounded-xl p-4 mb-6 flex items-start gap-3">
+                                                    <AlertTriangle size={18} className="text-amber-600 dark:text-amber-500 shrink-0 mt-0.5" />
+                                                    <p className="text-xs text-amber-800 dark:text-amber-400 font-medium leading-relaxed">
+                                                        Você possui <strong>R$ {pendingExposure.toFixed(2)}</strong> investidos no mercado. As stakes abaixo foram calculadas com base na sua Banca Livre (<strong className="font-mono">R$ {availableBankroll.toFixed(2)}</strong>).
                                                     </p>
                                                 </motion.div>
                                             )}
@@ -789,77 +790,83 @@ const Calculators: React.FC = () => {
                                         </div>
 
                                         {/* 🔥 VISÃO MOBILE (CARDS) 🔥 */}
-                                        <div className="md:hidden space-y-4 px-6 pb-6 pt-2">
+                                        <div className="md:hidden space-y-5 mt-4">
                                             <AnimatePresence>
                                                 {processedMethods.map((m) => (
-                                                    <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} key={`mobile-${m.id}`} className="bg-slate-50 dark:bg-[#000000] border border-slate-200 dark:border-[#2C2C2E] rounded-2xl p-5 relative shadow-sm">
+                                                    <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} key={`mobile-${m.id}`} className="bg-slate-50 dark:bg-[#000000] border border-slate-200 dark:border-[#2C2C2E] rounded-3xl p-5 relative shadow-sm">
                                                         
-                                                        <button onClick={() => removeSimMethod(m.id)} className="absolute top-5 right-5 p-2 text-slate-400 hover:text-red-500 transition-colors bg-white dark:bg-[#1C1C1E] rounded-lg shadow-sm border border-slate-100 dark:border-[#2C2C2E]">
-                                                            <Trash2 size={14}/>
-                                                        </button>
-
-                                                        <div className="pr-12 mb-5">
-                                                            <p className="text-[10px] font-bold uppercase text-slate-500 dark:text-[#8E8E93] tracking-widest mb-2">Método / Estratégia</p>
-                                                            <div className="relative">
-                                                                <input list="methods-list" value={m.name} onChange={e => updateSimMethod(m.id, 'name', e.target.value)} className="w-full bg-white dark:bg-[#1C1C1E] border border-slate-200 dark:border-[#2C2C2E] text-slate-900 dark:text-white px-3 py-2.5 rounded-lg text-sm font-bold outline-none focus:border-indigo-500" placeholder="Ex: Oportunista..." />
-                                                            </div>
-                                                            <div className="mt-2">
-                                                                {m.isSynced ? (
-                                                                    <span className="text-[10px] font-bold text-emerald-500 uppercase tracking-widest flex items-center gap-1"><CheckCircle2 size={12}/> Histórico Validado</span>
-                                                                ) : (
-                                                                    <span className="text-[10px] font-bold text-slate-400 dark:text-[#636366] uppercase tracking-widest">● Simulação Manual</span>
-                                                                )}
-                                                            </div>
-                                                        </div>
-
-                                                        <div className="grid grid-cols-3 gap-2 mb-4 p-3 bg-white dark:bg-[#1C1C1E] rounded-xl border border-slate-200 dark:border-[#2C2C2E]">
-                                                            <div>
-                                                                <p className="text-[10px] text-slate-500 dark:text-[#8E8E93] uppercase font-bold tracking-widest text-center mb-1">WR %</p>
-                                                                <input type="number" value={m.winRate} onChange={e => updateSimMethod(m.id, 'winRate', e.target.value)} className={inputClass} />
-                                                            </div>
-                                                            <div className="border-l border-r border-slate-100 dark:border-[#2C2C2E] px-1">
-                                                                <p className="text-[10px] text-slate-500 dark:text-[#8E8E93] uppercase font-bold tracking-widest text-center mb-1">Odd</p>
-                                                                <input type="number" step="0.01" value={m.avgOdd} onChange={e => updateSimMethod(m.id, 'avgOdd', e.target.value)} className={inputClass} />
-                                                            </div>
-                                                            <div>
-                                                                <p className="text-[10px] text-slate-500 dark:text-[#8E8E93] uppercase font-bold tracking-widest text-center mb-1">Entr/Dia</p>
-                                                                <input type="number" min="1" value={m.entries} onChange={e => updateSimMethod(m.id, 'entries', e.target.value)} className={inputClass} />
-                                                            </div>
-                                                        </div>
-
-                                                        <div className="grid grid-cols-2 gap-3 mb-4">
-                                                            <div className="p-3 bg-white dark:bg-[#1C1C1E] rounded-xl border border-slate-200 dark:border-[#2C2C2E] text-center flex flex-col items-center justify-center">
-                                                                <p className="text-[10px] text-slate-500 dark:text-[#8E8E93] uppercase font-bold tracking-widest mb-1">Max Bad Run</p>
-                                                                <div className="flex items-center justify-center gap-1 mb-1">
-                                                                    <input type="number" min="1" value={m.badRun || 5} onChange={e => updateSimMethod(m.id, 'badRun', e.target.value)} className={`${inputClass} !text-red-500 dark:!text-red-400 !px-0 !py-0 !w-8`} />
-                                                                    <span className="text-[10px] font-bold text-slate-500">Reds</span>
+                                                        <div className="flex justify-between items-start mb-5">
+                                                            <div className="flex-1 pr-6">
+                                                                <p className="text-[10px] font-bold uppercase text-slate-500 dark:text-[#8E8E93] tracking-widest mb-1.5">Método / Estratégia</p>
+                                                                <div className="relative">
+                                                                    <input list="methods-list" value={m.name} onChange={e => updateSimMethod(m.id, 'name', e.target.value)} className="w-full bg-white dark:bg-[#1C1C1E] border border-slate-200 dark:border-[#2C2C2E] text-slate-900 dark:text-white px-4 py-3 rounded-xl text-base font-bold outline-none focus:border-indigo-500 shadow-sm" placeholder="Ex: Oportunista..." />
                                                                 </div>
-                                                                <span className="text-[10px] font-medium text-slate-500 dark:text-[#8E8E93]">-R$ {m.drawdownRiskMoney.toFixed(0)} ({m.drawdownRiskPct.toFixed(0)}%)</span>
+                                                                <div className="mt-2 pl-1">
+                                                                    {m.isSynced ? (
+                                                                        <span className="text-[10px] font-bold text-emerald-500 uppercase tracking-widest flex items-center gap-1.5"><CheckCircle2 size={12}/> Histórico Validado</span>
+                                                                    ) : (
+                                                                        <span className="text-[10px] font-bold text-slate-400 dark:text-[#636366] uppercase tracking-widest">● Simulação Manual</span>
+                                                                    )}
+                                                                </div>
                                                             </div>
-                                                            <div className="p-3 bg-white dark:bg-[#1C1C1E] rounded-xl border border-slate-200 dark:border-[#2C2C2E] text-center flex flex-col justify-center">
-                                                                <p className="text-[10px] text-slate-500 dark:text-[#8E8E93] uppercase font-bold tracking-widest mb-1.5">EV Esperado</p>
-                                                                <span className={`text-[11px] font-bold uppercase tracking-widest px-2 py-0.5 rounded border inline-block mx-auto mb-1.5 ${m.evPct > 0 ? 'bg-emerald-50 text-emerald-600 border-emerald-200 dark:bg-emerald-500/10 dark:text-emerald-400 dark:border-emerald-500/20' : 'bg-red-50 text-red-600 border-red-200 dark:bg-red-500/10 dark:text-red-400 dark:border-red-500/20'}`}>{m.evPct > 0 ? '+' : ''}{m.evPct.toFixed(1)}%</span>
+                                                            <button onClick={() => removeSimMethod(m.id)} className="p-3 text-red-400 hover:text-red-500 transition-colors bg-white dark:bg-[#1C1C1E] rounded-xl shadow-sm border border-slate-200 dark:border-[#2C2C2E] shrink-0 mt-5">
+                                                                <Trash2 size={16}/>
+                                                            </button>
+                                                        </div>
+
+                                                        {/* GRID DE PARÂMETROS BASE (THUMB FRIENDLY) */}
+                                                        <div className="grid grid-cols-3 gap-3 mb-5">
+                                                            <div className="bg-white dark:bg-[#1C1C1E] border border-slate-200 dark:border-[#2C2C2E] rounded-xl p-3 shadow-sm">
+                                                                <p className="text-[9px] text-slate-500 dark:text-[#8E8E93] uppercase font-bold tracking-widest text-center mb-2">WR %</p>
+                                                                <input type="number" value={m.winRate} onChange={e => updateSimMethod(m.id, 'winRate', e.target.value)} className="w-full bg-slate-50 dark:bg-[#000000] rounded-lg text-center font-mono font-bold text-base py-2 outline-none text-slate-900 dark:text-white focus:border-indigo-500 border border-transparent transition-colors" />
+                                                            </div>
+                                                            <div className="bg-white dark:bg-[#1C1C1E] border border-slate-200 dark:border-[#2C2C2E] rounded-xl p-3 shadow-sm">
+                                                                <p className="text-[9px] text-slate-500 dark:text-[#8E8E93] uppercase font-bold tracking-widest text-center mb-2">Odd</p>
+                                                                <input type="number" step="0.01" value={m.avgOdd} onChange={e => updateSimMethod(m.id, 'avgOdd', e.target.value)} className="w-full bg-slate-50 dark:bg-[#000000] rounded-lg text-center font-mono font-bold text-base py-2 outline-none text-slate-900 dark:text-white focus:border-indigo-500 border border-transparent transition-colors" />
+                                                            </div>
+                                                            <div className="bg-white dark:bg-[#1C1C1E] border border-slate-200 dark:border-[#2C2C2E] rounded-xl p-3 shadow-sm">
+                                                                <p className="text-[9px] text-slate-500 dark:text-[#8E8E93] uppercase font-bold tracking-widest text-center mb-2">Entr/Dia</p>
+                                                                <input type="number" min="1" value={m.entries} onChange={e => updateSimMethod(m.id, 'entries', e.target.value)} className="w-full bg-slate-50 dark:bg-[#000000] rounded-lg text-center font-mono font-bold text-base py-2 outline-none text-slate-900 dark:text-white focus:border-indigo-500 border border-transparent transition-colors" />
+                                                            </div>
+                                                        </div>
+
+                                                        {/* RESULTADOS (RISCO E EV) */}
+                                                        <div className="grid grid-cols-2 gap-3 mb-5">
+                                                            <div className="bg-white dark:bg-[#1C1C1E] border border-slate-200 dark:border-[#2C2C2E] rounded-xl p-4 shadow-sm flex flex-col items-center justify-center">
+                                                                <p className="text-[10px] text-slate-500 dark:text-[#8E8E93] uppercase font-bold tracking-widest mb-2">Max Bad Run</p>
+                                                                <div className="flex items-center justify-center gap-1.5 mb-2">
+                                                                    <input type="number" min="1" value={m.badRun || 5} onChange={e => updateSimMethod(m.id, 'badRun', e.target.value)} className="w-12 bg-slate-50 dark:bg-[#000000] rounded-lg text-center font-mono font-bold text-base py-1.5 outline-none text-red-600 dark:text-red-500 focus:border-red-500 border border-transparent transition-colors" />
+                                                                    <span className="text-[10px] font-bold text-slate-500 dark:text-[#8E8E93]">Reds</span>
+                                                                </div>
+                                                                <span className="text-[10px] font-bold text-red-600 dark:text-red-500 bg-red-50 dark:bg-red-500/10 px-2 py-1 rounded-md">-R$ {m.drawdownRiskMoney.toFixed(0)} ({m.drawdownRiskPct.toFixed(0)}%)</span>
+                                                            </div>
+                                                            <div className="bg-white dark:bg-[#1C1C1E] border border-slate-200 dark:border-[#2C2C2E] rounded-xl p-4 shadow-sm flex flex-col justify-center items-center">
+                                                                <p className="text-[10px] text-slate-500 dark:text-[#8E8E93] uppercase font-bold tracking-widest mb-2">EV Esperado</p>
+                                                                <span className={`text-sm font-bold uppercase tracking-widest px-3 py-1 rounded-lg border mb-2 ${m.evPct > 0 ? 'bg-emerald-50 text-emerald-600 border-emerald-200 dark:bg-emerald-500/10 dark:text-emerald-400 dark:border-emerald-500/20' : 'bg-red-50 text-red-600 border-red-200 dark:bg-red-500/10 dark:text-red-400 dark:border-red-500/20'}`}>{m.evPct > 0 ? '+' : ''}{m.evPct.toFixed(1)}%</span>
                                                                 <span className="text-[10px] text-slate-500 dark:text-[#8E8E93] font-bold">{m.evMoney > 0 ? '+' : ''} R$ {m.evMoney.toFixed(2)}/bet</span>
                                                             </div>
                                                         </div>
 
-                                                        <div className="flex flex-col gap-3 p-4 bg-white dark:bg-[#1C1C1E] rounded-xl border border-slate-200 dark:border-[#2C2C2E] shadow-sm">
-                                                            <div className="flex items-center justify-between gap-2 border-b border-slate-100 dark:border-[#2C2C2E] pb-3">
-                                                                <div className="flex-1 text-center">
-                                                                    <p className="text-[10px] text-slate-500 dark:text-[#8E8E93] uppercase font-bold tracking-widest mb-1">Stake Meta</p>
-                                                                    <span className={`font-mono font-bold text-sm block ${m.requiredStakePct > m.safeStakePct ? 'text-red-500' : 'text-slate-900 dark:text-white'}`}>{m.evPct > 0 ? m.requiredStakePct.toFixed(1) + '%' : 'N/A'}</span>
+                                                        {/* STAKE E APOSTE ISSO EM DESTAQUE */}
+                                                        <div className="bg-white dark:bg-[#1C1C1E] border border-slate-200 dark:border-[#2C2C2E] rounded-xl shadow-sm overflow-hidden flex flex-col">
+                                                            <div className="flex items-stretch border-b border-slate-100 dark:border-[#2C2C2E]">
+                                                                <div className="flex-1 p-4 flex flex-col items-center justify-center border-r border-slate-100 dark:border-[#2C2C2E]">
+                                                                    <p className="text-[10px] text-slate-500 dark:text-[#8E8E93] uppercase font-bold tracking-widest mb-2">Stake Meta</p>
+                                                                    <span className={`font-mono font-bold text-lg block mb-1 ${m.requiredStakePct > m.safeStakePct ? 'text-red-500' : 'text-slate-900 dark:text-white'}`}>{m.evPct > 0 ? m.requiredStakePct.toFixed(1) + '%' : 'N/A'}</span>
+                                                                    {m.evPct > 0 && <button onClick={() => updateSimMethod(m.id, 'stake', String(m.requiredStakePct.toFixed(1)))} className="text-[9px] uppercase font-bold tracking-widest text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-500/10 px-3 py-1 rounded-md mt-1">Fixar Meta</button>}
                                                                 </div>
-                                                                <div className="flex-1 text-center border-l border-slate-100 dark:border-[#2C2C2E]">
-                                                                    <p className="text-[10px] text-slate-500 dark:text-[#8E8E93] uppercase font-bold tracking-widest mb-1">Sua Stake</p>
-                                                                    <div className="flex justify-center items-center gap-1">
-                                                                        <input type="number" step="0.1" value={m.stake} onChange={e => updateSimMethod(m.id, 'stake', e.target.value)} className={`${inputClass} !w-12 !py-0`} />
-                                                                        <span className="text-xs font-bold text-slate-500">%</span>
+                                                                <div className="flex-1 p-4 flex flex-col items-center justify-center">
+                                                                    <p className="text-[10px] text-slate-500 dark:text-[#8E8E93] uppercase font-bold tracking-widest mb-2">Sua Stake</p>
+                                                                    <div className="flex items-center gap-1.5 w-full max-w-[100px]">
+                                                                        <input type="number" step="0.1" value={m.stake} onChange={e => updateSimMethod(m.id, 'stake', e.target.value)} className="w-full bg-slate-50 dark:bg-[#000000] border border-slate-200 dark:border-[#3A3A3C] text-slate-900 dark:text-white rounded-lg px-2 py-2 font-mono font-bold text-lg text-center outline-none focus:border-indigo-500 transition-colors" />
+                                                                        <span className="text-sm font-bold text-slate-500">%</span>
                                                                     </div>
+                                                                    <div className="mt-2 w-full flex justify-center">{m.riskBadge}</div>
                                                                 </div>
                                                             </div>
-                                                            <div className="text-center pt-1">
-                                                                <p className="text-[10px] text-emerald-600 dark:text-emerald-500 uppercase font-bold tracking-widest mb-2">Aposte Isso</p>
-                                                                <div className="bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 py-3 px-2 rounded-xl font-bold font-mono text-lg border border-emerald-200 dark:border-emerald-500/20 shadow-sm">
+                                                            <div className="bg-emerald-50 dark:bg-emerald-500/10 p-5 flex flex-col items-center justify-center">
+                                                                <p className="text-[10px] text-emerald-700 dark:text-emerald-500 uppercase font-black tracking-widest mb-1.5">Aposte Isso na Próxima Entrada</p>
+                                                                <div className="text-3xl font-black font-mono text-emerald-600 dark:text-emerald-400 tracking-tight">
                                                                     R$ {m.stakeValue.toFixed(2)}
                                                                 </div>
                                                             </div>
@@ -869,8 +876,8 @@ const Calculators: React.FC = () => {
                                                 ))}
                                             </AnimatePresence>
                                             
-                                            <button onClick={addSimMethod} className="w-full mt-4 py-4 rounded-xl border border-slate-300 dark:border-[#3A3A3C] text-slate-600 dark:text-white font-bold uppercase tracking-widest text-xs flex items-center justify-center gap-2 hover:bg-slate-100 dark:hover:bg-[#2C2C2E] transition-colors bg-white dark:bg-[#1C1C1E] shadow-sm">
-                                                <Plus size={16} /> Nova Simulação
+                                            <button onClick={addSimMethod} className="w-full mt-2 py-4 rounded-xl border-2 border-dashed border-slate-300 dark:border-[#3A3A3C] text-slate-500 dark:text-[#8E8E93] hover:text-slate-900 dark:hover:text-white font-bold uppercase tracking-widest text-xs flex items-center justify-center gap-2 hover:bg-slate-50 dark:hover:bg-[#1C1C1E] transition-colors shadow-sm">
+                                                <Plus size={16} /> Adicionar Nova Simulação
                                             </button>
                                         </div>
                                     </div>
