@@ -318,59 +318,42 @@ const NewBetModal: React.FC<NewBetModalProps> = ({
   };
 
   const calculateResult = () => {
-    const stake =
-      parseFloat(formData.stake) || 0;
-
-    const odds =
-      parseFloat(formData.odds) || 0;
-
-    const cashout =
-      parseFloat(formData.cashoutValue) || 0;
+    const stake = parseFloat(formData.stake) || 0;
+    const odds = parseFloat(formData.odds) || 0;
+    const cashout = parseFloat(formData.cashoutValue) || 0;
 
     if (!stake || !odds) return 0;
 
     switch (formData.status) {
-      case 'won':
-        return stake * odds - stake;
-
-      case 'lost':
-        return -stake;
-
-      case 'half-won':
-        return (stake * odds - stake) / 2;
-
-      case 'half-lost':
-        return -stake / 2;
-
-      case 'cashout':
-        return cashout - stake;
-
+      case 'won': return stake * odds - stake;
+      case 'lost': return -stake;
+      case 'half-won': return (stake * odds - stake) / 2;
+      case 'half-lost': return -stake / 2;
+      case 'cashout': return cashout - stake;
       case 'void':
-      case 'refunded':
-        return 0;
-
-      default:
-        return stake * odds - stake;
+      case 'refunded': return 0;
+      default: return stake * odds - stake;
     }
   };
 
   const resultValue = calculateResult();
 
   // 🔥 Design System Apple PRO: Estilos Flat & Sóbrios 🔥
-  const inputStyle = 'w-full bg-slate-50 dark:bg-[#000000] border border-slate-200 dark:border-[#3A3A3C] text-slate-900 dark:text-white rounded-xl px-4 py-3 outline-none focus:border-indigo-500 transition-colors text-sm font-bold placeholder:text-slate-400 dark:placeholder:text-[#636366] appearance-none';
+  // Uso de text-base (16px) no mobile evita zoom automático no iOS
+  const inputStyle = 'w-full min-w-0 bg-slate-50 dark:bg-[#000000] border border-slate-200 dark:border-[#3A3A3C] text-slate-900 dark:text-white rounded-xl px-4 py-3 md:py-2.5 outline-none focus:border-indigo-500 transition-colors text-base md:text-sm font-bold placeholder:text-slate-400 dark:placeholder:text-[#636366] appearance-none';
 
   const myActiveLeagues = globalLeagues.filter(
     (l) => userLeagues.includes(l.id)
   );
 
   const statusOptions = [
-    { id: 'pending', label: 'Aberto', icon: Clock, color: 'bg-slate-100 text-slate-900 dark:bg-[#1C1C1E] dark:text-white border-slate-200 dark:border-[#3A3A3C]' },
+    { id: 'pending', label: 'Aberto', icon: Clock, color: 'bg-slate-100 text-slate-900 dark:bg-[#2C2C2E] dark:text-white border-slate-300 dark:border-[#3A3A3C]' },
     { id: 'won', label: 'Lucro', icon: CheckCircle2, color: 'bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400 border-emerald-200 dark:border-emerald-500/30' },
     { id: 'half-won', label: '½ Lucro', icon: CheckCircle2, color: 'bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400 border-emerald-200 dark:border-emerald-500/30 opacity-80' },
     { id: 'lost', label: 'Prej.', icon: XCircle, color: 'bg-red-50 text-red-700 dark:bg-red-500/10 dark:text-red-400 border-red-200 dark:border-red-500/30' },
     { id: 'half-lost', label: '½ Prej.', icon: XCircle, color: 'bg-red-50 text-red-700 dark:bg-red-500/10 dark:text-red-400 border-red-200 dark:border-red-500/30 opacity-80' },
     { id: 'cashout', label: 'Cashout', icon: DollarSign, color: 'bg-indigo-50 text-indigo-700 dark:bg-indigo-500/10 dark:text-indigo-400 border-indigo-200 dark:border-indigo-500/30' },
-    { id: 'refunded', label: 'Devolve', icon: Ban, color: 'bg-slate-100 text-slate-600 dark:bg-[#2C2C2E] dark:text-[#8E8E93] border-slate-200 dark:border-[#3A3A3C]' }
+    { id: 'refunded', label: 'Devolve', icon: Ban, color: 'bg-slate-100 text-slate-600 dark:bg-[#1C1C1E] dark:text-[#8E8E93] border-slate-200 dark:border-[#3A3A3C]' }
   ];
 
   return (
@@ -389,7 +372,7 @@ const NewBetModal: React.FC<NewBetModalProps> = ({
             exit={{ scale: 0.95, opacity: 0, y: 40 }}
             transition={{ type: 'spring', damping: 25, stiffness: 300 }}
             onClick={(e) => e.stopPropagation()}
-            className="w-full max-w-2xl bg-white dark:bg-[#1C1C1E] border border-slate-200 dark:border-[#2C2C2E] sm:rounded-2xl rounded-t-3xl shadow-2xl flex flex-col relative overflow-hidden h-[95vh] sm:h-auto sm:max-h-[90vh]"
+            className="w-full max-w-2xl bg-white dark:bg-[#1C1C1E] border border-slate-200 dark:border-[#2C2C2E] sm:rounded-2xl rounded-t-[2rem] shadow-2xl flex flex-col relative overflow-hidden h-[95vh] sm:h-auto sm:max-h-[90vh]"
           >
             {/* HEADER */}
             <div className="px-5 py-4 border-b border-slate-100 dark:border-[#2C2C2E] flex flex-col gap-3 bg-white/90 dark:bg-[#1C1C1E]/90 backdrop-blur-md shrink-0 z-20">
@@ -400,8 +383,8 @@ const NewBetModal: React.FC<NewBetModalProps> = ({
                       ? 'Editar Operação'
                       : 'Nova Operação'}
                   </h2>
-                  <p className="text-slate-500 dark:text-[#8E8E93] text-xs mt-0.5 font-medium">
-                    Diário operacional
+                  <p className="text-slate-500 dark:text-[#8E8E93] text-[11px] font-bold uppercase tracking-widest mt-0.5">
+                    Diário Operacional
                   </p>
                 </div>
 
@@ -413,6 +396,7 @@ const NewBetModal: React.FC<NewBetModalProps> = ({
                 </button>
               </div>
 
+              {/* TAB SELECTOR: Manual vs Scanner */}
               {!betToEdit && isPro && (
                 <div className="flex bg-slate-100 dark:bg-[#000000] p-1 rounded-lg border border-slate-200 dark:border-[#2C2C2E] mt-1">
                   <button
@@ -423,12 +407,12 @@ const NewBetModal: React.FC<NewBetModalProps> = ({
                     className={`flex-1 py-2.5 rounded-md text-[11px] font-bold uppercase tracking-widest transition-all ${
                       entryMode === 'manual'
                         ? 'bg-white dark:bg-[#2C2C2E] text-slate-900 dark:text-white shadow-sm border border-slate-200 dark:border-transparent'
-                        : 'text-slate-500 dark:text-[#8E8E93]'
+                        : 'text-slate-500 dark:text-[#8E8E93] hover:text-slate-700 dark:hover:text-slate-300'
                     }`}
                   >
                     <div className="flex items-center justify-center gap-1.5">
                       <Edit3 size={14} />
-                      Manual
+                      Digitação Manual
                     </div>
                   </button>
 
@@ -440,7 +424,7 @@ const NewBetModal: React.FC<NewBetModalProps> = ({
                     className={`flex-1 py-2.5 rounded-md text-[11px] font-bold uppercase tracking-widest transition-all ${
                       entryMode === 'scanner'
                         ? 'bg-indigo-600 text-white shadow-sm border border-transparent'
-                        : 'text-slate-500 dark:text-[#8E8E93]'
+                        : 'text-slate-500 dark:text-[#8E8E93] hover:text-slate-700 dark:hover:text-slate-300'
                     }`}
                   >
                     <div className="flex items-center justify-center gap-1.5">
@@ -453,13 +437,13 @@ const NewBetModal: React.FC<NewBetModalProps> = ({
 
               <AnimatePresence>
                 {error && (
-                  <motion.div
+                  <motion.div 
                     initial={{ opacity: 0, height: 0 }}
                     animate={{ opacity: 1, height: 'auto' }}
                     exit={{ opacity: 0, height: 0 }}
                     className="mt-1 bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/20 text-red-600 dark:text-red-400 p-3 rounded-lg flex items-center gap-2 text-xs font-bold"
                   >
-                    <AlertCircle size={14} />
+                    <AlertCircle size={14} className="shrink-0" />
                     {error}
                   </motion.div>
                 )}
@@ -485,330 +469,297 @@ const NewBetModal: React.FC<NewBetModalProps> = ({
                     
                     {/* STATUS */}
                     <div>
-                      <label className="text-[10px] uppercase tracking-widest text-slate-500 dark:text-[#8E8E93] font-bold mb-2 block ml-1">
+                      <label className="text-[10px] uppercase text-slate-500 dark:text-[#8E8E93] font-bold tracking-widest ml-1 mb-2 block">
                         Status da Operação
                       </label>
-
                       <div className="grid grid-cols-4 sm:grid-cols-7 gap-2">
                         {statusOptions.map((opt) => (
                           <button
                             key={opt.id}
                             type="button"
-                            onClick={() =>
-                              setFormData({
-                                ...formData,
-                                status: opt.id as BetStatus
-                              })
-                            }
-                            className={`rounded-lg py-2.5 border transition-all flex flex-col items-center gap-1 text-[10px] font-bold uppercase tracking-wider ${
+                            onClick={() => setFormData({ ...formData, status: opt.id as BetStatus })}
+                            className={`rounded-lg py-2.5 border transition-all flex flex-col items-center justify-center gap-1.5 text-[9px] font-bold uppercase tracking-widest ${
                               formData.status === opt.id
                                 ? `${opt.color} shadow-sm`
-                                : 'bg-slate-50 dark:bg-[#000000] border-slate-200 dark:border-[#3A3A3C] text-slate-500 dark:text-[#8E8E93] hover:border-slate-300 dark:hover:border-slate-600'
+                                : 'bg-white dark:bg-[#1C1C1E] text-slate-500 dark:text-[#8E8E93] border-transparent hover:border-slate-200 dark:hover:border-[#3A3A3C]'
                             }`}
                           >
                             <opt.icon size={16} className="mb-0.5" />
-                            {opt.label}
+                            <span className="whitespace-nowrap">{opt.label}</span>
                           </button>
                         ))}
                       </div>
                     </div>
 
-                    {/* LIGA / EVENTO */}
+                    {!betToEdit && myActiveLeagues.length > 0 && isPro && (
+                      <div className="flex justify-end">
+                          <button 
+                            type="button"
+                            onClick={() => setIsManualMode(!isManualMode)}
+                            className="text-[10px] text-indigo-600 dark:text-indigo-400 font-bold flex items-center gap-1 transition-colors px-3 py-1.5 bg-indigo-50 dark:bg-indigo-500/10 rounded-lg border border-indigo-200 dark:border-indigo-500/20 uppercase tracking-wider"
+                          >
+                            {isManualMode ? 'Usar Seleção Inteligente' : 'Digitar Manualmente'}
+                            <ArrowRightLeft size={12} />
+                          </button>
+                      </div>
+                    )}
+
                     <div className="grid grid-cols-1 sm:grid-cols-12 gap-5">
-                      <div className="sm:col-span-4">
-                        <label className="text-[10px] uppercase tracking-widest text-slate-500 dark:text-[#8E8E93] font-bold mb-2 block ml-1">
-                          Competição
-                        </label>
+                      <div className="sm:col-span-12 grid grid-cols-1 sm:grid-cols-12 gap-4 p-5 bg-slate-50 dark:bg-[#000000] rounded-xl border border-slate-200 dark:border-[#2C2C2E] shadow-sm">
+                          
+                          <div className="sm:col-span-4 space-y-2">
+                            <label className="text-[10px] uppercase text-slate-500 dark:text-[#8E8E93] font-bold tracking-widest ml-1 flex items-center justify-between">
+                              <span className="flex items-center gap-1"><Trophy size={12} /> Competição</span>
+                              {!isPro && <span className="text-[9px] text-indigo-500 flex items-center gap-1 ml-auto"><Lock size={10}/> PRO</span>}
+                            </label>
+                            
+                            {!isManualMode && myActiveLeagues.length > 0 && isPro ? (
+                              <select
+                                value={selectedLeagueId}
+                                onChange={(e) => {
+                                  const val = e.target.value;
+                                  if (val === 'manual') setIsManualMode(true);
+                                  else setSelectedLeagueId(val);
+                                }}
+                                className={`${inputStyle}`}
+                              >
+                                <option value="">Selecione...</option>
+                                {myActiveLeagues.map(l => (
+                                  <option key={l.id} value={l.id}>{l.name} ({l.country})</option>
+                                ))}
+                                <option value="manual" className="font-bold text-indigo-500">+ Digitar Manualmente</option>
+                              </select>
+                            ) : (
+                              <select
+                                 value={formData.sport}
+                                 onChange={(e) => setFormData({ ...formData, sport: e.target.value })}
+                                 className={`${inputStyle}`}
+                              >
+                                 <option>Futebol</option>
+                                 <option>Basquete</option>
+                                 <option>Tênis</option>
+                                 <option>eSports</option>
+                                 <option>MMA</option>
+                                 <option>Vôlei</option>
+                                 <option>Outros</option>
+                              </select>
+                            )}
+                          </div>
 
-                        <select
-                          value={formData.sport}
-                          onChange={(e) =>
-                            setFormData({
-                              ...formData,
-                              sport: e.target.value
-                            })
-                          }
-                          className={inputStyle}
-                        >
-                          <option>Futebol</option>
-                          <option>Basquete</option>
-                          <option>Tênis</option>
-                          <option>eSports</option>
-                          <option>MMA</option>
-                          <option>Vôlei</option>
-                          <option>Outros</option>
-                        </select>
+                          <div className="sm:col-span-8 space-y-2 min-w-0">
+                            <label className="text-[10px] uppercase text-slate-500 dark:text-[#8E8E93] font-bold tracking-widest ml-1 flex items-center justify-between">
+                              <span className="flex items-center gap-1"><Shield size={12} /> Evento</span>
+                            </label>
+
+                            {!isManualMode && selectedLeagueId && selectedLeagueId !== 'manual' && isPro ? (
+                               <div className="flex gap-2 items-center min-w-0">
+                                  <select 
+                                    value={selectedHomeTeam}
+                                    onChange={(e) => setSelectedHomeTeam(e.target.value)}
+                                    className={`${inputStyle} px-3 min-w-0`}
+                                    disabled={isLoadingTeams}
+                                  >
+                                    <option value="">Casa</option>
+                                    {currentLeagueTeams.map(t => (
+                                      <option key={t.id} value={t.id}>
+                                         {t.name}
+                                      </option>
+                                    ))}
+                                  </select>
+                                  <span className="text-slate-400 font-bold text-xs shrink-0">VS</span>
+                                  <select 
+                                    value={selectedAwayTeam}
+                                    onChange={(e) => setSelectedAwayTeam(e.target.value)}
+                                    className={`${inputStyle} px-3 min-w-0`}
+                                    disabled={isLoadingTeams}
+                                  >
+                                    <option value="">Fora</option>
+                                    {currentLeagueTeams.map(t => (
+                                      <option key={t.id} value={t.id}>
+                                         {t.name}
+                                      </option>
+                                    ))}
+                                  </select>
+                               </div>
+                            ) : (
+                              <input
+                                type="text"
+                                value={formData.event}
+                                onChange={(e) => setFormData({ ...formData, event: e.target.value })}
+                                placeholder={!isPro ? "Ex: Fla vs Pal" : "Ex: Flamengo vs Palmeiras"}
+                                className={inputStyle}
+                              />
+                            )}
+                          </div>
                       </div>
 
-                      <div className="sm:col-span-8">
-                        <label className="text-[10px] uppercase tracking-widest text-slate-500 dark:text-[#8E8E93] font-bold mb-2 flex items-center justify-between ml-1">
-                          Evento
-                          {!isManualMode && myActiveLeagues.length > 0 && isPro && (
-                              <button
-                                type="button"
-                                onClick={() => setIsManualMode(!isManualMode)}
-                                className="text-indigo-600 dark:text-indigo-400 font-bold flex items-center gap-1"
-                              >
-                                {isManualMode ? 'Smart' : 'Manual'}
-                                <ArrowRightLeft size={10} />
-                              </button>
+                      {/* MARKET + SELECTION */}
+                      <div className="sm:col-span-12 grid grid-cols-1 sm:grid-cols-2 gap-5 min-w-0">
+                        <div className="min-w-0 space-y-2">
+                          <label className="text-[10px] uppercase tracking-widest text-slate-500 dark:text-[#8E8E93] font-bold mb-2 block ml-1">
+                            Mercado
+                          </label>
+                          <select
+                            value={formData.market}
+                            onChange={(e) => setFormData({ ...formData, market: e.target.value })}
+                            className={inputStyle}
+                          >
+                            <option value="">Selecione...</option>
+                            {availableMarkets.map((m) => (
+                              <option key={m.id} value={m.name}>{m.name}</option>
+                            ))}
+                            <option value="__custom">Outro (Digitar Manualmente)</option>
+                          </select>
+                          
+                          {formData.market === '__custom' && (
+                            <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} className="mt-2 min-w-0">
+                              <input
+                                type="text"
+                                value={manualMarket}
+                                onChange={(e) => setManualMarket(e.target.value)}
+                                placeholder="Nome do mercado"
+                                className={`${inputStyle} border-indigo-500/50 focus:border-indigo-500`}
+                                autoFocus
+                              />
+                            </motion.div>
                           )}
-                        </label>
+                        </div>
 
-                        {!isManualMode && selectedLeagueId && selectedLeagueId !== 'manual' && isPro ? (
-                            <div className="flex gap-2 items-center">
-                              <select 
-                                value={selectedHomeTeam}
-                                onChange={(e) => setSelectedHomeTeam(e.target.value)}
-                                className={inputStyle}
-                                disabled={isLoadingTeams}
-                              >
-                                <option value="">Casa</option>
-                                {currentLeagueTeams.map(t => (
-                                  <option key={t.id} value={t.id}>
-                                     {t.name}
-                                  </option>
-                                ))}
-                              </select>
-                              <span className="text-slate-400 font-bold text-xs">VS</span>
-                              <select 
-                                value={selectedAwayTeam}
-                                onChange={(e) => setSelectedAwayTeam(e.target.value)}
-                                className={inputStyle}
-                                disabled={isLoadingTeams}
-                              >
-                                <option value="">Fora</option>
-                                {currentLeagueTeams.map(t => (
-                                  <option key={t.id} value={t.id}>
-                                     {t.name}
-                                  </option>
-                                ))}
-                              </select>
-                           </div>
-                        ) : (
-                            <input
-                              type="text"
-                              value={formData.event}
-                              onChange={(e) =>
-                                setFormData({
-                                  ...formData,
-                                  event: e.target.value
-                                })
-                              }
-                              placeholder={!isPro ? "Ex: Fla vs Pal" : "Ex: Flamengo vs Palmeiras"}
-                              className={inputStyle}
-                            />
-                        )}
-                      </div>
-                    </div>
-
-                    {/* MARKET + SELECTION */}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-                      <div>
-                        <label className="text-[10px] uppercase tracking-widest text-slate-500 dark:text-[#8E8E93] font-bold mb-2 block ml-1">
-                          Mercado
-                        </label>
-
-                        <select
-                          value={formData.market}
-                          onChange={(e) =>
-                            setFormData({
-                              ...formData,
-                              market: e.target.value
-                            })
-                          }
-                          className={inputStyle}
-                        >
-                          <option value="">
-                            Selecione...
-                          </option>
-
-                          {availableMarkets.map(
-                            (m) => (
-                              <option
-                                key={m.id}
-                                value={m.name}
-                              >
-                                {m.name}
-                              </option>
-                            )
-                          )}
-
-                          <option value="__custom">
-                            Outro
-                          </option>
-                        </select>
-
-                        {formData.market ===
-                          '__custom' && (
+                        <div className="min-w-0 space-y-2">
+                          <label className="text-[10px] uppercase tracking-widest text-slate-500 dark:text-[#8E8E93] font-bold mb-2 block ml-1">
+                            Posição (Seleção)
+                          </label>
                           <input
                             type="text"
-                            value={manualMarket}
-                            onChange={(e) =>
-                              setManualMarket(
-                                e.target.value
-                              )
-                            }
-                            placeholder="Nome do mercado"
-                            className={`${inputStyle} mt-3 border-indigo-500`}
+                            value={formData.selection}
+                            onChange={(e) => setFormData({ ...formData, selection: e.target.value })}
+                            placeholder="Ex: Over 2.5, Casa..."
+                            className={inputStyle}
                           />
+                        </div>
+                      </div>
+                      
+                      {/* MÉTODO E GESTÃO */}
+                      <div className="sm:col-span-12 grid grid-cols-1 sm:grid-cols-2 gap-5 min-w-0">
+                          <div className="min-w-0 space-y-2">
+                              <label className="text-[10px] uppercase tracking-widest text-slate-500 dark:text-[#8E8E93] font-bold flex items-center justify-between ml-1">
+                                  Método Analítico
+                                  {!isPro && availableMethods.length === 0 && <Lock size={10} className="text-indigo-500"/>}
+                              </label>
+                              <select
+                                value={formData.method}
+                                onChange={(e) => setFormData({ ...formData, method: e.target.value })}
+                                className={inputStyle}
+                                disabled={!isPro && availableMethods.length === 0}
+                              >
+                                <option value="">{(!isPro && availableMethods.length === 0) ? "Padrão" : "Opcional"}</option>
+                                {availableMethods.map((m) => (
+                                  <option key={m.id} value={m.name}>{m.name}</option>
+                                ))}
+                              </select>
+                          </div>
+                          <div className="min-w-0 space-y-2">
+                              <label className="text-[10px] uppercase tracking-widest text-slate-500 dark:text-[#8E8E93] font-bold flex items-center justify-between ml-1">
+                                  Plano de Gestão
+                                  {!isPro && <Lock size={10} className="text-indigo-500"/>}
+                              </label>
+                              <select
+                                value={formData.strategy}
+                                onChange={(e) => setFormData({ ...formData, strategy: e.target.value })}
+                                className={`${inputStyle} ${!isPro ? 'opacity-50' : ''}`}
+                                disabled={!isPro || availableStrategies.length === 0}
+                              >
+                                <option value="">{(!isPro) ? "Bloqueado" : "Opcional"}</option>
+                                {availableStrategies.map((s) => (
+                                  <option key={s.id} value={s.name}>{s.name}</option>
+                                ))}
+                              </select>
+                          </div>
+                      </div>
+
+                      {/* ODDS + STAKE */}
+                      <div className="sm:col-span-12 grid grid-cols-2 gap-4 border-t border-slate-100 dark:border-[#2C2C2E] pt-5 mt-2 min-w-0">
+                        <div className="min-w-0 space-y-2">
+                          <label className="text-[10px] uppercase tracking-widest text-slate-500 dark:text-[#8E8E93] font-bold ml-1 block">
+                            Cotação (Odd)
+                          </label>
+                          <div className="relative min-w-0">
+                              <span className="absolute left-3 top-1/2 -translate-y-1/2 font-mono font-bold text-slate-400">@</span>
+                              <input
+                                  type="number"
+                                  step="0.01"
+                                  value={formData.odds}
+                                  onChange={(e) => setFormData({ ...formData, odds: e.target.value })}
+                                  placeholder="1.85"
+                                  className={`${inputStyle} pl-8 font-mono text-base md:text-lg font-bold min-w-0`}
+                              />
+                          </div>
+                        </div>
+
+                        <div className="min-w-0 space-y-2">
+                          <label className="text-[10px] uppercase tracking-widest text-slate-500 dark:text-[#8E8E93] font-bold ml-1 block truncate">
+                            Exposição ({currency})
+                          </label>
+                          <input
+                            type="number"
+                            step="1"
+                            value={formData.stake}
+                            onChange={(e) => setFormData({ ...formData, stake: e.target.value })}
+                            placeholder="100.00"
+                            className={`${inputStyle} font-mono text-base md:text-lg font-bold min-w-0`}
+                          />
+                        </div>
+
+                        {/* CASHOUT */}
+                        {formData.status === 'cashout' && (
+                          <motion.div 
+                            initial={{ opacity: 0, height: 0 }}
+                            animate={{ opacity: 1, height: 'auto' }}
+                            className="col-span-2 pt-2 min-w-0 space-y-2"
+                          >
+                            <label className="text-[10px] uppercase tracking-widest text-indigo-600 dark:text-indigo-400 font-bold ml-1 flex items-center gap-1">
+                              <DollarSign size={12} /> Retorno (Cashout)
+                            </label>
+                            <input
+                              type="number"
+                              step="0.01"
+                              value={formData.cashoutValue}
+                              onChange={(e) => setFormData({ ...formData, cashoutValue: e.target.value })}
+                              placeholder="Valor sacado"
+                              className={`${inputStyle} border-indigo-500/50 text-indigo-600 dark:text-indigo-400 focus:border-indigo-500 font-mono text-base md:text-lg font-bold min-w-0`}
+                            />
+                          </motion.div>
                         )}
                       </div>
-
-                      <div>
-                        <label className="text-[10px] uppercase tracking-widest text-slate-500 dark:text-[#8E8E93] font-bold mb-2 block ml-1">
-                          Seleção
-                        </label>
-
-                        <input
-                          type="text"
-                          value={formData.selection}
-                          onChange={(e) =>
-                            setFormData({
-                              ...formData,
-                              selection: e.target.value
-                            })
-                          }
-                          placeholder="Over 2.5"
-                          className={inputStyle}
-                        />
-                      </div>
                     </div>
-                    
-                    {/* MÉTODO E GESTÃO */}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-                        <div>
-                            <label className="text-[10px] uppercase tracking-widest text-slate-500 dark:text-[#8E8E93] font-bold mb-2 flex items-center justify-between ml-1">
-                                Método
-                                {!isPro && availableMethods.length === 0 && <Lock size={10} className="text-indigo-500"/>}
-                            </label>
-                            <select
-                              value={formData.method}
-                              onChange={(e) => setFormData({ ...formData, method: e.target.value })}
-                              className={inputStyle}
-                              disabled={!isPro && availableMethods.length === 0}
-                            >
-                              <option value="">{(!isPro && availableMethods.length === 0) ? "Padrão" : "Opcional"}</option>
-                              {availableMethods.map((m) => (
-                                <option key={m.id} value={m.name}>{m.name}</option>
-                              ))}
-                            </select>
-                        </div>
-                        <div>
-                            <label className="text-[10px] uppercase tracking-widest text-slate-500 dark:text-[#8E8E93] font-bold mb-2 flex items-center justify-between ml-1">
-                                Plano de Gestão
-                                {!isPro && <Lock size={10} className="text-indigo-500"/>}
-                            </label>
-                            <select
-                              value={formData.strategy}
-                              onChange={(e) => setFormData({ ...formData, strategy: e.target.value })}
-                              className={inputStyle}
-                              disabled={!isPro || availableStrategies.length === 0}
-                            >
-                              <option value="">{(!isPro) ? "Bloqueado" : "Opcional"}</option>
-                              {availableStrategies.map((s) => (
-                                <option key={s.id} value={s.name}>{s.name}</option>
-                              ))}
-                            </select>
-                        </div>
-                    </div>
-
-                    {/* ODDS + STAKE */}
-                    <div className="grid grid-cols-2 gap-4 border-t border-slate-100 dark:border-[#2C2C2E] pt-5 mt-2">
-                      <div>
-                        <label className="text-[10px] uppercase tracking-widest text-slate-500 dark:text-[#8E8E93] font-bold mb-2 block ml-1">
-                          Odd
-                        </label>
-                        <div className="relative">
-                            <span className="absolute left-3 top-1/2 -translate-y-1/2 font-mono font-bold text-slate-400">@</span>
-                            <input
-                                type="number"
-                                step="0.01"
-                                value={formData.odds}
-                                onChange={(e) => setFormData({ ...formData, odds: e.target.value })}
-                                placeholder="1.85"
-                                className={`${inputStyle} pl-8 font-mono text-base`}
-                            />
-                        </div>
-                      </div>
-
-                      <div>
-                        <label className="text-[10px] uppercase tracking-widest text-slate-500 dark:text-[#8E8E93] font-bold mb-2 block ml-1 truncate">
-                          Stake ({currency})
-                        </label>
-
-                        <input
-                          type="number"
-                          step="1"
-                          value={formData.stake}
-                          onChange={(e) => setFormData({ ...formData, stake: e.target.value })}
-                          placeholder="100.00"
-                          className={`${inputStyle} font-mono text-base`}
-                        />
-                      </div>
-                    </div>
-
-                    {/* CASHOUT */}
-                    {formData.status === 'cashout' && (
-                      <motion.div 
-                        initial={{ opacity: 0, height: 0 }}
-                        animate={{ opacity: 1, height: 'auto' }}
-                        className="col-span-2 pt-2"
-                      >
-                        <label className="text-[10px] uppercase tracking-widest text-indigo-600 dark:text-indigo-400 font-bold mb-2 block ml-1">
-                          Retorno (Cashout)
-                        </label>
-
-                        <input
-                          type="number"
-                          step="0.01"
-                          value={formData.cashoutValue}
-                          onChange={(e) => setFormData({ ...formData, cashoutValue: e.target.value })}
-                          placeholder="Valor sacado"
-                          className={`${inputStyle} border-indigo-500 text-indigo-600 dark:text-indigo-400 font-mono text-base`}
-                        />
-                      </motion.div>
-                    )}
                   </div>
 
                   {/* FOOTER */}
-                  <div className="bg-slate-50 dark:bg-[#000000] border-t border-slate-200 dark:border-[#2C2C2E] p-5 shrink-0 mt-auto flex flex-col sm:flex-row items-center justify-between gap-4">
+                  <div className="bg-slate-50 dark:bg-[#1C1C1E] border-t border-slate-200 dark:border-[#2C2C2E] p-4 shrink-0 mt-auto flex flex-col sm:flex-row items-center justify-between gap-4">
                     
-                    <div className="w-full sm:w-auto flex flex-col items-center sm:items-start bg-white dark:bg-[#1C1C1E] border border-slate-200 dark:border-[#3A3A3C] rounded-xl px-5 py-3 shadow-sm">
-                      <p className="text-slate-500 dark:text-[#8E8E93] text-[9px] font-bold uppercase tracking-widest mb-1">
+                    <div className="w-full sm:w-auto flex flex-col items-center sm:items-start bg-white dark:bg-[#000000] border border-slate-200 dark:border-[#3A3A3C] rounded-xl px-5 py-3 shadow-sm min-w-0">
+                      <p className="text-slate-500 dark:text-[#8E8E93] text-[9px] font-bold uppercase tracking-widest mb-1 truncate">
                         {formData.status === 'pending' ? 'Potencial Estimado' : 'Resultado'}
                       </p>
-
-                      <div
-                        className={`text-xl font-bold font-mono tracking-tight ${
-                          resultValue > 0
-                            ? 'text-emerald-600 dark:text-emerald-400'
-                            : resultValue < 0
-                            ? 'text-red-600 dark:text-red-400'
-                            : 'text-slate-900 dark:text-white'
-                        }`}
-                      >
+                      <div className={`text-xl font-bold font-mono tracking-tight truncate ${
+                        resultValue > 0 ? 'text-emerald-600 dark:text-emerald-400' : resultValue < 0 ? 'text-red-600 dark:text-red-400' : 'text-slate-900 dark:text-white'
+                      }`}>
                         {resultValue > 0 ? '+' : ''}{currency} {resultValue.toFixed(2)}
                       </div>
                     </div>
 
                     <button
                       type="submit"
-                      className="w-full sm:w-auto bg-slate-900 hover:bg-slate-800 text-white dark:bg-emerald-600 dark:hover:bg-emerald-500 dark:text-white font-bold py-4 px-8 rounded-xl transition-all text-xs uppercase tracking-widest flex items-center justify-center gap-2 shadow-sm"
+                      className="w-full sm:w-auto bg-slate-900 hover:bg-slate-800 text-white dark:bg-white dark:hover:bg-slate-200 dark:text-slate-900 font-bold py-4 px-8 rounded-xl transition-all active:scale-95 text-xs uppercase tracking-widest flex items-center justify-center gap-2 shadow-sm"
                     >
                       {betToEdit ? (
-                        <>
-                          <Save size={16} />
-                          Atualizar
-                        </>
+                        <><Save size={16} /> Atualizar</>
                       ) : (
-                        <>
-                          <CheckCircle2 size={16} />
-                          Salvar
-                        </>
+                        <><CheckCircle2 size={16} /> Salvar Operação</>
                       )}
                     </button>
                   </div>
+
                 </form>
               )}
             </div>
