@@ -38,7 +38,6 @@ const NewBetModal: React.FC<NewBetModalProps> = ({
     currency,
     customMarkets,
     customStrategies,
-    unitSize,
     isPro,
     activeBankrollId,
 
@@ -83,24 +82,24 @@ const NewBetModal: React.FC<NewBetModalProps> = ({
     if (isOpen && globalLeagues.length === 0) {
       fetchLeagues();
     }
-  }, [isOpen]);
+  }, [isOpen, globalLeagues.length, fetchLeagues]);
 
   useEffect(() => {
     if (selectedLeagueId && selectedLeagueId !== 'manual') {
       fetchLeagueTeams(selectedLeagueId);
 
       const league = globalLeagues.find(
-        l => l.id === selectedLeagueId
+        (l) => l.id === selectedLeagueId
       );
 
       if (league) {
-        setFormData(prev => ({
+        setFormData((prev) => ({
           ...prev,
           sport: league.sport
         }));
       }
     }
-  }, [selectedLeagueId]);
+  }, [selectedLeagueId, fetchLeagueTeams, globalLeagues]);
 
   useEffect(() => {
     if (
@@ -110,16 +109,16 @@ const NewBetModal: React.FC<NewBetModalProps> = ({
     ) {
       const home =
         currentLeagueTeams.find(
-          t => t.id === selectedHomeTeam
+          (t) => t.id === selectedHomeTeam
         )?.name || '';
 
       const away =
         currentLeagueTeams.find(
-          t => t.id === selectedAwayTeam
+          (t) => t.id === selectedAwayTeam
         )?.name || '';
 
       if (home && away) {
-        setFormData(prev => ({
+        setFormData((prev) => ({
           ...prev,
           event: `${home} vs ${away}`
         }));
@@ -152,7 +151,7 @@ const NewBetModal: React.FC<NewBetModalProps> = ({
       setEntryMode('manual');
 
       const isCustomMarket = !availableMarkets.some(
-        m => m.name === betToEdit.market
+        (m) => m.name === betToEdit.market
       );
 
       if (isCustomMarket && betToEdit.market) {
@@ -174,24 +173,25 @@ const NewBetModal: React.FC<NewBetModalProps> = ({
 
       setManualMarket('');
       setEntryMode('manual');
-
-      setIsManualMode(
-        !isPro || userLeagues.length === 0
-      );
-
+      setIsManualMode(!isPro || userLeagues.length === 0);
       setSelectedLeagueId('');
       setSelectedHomeTeam('');
       setSelectedAwayTeam('');
     }
-  }, [betToEdit, isOpen]);
+  }, [
+    betToEdit,
+    isOpen,
+    availableMarkets,
+    isPro,
+    userLeagues.length
+  ]);
 
   const handleScanComplete = (scannedData: any) => {
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
       event: scannedData.match || prev.event,
       market: scannedData.market || prev.market,
-      selection:
-        scannedData.selection || prev.selection,
+      selection: scannedData.selection || prev.selection,
       odds: scannedData.odd
         ? scannedData.odd.toString()
         : prev.odds,
@@ -205,7 +205,8 @@ const NewBetModal: React.FC<NewBetModalProps> = ({
           scannedData.status === 'half-won' ||
           scannedData.status === 'half-lost' ||
           scannedData.status === 'cashout'
-        ) && scannedData.return
+        ) &&
+        scannedData.return
           ? scannedData.return.toString()
           : ''
     }));
@@ -213,10 +214,10 @@ const NewBetModal: React.FC<NewBetModalProps> = ({
     if (
       scannedData.market &&
       !availableMarkets.some(
-        m => m.name === scannedData.market
+        (m) => m.name === scannedData.market
       )
     ) {
-      setFormData(prev => ({
+      setFormData((prev) => ({
         ...prev,
         market: '__custom'
       }));
@@ -230,8 +231,9 @@ const NewBetModal: React.FC<NewBetModalProps> = ({
     if (setToast) {
       setToast({
         type: 'success',
-        message:
-          'Dados extraídos com sucesso. Revise antes de salvar.'
+        message: `Dados extraídos com sucesso de ${
+          scannedData.bookmaker || 'bilhete'
+        }. Revise antes de salvar.`
       });
     }
   };
@@ -240,6 +242,7 @@ const NewBetModal: React.FC<NewBetModalProps> = ({
     e: React.FormEvent
   ) => {
     e.preventDefault();
+
     setError('');
 
     if (!activeBankrollId) {
@@ -274,9 +277,7 @@ const NewBetModal: React.FC<NewBetModalProps> = ({
       formData.status === 'cashout' &&
       !formData.cashoutValue
     ) {
-      setError(
-        'Informe o valor do Cashout.'
-      );
+      setError('Informe o valor do cashout.');
       return;
     }
 
@@ -289,14 +290,12 @@ const NewBetModal: React.FC<NewBetModalProps> = ({
       return;
     }
 
-    const finalMarket =
-      formData.market === '__custom'
-        ? manualMarket
-        : formData.market;
-
     const payload = {
       ...formData,
-      market: finalMarket,
+      market:
+        formData.market === '__custom'
+          ? manualMarket
+          : formData.market,
       odds: parseFloat(formData.odds),
       stake: stakeValue,
       cashoutValue: formData.cashoutValue
@@ -358,16 +357,16 @@ const NewBetModal: React.FC<NewBetModalProps> = ({
   const resultValue = calculateResult();
 
   const inputStyle =
-    'w-full h-14 bg-[#050505] border border-white/10 rounded-2xl px-5 text-white text-sm font-semibold outline-none transition-all focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10 placeholder:text-slate-600';
+    'w-full bg-[#1C1C1E] border border-[#3A3A3C] text-white rounded-2xl px-5 py-4 outline-none focus:border-indigo-500 transition-colors text-base font-semibold placeholder:text-[#636366]';
 
   const myActiveLeagues = globalLeagues.filter(
-    l => userLeagues.includes(l.id)
+    (l) => userLeagues.includes(l.id)
   );
 
   const statusOptions = [
     {
       id: 'pending',
-      label: 'Aberta',
+      label: 'Aberto',
       icon: Clock
     },
     {
@@ -382,12 +381,12 @@ const NewBetModal: React.FC<NewBetModalProps> = ({
     },
     {
       id: 'lost',
-      label: 'Loss',
+      label: 'Prejuízo',
       icon: XCircle
     },
     {
       id: 'half-lost',
-      label: '½ Loss',
+      label: '½ Prej.',
       icon: XCircle
     },
     {
@@ -397,7 +396,7 @@ const NewBetModal: React.FC<NewBetModalProps> = ({
     },
     {
       id: 'refunded',
-      label: 'Void',
+      label: 'Devolvido',
       icon: Ban
     }
   ];
@@ -410,34 +409,34 @@ const NewBetModal: React.FC<NewBetModalProps> = ({
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           onClick={onClose}
-          className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-end md:items-center justify-center p-0 md:p-6"
+          className="fixed inset-0 bg-black/80 backdrop-blur-md z-50 flex items-end sm:items-center justify-center"
         >
           <motion.div
             initial={{
+              scale: 0.95,
               opacity: 0,
-              y: 30,
-              scale: 0.98
+              y: 40
             }}
             animate={{
+              scale: 1,
               opacity: 1,
-              y: 0,
-              scale: 1
+              y: 0
             }}
             exit={{
+              scale: 0.95,
               opacity: 0,
-              y: 20,
-              scale: 0.98
+              y: 40
             }}
             transition={{
               type: 'spring',
               damping: 24,
-              stiffness: 280
+              stiffness: 260
             }}
             onClick={(e) => e.stopPropagation()}
-            className="w-full md:max-w-3xl h-[92vh] md:h-auto md:max-h-[95vh] bg-[#000000] border border-white/10 rounded-t-[2rem] md:rounded-[2rem] overflow-hidden flex flex-col shadow-2xl font-sans"
+            className="w-full max-w-3xl h-[95vh] bg-[#000000] border border-[#2C2C2E] sm:rounded-[2rem] rounded-t-[2rem] overflow-hidden flex flex-col shadow-2xl"
           >
             {/* HEADER */}
-            <div className="sticky top-0 z-20 bg-black/90 backdrop-blur-md border-b border-white/5 px-6 py-5 flex flex-col gap-4">
+            <div className="px-6 py-5 border-b border-[#2C2C2E] bg-black/70 backdrop-blur-md shrink-0 z-20">
               <div className="flex items-center justify-between">
                 <div>
                   <h2 className="text-2xl font-black text-white tracking-tight">
@@ -446,34 +445,34 @@ const NewBetModal: React.FC<NewBetModalProps> = ({
                       : 'Nova Operação'}
                   </h2>
 
-                  <p className="text-slate-500 text-sm mt-1 font-medium">
-                    Registro operacional avançado
+                  <p className="text-[#8E8E93] text-sm mt-1">
+                    Diário operacional profissional
                   </p>
                 </div>
 
                 <button
                   onClick={onClose}
-                  className="w-11 h-11 rounded-2xl bg-[#111113] border border-white/10 flex items-center justify-center text-slate-400 hover:text-white transition-colors"
+                  className="w-10 h-10 rounded-full bg-[#1C1C1E] border border-[#3A3A3C] flex items-center justify-center text-[#8E8E93] hover:text-white transition-colors"
                 >
                   <X size={18} />
                 </button>
               </div>
 
               {!betToEdit && isPro && (
-                <div className="grid grid-cols-2 gap-3">
+                <div className="flex mt-5 bg-[#1C1C1E] p-1 rounded-2xl border border-[#2C2C2E]">
                   <button
                     type="button"
                     onClick={() =>
                       setEntryMode('manual')
                     }
-                    className={`h-12 rounded-2xl text-xs font-black uppercase tracking-[0.14em] transition-all ${
+                    className={`flex-1 py-3 rounded-xl text-sm font-bold transition-all ${
                       entryMode === 'manual'
                         ? 'bg-white text-black'
-                        : 'bg-[#111113] text-slate-400 border border-white/5'
+                        : 'text-[#8E8E93]'
                     }`}
                   >
                     <div className="flex items-center justify-center gap-2">
-                      <Edit3 size={14} />
+                      <Edit3 size={16} />
                       Manual
                     </div>
                   </button>
@@ -483,15 +482,15 @@ const NewBetModal: React.FC<NewBetModalProps> = ({
                     onClick={() =>
                       setEntryMode('scanner')
                     }
-                    className={`h-12 rounded-2xl text-xs font-black uppercase tracking-[0.14em] transition-all ${
+                    className={`flex-1 py-3 rounded-xl text-sm font-bold transition-all ${
                       entryMode === 'scanner'
                         ? 'bg-indigo-600 text-white'
-                        : 'bg-[#111113] text-slate-400 border border-white/5'
+                        : 'text-[#8E8E93]'
                     }`}
                   >
                     <div className="flex items-center justify-center gap-2">
-                      <Camera size={14} />
-                      Scanner
+                      <Camera size={16} />
+                      Scanner IA
                     </div>
                   </button>
                 </div>
@@ -512,7 +511,7 @@ const NewBetModal: React.FC<NewBetModalProps> = ({
                       opacity: 0,
                       height: 0
                     }}
-                    className="bg-red-500/10 border border-red-500/20 rounded-2xl p-4 text-red-400 text-sm font-semibold flex items-center gap-3"
+                    className="mt-4 bg-red-500/10 border border-red-500/20 text-red-400 p-4 rounded-2xl flex items-center gap-3 text-sm font-semibold"
                   >
                     <AlertCircle size={16} />
                     {error}
@@ -521,10 +520,10 @@ const NewBetModal: React.FC<NewBetModalProps> = ({
               </AnimatePresence>
             </div>
 
-            {/* CONTENT */}
+            {/* BODY */}
             <div className="flex-1 overflow-hidden">
               {entryMode === 'scanner' ? (
-                <div className="h-full overflow-y-auto p-6">
+                <div className="p-6 overflow-y-auto h-full">
                   <TicketScanner
                     onScanComplete={
                       handleScanComplete
@@ -534,16 +533,16 @@ const NewBetModal: React.FC<NewBetModalProps> = ({
               ) : (
                 <form
                   onSubmit={handleSubmit}
-                  className="h-full flex flex-col"
+                  className="flex flex-col h-full"
                 >
                   <div className="flex-1 overflow-y-auto p-6 space-y-6">
                     {/* STATUS */}
-                    <div className="space-y-3">
-                      <label className="text-[10px] uppercase tracking-[0.18em] text-slate-500 font-black">
-                        Status Operacional
+                    <div>
+                      <label className="text-[10px] uppercase tracking-[0.2em] text-[#8E8E93] font-bold mb-3 block">
+                        Status da Operação
                       </label>
 
-                      <div className="grid grid-cols-3 md:grid-cols-7 gap-2">
+                      <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-7 gap-2">
                         {statusOptions.map((opt) => (
                           <button
                             key={opt.id}
@@ -555,24 +554,50 @@ const NewBetModal: React.FC<NewBetModalProps> = ({
                                   opt.id as BetStatus
                               })
                             }
-                            className={`h-16 rounded-2xl border text-[10px] font-black uppercase tracking-wide transition-all flex flex-col items-center justify-center gap-1 ${
-                              formData.status === opt.id
-                                ? 'bg-emerald-500 text-black border-emerald-400'
-                                : 'bg-[#0B0B0C] border-white/5 text-slate-500 hover:border-white/10'
+                            className={`rounded-2xl py-3 border transition-all flex flex-col items-center gap-1 text-[11px] font-bold ${
+                              formData.status ===
+                              opt.id
+                                ? 'bg-indigo-600 border-indigo-500 text-white'
+                                : 'bg-[#1C1C1E] border-[#2C2C2E] text-[#8E8E93]'
                             }`}
                           >
-                            <opt.icon size={14} />
+                            <opt.icon size={16} />
                             {opt.label}
                           </button>
                         ))}
                       </div>
                     </div>
 
-                    {/* EVENT */}
-                    <div className="grid md:grid-cols-2 gap-5">
-                      <div className="space-y-2">
-                        <label className="text-[10px] uppercase tracking-[0.18em] text-slate-500 font-black">
-                          Esporte
+                    {/* LEAGUE */}
+                    {!betToEdit &&
+                      myActiveLeagues.length >
+                        0 &&
+                      isPro && (
+                        <div className="flex justify-end">
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setIsManualMode(
+                                !isManualMode
+                              )
+                            }
+                            className="text-xs text-indigo-400 font-bold flex items-center gap-2 bg-indigo-500/10 border border-indigo-500/20 px-4 py-2 rounded-xl"
+                          >
+                            {isManualMode
+                              ? 'Seleção Inteligente'
+                              : 'Digitação Manual'}
+                            <ArrowRightLeft
+                              size={14}
+                            />
+                          </button>
+                        </div>
+                      )}
+
+                    {/* SPORT + EVENT */}
+                    <div className="grid grid-cols-1 sm:grid-cols-12 gap-4">
+                      <div className="sm:col-span-4">
+                        <label className="text-[10px] uppercase tracking-[0.2em] text-[#8E8E93] font-bold mb-2 block">
+                          Competição
                         </label>
 
                         <select
@@ -586,16 +611,26 @@ const NewBetModal: React.FC<NewBetModalProps> = ({
                           }
                           className={inputStyle}
                         >
-                          <option>Futebol</option>
-                          <option>Basquete</option>
+                          <option>
+                            Futebol
+                          </option>
+                          <option>
+                            Basquete
+                          </option>
                           <option>Tênis</option>
+                          <option>
+                            eSports
+                          </option>
                           <option>MMA</option>
-                          <option>eSports</option>
+                          <option>Vôlei</option>
+                          <option>
+                            Outros
+                          </option>
                         </select>
                       </div>
 
-                      <div className="space-y-2">
-                        <label className="text-[10px] uppercase tracking-[0.18em] text-slate-500 font-black">
+                      <div className="sm:col-span-8">
+                        <label className="text-[10px] uppercase tracking-[0.2em] text-[#8E8E93] font-bold mb-2 block">
                           Evento
                         </label>
 
@@ -616,9 +651,9 @@ const NewBetModal: React.FC<NewBetModalProps> = ({
                     </div>
 
                     {/* MARKET */}
-                    <div className="grid md:grid-cols-2 gap-5">
-                      <div className="space-y-2">
-                        <label className="text-[10px] uppercase tracking-[0.18em] text-slate-500 font-black">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div>
+                        <label className="text-[10px] uppercase tracking-[0.2em] text-[#8E8E93] font-bold mb-2 block">
                           Mercado
                         </label>
 
@@ -663,22 +698,20 @@ const NewBetModal: React.FC<NewBetModalProps> = ({
                                 e.target.value
                               )
                             }
-                            placeholder="Mercado personalizado"
-                            className={`${inputStyle} border-emerald-500/30`}
+                            placeholder="Nome do mercado"
+                            className={`${inputStyle} mt-3`}
                           />
                         )}
                       </div>
 
-                      <div className="space-y-2">
-                        <label className="text-[10px] uppercase tracking-[0.18em] text-slate-500 font-black">
-                          Posição
+                      <div>
+                        <label className="text-[10px] uppercase tracking-[0.2em] text-[#8E8E93] font-bold mb-2 block">
+                          Seleção
                         </label>
 
                         <input
                           type="text"
-                          value={
-                            formData.selection
-                          }
+                          value={formData.selection}
                           onChange={(e) =>
                             setFormData({
                               ...formData,
@@ -686,16 +719,16 @@ const NewBetModal: React.FC<NewBetModalProps> = ({
                                 e.target.value
                             })
                           }
-                          placeholder="Ex: Over 2.5"
+                          placeholder="Over 2.5"
                           className={inputStyle}
                         />
                       </div>
                     </div>
 
-                    {/* ODDS */}
-                    <div className="grid md:grid-cols-3 gap-5">
-                      <div className="space-y-2">
-                        <label className="text-[10px] uppercase tracking-[0.18em] text-slate-500 font-black">
+                    {/* ODDS + STAKE */}
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="text-[10px] uppercase tracking-[0.2em] text-[#8E8E93] font-bold mb-2 block">
                           Odd
                         </label>
 
@@ -710,19 +743,18 @@ const NewBetModal: React.FC<NewBetModalProps> = ({
                                 e.target.value
                             })
                           }
-                          placeholder="1.85"
-                          className={inputStyle}
+                          className={`${inputStyle} font-mono text-xl`}
                         />
                       </div>
 
-                      <div className="space-y-2">
-                        <label className="text-[10px] uppercase tracking-[0.18em] text-slate-500 font-black">
+                      <div>
+                        <label className="text-[10px] uppercase tracking-[0.2em] text-[#8E8E93] font-bold mb-2 block">
                           Exposição ({currency})
                         </label>
 
                         <input
                           type="number"
-                          step="0.01"
+                          step="1"
                           value={formData.stake}
                           onChange={(e) =>
                             setFormData({
@@ -731,73 +763,70 @@ const NewBetModal: React.FC<NewBetModalProps> = ({
                                 e.target.value
                             })
                           }
-                          placeholder="100"
-                          className={inputStyle}
+                          className={`${inputStyle} font-mono text-xl`}
                         />
                       </div>
-
-                      {formData.status ===
-                        'cashout' && (
-                        <div className="space-y-2">
-                          <label className="text-[10px] uppercase tracking-[0.18em] text-amber-500 font-black">
-                            Cashout
-                          </label>
-
-                          <input
-                            type="number"
-                            step="0.01"
-                            value={
-                              formData.cashoutValue
-                            }
-                            onChange={(e) =>
-                              setFormData({
-                                ...formData,
-                                cashoutValue:
-                                  e.target.value
-                              })
-                            }
-                            placeholder="Valor"
-                            className={`${inputStyle} border-amber-500/30 text-amber-400`}
-                          />
-                        </div>
-                      )}
                     </div>
+
+                    {/* CASHOUT */}
+                    {formData.status ===
+                      'cashout' && (
+                      <div>
+                        <label className="text-[10px] uppercase tracking-[0.2em] text-indigo-400 font-bold mb-2 block">
+                          Valor Cashout
+                        </label>
+
+                        <input
+                          type="number"
+                          step="0.01"
+                          value={
+                            formData.cashoutValue
+                          }
+                          onChange={(e) =>
+                            setFormData({
+                              ...formData,
+                              cashoutValue:
+                                e.target.value
+                            })
+                          }
+                          className={`${inputStyle} border-indigo-500/30`}
+                        />
+                      </div>
+                    )}
                   </div>
 
                   {/* FOOTER */}
-                  <div className="sticky bottom-0 bg-black/95 backdrop-blur-md border-t border-white/5 p-6 flex flex-col md:flex-row items-center justify-between gap-5">
-                    <div className="w-full md:w-auto bg-[#0B0B0C] border border-white/5 rounded-2xl px-5 py-4">
-                      <p className="text-[10px] uppercase tracking-[0.18em] text-slate-500 font-black mb-2">
-                        Resultado Estimado
+                  <div className="border-t border-[#2C2C2E] bg-black/80 backdrop-blur-md p-6 flex flex-col sm:flex-row items-center justify-between gap-4">
+                    <div className="bg-[#1C1C1E] border border-[#2C2C2E] rounded-2xl px-5 py-4 w-full sm:w-auto">
+                      <p className="text-[10px] uppercase tracking-[0.2em] text-[#8E8E93] font-bold mb-1">
+                        Resultado
                       </p>
 
                       <div
-                        className={`text-3xl font-black tracking-tight font-mono ${
+                        className={`text-3xl font-black font-mono ${
                           resultValue > 0
                             ? 'text-emerald-400'
                             : resultValue < 0
                             ? 'text-red-400'
-                            : 'text-slate-400'
+                            : 'text-white'
                         }`}
                       >
                         {resultValue > 0
                           ? '+'
                           : ''}
                         {currency}{' '}
-                        {resultValue.toFixed(
-                          2
-                        )}
+                        {resultValue.toFixed(2)}
                       </div>
                     </div>
 
                     <button
                       type="submit"
-                      className="w-full md:w-[340px] h-16 rounded-2xl bg-emerald-500 hover:bg-emerald-400 text-black font-black uppercase tracking-[0.18em] text-sm transition-all shadow-[0_0_35px_rgba(16,185,129,0.25)] active:scale-[0.98] flex items-center justify-center gap-3"
+                      className="w-full sm:w-[320px] bg-emerald-500 hover:bg-emerald-400 text-black font-black py-5 rounded-2xl transition-all text-sm uppercase tracking-[0.2em] flex items-center justify-center gap-3 shadow-2xl shadow-emerald-500/20"
                     >
                       {betToEdit ? (
                         <>
                           <Save size={18} />
-                          Atualizar Operação
+                          Atualizar Registro
                         </>
                       ) : (
                         <>
