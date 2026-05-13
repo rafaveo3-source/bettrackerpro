@@ -18,7 +18,7 @@ import {
   Edit3
 } from 'lucide-react';
 import { useBetStore, BetStatus, Bet } from '../store/useBetStore';
-import TicketScanner from './TicketScanner'; // Make sure the path is correct based on your folder structure
+import TicketScanner from './TicketScanner'; 
 
 interface NewBetModalProps {
   isOpen: boolean;
@@ -51,7 +51,7 @@ const NewBetModal: React.FC<NewBetModalProps> = ({
     fetchLeagues,
     fetchLeagueTeams,
     isLoadingTeams,
-    setToast // Assuming setToast is available to show success/error messages
+    setToast
   } = useBetStore();
 
   const [error, setError] = useState('');
@@ -125,7 +125,7 @@ const NewBetModal: React.FC<NewBetModalProps> = ({
       });
       
       setIsManualMode(true);
-      setEntryMode('manual'); // Force manual mode when editing
+      setEntryMode('manual'); 
       
       const isCustomMarket = !availableMarkets.some(m => m.name === betToEdit.market);
       if (isCustomMarket && betToEdit.market) {
@@ -153,13 +153,12 @@ const NewBetModal: React.FC<NewBetModalProps> = ({
     }
   }, [betToEdit, isOpen, userLeagues.length, isPro]);
 
-  // Handler for when the scanner successfully extracts data
   const handleScanComplete = (scannedData: any) => {
     setFormData(prev => ({
         ...prev,
         event: scannedData.match || prev.event,
         market: scannedData.market || prev.market,
-        selection: scannedData.selection || prev.selection, // 🔥 ADICIONE ESTA LINHA AQUI
+        selection: scannedData.selection || prev.selection,
         odds: scannedData.odd ? scannedData.odd.toString() : prev.odds,
         stake: scannedData.stake ? scannedData.stake.toString() : prev.stake,
         status: (scannedData.status as BetStatus) || 'pending',
@@ -203,7 +202,6 @@ const NewBetModal: React.FC<NewBetModalProps> = ({
       return;
     }
 
-    // 🔥 O STAKE AGORA É SEMPRE LIDO COMO MOEDA PURA
     let stakeValue = parseFloat(formData.stake);
 
     if (stakeValue < 0) {
@@ -236,7 +234,6 @@ const NewBetModal: React.FC<NewBetModalProps> = ({
   };
 
   const calculateResult = () => {
-    // 🔥 CÁLCULO DE RESULTADO AGORA SEMPRE TRATA O INPUT COMO MOEDA
     let stake = parseFloat(formData.stake) || 0;
     const odds = parseFloat(formData.odds) || 0;
     const cashout = parseFloat(formData.cashoutValue) || 0;
@@ -257,19 +254,19 @@ const NewBetModal: React.FC<NewBetModalProps> = ({
 
   const resultValue = calculateResult();
 
-  const inputStyle =
-    'w-full bg-slate-950 border border-slate-700 text-slate-200 rounded-xl px-4 py-2.5 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/30 outline-none transition-all placeholder:text-slate-600 disabled:opacity-50 disabled:cursor-not-allowed';
+  // 🔥 Design System Apple PRO: Input Class 🔥
+  const inputStyle = 'w-full bg-white dark:bg-[#1C1C1E] border border-slate-200 dark:border-[#3A3A3C] text-slate-900 dark:text-white rounded-xl px-4 py-3 outline-none focus:border-indigo-500 transition-colors font-medium text-sm placeholder:text-slate-400 dark:placeholder:text-[#636366] disabled:opacity-50 disabled:cursor-not-allowed';
 
   const myActiveLeagues = globalLeagues.filter(l => userLeagues.includes(l.id));
 
   const statusOptions = [
-    { id: 'pending', label: 'Em Aberto', icon: Clock, color: 'bg-slate-700 text-slate-200', activeRing: 'ring-slate-500' },
-    { id: 'won', label: 'Lucro', icon: CheckCircle2, color: 'bg-emerald-500 text-black', activeRing: 'ring-emerald-400' },
-    { id: 'half-won', label: '½ Lucro', icon: CheckCircle2, color: 'bg-emerald-500/40 text-emerald-100', activeRing: 'ring-emerald-400' },
-    { id: 'lost', label: 'Prejuízo', icon: XCircle, color: 'bg-red-500 text-white', activeRing: 'ring-red-400' },
-    { id: 'half-lost', label: '½ Prej.', icon: XCircle, color: 'bg-red-500/40 text-red-100', activeRing: 'ring-red-400' },
-    { id: 'cashout', label: 'Cashout', icon: DollarSign, color: 'bg-amber-500 text-black', activeRing: 'ring-amber-400' },
-    { id: 'refunded', label: 'Devolvido', icon: Ban, color: 'bg-slate-500 text-white', activeRing: 'ring-slate-400' },
+    { id: 'pending', label: 'Aberto', icon: Clock, color: 'bg-slate-100 text-slate-900 dark:bg-slate-800 dark:text-white border-slate-300 dark:border-slate-600' },
+    { id: 'won', label: 'Lucro', icon: CheckCircle2, color: 'bg-emerald-500 text-white border-emerald-600' },
+    { id: 'half-won', label: '½ Lucro', icon: CheckCircle2, color: 'bg-emerald-500/80 text-white border-emerald-500/50' },
+    { id: 'lost', label: 'Prejuízo', icon: XCircle, color: 'bg-red-500 text-white border-red-600' },
+    { id: 'half-lost', label: '½ Prej', icon: XCircle, color: 'bg-red-500/80 text-white border-red-500/50' },
+    { id: 'cashout', label: 'Cashout', icon: DollarSign, color: 'bg-indigo-500 text-white border-indigo-600' },
+    { id: 'refunded', label: 'Devolvido', icon: Ban, color: 'bg-slate-500 text-white border-slate-600' },
   ];
 
   return (
@@ -280,56 +277,54 @@ const NewBetModal: React.FC<NewBetModalProps> = ({
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           onClick={onClose}
-          className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 sm:p-6"
+          className="fixed inset-0 bg-slate-900/40 dark:bg-black/60 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center sm:p-4 font-sans"
         >
           <motion.div
-            initial={{ scale: 0.95, opacity: 0, y: 20 }}
+            initial={{ scale: 0.95, opacity: 0, y: 40 }}
             animate={{ scale: 1, opacity: 1, y: 0 }}
-            exit={{ scale: 0.95, opacity: 0, y: 20 }}
+            exit={{ scale: 0.95, opacity: 0, y: 40 }}
+            transition={{ type: 'spring', damping: 25, stiffness: 300 }}
             onClick={(e) => e.stopPropagation()}
-            className="bg-gradient-to-b from-slate-900 to-slate-950 border border-slate-800 w-full max-w-2xl max-h-[95vh] rounded-[2rem] shadow-2xl flex flex-col relative overflow-hidden"
+            className="bg-slate-50 dark:bg-[#000000] border border-slate-200 dark:border-[#2C2C2E] w-full max-w-3xl sm:rounded-2xl rounded-t-3xl shadow-2xl flex flex-col relative overflow-hidden h-[90vh] sm:h-auto sm:max-h-[90vh]"
           >
             {/* CABEÇALHO FIXO */}
-            <div className="px-6 py-5 border-b border-slate-800 flex flex-col gap-4 bg-slate-900/80 backdrop-blur-md shrink-0 z-20">
+            <div className="px-5 py-4 border-b border-slate-200 dark:border-[#2C2C2E] flex flex-col gap-3 bg-white/80 dark:bg-[#1C1C1E]/80 backdrop-blur-md shrink-0 z-20">
               <div className="flex justify-between items-center">
                 <div>
-                  <h2 className="text-xl font-black text-white tracking-tight flex items-center gap-2">
+                  <h2 className="text-lg font-bold text-slate-900 dark:text-white tracking-tight flex items-center gap-2">
                     {betToEdit ? 'Editar Operação' : 'Nova Operação'}
                   </h2>
-                  <p className="text-slate-500 text-xs mt-0.5">
-                    Preencha os detalhes do registro no diário de bordo
-                  </p>
                 </div>
                 <button
                   onClick={onClose}
-                  className="bg-slate-800/50 p-2 rounded-full text-slate-400 hover:text-white hover:bg-slate-700 transition-all"
+                  className="bg-slate-100 dark:bg-[#2C2C2E] p-2 rounded-full text-slate-500 dark:text-[#8E8E93] hover:text-slate-900 dark:hover:text-white transition-all"
                 >
-                  <X size={20} />
+                  <X size={18} />
                 </button>
               </div>
 
               {/* TAB SELECTOR: Manual vs Scanner */}
               {!betToEdit && isPro && (
-                <div className="flex bg-slate-800/50 p-1 rounded-xl">
+                <div className="flex bg-slate-100 dark:bg-[#000000] p-1 rounded-xl border border-slate-200 dark:border-[#2C2C2E]">
                   <button
                     onClick={() => setEntryMode('manual')}
                     className={`flex-1 flex items-center justify-center gap-2 py-2 text-xs font-bold rounded-lg transition-all ${
                       entryMode === 'manual'
-                        ? 'bg-slate-700 text-white shadow-sm'
-                        : 'text-slate-400 hover:text-slate-300'
+                        ? 'bg-white dark:bg-[#2C2C2E] text-slate-900 dark:text-white shadow-sm border border-slate-200 dark:border-[#3A3A3C]'
+                        : 'text-slate-500 dark:text-[#8E8E93] hover:text-slate-700 dark:hover:text-slate-300'
                     }`}
                   >
-                    <Edit3 size={14} /> Digitação Manual
+                    <Edit3 size={14} /> Digitação
                   </button>
                   <button
                     onClick={() => setEntryMode('scanner')}
                     className={`flex-1 flex items-center justify-center gap-2 py-2 text-xs font-bold rounded-lg transition-all ${
                       entryMode === 'scanner'
                         ? 'bg-indigo-600 text-white shadow-sm'
-                        : 'text-slate-400 hover:text-slate-300'
+                        : 'text-slate-500 dark:text-[#8E8E93] hover:text-slate-700 dark:hover:text-slate-300'
                     }`}
                   >
-                    <Camera size={14} /> Importação por Imagem
+                    <Camera size={14} /> Scanner IA
                   </button>
                 </div>
               )}
@@ -340,9 +335,9 @@ const NewBetModal: React.FC<NewBetModalProps> = ({
                     initial={{ opacity: 0, height: 0 }}
                     animate={{ opacity: 1, height: 'auto' }}
                     exit={{ opacity: 0, height: 0 }}
-                    className="bg-red-500/10 border border-red-500/30 text-red-400 p-3 rounded-xl text-xs md:text-sm flex items-center gap-3 font-medium"
+                    className="bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/20 text-red-600 dark:text-red-400 p-3 rounded-xl text-xs flex items-center gap-2 font-bold"
                   >
-                    <AlertCircle size={16} className="shrink-0" />
+                    <AlertCircle size={14} className="shrink-0" />
                     {error}
                   </motion.div>
                 )}
@@ -352,16 +347,16 @@ const NewBetModal: React.FC<NewBetModalProps> = ({
             {/* ÁREA DE SCROLL */}
             <div className="flex flex-col flex-1 overflow-hidden">
                 {entryMode === 'scanner' ? (
-                    <div className="p-6 overflow-y-auto flex-1 custom-scrollbar">
-                         {/* We assume TicketScanner handles its own instructions and UI */}
+                    <div className="p-4 sm:p-6 overflow-y-auto flex-1 custom-scrollbar">
                         <TicketScanner onScanComplete={handleScanComplete} />
                     </div>
                 ) : (
                     <form onSubmit={handleSubmit} className="flex flex-col flex-1 overflow-hidden">
-                      <div className="p-6 overflow-y-auto flex-1 space-y-6 custom-scrollbar">
+                      <div className="p-5 overflow-y-auto flex-1 space-y-6 custom-scrollbar">
 
+                        {/* STATUS DA APOSTA */}
                         <div className="space-y-3">
-                          <label className="text-[10px] uppercase text-slate-500 font-bold tracking-wider ml-1">
+                          <label className="text-[10px] uppercase text-slate-500 dark:text-[#8E8E93] font-bold tracking-widest ml-1">
                             Status da Operação
                           </label>
                           <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-7 gap-2">
@@ -370,13 +365,13 @@ const NewBetModal: React.FC<NewBetModalProps> = ({
                                 key={opt.id}
                                 type="button"
                                 onClick={() => setFormData({ ...formData, status: opt.id as BetStatus })}
-                                className={`py-2 px-1 rounded-lg text-[10px] sm:text-xs font-bold transition-all flex flex-col items-center justify-center gap-1 border-2 ${
+                                className={`py-2 px-1 rounded-xl text-[10px] font-bold transition-all flex flex-col items-center justify-center gap-1.5 border-2 ${
                                   formData.status === opt.id
-                                    ? `${opt.color} ${opt.activeRing} border-transparent shadow-md scale-105`
-                                    : 'bg-slate-900 text-slate-500 border-slate-800 hover:bg-slate-800 hover:border-slate-700'
+                                    ? `${opt.color} shadow-sm scale-[1.02]`
+                                    : 'bg-white dark:bg-[#1C1C1E] text-slate-500 dark:text-[#8E8E93] border-transparent hover:border-slate-200 dark:hover:border-[#3A3A3C]'
                                 }`}
                               >
-                                <opt.icon size={14} />
+                                <opt.icon size={16} />
                                 <span className="whitespace-nowrap">{opt.label}</span>
                               </button>
                             ))}
@@ -388,7 +383,7 @@ const NewBetModal: React.FC<NewBetModalProps> = ({
                               <button 
                                 type="button"
                                 onClick={() => setIsManualMode(!isManualMode)}
-                                className="text-[10px] text-emerald-500 hover:text-emerald-400 font-bold flex items-center gap-1 transition-colors px-3 py-1 bg-emerald-500/10 rounded-full border border-emerald-500/20"
+                                className="text-[10px] text-indigo-600 dark:text-indigo-400 font-bold flex items-center gap-1 transition-colors px-3 py-1.5 bg-indigo-50 dark:bg-indigo-500/10 rounded-lg border border-indigo-200 dark:border-indigo-500/20 uppercase tracking-wider"
                               >
                                 {isManualMode ? 'Usar Seleção Inteligente' : 'Digitar Manualmente'}
                                 <ArrowRightLeft size={12} />
@@ -397,10 +392,12 @@ const NewBetModal: React.FC<NewBetModalProps> = ({
                         )}
 
                         <div className="grid grid-cols-1 sm:grid-cols-12 gap-5">
-                          <div className="sm:col-span-12 grid grid-cols-1 sm:grid-cols-12 gap-5 p-5 bg-slate-900/50 rounded-2xl border border-slate-800/50">
+                          <div className="sm:col-span-12 grid grid-cols-1 sm:grid-cols-12 gap-4 p-5 bg-white dark:bg-[#1C1C1E] rounded-2xl border border-slate-200 dark:border-[#2C2C2E] shadow-sm">
+                              
                               <div className="sm:col-span-5 space-y-2">
-                                <label className="text-[10px] uppercase text-slate-500 font-bold tracking-wider ml-1 flex items-center gap-1">
+                                <label className="text-[10px] uppercase text-slate-500 dark:text-[#8E8E93] font-bold tracking-widest ml-1 flex items-center gap-1">
                                   <Trophy size={12} /> Competição
+                                  {!isPro && <span className="text-[9px] text-indigo-500 flex items-center gap-1 ml-auto"><Lock size={10}/> Auto (PRO)</span>}
                                 </label>
                                 
                                 {!isManualMode && myActiveLeagues.length > 0 && isPro ? (
@@ -411,19 +408,19 @@ const NewBetModal: React.FC<NewBetModalProps> = ({
                                       if (val === 'manual') setIsManualMode(true);
                                       else setSelectedLeagueId(val);
                                     }}
-                                    className={inputStyle}
+                                    className={`${inputStyle} appearance-none`}
                                   >
                                     <option value="">Selecione...</option>
                                     {myActiveLeagues.map(l => (
                                       <option key={l.id} value={l.id}>{l.name} ({l.country})</option>
                                     ))}
-                                    <option value="manual" className="font-bold text-emerald-400">+ Digitar Manualmente</option>
+                                    <option value="manual" className="font-bold text-indigo-500">+ Digitar Manualmente</option>
                                   </select>
                                 ) : (
                                   <select
                                      value={formData.sport}
                                      onChange={(e) => setFormData({ ...formData, sport: e.target.value })}
-                                     className={inputStyle}
+                                     className={`${inputStyle} appearance-none`}
                                   >
                                      <option>Futebol</option>
                                      <option>Basquete</option>
@@ -437,9 +434,8 @@ const NewBetModal: React.FC<NewBetModalProps> = ({
                               </div>
 
                               <div className="sm:col-span-7 space-y-2">
-                                <label className="text-[10px] uppercase text-slate-500 font-bold tracking-wider ml-1 flex items-center gap-1">
+                                <label className="text-[10px] uppercase text-slate-500 dark:text-[#8E8E93] font-bold tracking-widest ml-1 flex items-center gap-1">
                                   <Shield size={12} /> Evento
-                                  {!isPro && <span className="text-[9px] text-amber-500 flex items-center gap-1 ml-auto"><Lock size={8}/> Automático (PRO)</span>}
                                 </label>
 
                                 {!isManualMode && selectedLeagueId && selectedLeagueId !== 'manual' && isPro ? (
@@ -447,26 +443,26 @@ const NewBetModal: React.FC<NewBetModalProps> = ({
                                       <select 
                                         value={selectedHomeTeam}
                                         onChange={(e) => setSelectedHomeTeam(e.target.value)}
-                                        className={`${inputStyle} text-xs px-2`}
+                                        className={`${inputStyle} text-xs px-3 appearance-none`}
                                         disabled={isLoadingTeams}
                                       >
                                         <option value="">Casa</option>
                                         {currentLeagueTeams.map(t => (
-                                          <option key={t.id} value={t.id} className={userTeams.includes(t.id) ? 'font-bold text-emerald-400' : ''}>
+                                          <option key={t.id} value={t.id} className={userTeams.includes(t.id) ? 'font-bold text-indigo-500' : ''}>
                                              {t.name} {userTeams.includes(t.id) ? '★' : ''}
                                           </option>
                                         ))}
                                       </select>
-                                      <span className="text-slate-600 font-black text-xs">VS</span>
+                                      <span className="text-slate-400 font-bold text-xs">VS</span>
                                       <select 
                                         value={selectedAwayTeam}
                                         onChange={(e) => setSelectedAwayTeam(e.target.value)}
-                                        className={`${inputStyle} text-xs px-2`}
+                                        className={`${inputStyle} text-xs px-3 appearance-none`}
                                         disabled={isLoadingTeams}
                                       >
                                         <option value="">Visitante</option>
                                         {currentLeagueTeams.map(t => (
-                                          <option key={t.id} value={t.id} className={userTeams.includes(t.id) ? 'font-bold text-emerald-400' : ''}>
+                                          <option key={t.id} value={t.id} className={userTeams.includes(t.id) ? 'font-bold text-indigo-500' : ''}>
                                              {t.name} {userTeams.includes(t.id) ? '★' : ''}
                                           </option>
                                         ))}
@@ -485,20 +481,20 @@ const NewBetModal: React.FC<NewBetModalProps> = ({
                           </div>
 
                           <div className="sm:col-span-6 space-y-2">
-                            <label className="text-[10px] uppercase text-slate-500 font-bold tracking-wider ml-1 flex justify-between">
+                            <label className="text-[10px] uppercase text-slate-500 dark:text-[#8E8E93] font-bold tracking-widest ml-1 flex justify-between">
                                 Mercado
-                                {!isPro && availableMarkets.length === 0 && <span className="text-[9px] text-amber-500 flex items-center gap-1"><Lock size={8}/> Personalizado (PRO)</span>}
+                                {!isPro && availableMarkets.length === 0 && <span className="text-[9px] text-indigo-500 flex items-center gap-1"><Lock size={10}/> Custom (PRO)</span>}
                             </label>
                             <select
                               value={formData.market}
                               onChange={(e) => setFormData({ ...formData, market: e.target.value })}
-                              className={inputStyle}
+                              className={`${inputStyle} appearance-none`}
                             >
                               <option value="">Selecione...</option>
                               {availableMarkets.map((m) => (
                                 <option key={m.id} value={m.name}>{m.name}</option>
                               ))}
-                              <option value="__custom">Outro (Digitar Manualmente)</option>
+                              <option value="__custom">Outro (Digitar)</option>
                             </select>
                             
                             {formData.market === '__custom' && (
@@ -508,7 +504,7 @@ const NewBetModal: React.FC<NewBetModalProps> = ({
                                   value={manualMarket}
                                   onChange={(e) => setManualMarket(e.target.value)}
                                   placeholder="Nome do mercado"
-                                  className={`${inputStyle} border-emerald-500/50`}
+                                  className={`${inputStyle} border-indigo-500/50`}
                                   autoFocus
                                 />
                               </motion.div>
@@ -516,7 +512,7 @@ const NewBetModal: React.FC<NewBetModalProps> = ({
                           </div>
 
                           <div className="sm:col-span-6 space-y-2">
-                            <label className="text-[10px] uppercase text-slate-500 font-bold tracking-wider ml-1">Posição (Seleção)</label>
+                            <label className="text-[10px] uppercase text-slate-500 dark:text-[#8E8E93] font-bold tracking-widest ml-1">Posição (Seleção)</label>
                             <input
                               type="text"
                               value={formData.selection}
@@ -527,14 +523,14 @@ const NewBetModal: React.FC<NewBetModalProps> = ({
                           </div>
 
                           <div className="sm:col-span-6 space-y-2">
-                            <label className="text-[10px] uppercase text-slate-500 font-bold tracking-wider ml-1 flex justify-between">
+                            <label className="text-[10px] uppercase text-slate-500 dark:text-[#8E8E93] font-bold tracking-widest ml-1 flex justify-between">
                                 Método Analítico
-                                {!isPro && availableMethods.length === 0 && <span className="text-[9px] text-amber-500 flex items-center gap-1"><Lock size={8}/> Personalizado (PRO)</span>}
+                                {!isPro && availableMethods.length === 0 && <span className="text-[9px] text-indigo-500 flex items-center gap-1"><Lock size={10}/> PRO</span>}
                             </label>
                             <select
                               value={formData.method}
                               onChange={(e) => setFormData({ ...formData, method: e.target.value })}
-                              className={inputStyle}
+                              className={`${inputStyle} appearance-none`}
                               disabled={!isPro && availableMethods.length === 0}
                             >
                               <option value="">{(!isPro && availableMethods.length === 0) ? "Padrão" : "Opcional"}</option>
@@ -545,14 +541,14 @@ const NewBetModal: React.FC<NewBetModalProps> = ({
                           </div>
 
                           <div className="sm:col-span-6 space-y-2">
-                            <label className="text-[10px] uppercase text-slate-500 font-bold tracking-wider ml-1 flex justify-between">
+                            <label className="text-[10px] uppercase text-slate-500 dark:text-[#8E8E93] font-bold tracking-widest ml-1 flex justify-between">
                                 Plano de Gestão
-                                {!isPro && <span className="text-[9px] text-amber-500 flex items-center gap-1"><Lock size={8}/> PRO</span>}
+                                {!isPro && <span className="text-[9px] text-indigo-500 flex items-center gap-1"><Lock size={10}/> PRO</span>}
                             </label>
                             <select
                               value={formData.strategy}
                               onChange={(e) => setFormData({ ...formData, strategy: e.target.value })}
-                              className={`${inputStyle} ${!isPro ? 'opacity-50 cursor-not-allowed' : ''}`}
+                              className={`${inputStyle} appearance-none ${!isPro ? 'opacity-50' : ''}`}
                               disabled={!isPro || availableStrategies.length === 0}
                             >
                               <option value="">{(!isPro) ? "Bloqueado (Upgrade para usar)" : "Opcional"}</option>
@@ -562,11 +558,12 @@ const NewBetModal: React.FC<NewBetModalProps> = ({
                             </select>
                           </div>
 
-                          <div className="sm:col-span-12 border-t border-slate-800/50 pt-5 mt-1">
+                          {/* DADOS FINANCEIROS */}
+                          <div className="sm:col-span-12 border-t border-slate-200 dark:border-[#2C2C2E] pt-5 mt-2">
                               <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 items-end">
                                 
                                 <div className="space-y-2">
-                                  <label className="text-[10px] uppercase text-slate-500 font-bold tracking-wider ml-1">Cotação (Odd)</label>
+                                  <label className="text-[10px] uppercase text-slate-500 dark:text-[#8E8E93] font-bold tracking-widest ml-1">Cotação (Odd)</label>
                                   <div className="relative">
                                     <input
                                       type="number"
@@ -574,16 +571,14 @@ const NewBetModal: React.FC<NewBetModalProps> = ({
                                       value={formData.odds}
                                       onChange={(e) => setFormData({ ...formData, odds: e.target.value })}
                                       placeholder="1.85"
-                                      className={`${inputStyle} pl-8 font-mono`}
+                                      className={`${inputStyle} pl-8 font-mono text-lg font-bold`}
                                     />
-                                    {/* 🔥 CORRIGIDO: Removido o ícone de % e colocado o @ 🔥 */}
-                                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 font-black text-sm font-mono">@</span>
+                                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 font-black text-sm font-mono">@</span>
                                   </div>
                                 </div>
 
-                                {/* 🔥 CAMPO DE EXPOSIÇÃO FIXADO EM MOEDA */}
                                 <div className="space-y-2">
-                                  <label className="text-[10px] uppercase text-slate-500 font-bold tracking-wider ml-1 truncate">
+                                  <label className="text-[10px] uppercase text-slate-500 dark:text-[#8E8E93] font-bold tracking-widest ml-1 truncate">
                                     Exposição ({currency})
                                   </label>
                                   <input
@@ -592,7 +587,7 @@ const NewBetModal: React.FC<NewBetModalProps> = ({
                                     value={formData.stake}
                                     onChange={(e) => setFormData({ ...formData, stake: e.target.value })}
                                     placeholder="100.00"
-                                    className={inputStyle}
+                                    className={`${inputStyle} font-mono text-lg font-bold`}
                                   />
                                 </div>
 
@@ -602,7 +597,7 @@ const NewBetModal: React.FC<NewBetModalProps> = ({
                                     animate={{ opacity: 1, x: 0 }}
                                     className="space-y-2 col-span-2"
                                   >
-                                    <label className="text-[10px] uppercase text-amber-500 font-bold tracking-wider ml-1 flex items-center gap-1">
+                                    <label className="text-[10px] uppercase text-indigo-600 dark:text-indigo-400 font-bold tracking-widest ml-1 flex items-center gap-1">
                                       <DollarSign size={12} /> Retorno (Cashout)
                                     </label>
                                     <input
@@ -611,7 +606,7 @@ const NewBetModal: React.FC<NewBetModalProps> = ({
                                       value={formData.cashoutValue}
                                       onChange={(e) => setFormData({ ...formData, cashoutValue: e.target.value })}
                                       placeholder="Valor sacado"
-                                      className={`${inputStyle} border-amber-500/50 text-amber-400 focus:border-amber-500`}
+                                      className={`${inputStyle} border-indigo-500/50 text-indigo-600 dark:text-indigo-400 focus:border-indigo-500 font-mono text-lg font-bold`}
                                     />
                                   </motion.div>
                                 )}
@@ -621,15 +616,14 @@ const NewBetModal: React.FC<NewBetModalProps> = ({
                       </div>
 
                       {/* RODAPÉ FIXO (Resultados e Botão de Salvar) */}
-                      <div className="bg-slate-950/90 backdrop-blur-md border-t border-slate-800 p-6 shrink-0 mt-auto flex flex-col sm:flex-row items-center justify-between gap-4 rounded-b-3xl">
+                      <div className="bg-slate-50 dark:bg-[#1C1C1E] border-t border-slate-200 dark:border-[#2C2C2E] p-5 shrink-0 mt-auto flex flex-col sm:flex-row items-center justify-between gap-4">
                         
-                        <div className="w-full sm:w-auto flex flex-col items-center sm:items-start bg-slate-900 border border-slate-800 rounded-xl px-5 py-3">
-                          <p className="text-slate-500 text-[10px] font-bold uppercase tracking-widest">
+                        <div className="w-full sm:w-auto flex flex-col items-center sm:items-start bg-white dark:bg-[#000000] border border-slate-200 dark:border-[#3A3A3C] rounded-xl px-5 py-3 shadow-sm">
+                          <p className="text-slate-500 dark:text-[#8E8E93] text-[9px] font-bold uppercase tracking-widest">
                             {formData.status === 'pending' ? 'Potencial Estimado' : 'Resultado Consolidado'}
                           </p>
-                          {/* 🔥 CÁLCULO DE RESULTADO E VISUALIZAÇÃO FIXADA EM MOEDA */}
-                          <div className={`text-2xl font-mono font-black tracking-tight ${
-                            resultValue > 0 ? 'text-emerald-400' : resultValue < 0 ? 'text-red-400' : 'text-slate-400'
+                          <div className={`text-2xl font-mono font-bold tracking-tight ${
+                            resultValue > 0 ? 'text-emerald-600 dark:text-emerald-400' : resultValue < 0 ? 'text-red-600 dark:text-red-400' : 'text-slate-900 dark:text-white'
                           }`}>
                             {resultValue > 0 ? '+' : ''}{currency} {resultValue.toFixed(2)}
                           </div>
@@ -637,12 +631,12 @@ const NewBetModal: React.FC<NewBetModalProps> = ({
 
                         <button
                           type="submit"
-                          className="w-full sm:w-1/2 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black py-4 rounded-xl transition-all shadow-xl shadow-emerald-900/20 hover:shadow-emerald-500/20 active:scale-[0.98] tracking-wide text-sm flex items-center justify-center gap-2 uppercase"
+                          className="w-full sm:w-auto bg-slate-900 hover:bg-slate-800 text-white dark:bg-white dark:hover:bg-slate-200 dark:text-slate-900 font-bold py-4 px-8 rounded-xl transition-all active:scale-95 text-xs tracking-widest flex items-center justify-center gap-2 uppercase shadow-sm"
                         >
                           {betToEdit ? (
-                            <><Save size={18} /> Atualizar Registro</>
+                            <><Save size={16} /> Atualizar Registro</>
                           ) : (
-                            <><CheckCircle2 size={18} /> Salvar Operação</>
+                            <><CheckCircle2 size={16} /> Salvar Operação</>
                           )}
                         </button>
                       </div>
