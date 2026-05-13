@@ -648,8 +648,8 @@ const Calculators: React.FC = () => {
                                 </div>
 
                                 {/* CARD 3: A PLANILHA DE MÉTODOS EDITÁVEL */}
-                                <div className={`${cardClass} overflow-hidden p-0 md:p-0`}>
-                                    <div className="p-6 md:p-8">
+                                <div className={`${cardClass} overflow-hidden !px-2 !py-0 md:p-0`}>
+                                    <div className="p-3 md:p-8">
                                         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-6 mb-6">
                                             <div>
                                                 <h3 className="text-lg font-bold text-slate-900 dark:text-white tracking-tight flex items-center gap-2"><BarChart4 size={18} className="text-indigo-500"/> Simulador de Cenários</h3>
@@ -787,10 +787,10 @@ const Calculators: React.FC = () => {
                                         </div>
 
                                         {/* 🔥 VISÃO MOBILE (CARDS CORRIGIDOS - MIN-W-0) 🔥 */}
-                                        <div className="md:hidden space-y-4 mt-4 px-3 pb-4 pt-2">
+                                        <div className="md:hidden space-y-4 mt-4 px-1 pb-4 pt-2">
                                             <AnimatePresence>
                                                 {processedMethods.map((m) => (
-                                                    <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} key={`mobile-${m.id}`} className="bg-slate-50 dark:bg-[#000000] border border-slate-200 dark:border-[#2C2C2E] rounded-3xl p-4 relative shadow-sm">
+                                                    <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} key={`mobile-${m.id}`} className="bg-slate-50 dark:bg-[#000000] border border-slate-200 dark:border-[#2C2C2E] rounded-3xl p-3 relative shadow-sm">
                                                         
                                                         <button onClick={() => removeSimMethod(m.id)} className="absolute top-4 right-4 p-2 text-slate-400 hover:text-red-500 transition-colors bg-white dark:bg-[#1C1C1E] rounded-lg shadow-sm border border-slate-100 dark:border-[#2C2C2E]">
                                                             <Trash2 size={14}/>
@@ -811,7 +811,7 @@ const Calculators: React.FC = () => {
                                                         </div>
 
                                                         {/* GRID DE PARÂMETROS BASE (THUMB FRIENDLY COMPACTO) */}
-                                                        <div className="grid grid-cols-3 gap-2 mb-5 min-w-0">
+                                                        <div className="grid grid-cols-3 gap-1.5 mb-5 min-w-0">
                                                             <div className="bg-white dark:bg-[#1C1C1E] border border-slate-200 dark:border-[#2C2C2E] rounded-xl p-2.5 shadow-sm min-w-0">
                                                                 <p className="text-[8px] text-slate-500 dark:text-[#8E8E93] uppercase font-bold tracking-widest text-center mb-1.5">WR %</p>
                                                                 <input type="number" value={m.winRate} onChange={e => updateSimMethod(m.id, 'winRate', e.target.value)} className="w-full min-w-0 bg-slate-50 dark:bg-[#000000] rounded-lg text-center font-mono font-bold text-[13px] py-2 px-0.5 outline-none text-slate-900 dark:text-white focus:border-indigo-500 border border-transparent transition-colors" />
