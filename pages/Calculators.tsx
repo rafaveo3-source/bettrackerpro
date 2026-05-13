@@ -34,7 +34,7 @@ const Calculators: React.FC = () => {
 
   // 🔥 OVERLAY DE VITRINE (EFEITO BLUR) PARA USUÁRIOS FREE 🔥
   const ProBlurOverlay = ({ title, desc }: { title: string, desc: string }) => (
-      <div className="absolute inset-0 z-50 flex items-center justify-center bg-white/40 dark:bg-[#020617]/50 backdrop-blur-md rounded-[2rem]">
+      <div className="absolute inset-0 z-50 flex items-center justify-center bg-white/40 dark:bg-[#020617]/50 backdrop-blur-md rounded-2xl">
           <div className="bg-white dark:bg-[#1C1C1E] border border-emerald-500/30 p-8 rounded-2xl max-w-md text-center shadow-xl flex flex-col items-center mx-4">
               <div className="bg-emerald-500/10 p-4 rounded-xl mb-4 text-emerald-600 dark:text-emerald-400">
                   <Crown size={28} />
@@ -415,6 +415,9 @@ const Calculators: React.FC = () => {
   };
   const chartPaths = generateChartPoints();
 
+  // ==============================================
+  // OUTRAS CALCULADORAS MANTIDAS
+  // ==============================================
   const [dutchTotalStake, setDutchTotalStake] = useState('100');
   const [dutchSelections, setDutchSelections] = useState([{ id: 1, name: 'Seleção A', odds: '2.50', stake: 0, profit: 0 }, { id: 2, name: 'Seleção B', odds: '3.20', stake: 0, profit: 0 }]);
   const addDutchSelection = () => setDutchSelections([...dutchSelections, { id: Date.now(), name: `Seleção ${String.fromCharCode(65 + dutchSelections.length)}`, odds: '', stake: 0, profit: 0 }]);
@@ -468,7 +471,6 @@ const Calculators: React.FC = () => {
     { id: 'odds', label: 'Odds Conv.', pro: false }
   ];
 
-  // 🔥 Design System Fixes 🔥
   const inputClass = "bg-transparent border-b border-transparent hover:border-slate-300 dark:hover:border-[#3A3A3C] focus:border-indigo-500 text-slate-900 dark:text-white px-1 py-1 outline-none font-mono text-xs w-full text-center transition-colors";
   const cardClass = "bg-white dark:bg-[#1C1C1E] border border-slate-200 dark:border-[#2C2C2E] rounded-2xl p-6 shadow-sm";
   const sectionTitleClass = "text-lg font-bold text-slate-900 dark:text-white uppercase tracking-tight mb-6 flex items-center gap-2";
@@ -606,263 +608,263 @@ const Calculators: React.FC = () => {
                             )}
                         </AnimatePresence>
 
-                        {/* CARD 2: RESULTADO MATEMÁTICO (PLANO DE AÇÃO) E GPS */}
+                        {/* OCULTA AS OPERAÇÕES SE A META BATEU OU QUEBROU */}
                         {!isTargetReached && !isBankrollBusted && (
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <div className={`${cardClass} flex flex-col justify-center relative overflow-hidden`}>
-                                    <p className="text-[10px] font-bold text-slate-500 dark:text-[#8E8E93] uppercase tracking-widest mb-2 flex items-center gap-1.5"><Navigation size={14} className="text-indigo-500"/> GPS de Crescimento</p>
-                                    <h3 className={`text-xl sm:text-2xl font-bold tracking-tight mb-2 relative z-10 ${etaColor}`}>
-                                        {etaText}
-                                    </h3>
-                                    <p className="text-sm font-medium leading-relaxed text-slate-600 dark:text-slate-400 relative z-10">
-                                        Para manter o curso, seu lucro <strong className="text-slate-900 dark:text-white">Hoje</strong> precisa ser de <strong>R$ {dailyTargetMoney.toFixed(2)}</strong>.
-                                    </p>
-                                </div>
-
-                                <div className={`rounded-2xl p-6 flex flex-col justify-center border shadow-sm ${
-                                    isGoalAchievable 
-                                    ? 'bg-emerald-50 dark:bg-emerald-500/10 border-emerald-200 dark:border-emerald-500/20' 
-                                    : 'bg-amber-50 dark:bg-amber-500/10 border-amber-200 dark:border-amber-500/20'
-                                }`}>
-                                    <p className={`text-[10px] font-bold uppercase tracking-widest mb-1 ${isGoalAchievable ? 'text-emerald-600 dark:text-emerald-400' : 'text-amber-600 dark:text-amber-400'}`}>A Meta de Hoje (Dia 1)</p>
-                                    <h3 className={`text-2xl font-bold tracking-tight mb-2 ${isGoalAchievable ? 'text-emerald-700 dark:text-emerald-300' : 'text-amber-700 dark:text-amber-300'}`}>
-                                        Fazer + R$ {dailyTargetMoney.toFixed(2)}
-                                    </h3>
-                                    <p className={`text-xs font-medium leading-relaxed ${isGoalAchievable ? 'text-emerald-600/90 dark:text-emerald-400/90' : 'text-amber-700/90 dark:text-amber-400/90'}`}>
-                                        {isCompound ? `Sua meta global exige crescimento de ` : `Sua meta global exige lucro de R$ `}
-                                        <strong>{isCompound ? `${dailyGrowthNeededPct.toFixed(2)}%` : dailyTargetMoney.toFixed(2)} ao dia</strong>. 
-                                        {isGoalAchievable ? ` A estratégia projetou bater o alvo. Execute o volume planejado.` : ` Sua estratégia atual não alcança essa meta. Aumente o volume ou as odds.`}
-                                    </p>
-                                </div>
-                            </div>
-                        )}
-
-                        {/* CARD 3: A PLANILHA DE MÉTODOS EDITÁVEL */}
-                        {!isTargetReached && !isBankrollBusted && (
-                            <div className={`${cardClass} overflow-hidden p-0 md:p-0`}>
-                                
-                                <div className="p-6 md:p-8">
-                                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
-                                        <div>
-                                            <h3 className="text-lg font-bold text-slate-900 dark:text-white tracking-tight flex items-center gap-2"><BarChart4 size={18} className="text-indigo-500"/> Simulador de Cenários</h3>
-                                            <p className="text-[10px] text-slate-500 dark:text-[#8E8E93] uppercase font-bold tracking-wider mt-1">A coluna "Aposte Isso" te diz o valor da Próxima Entrada.</p>
-                                        </div>
-                                        <div className="flex flex-col sm:flex-row items-end sm:items-center gap-3">
-                                            <div className="flex items-center gap-2 bg-slate-50 dark:bg-[#000000] px-3 py-1.5 rounded-lg border border-slate-200 dark:border-[#2C2C2E]">
-                                                <span className="text-[9px] font-bold text-slate-500 dark:text-[#8E8E93] uppercase tracking-widest flex items-center gap-1" title="Se ligado, as próximas stakes descontam o valor que já está investido no mercado (Risco Exposto)."><Coins size={12}/> Simultâneo</span>
-                                                <button 
-                                                    onClick={() => setUseAvailableBankroll(!useAvailableBankroll)}
-                                                    className={`relative inline-flex h-4 w-8 items-center rounded-full transition-colors ${useAvailableBankroll ? 'bg-indigo-500' : 'bg-slate-300 dark:bg-[#3A3A3C]'}`}
-                                                >
-                                                    <span className={`inline-block h-3 w-3 transform rounded-full bg-white transition-transform ${useAvailableBankroll ? 'translate-x-4' : 'translate-x-1'}`}/>
-                                                </button>
-                                            </div>
-                                            <div className="flex gap-2">
-                                                <button onClick={handleAutoFill} className="text-[10px] font-bold uppercase tracking-widest text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-[#2C2C2E] hover:bg-slate-200 dark:hover:bg-[#3A3A3C] px-3 py-2 rounded-lg transition-colors flex items-center gap-1.5"><RefreshCcw size={12}/> Auditar</button>
-                                                <button onClick={addSimMethod} className="text-[10px] font-bold uppercase tracking-widest text-white bg-indigo-600 hover:bg-indigo-500 px-3 py-2 rounded-lg transition-colors flex items-center gap-1.5"><Plus size={14}/> Método</button>
-                                            </div>
-                                        </div>
+                            <>
+                                {/* CARD 2: RESULTADO MATEMÁTICO (PLANO DE AÇÃO) E GPS */}
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div className={`${cardClass} flex flex-col justify-center relative overflow-hidden`}>
+                                        <p className="text-[10px] font-bold text-slate-500 dark:text-[#8E8E93] uppercase tracking-widest mb-2 flex items-center gap-1.5"><Navigation size={14} className="text-indigo-500"/> GPS de Crescimento</p>
+                                        <h3 className={`text-xl sm:text-2xl font-bold tracking-tight mb-2 relative z-10 ${etaColor}`}>
+                                            {etaText}
+                                        </h3>
+                                        <p className="text-sm font-medium leading-relaxed text-slate-600 dark:text-slate-400 relative z-10">
+                                            Para manter o curso, seu lucro <strong className="text-slate-900 dark:text-white">Hoje</strong> precisa ser de <strong>R$ {dailyTargetMoney.toFixed(2)}</strong>.
+                                        </p>
                                     </div>
 
-                                    <AnimatePresence>
-                                        {useAvailableBankroll && pendingExposure > 0 && (
-                                            <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} className="bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/20 rounded-xl p-3 mb-6 flex items-center gap-3">
-                                                <AlertTriangle size={16} className="text-amber-600 dark:text-amber-500 shrink-0" />
-                                                <p className="text-xs text-amber-800 dark:text-amber-400 font-medium">
-                                                    Você possui <strong>R$ {pendingExposure.toFixed(2)}</strong> investidos no mercado. Stakes calculadas sobre a Banca Livre (<strong className="font-mono">R$ {availableBankroll.toFixed(2)}</strong>).
-                                                </p>
-                                            </motion.div>
-                                        )}
-                                    </AnimatePresence>
-                                    
-                                    {/* 🔥 VISÃO DESKTOP (TABELA) 🔥 */}
-                                    <div className="hidden md:block overflow-x-auto custom-scrollbar pb-2">
-                                        <table className="w-full text-left min-w-[768px]">
-                                            <thead>
-                                                <tr className="border-b border-slate-200 dark:border-[#2C2C2E] text-[10px] uppercase tracking-widest text-slate-500 dark:text-[#8E8E93] font-bold">
-                                                    <th className="pb-3 px-2 font-medium w-48">Método</th>
-                                                    <th className="pb-3 text-center font-medium w-16">Win Rate %</th>
-                                                    <th className="pb-3 text-center font-medium w-16">Odd Média</th>
-                                                    <th className="pb-3 text-center font-medium w-16">Entr/Dia</th>
-                                                    <th className="pb-3 text-center font-medium w-20">Max Bad Run</th>
-                                                    <th className="pb-3 text-center font-medium w-24 text-indigo-500">EV Esperado</th>
-                                                    <th className="pb-3 text-center font-medium w-20">Stake Meta %</th>
-                                                    <th className="pb-3 text-center font-medium w-16">Sua Stake %</th>
-                                                    <th className="pb-3 text-center font-medium text-emerald-500 w-28">Aposte Isso (R$)</th>
-                                                    <th className="pb-3 text-center"></th>
-                                                </tr>
-                                            </thead>
-                                            <tbody>
-                                                <AnimatePresence>
-                                                    {processedMethods.map((m) => (
-                                                        <motion.tr initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, height: 0 }} key={`desktop-${m.id}`} className="border-b border-slate-100 dark:border-[#2C2C2E] hover:bg-slate-50 dark:hover:bg-[#000000] transition-colors group">
-                                                            
-                                                            <td className="py-3 px-2">
-                                                                <div className="flex flex-col gap-1.5">
-                                                                    <div className="relative">
-                                                                        <input 
-                                                                            list="methods-list"
-                                                                            value={m.name} 
-                                                                            onChange={e => updateSimMethod(m.id, 'name', e.target.value)} 
-                                                                            className="bg-slate-100 dark:bg-[#2C2C2E] border border-transparent focus:border-indigo-500 text-slate-900 dark:text-white px-3 py-1.5 rounded-lg font-bold text-xs w-full outline-none pr-6 transition-colors"
-                                                                            placeholder="Ex: Oportunista..."
-                                                                        />
-                                                                        <ChevronDown size={12} className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
-                                                                    </div>
-                                                                    {m.isSynced ? (
-                                                                        <span className="text-[9px] font-bold text-emerald-500 uppercase tracking-widest flex items-center gap-1"><CheckCircle2 size={10}/> Validado</span>
-                                                                    ) : (
-                                                                        <span className="text-[9px] font-bold text-slate-400 dark:text-[#636366] uppercase tracking-widest">● Simulação</span>
-                                                                    )}
-                                                                </div>
-                                                            </td>
-
-                                                            <td className="py-3 px-1"><input type="number" value={m.winRate} onChange={e => updateSimMethod(m.id, 'winRate', e.target.value)} className={inputClass} /></td>
-                                                            <td className="py-3 px-1"><input type="number" step="0.01" value={m.avgOdd} onChange={e => updateSimMethod(m.id, 'avgOdd', e.target.value)} className={inputClass} /></td>
-                                                            <td className="py-3 px-1"><input type="number" min="1" value={m.entries} onChange={e => updateSimMethod(m.id, 'entries', e.target.value)} className={inputClass} /></td>
-
-                                                            <td className="py-3 px-1">
-                                                                <div className="flex flex-col items-center">
-                                                                    <div className="flex items-center gap-1">
-                                                                        <input type="number" min="1" value={m.badRun || 5} onChange={e => updateSimMethod(m.id, 'badRun', e.target.value)} className={`${inputClass} !text-red-500 dark:!text-red-400 !px-1`} title="Insira a Bad Run (Reds seguidos) esperada" />
-                                                                    </div>
-                                                                    <span className="text-[9px] font-bold text-slate-500 mt-1 whitespace-nowrap">
-                                                                        -R$ {m.drawdownRiskMoney.toFixed(0)} ({m.drawdownRiskPct.toFixed(0)}%)
-                                                                    </span>
-                                                                </div>
-                                                            </td>
-
-                                                            <td className="py-3 px-1 text-center">
-                                                                <div className="flex flex-col items-center justify-center">
-                                                                    <span className={`text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 rounded border whitespace-nowrap ${m.evPct > 0 ? 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-200 dark:border-emerald-500/20' : 'bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-400 border-red-200 dark:border-red-500/20'}`}>
-                                                                        {m.evPct > 0 ? '+' : ''}{m.evPct.toFixed(1)}%
-                                                                    </span>
-                                                                    <span className="text-[10px] text-slate-500 dark:text-[#8E8E93] font-bold mt-1 tracking-widest whitespace-nowrap">
-                                                                        {m.evMoney > 0 ? '+' : ''} R$ {m.evMoney.toFixed(2)}/bet
-                                                                    </span>
-                                                                </div>
-                                                            </td>
-
-                                                            <td className="py-3 px-1 text-center">
-                                                                <div className="flex flex-col items-center">
-                                                                    <span className={`font-mono font-bold text-sm ${m.requiredStakePct > m.safeStakePct ? 'text-red-500' : 'text-slate-900 dark:text-white'}`}>
-                                                                        {m.evPct > 0 ? m.requiredStakePct.toFixed(1) + '%' : 'N/A'}
-                                                                    </span>
-                                                                    {m.evPct > 0 && (
-                                                                        <button onClick={() => updateSimMethod(m.id, 'stake', String(m.requiredStakePct.toFixed(1)))} className="text-[9px] uppercase font-bold tracking-widest text-indigo-500 hover:text-indigo-600 mt-1 flex items-center gap-1 whitespace-nowrap">
-                                                                            Fixar
-                                                                        </button>
-                                                                    )}
-                                                                </div>
-                                                            </td>
-
-                                                            <td className="py-3 px-1">
-                                                                <div className="flex flex-col items-center">
-                                                                    <input type="number" step="0.1" value={m.stake} onChange={e => updateSimMethod(m.id, 'stake', e.target.value)} className={inputClass} />
-                                                                    <div className="mt-1 w-full text-center flex justify-center">{m.riskBadge}</div>
-                                                                </div>
-                                                            </td>
-                                                            
-                                                            <td className="py-3 px-1 text-center">
-                                                                <div className="bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 py-2 px-2 rounded-lg font-bold font-mono text-sm border border-emerald-100 dark:border-emerald-500/20 whitespace-nowrap">
-                                                                    R$ {m.stakeValue.toFixed(2)}
-                                                                </div>
-                                                            </td>
-
-                                                            <td className="py-3 pr-2 text-right">
-                                                                <button onClick={() => removeSimMethod(m.id)} className="p-2 text-slate-300 dark:text-[#636366] hover:text-red-500 transition-colors"><Trash2 size={16}/></button>
-                                                            </td>
-                                                        </motion.tr>
-                                                    ))}
-                                                </AnimatePresence>
-                                            </tbody>
-                                        </table>
+                                    <div className={`rounded-2xl p-6 flex flex-col justify-center border shadow-sm ${
+                                        isGoalAchievable 
+                                        ? 'bg-emerald-50 dark:bg-emerald-500/10 border-emerald-200 dark:border-emerald-500/20' 
+                                        : 'bg-amber-50 dark:bg-amber-500/10 border-amber-200 dark:border-amber-500/20'
+                                    }`}>
+                                        <p className={`text-[10px] font-bold uppercase tracking-widest mb-1 ${isGoalAchievable ? 'text-emerald-600 dark:text-emerald-400' : 'text-amber-600 dark:text-amber-400'}`}>A Meta de Hoje (Dia 1)</p>
+                                        <h3 className={`text-2xl font-bold tracking-tight mb-2 ${isGoalAchievable ? 'text-emerald-700 dark:text-emerald-300' : 'text-amber-700 dark:text-amber-300'}`}>
+                                            Fazer + R$ {dailyTargetMoney.toFixed(2)}
+                                        </h3>
+                                        <p className={`text-xs font-medium leading-relaxed ${isGoalAchievable ? 'text-emerald-600/90 dark:text-emerald-400/90' : 'text-amber-700/90 dark:text-amber-400/90'}`}>
+                                            {isCompound ? `Sua meta global exige crescimento de ` : `Sua meta global exige lucro de R$ `}
+                                            <strong>{isCompound ? `${dailyGrowthNeededPct.toFixed(2)}%` : dailyTargetMoney.toFixed(2)} ao dia</strong>. 
+                                            {isGoalAchievable ? ` A estratégia projetou bater o alvo. Execute o volume planejado.` : ` Sua estratégia atual não alcança essa meta. Aumente o volume ou as odds.`}
+                                        </p>
                                     </div>
+                                </div>
 
-                                    {/* 🔥 VISÃO MOBILE (CARDS) 🔥 */}
-                                    <div className="md:hidden space-y-4 px-6 pb-6 pt-2">
-                                        <AnimatePresence>
-                                            {processedMethods.map((m) => (
-                                                <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} key={`mobile-${m.id}`} className="bg-slate-50 dark:bg-[#000000] border border-slate-200 dark:border-[#2C2C2E] rounded-2xl p-5 relative shadow-sm">
-                                                    
-                                                    <button onClick={() => removeSimMethod(m.id)} className="absolute top-5 right-5 p-2 text-slate-400 hover:text-red-500 transition-colors bg-white dark:bg-[#1C1C1E] rounded-lg shadow-sm border border-slate-100 dark:border-[#2C2C2E]">
-                                                        <Trash2 size={14}/>
+                                {/* CARD 3: A PLANILHA DE MÉTODOS EDITÁVEL */}
+                                <div className={`${cardClass} overflow-hidden p-0 md:p-0`}>
+                                    <div className="p-6 md:p-8">
+                                        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+                                            <div>
+                                                <h3 className="text-lg font-bold text-slate-900 dark:text-white tracking-tight flex items-center gap-2"><BarChart4 size={18} className="text-indigo-500"/> Simulador de Cenários</h3>
+                                                <p className="text-[10px] text-slate-500 dark:text-[#8E8E93] uppercase font-bold tracking-wider mt-1">A coluna "Aposte Isso" te diz o valor da Próxima Entrada.</p>
+                                            </div>
+                                            <div className="flex flex-col sm:flex-row items-end sm:items-center gap-3">
+                                                <div className="flex items-center gap-2 bg-slate-50 dark:bg-[#000000] px-3 py-1.5 rounded-lg border border-slate-200 dark:border-[#2C2C2E]">
+                                                    <span className="text-[9px] font-bold text-slate-500 dark:text-[#8E8E93] uppercase tracking-widest flex items-center gap-1" title="Se ligado, as próximas stakes descontam o valor que já está investido no mercado (Risco Exposto)."><Coins size={12}/> Simultâneo</span>
+                                                    <button 
+                                                        onClick={() => setUseAvailableBankroll(!useAvailableBankroll)}
+                                                        className={`relative inline-flex h-4 w-8 items-center rounded-full transition-colors ${useAvailableBankroll ? 'bg-indigo-500' : 'bg-slate-300 dark:bg-[#3A3A3C]'}`}
+                                                    >
+                                                        <span className={`inline-block h-3 w-3 transform rounded-full bg-white transition-transform ${useAvailableBankroll ? 'translate-x-4' : 'translate-x-1'}`}/>
                                                     </button>
+                                                </div>
+                                                <div className="flex gap-2">
+                                                    <button onClick={handleAutoFill} className="text-[10px] font-bold uppercase tracking-widest text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-[#2C2C2E] hover:bg-slate-200 dark:hover:bg-[#3A3A3C] px-3 py-2 rounded-lg transition-colors flex items-center gap-1.5"><RefreshCcw size={12}/> Auditar</button>
+                                                    <button onClick={addSimMethod} className="text-[10px] font-bold uppercase tracking-widest text-white bg-indigo-600 hover:bg-indigo-500 px-3 py-2 rounded-lg transition-colors flex items-center gap-1.5"><Plus size={14}/> Método</button>
+                                                </div>
+                                            </div>
+                                        </div>
 
-                                                    <div className="pr-12 mb-5">
-                                                        <p className="text-[10px] font-bold uppercase text-slate-500 dark:text-[#8E8E93] tracking-widest mb-2">Método / Estratégia</p>
-                                                        <div className="relative">
-                                                            <input list="methods-list" value={m.name} onChange={e => updateSimMethod(m.id, 'name', e.target.value)} className="w-full bg-white dark:bg-[#1C1C1E] border border-slate-200 dark:border-[#2C2C2E] text-slate-900 dark:text-white px-3 py-2.5 rounded-lg text-sm font-bold outline-none focus:border-indigo-500" placeholder="Ex: Oportunista..." />
-                                                        </div>
-                                                        <div className="mt-2">
-                                                            {m.isSynced ? (
-                                                                <span className="text-[10px] font-bold text-emerald-500 uppercase tracking-widest flex items-center gap-1"><CheckCircle2 size={12}/> Histórico Validado</span>
-                                                            ) : (
-                                                                <span className="text-[10px] font-bold text-slate-400 dark:text-[#636366] uppercase tracking-widest">● Simulação Manual</span>
-                                                            )}
-                                                        </div>
-                                                    </div>
-
-                                                    <div className="grid grid-cols-3 gap-2 mb-4 p-3 bg-white dark:bg-[#1C1C1E] rounded-xl border border-slate-200 dark:border-[#2C2C2E]">
-                                                        <div>
-                                                            <p className="text-[10px] text-slate-500 dark:text-[#8E8E93] uppercase font-bold tracking-widest text-center mb-1">WR %</p>
-                                                            <input type="number" value={m.winRate} onChange={e => updateSimMethod(m.id, 'winRate', e.target.value)} className={inputClass} />
-                                                        </div>
-                                                        <div className="border-l border-r border-slate-100 dark:border-[#2C2C2E] px-1">
-                                                            <p className="text-[10px] text-slate-500 dark:text-[#8E8E93] uppercase font-bold tracking-widest text-center mb-1">Odd</p>
-                                                            <input type="number" step="0.01" value={m.avgOdd} onChange={e => updateSimMethod(m.id, 'avgOdd', e.target.value)} className={inputClass} />
-                                                        </div>
-                                                        <div>
-                                                            <p className="text-[10px] text-slate-500 dark:text-[#8E8E93] uppercase font-bold tracking-widest text-center mb-1">Entr/Dia</p>
-                                                            <input type="number" min="1" value={m.entries} onChange={e => updateSimMethod(m.id, 'entries', e.target.value)} className={inputClass} />
-                                                        </div>
-                                                    </div>
-
-                                                    <div className="grid grid-cols-2 gap-3 mb-4">
-                                                        <div className="p-3 bg-white dark:bg-[#1C1C1E] rounded-xl border border-slate-200 dark:border-[#2C2C2E] text-center flex flex-col items-center justify-center">
-                                                            <p className="text-[10px] text-slate-500 dark:text-[#8E8E93] uppercase font-bold tracking-widest mb-1">Max Bad Run</p>
-                                                            <div className="flex items-center justify-center gap-1 mb-1">
-                                                                <input type="number" min="1" value={m.badRun || 5} onChange={e => updateSimMethod(m.id, 'badRun', e.target.value)} className={`${inputClass} !text-red-500 dark:!text-red-400 !px-0 !py-0 !w-8`} />
-                                                                <span className="text-[10px] font-bold text-slate-500">Reds</span>
-                                                            </div>
-                                                            <span className="text-[10px] font-medium text-slate-500 dark:text-[#8E8E93]">-R$ {m.drawdownRiskMoney.toFixed(0)} ({m.drawdownRiskPct.toFixed(0)}%)</span>
-                                                        </div>
-                                                        <div className="p-3 bg-white dark:bg-[#1C1C1E] rounded-xl border border-slate-200 dark:border-[#2C2C2E] text-center flex flex-col justify-center">
-                                                            <p className="text-[10px] text-slate-500 dark:text-[#8E8E93] uppercase font-bold tracking-widest mb-1.5">EV Esperado</p>
-                                                            <span className={`text-[11px] font-bold uppercase tracking-widest px-2 py-0.5 rounded border inline-block mx-auto mb-1.5 ${m.evPct > 0 ? 'bg-emerald-50 text-emerald-600 border-emerald-200 dark:bg-emerald-500/10 dark:text-emerald-400 dark:border-emerald-500/20' : 'bg-red-50 text-red-600 border-red-200 dark:bg-red-500/10 dark:text-red-400 dark:border-red-500/20'}`}>{m.evPct > 0 ? '+' : ''}{m.evPct.toFixed(1)}%</span>
-                                                            <span className="text-[10px] text-slate-500 dark:text-[#8E8E93] font-bold">{m.evMoney > 0 ? '+' : ''} R$ {m.evMoney.toFixed(2)}/bet</span>
-                                                        </div>
-                                                    </div>
-
-                                                    <div className="flex flex-col gap-3 p-4 bg-white dark:bg-[#1C1C1E] rounded-xl border border-slate-200 dark:border-[#2C2C2E] shadow-sm">
-                                                        <div className="flex items-center justify-between gap-2 border-b border-slate-100 dark:border-[#2C2C2E] pb-3">
-                                                            <div className="flex-1 text-center">
-                                                                <p className="text-[10px] text-slate-500 dark:text-[#8E8E93] uppercase font-bold tracking-widest mb-1">Stake Meta</p>
-                                                                <span className={`font-mono font-bold text-sm block ${m.requiredStakePct > m.safeStakePct ? 'text-red-500' : 'text-slate-900 dark:text-white'}`}>{m.evPct > 0 ? m.requiredStakePct.toFixed(1) + '%' : 'N/A'}</span>
-                                                            </div>
-                                                            <div className="flex-1 text-center border-l border-slate-100 dark:border-[#2C2C2E]">
-                                                                <p className="text-[10px] text-slate-500 dark:text-[#8E8E93] uppercase font-bold tracking-widest mb-1">Sua Stake</p>
-                                                                <div className="flex justify-center items-center gap-1">
-                                                                    <input type="number" step="0.1" value={m.stake} onChange={e => updateSimMethod(m.id, 'stake', e.target.value)} className={`${inputClass} !w-12 !py-0`} />
-                                                                    <span className="text-xs font-bold text-slate-500">%</span>
-                                                                </div>
-                                                            </div>
-                                                        </div>
-                                                        <div className="text-center pt-1">
-                                                            <p className="text-[10px] text-emerald-600 dark:text-emerald-500 uppercase font-bold tracking-widest mb-2">Aposte Isso</p>
-                                                            <div className="bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 py-3 px-2 rounded-xl font-bold font-mono text-lg border border-emerald-200 dark:border-emerald-500/20 shadow-sm">
-                                                                R$ {m.stakeValue.toFixed(2)}
-                                                            </div>
-                                                        </div>
-                                                    </div>
-
+                                        <AnimatePresence>
+                                            {useAvailableBankroll && pendingExposure > 0 && (
+                                                <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} className="bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/20 rounded-xl p-3 mb-6 flex items-center gap-3">
+                                                    <AlertTriangle size={16} className="text-amber-600 dark:text-amber-500 shrink-0" />
+                                                    <p className="text-xs text-amber-800 dark:text-amber-400 font-medium">
+                                                        Você possui <strong>R$ {pendingExposure.toFixed(2)}</strong> investidos no mercado. Stakes calculadas sobre a Banca Livre (<strong className="font-mono">R$ {availableBankroll.toFixed(2)}</strong>).
+                                                    </p>
                                                 </motion.div>
-                                            ))}
+                                            )}
                                         </AnimatePresence>
                                         
-                                        <button onClick={addSimMethod} className="w-full mt-4 py-4 rounded-xl border border-slate-300 dark:border-[#3A3A3C] text-slate-600 dark:text-white font-bold uppercase tracking-widest text-xs flex items-center justify-center gap-2 hover:bg-slate-100 dark:hover:bg-[#2C2C2E] transition-colors bg-white dark:bg-[#1C1C1E] shadow-sm">
-                                            <Plus size={16} /> Nova Simulação
-                                        </button>
+                                        {/* 🔥 VISÃO DESKTOP (TABELA) 🔥 */}
+                                        <div className="hidden md:block overflow-x-auto custom-scrollbar pb-2">
+                                            <table className="w-full text-left min-w-[768px]">
+                                                <thead>
+                                                    <tr className="border-b border-slate-200 dark:border-[#2C2C2E] text-[10px] uppercase tracking-widest text-slate-500 dark:text-[#8E8E93] font-bold">
+                                                        <th className="pb-3 px-2 font-medium w-48">Método</th>
+                                                        <th className="pb-3 text-center font-medium w-16">Win Rate %</th>
+                                                        <th className="pb-3 text-center font-medium w-16">Odd Média</th>
+                                                        <th className="pb-3 text-center font-medium w-16">Entr/Dia</th>
+                                                        <th className="pb-3 text-center font-medium w-20">Max Bad Run</th>
+                                                        <th className="pb-3 text-center font-medium w-24 text-indigo-500">EV Esperado</th>
+                                                        <th className="pb-3 text-center font-medium w-20">Stake Meta %</th>
+                                                        <th className="pb-3 text-center font-medium w-16">Sua Stake %</th>
+                                                        <th className="pb-3 text-center font-medium text-emerald-500 w-28">Aposte Isso (R$)</th>
+                                                        <th className="pb-3 text-center"></th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    <AnimatePresence>
+                                                        {processedMethods.map((m) => (
+                                                            <motion.tr initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, height: 0 }} key={`desktop-${m.id}`} className="border-b border-slate-100 dark:border-[#2C2C2E] hover:bg-slate-50 dark:hover:bg-[#000000] transition-colors group">
+                                                                
+                                                                <td className="py-3 px-2">
+                                                                    <div className="flex flex-col gap-1.5">
+                                                                        <div className="relative">
+                                                                            <input 
+                                                                                list="methods-list"
+                                                                                value={m.name} 
+                                                                                onChange={e => updateSimMethod(m.id, 'name', e.target.value)} 
+                                                                                className="bg-slate-100 dark:bg-[#2C2C2E] border border-transparent focus:border-indigo-500 text-slate-900 dark:text-white px-3 py-1.5 rounded-lg font-bold text-xs w-full outline-none pr-6 transition-colors"
+                                                                                placeholder="Ex: Oportunista..."
+                                                                            />
+                                                                            <ChevronDown size={12} className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+                                                                        </div>
+                                                                        {m.isSynced ? (
+                                                                            <span className="text-[9px] font-bold text-emerald-500 uppercase tracking-widest flex items-center gap-1"><CheckCircle2 size={10}/> Validado</span>
+                                                                        ) : (
+                                                                            <span className="text-[9px] font-bold text-slate-400 dark:text-[#636366] uppercase tracking-widest">● Simulação</span>
+                                                                        )}
+                                                                    </div>
+                                                                </td>
+
+                                                                <td className="py-3 px-1"><input type="number" value={m.winRate} onChange={e => updateSimMethod(m.id, 'winRate', e.target.value)} className={inputClass} /></td>
+                                                                <td className="py-3 px-1"><input type="number" step="0.01" value={m.avgOdd} onChange={e => updateSimMethod(m.id, 'avgOdd', e.target.value)} className={inputClass} /></td>
+                                                                <td className="py-3 px-1"><input type="number" min="1" value={m.entries} onChange={e => updateSimMethod(m.id, 'entries', e.target.value)} className={inputClass} /></td>
+
+                                                                <td className="py-3 px-1">
+                                                                    <div className="flex flex-col items-center">
+                                                                        <div className="flex items-center gap-1">
+                                                                            <input type="number" min="1" value={m.badRun || 5} onChange={e => updateSimMethod(m.id, 'badRun', e.target.value)} className={`${inputClass} !text-red-500 dark:!text-red-400 !px-1`} title="Insira a Bad Run (Reds seguidos) esperada" />
+                                                                        </div>
+                                                                        <span className="text-[9px] font-bold text-slate-500 mt-1 whitespace-nowrap">
+                                                                            -R$ {m.drawdownRiskMoney.toFixed(0)} ({m.drawdownRiskPct.toFixed(0)}%)
+                                                                        </span>
+                                                                    </div>
+                                                                </td>
+
+                                                                <td className="py-3 px-1 text-center">
+                                                                    <div className="flex flex-col items-center justify-center">
+                                                                        <span className={`text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 rounded border whitespace-nowrap ${m.evPct > 0 ? 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-200 dark:border-emerald-500/20' : 'bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-400 border-red-200 dark:border-red-500/20'}`}>
+                                                                            {m.evPct > 0 ? '+' : ''}{m.evPct.toFixed(1)}%
+                                                                        </span>
+                                                                        <span className="text-[10px] text-slate-500 dark:text-[#8E8E93] font-bold mt-1 tracking-widest whitespace-nowrap">
+                                                                            {m.evMoney > 0 ? '+' : ''} R$ {m.evMoney.toFixed(2)}/bet
+                                                                        </span>
+                                                                    </div>
+                                                                </td>
+
+                                                                <td className="py-3 px-1 text-center">
+                                                                    <div className="flex flex-col items-center">
+                                                                        <span className={`font-mono font-bold text-sm ${m.requiredStakePct > m.safeStakePct ? 'text-red-500' : 'text-slate-900 dark:text-white'}`}>
+                                                                            {m.evPct > 0 ? m.requiredStakePct.toFixed(1) + '%' : 'N/A'}
+                                                                        </span>
+                                                                        {m.evPct > 0 && (
+                                                                            <button onClick={() => updateSimMethod(m.id, 'stake', String(m.requiredStakePct.toFixed(1)))} className="text-[9px] uppercase font-bold tracking-widest text-indigo-500 hover:text-indigo-600 mt-1 flex items-center gap-1 whitespace-nowrap">
+                                                                                Fixar
+                                                                            </button>
+                                                                        )}
+                                                                    </div>
+                                                                </td>
+
+                                                                <td className="py-3 px-1">
+                                                                    <div className="flex flex-col items-center">
+                                                                        <input type="number" step="0.1" value={m.stake} onChange={e => updateSimMethod(m.id, 'stake', e.target.value)} className={inputClass} />
+                                                                        <div className="mt-1 w-full text-center flex justify-center">{m.riskBadge}</div>
+                                                                    </div>
+                                                                </td>
+                                                                
+                                                                <td className="py-3 px-1 text-center">
+                                                                    <div className="bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 py-2 px-2 rounded-lg font-bold font-mono text-sm border border-emerald-100 dark:border-emerald-500/20 whitespace-nowrap">
+                                                                        R$ {m.stakeValue.toFixed(2)}
+                                                                    </div>
+                                                                </td>
+
+                                                                <td className="py-3 pr-2 text-right">
+                                                                    <button onClick={() => removeSimMethod(m.id)} className="p-2 text-slate-300 dark:text-[#636366] hover:text-red-500 transition-colors"><Trash2 size={16}/></button>
+                                                                </td>
+                                                            </motion.tr>
+                                                        ))}
+                                                    </AnimatePresence>
+                                                </tbody>
+                                            </table>
+                                        </div>
+
+                                        {/* 🔥 VISÃO MOBILE (CARDS) 🔥 */}
+                                        <div className="md:hidden space-y-4 px-6 pb-6 pt-2">
+                                            <AnimatePresence>
+                                                {processedMethods.map((m) => (
+                                                    <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} key={`mobile-${m.id}`} className="bg-slate-50 dark:bg-[#000000] border border-slate-200 dark:border-[#2C2C2E] rounded-2xl p-5 relative shadow-sm">
+                                                        
+                                                        <button onClick={() => removeSimMethod(m.id)} className="absolute top-5 right-5 p-2 text-slate-400 hover:text-red-500 transition-colors bg-white dark:bg-[#1C1C1E] rounded-lg shadow-sm border border-slate-100 dark:border-[#2C2C2E]">
+                                                            <Trash2 size={14}/>
+                                                        </button>
+
+                                                        <div className="pr-12 mb-5">
+                                                            <p className="text-[10px] font-bold uppercase text-slate-500 dark:text-[#8E8E93] tracking-widest mb-2">Método / Estratégia</p>
+                                                            <div className="relative">
+                                                                <input list="methods-list" value={m.name} onChange={e => updateSimMethod(m.id, 'name', e.target.value)} className="w-full bg-white dark:bg-[#1C1C1E] border border-slate-200 dark:border-[#2C2C2E] text-slate-900 dark:text-white px-3 py-2.5 rounded-lg text-sm font-bold outline-none focus:border-indigo-500" placeholder="Ex: Oportunista..." />
+                                                            </div>
+                                                            <div className="mt-2">
+                                                                {m.isSynced ? (
+                                                                    <span className="text-[10px] font-bold text-emerald-500 uppercase tracking-widest flex items-center gap-1"><CheckCircle2 size={12}/> Histórico Validado</span>
+                                                                ) : (
+                                                                    <span className="text-[10px] font-bold text-slate-400 dark:text-[#636366] uppercase tracking-widest">● Simulação Manual</span>
+                                                                )}
+                                                            </div>
+                                                        </div>
+
+                                                        <div className="grid grid-cols-3 gap-2 mb-4 p-3 bg-white dark:bg-[#1C1C1E] rounded-xl border border-slate-200 dark:border-[#2C2C2E]">
+                                                            <div>
+                                                                <p className="text-[10px] text-slate-500 dark:text-[#8E8E93] uppercase font-bold tracking-widest text-center mb-1">WR %</p>
+                                                                <input type="number" value={m.winRate} onChange={e => updateSimMethod(m.id, 'winRate', e.target.value)} className={inputClass} />
+                                                            </div>
+                                                            <div className="border-l border-r border-slate-100 dark:border-[#2C2C2E] px-1">
+                                                                <p className="text-[10px] text-slate-500 dark:text-[#8E8E93] uppercase font-bold tracking-widest text-center mb-1">Odd</p>
+                                                                <input type="number" step="0.01" value={m.avgOdd} onChange={e => updateSimMethod(m.id, 'avgOdd', e.target.value)} className={inputClass} />
+                                                            </div>
+                                                            <div>
+                                                                <p className="text-[10px] text-slate-500 dark:text-[#8E8E93] uppercase font-bold tracking-widest text-center mb-1">Entr/Dia</p>
+                                                                <input type="number" min="1" value={m.entries} onChange={e => updateSimMethod(m.id, 'entries', e.target.value)} className={inputClass} />
+                                                            </div>
+                                                        </div>
+
+                                                        <div className="grid grid-cols-2 gap-3 mb-4">
+                                                            <div className="p-3 bg-white dark:bg-[#1C1C1E] rounded-xl border border-slate-200 dark:border-[#2C2C2E] text-center flex flex-col items-center justify-center">
+                                                                <p className="text-[10px] text-slate-500 dark:text-[#8E8E93] uppercase font-bold tracking-widest mb-1">Max Bad Run</p>
+                                                                <div className="flex items-center justify-center gap-1 mb-1">
+                                                                    <input type="number" min="1" value={m.badRun || 5} onChange={e => updateSimMethod(m.id, 'badRun', e.target.value)} className={`${inputClass} !text-red-500 dark:!text-red-400 !px-0 !py-0 !w-8`} />
+                                                                    <span className="text-[10px] font-bold text-slate-500">Reds</span>
+                                                                </div>
+                                                                <span className="text-[10px] font-medium text-slate-500 dark:text-[#8E8E93]">-R$ {m.drawdownRiskMoney.toFixed(0)} ({m.drawdownRiskPct.toFixed(0)}%)</span>
+                                                            </div>
+                                                            <div className="p-3 bg-white dark:bg-[#1C1C1E] rounded-xl border border-slate-200 dark:border-[#2C2C2E] text-center flex flex-col justify-center">
+                                                                <p className="text-[10px] text-slate-500 dark:text-[#8E8E93] uppercase font-bold tracking-widest mb-1.5">EV Esperado</p>
+                                                                <span className={`text-[11px] font-bold uppercase tracking-widest px-2 py-0.5 rounded border inline-block mx-auto mb-1.5 ${m.evPct > 0 ? 'bg-emerald-50 text-emerald-600 border-emerald-200 dark:bg-emerald-500/10 dark:text-emerald-400 dark:border-emerald-500/20' : 'bg-red-50 text-red-600 border-red-200 dark:bg-red-500/10 dark:text-red-400 dark:border-red-500/20'}`}>{m.evPct > 0 ? '+' : ''}{m.evPct.toFixed(1)}%</span>
+                                                                <span className="text-[10px] text-slate-500 dark:text-[#8E8E93] font-bold">{m.evMoney > 0 ? '+' : ''} R$ {m.evMoney.toFixed(2)}/bet</span>
+                                                            </div>
+                                                        </div>
+
+                                                        <div className="flex flex-col gap-3 p-4 bg-white dark:bg-[#1C1C1E] rounded-xl border border-slate-200 dark:border-[#2C2C2E] shadow-sm">
+                                                            <div className="flex items-center justify-between gap-2 border-b border-slate-100 dark:border-[#2C2C2E] pb-3">
+                                                                <div className="flex-1 text-center">
+                                                                    <p className="text-[10px] text-slate-500 dark:text-[#8E8E93] uppercase font-bold tracking-widest mb-1">Stake Meta</p>
+                                                                    <span className={`font-mono font-bold text-sm block ${m.requiredStakePct > m.safeStakePct ? 'text-red-500' : 'text-slate-900 dark:text-white'}`}>{m.evPct > 0 ? m.requiredStakePct.toFixed(1) + '%' : 'N/A'}</span>
+                                                                </div>
+                                                                <div className="flex-1 text-center border-l border-slate-100 dark:border-[#2C2C2E]">
+                                                                    <p className="text-[10px] text-slate-500 dark:text-[#8E8E93] uppercase font-bold tracking-widest mb-1">Sua Stake</p>
+                                                                    <div className="flex justify-center items-center gap-1">
+                                                                        <input type="number" step="0.1" value={m.stake} onChange={e => updateSimMethod(m.id, 'stake', e.target.value)} className={`${inputClass} !w-12 !py-0`} />
+                                                                        <span className="text-xs font-bold text-slate-500">%</span>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                            <div className="text-center pt-1">
+                                                                <p className="text-[10px] text-emerald-600 dark:text-emerald-500 uppercase font-bold tracking-widest mb-2">Aposte Isso</p>
+                                                                <div className="bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 py-3 px-2 rounded-xl font-bold font-mono text-lg border border-emerald-200 dark:border-emerald-500/20 shadow-sm">
+                                                                    R$ {m.stakeValue.toFixed(2)}
+                                                                </div>
+                                                            </div>
+                                                        </div>
+
+                                                    </motion.div>
+                                                ))}
+                                            </AnimatePresence>
+                                            
+                                            <button onClick={addSimMethod} className="w-full mt-4 py-4 rounded-xl border border-slate-300 dark:border-[#3A3A3C] text-slate-600 dark:text-white font-bold uppercase tracking-widest text-xs flex items-center justify-center gap-2 hover:bg-slate-100 dark:hover:bg-[#2C2C2E] transition-colors bg-white dark:bg-[#1C1C1E] shadow-sm">
+                                                <Plus size={16} /> Nova Simulação
+                                            </button>
+                                        </div>
                                     </div>
                                 </div>
 
