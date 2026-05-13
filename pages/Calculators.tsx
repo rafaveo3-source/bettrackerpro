@@ -309,13 +309,13 @@ const Calculators: React.FC = () => {
       
       let riskBadge = null;
       if (evRaw <= 0) {
-          riskBadge = <span className="text-[8px] font-bold text-red-500 uppercase bg-red-500/10 px-2 py-0.5 rounded whitespace-nowrap">EV Negativo</span>;
+          riskBadge = <span className="text-[8px] font-bold text-red-500 uppercase bg-red-50 dark:bg-red-500/10 px-2 py-0.5 rounded whitespace-nowrap border border-red-200 dark:border-red-500/20">EV Negativo</span>;
       } else if (drawdownRiskPct >= 50) {
-          riskBadge = <span className="text-[8px] font-bold text-red-500 uppercase bg-red-500/10 px-2 py-0.5 rounded flex items-center justify-center gap-1 whitespace-nowrap"><AlertTriangle size={10}/> Ruína</span>;
+          riskBadge = <span className="text-[8px] font-bold text-red-500 uppercase bg-red-50 dark:bg-red-500/10 px-2 py-0.5 rounded flex items-center justify-center gap-1 whitespace-nowrap border border-red-200 dark:border-red-500/20"><AlertTriangle size={10}/> Ruína</span>;
       } else if (m.stake > safeStakePct * 2) {
-          riskBadge = <span className="text-[8px] font-bold text-amber-600 dark:text-amber-500 uppercase bg-amber-50 dark:bg-amber-500/10 px-2 py-0.5 rounded whitespace-nowrap">Risco Alto</span>;
+          riskBadge = <span className="text-[8px] font-bold text-amber-600 dark:text-amber-500 uppercase bg-amber-50 dark:bg-amber-500/10 px-2 py-0.5 rounded whitespace-nowrap border border-amber-200 dark:border-amber-500/20">Risco Alto</span>;
       } else {
-          riskBadge = <span className="text-[8px] font-bold text-emerald-600 dark:text-emerald-500 uppercase bg-emerald-50 dark:bg-emerald-500/10 px-2 py-0.5 rounded whitespace-nowrap">Segura</span>;
+          riskBadge = <span className="text-[8px] font-bold text-emerald-600 dark:text-emerald-500 uppercase bg-emerald-50 dark:bg-emerald-500/10 px-2 py-0.5 rounded whitespace-nowrap border border-emerald-200 dark:border-emerald-500/20">Segura</span>;
       }
 
       const dailyGrowth = evRaw * (m.stake / 100) * m.entries * 100;
@@ -468,7 +468,7 @@ const Calculators: React.FC = () => {
     { id: 'odds', label: 'Odds Conv.', pro: false }
   ];
 
-  const inputClass = "bg-transparent border-b border-transparent hover:border-slate-300 dark:hover:border-[#3A3A3C] focus:border-indigo-500 text-slate-900 dark:text-white px-1 py-1 outline-none font-mono text-xs w-full text-center transition-colors";
+  const inputClass = "bg-transparent border-b border-transparent hover:border-slate-300 dark:hover:border-[#3A3A3C] focus:border-indigo-500 text-slate-900 dark:text-white px-1 py-1.5 md:py-1 outline-none font-mono text-base md:text-xs w-full text-center transition-colors";
   const cardClass = "bg-white dark:bg-[#1C1C1E] border border-slate-200 dark:border-[#2C2C2E] rounded-2xl p-6 shadow-sm";
   const sectionTitleClass = "text-lg font-bold text-slate-900 dark:text-white uppercase tracking-tight mb-6 flex items-center gap-2";
 
@@ -505,6 +505,7 @@ const Calculators: React.FC = () => {
           </div>
       </div>
       
+      {/* 🔥 FIX: Navegação Horizontal Responsiva (Snap-scroll Mobile) 🔥 */}
       <div className="flex w-full overflow-x-auto bg-slate-100 dark:bg-[#000000] p-1.5 rounded-xl border border-slate-200 dark:border-[#2C2C2E] px-4 md:px-1 snap-x snap-mandatory mx-4 md:mx-0 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:'none'] [scrollbar-width:'none']">
         {tabs.map(tab => (
           <button
@@ -542,6 +543,7 @@ const Calculators: React.FC = () => {
                                             <LayoutGrid size={14}/> Dashboard Base
                                         </p>
                                         <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full sm:w-auto">
+                                            {/* 🔥 FIX: Segmented Control ocupando espaço certo no Mobile 🔥 */}
                                             <div className="flex bg-slate-50 dark:bg-[#000000] p-1 rounded-lg border border-slate-200 dark:border-[#2C2C2E] shadow-sm w-full sm:w-auto">
                                                 <button onClick={() => setGrowthMode('compound')} className={`flex-1 sm:flex-none px-4 py-2 sm:px-3 sm:py-1.5 text-[10px] font-bold uppercase tracking-wider rounded-md transition-all ${growthMode === 'compound' ? 'bg-white dark:bg-[#2C2C2E] text-slate-900 dark:text-white shadow-sm' : 'text-slate-500 dark:text-[#8E8E93] hover:text-slate-700 dark:hover:text-slate-300'}`}>Compostos</button>
                                                 <button onClick={() => setGrowthMode('fixed')} className={`flex-1 sm:flex-none px-4 py-2 sm:px-3 sm:py-1.5 text-[10px] font-bold uppercase tracking-wider rounded-md transition-all ${growthMode === 'fixed' ? 'bg-white dark:bg-[#2C2C2E] text-slate-900 dark:text-white shadow-sm' : 'text-slate-500 dark:text-[#8E8E93] hover:text-slate-700 dark:hover:text-slate-300'}`}>Fixa</button>
@@ -862,7 +864,7 @@ const Calculators: React.FC = () => {
                                                                 </div>
                                                             </div>
                                                             <div className="bg-emerald-50 dark:bg-emerald-500/10 p-5 flex flex-col items-center justify-center">
-                                                                <p className="text-[10px] text-emerald-700 dark:text-emerald-500 uppercase font-black tracking-widest mb-1.5">Aposte Isso na Próxima Entrada</p>
+                                                                <p className="text-[10px] text-emerald-700 dark:text-emerald-500 uppercase font-bold tracking-widest mb-1.5">Aposte Isso na Próxima Entrada</p>
                                                                 <div className="text-3xl font-black font-mono text-emerald-600 dark:text-emerald-400 tracking-tight">
                                                                     R$ {m.stakeValue.toFixed(2)}
                                                                 </div>
@@ -873,7 +875,7 @@ const Calculators: React.FC = () => {
                                                 ))}
                                             </AnimatePresence>
                                             
-                                            <button onClick={addSimMethod} className="w-full mt-2 py-4 rounded-xl border-2 border-dashed border-slate-300 dark:border-[#3A3A3C] text-slate-500 dark:text-[#8E8E93] hover:text-slate-900 dark:hover:text-white font-bold uppercase tracking-widest text-xs flex items-center justify-center gap-2 hover:bg-slate-50 dark:hover:bg-[#1C1C1E] transition-colors shadow-sm">
+                                            <button onClick={addSimMethod} className="w-full mt-2 py-4 rounded-xl border border-slate-300 dark:border-[#3A3A3C] text-slate-500 dark:text-[#8E8E93] hover:text-slate-900 dark:hover:text-white font-bold uppercase tracking-widest text-xs flex items-center justify-center gap-2 hover:bg-slate-50 dark:hover:bg-[#1C1C1E] transition-colors shadow-sm">
                                                 <Plus size={16} /> Adicionar Nova Simulação
                                             </button>
                                         </div>
