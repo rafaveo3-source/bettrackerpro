@@ -356,49 +356,21 @@ const NewBetModal: React.FC<NewBetModalProps> = ({
 
   const resultValue = calculateResult();
 
-  const inputStyle =
-    'w-full bg-[#1C1C1E] border border-[#3A3A3C] text-white rounded-2xl px-5 py-4 outline-none focus:border-indigo-500 transition-colors text-base font-semibold placeholder:text-[#636366]';
+  // 🔥 Design System Apple PRO: Estilos Flat & Sóbrios 🔥
+  const inputStyle = 'w-full bg-slate-50 dark:bg-[#000000] border border-slate-200 dark:border-[#3A3A3C] text-slate-900 dark:text-white rounded-xl px-4 py-3 outline-none focus:border-indigo-500 transition-colors text-sm font-bold placeholder:text-slate-400 dark:placeholder:text-[#636366] appearance-none';
 
   const myActiveLeagues = globalLeagues.filter(
     (l) => userLeagues.includes(l.id)
   );
 
   const statusOptions = [
-    {
-      id: 'pending',
-      label: 'Aberto',
-      icon: Clock
-    },
-    {
-      id: 'won',
-      label: 'Lucro',
-      icon: CheckCircle2
-    },
-    {
-      id: 'half-won',
-      label: '½ Lucro',
-      icon: CheckCircle2
-    },
-    {
-      id: 'lost',
-      label: 'Prejuízo',
-      icon: XCircle
-    },
-    {
-      id: 'half-lost',
-      label: '½ Prej.',
-      icon: XCircle
-    },
-    {
-      id: 'cashout',
-      label: 'Cashout',
-      icon: DollarSign
-    },
-    {
-      id: 'refunded',
-      label: 'Devolvido',
-      icon: Ban
-    }
+    { id: 'pending', label: 'Aberto', icon: Clock, color: 'bg-slate-100 text-slate-900 dark:bg-[#1C1C1E] dark:text-white border-slate-200 dark:border-[#3A3A3C]' },
+    { id: 'won', label: 'Lucro', icon: CheckCircle2, color: 'bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400 border-emerald-200 dark:border-emerald-500/30' },
+    { id: 'half-won', label: '½ Lucro', icon: CheckCircle2, color: 'bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400 border-emerald-200 dark:border-emerald-500/30 opacity-80' },
+    { id: 'lost', label: 'Prej.', icon: XCircle, color: 'bg-red-50 text-red-700 dark:bg-red-500/10 dark:text-red-400 border-red-200 dark:border-red-500/30' },
+    { id: 'half-lost', label: '½ Prej.', icon: XCircle, color: 'bg-red-50 text-red-700 dark:bg-red-500/10 dark:text-red-400 border-red-200 dark:border-red-500/30 opacity-80' },
+    { id: 'cashout', label: 'Cashout', icon: DollarSign, color: 'bg-indigo-50 text-indigo-700 dark:bg-indigo-500/10 dark:text-indigo-400 border-indigo-200 dark:border-indigo-500/30' },
+    { id: 'refunded', label: 'Devolve', icon: Ban, color: 'bg-slate-100 text-slate-600 dark:bg-[#2C2C2E] dark:text-[#8E8E93] border-slate-200 dark:border-[#3A3A3C]' }
   ];
 
   return (
@@ -409,70 +381,53 @@ const NewBetModal: React.FC<NewBetModalProps> = ({
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           onClick={onClose}
-          className="fixed inset-0 bg-black/80 backdrop-blur-md z-50 flex items-end sm:items-center justify-center"
+          className="fixed inset-0 bg-slate-900/60 dark:bg-black/80 backdrop-blur-sm z-[70] flex items-end sm:items-center justify-center font-sans sm:p-4"
         >
           <motion.div
-            initial={{
-              scale: 0.95,
-              opacity: 0,
-              y: 40
-            }}
-            animate={{
-              scale: 1,
-              opacity: 1,
-              y: 0
-            }}
-            exit={{
-              scale: 0.95,
-              opacity: 0,
-              y: 40
-            }}
-            transition={{
-              type: 'spring',
-              damping: 24,
-              stiffness: 260
-            }}
+            initial={{ scale: 0.95, opacity: 0, y: 40 }}
+            animate={{ scale: 1, opacity: 1, y: 0 }}
+            exit={{ scale: 0.95, opacity: 0, y: 40 }}
+            transition={{ type: 'spring', damping: 25, stiffness: 300 }}
             onClick={(e) => e.stopPropagation()}
-            className="w-full max-w-3xl h-[95vh] bg-[#000000] border border-[#2C2C2E] sm:rounded-[2rem] rounded-t-[2rem] overflow-hidden flex flex-col shadow-2xl"
+            className="w-full max-w-2xl bg-white dark:bg-[#1C1C1E] border border-slate-200 dark:border-[#2C2C2E] sm:rounded-2xl rounded-t-3xl shadow-2xl flex flex-col relative overflow-hidden h-[95vh] sm:h-auto sm:max-h-[90vh]"
           >
             {/* HEADER */}
-            <div className="px-6 py-5 border-b border-[#2C2C2E] bg-black/70 backdrop-blur-md shrink-0 z-20">
+            <div className="px-5 py-4 border-b border-slate-100 dark:border-[#2C2C2E] flex flex-col gap-3 bg-white/90 dark:bg-[#1C1C1E]/90 backdrop-blur-md shrink-0 z-20">
               <div className="flex items-center justify-between">
                 <div>
-                  <h2 className="text-2xl font-black text-white tracking-tight">
+                  <h2 className="text-xl font-bold text-slate-900 dark:text-white tracking-tight">
                     {betToEdit
                       ? 'Editar Operação'
                       : 'Nova Operação'}
                   </h2>
-
-                  <p className="text-[#8E8E93] text-sm mt-1">
-                    Diário operacional profissional
+                  <p className="text-slate-500 dark:text-[#8E8E93] text-xs mt-0.5 font-medium">
+                    Diário operacional
                   </p>
                 </div>
 
                 <button
                   onClick={onClose}
-                  className="w-10 h-10 rounded-full bg-[#1C1C1E] border border-[#3A3A3C] flex items-center justify-center text-[#8E8E93] hover:text-white transition-colors"
+                  className="w-8 h-8 rounded-full bg-slate-100 dark:bg-[#2C2C2E] flex items-center justify-center text-slate-500 dark:text-[#8E8E93] hover:bg-slate-200 dark:hover:text-white transition-colors"
                 >
-                  <X size={18} />
+                  <X size={16} />
                 </button>
               </div>
 
               {!betToEdit && isPro && (
-                <div className="flex mt-5 bg-[#1C1C1E] p-1 rounded-2xl border border-[#2C2C2E]">
+                <div className="flex bg-slate-100 dark:bg-[#000000] p-1 rounded-lg border border-slate-200 dark:border-[#2C2C2E] mt-1">
                   <button
                     type="button"
                     onClick={() =>
                       setEntryMode('manual')
                     }
-                    className={`flex-1 py-3 rounded-xl text-sm font-bold transition-all ${
+                    className={`flex-1 py-2.5 rounded-md text-[11px] font-bold uppercase tracking-widest transition-all ${
                       entryMode === 'manual'
-                        ? 'bg-white text-black'
-                        : 'text-[#8E8E93]'
+                        ? 'bg-white dark:bg-[#2C2C2E] text-slate-900 dark:text-white shadow-sm border border-slate-200 dark:border-transparent'
+                        : 'text-slate-500 dark:text-[#8E8E93]'
                     }`}
                   >
-                    <div className="flex items-center justify-center gap-2">
-                      <Edit3 size={16} />
+                    <div className="flex items-center justify-center gap-1.5">
+                      <Edit3 size={14} />
                       Manual
                     </div>
                   </button>
@@ -482,14 +437,14 @@ const NewBetModal: React.FC<NewBetModalProps> = ({
                     onClick={() =>
                       setEntryMode('scanner')
                     }
-                    className={`flex-1 py-3 rounded-xl text-sm font-bold transition-all ${
+                    className={`flex-1 py-2.5 rounded-md text-[11px] font-bold uppercase tracking-widest transition-all ${
                       entryMode === 'scanner'
-                        ? 'bg-indigo-600 text-white'
-                        : 'text-[#8E8E93]'
+                        ? 'bg-indigo-600 text-white shadow-sm border border-transparent'
+                        : 'text-slate-500 dark:text-[#8E8E93]'
                     }`}
                   >
-                    <div className="flex items-center justify-center gap-2">
-                      <Camera size={16} />
+                    <div className="flex items-center justify-center gap-1.5">
+                      <Camera size={14} />
                       Scanner IA
                     </div>
                   </button>
@@ -499,21 +454,12 @@ const NewBetModal: React.FC<NewBetModalProps> = ({
               <AnimatePresence>
                 {error && (
                   <motion.div
-                    initial={{
-                      opacity: 0,
-                      height: 0
-                    }}
-                    animate={{
-                      opacity: 1,
-                      height: 'auto'
-                    }}
-                    exit={{
-                      opacity: 0,
-                      height: 0
-                    }}
-                    className="mt-4 bg-red-500/10 border border-red-500/20 text-red-400 p-4 rounded-2xl flex items-center gap-3 text-sm font-semibold"
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: 'auto' }}
+                    exit={{ opacity: 0, height: 0 }}
+                    className="mt-1 bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/20 text-red-600 dark:text-red-400 p-3 rounded-lg flex items-center gap-2 text-xs font-bold"
                   >
-                    <AlertCircle size={16} />
+                    <AlertCircle size={14} />
                     {error}
                   </motion.div>
                 )}
@@ -521,9 +467,9 @@ const NewBetModal: React.FC<NewBetModalProps> = ({
             </div>
 
             {/* BODY */}
-            <div className="flex-1 overflow-hidden">
+            <div className="flex-1 overflow-hidden flex flex-col">
               {entryMode === 'scanner' ? (
-                <div className="p-6 overflow-y-auto h-full">
+                <div className="p-4 sm:p-6 overflow-y-auto h-full custom-scrollbar">
                   <TicketScanner
                     onScanComplete={
                       handleScanComplete
@@ -533,16 +479,17 @@ const NewBetModal: React.FC<NewBetModalProps> = ({
               ) : (
                 <form
                   onSubmit={handleSubmit}
-                  className="flex flex-col h-full"
+                  className="flex flex-col h-full overflow-hidden"
                 >
-                  <div className="flex-1 overflow-y-auto p-6 space-y-6">
+                  <div className="flex-1 overflow-y-auto p-5 sm:p-6 space-y-6 custom-scrollbar">
+                    
                     {/* STATUS */}
                     <div>
-                      <label className="text-[10px] uppercase tracking-[0.2em] text-[#8E8E93] font-bold mb-3 block">
+                      <label className="text-[10px] uppercase tracking-widest text-slate-500 dark:text-[#8E8E93] font-bold mb-2 block ml-1">
                         Status da Operação
                       </label>
 
-                      <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-7 gap-2">
+                      <div className="grid grid-cols-4 sm:grid-cols-7 gap-2">
                         {statusOptions.map((opt) => (
                           <button
                             key={opt.id}
@@ -550,53 +497,26 @@ const NewBetModal: React.FC<NewBetModalProps> = ({
                             onClick={() =>
                               setFormData({
                                 ...formData,
-                                status:
-                                  opt.id as BetStatus
+                                status: opt.id as BetStatus
                               })
                             }
-                            className={`rounded-2xl py-3 border transition-all flex flex-col items-center gap-1 text-[11px] font-bold ${
-                              formData.status ===
-                              opt.id
-                                ? 'bg-indigo-600 border-indigo-500 text-white'
-                                : 'bg-[#1C1C1E] border-[#2C2C2E] text-[#8E8E93]'
+                            className={`rounded-lg py-2.5 border transition-all flex flex-col items-center gap-1 text-[10px] font-bold uppercase tracking-wider ${
+                              formData.status === opt.id
+                                ? `${opt.color} shadow-sm`
+                                : 'bg-slate-50 dark:bg-[#000000] border-slate-200 dark:border-[#3A3A3C] text-slate-500 dark:text-[#8E8E93] hover:border-slate-300 dark:hover:border-slate-600'
                             }`}
                           >
-                            <opt.icon size={16} />
+                            <opt.icon size={16} className="mb-0.5" />
                             {opt.label}
                           </button>
                         ))}
                       </div>
                     </div>
 
-                    {/* LEAGUE */}
-                    {!betToEdit &&
-                      myActiveLeagues.length >
-                        0 &&
-                      isPro && (
-                        <div className="flex justify-end">
-                          <button
-                            type="button"
-                            onClick={() =>
-                              setIsManualMode(
-                                !isManualMode
-                              )
-                            }
-                            className="text-xs text-indigo-400 font-bold flex items-center gap-2 bg-indigo-500/10 border border-indigo-500/20 px-4 py-2 rounded-xl"
-                          >
-                            {isManualMode
-                              ? 'Seleção Inteligente'
-                              : 'Digitação Manual'}
-                            <ArrowRightLeft
-                              size={14}
-                            />
-                          </button>
-                        </div>
-                      )}
-
-                    {/* SPORT + EVENT */}
-                    <div className="grid grid-cols-1 sm:grid-cols-12 gap-4">
+                    {/* LIGA / EVENTO */}
+                    <div className="grid grid-cols-1 sm:grid-cols-12 gap-5">
                       <div className="sm:col-span-4">
-                        <label className="text-[10px] uppercase tracking-[0.2em] text-[#8E8E93] font-bold mb-2 block">
+                        <label className="text-[10px] uppercase tracking-widest text-slate-500 dark:text-[#8E8E93] font-bold mb-2 block ml-1">
                           Competição
                         </label>
 
@@ -605,55 +525,87 @@ const NewBetModal: React.FC<NewBetModalProps> = ({
                           onChange={(e) =>
                             setFormData({
                               ...formData,
-                              sport:
-                                e.target.value
+                              sport: e.target.value
                             })
                           }
                           className={inputStyle}
                         >
-                          <option>
-                            Futebol
-                          </option>
-                          <option>
-                            Basquete
-                          </option>
+                          <option>Futebol</option>
+                          <option>Basquete</option>
                           <option>Tênis</option>
-                          <option>
-                            eSports
-                          </option>
+                          <option>eSports</option>
                           <option>MMA</option>
                           <option>Vôlei</option>
-                          <option>
-                            Outros
-                          </option>
+                          <option>Outros</option>
                         </select>
                       </div>
 
                       <div className="sm:col-span-8">
-                        <label className="text-[10px] uppercase tracking-[0.2em] text-[#8E8E93] font-bold mb-2 block">
+                        <label className="text-[10px] uppercase tracking-widest text-slate-500 dark:text-[#8E8E93] font-bold mb-2 flex items-center justify-between ml-1">
                           Evento
+                          {!isManualMode && myActiveLeagues.length > 0 && isPro && (
+                              <button
+                                type="button"
+                                onClick={() => setIsManualMode(!isManualMode)}
+                                className="text-indigo-600 dark:text-indigo-400 font-bold flex items-center gap-1"
+                              >
+                                {isManualMode ? 'Smart' : 'Manual'}
+                                <ArrowRightLeft size={10} />
+                              </button>
+                          )}
                         </label>
 
-                        <input
-                          type="text"
-                          value={formData.event}
-                          onChange={(e) =>
-                            setFormData({
-                              ...formData,
-                              event:
-                                e.target.value
-                            })
-                          }
-                          placeholder="Ex: Flamengo vs Palmeiras"
-                          className={inputStyle}
-                        />
+                        {!isManualMode && selectedLeagueId && selectedLeagueId !== 'manual' && isPro ? (
+                            <div className="flex gap-2 items-center">
+                              <select 
+                                value={selectedHomeTeam}
+                                onChange={(e) => setSelectedHomeTeam(e.target.value)}
+                                className={inputStyle}
+                                disabled={isLoadingTeams}
+                              >
+                                <option value="">Casa</option>
+                                {currentLeagueTeams.map(t => (
+                                  <option key={t.id} value={t.id}>
+                                     {t.name}
+                                  </option>
+                                ))}
+                              </select>
+                              <span className="text-slate-400 font-bold text-xs">VS</span>
+                              <select 
+                                value={selectedAwayTeam}
+                                onChange={(e) => setSelectedAwayTeam(e.target.value)}
+                                className={inputStyle}
+                                disabled={isLoadingTeams}
+                              >
+                                <option value="">Fora</option>
+                                {currentLeagueTeams.map(t => (
+                                  <option key={t.id} value={t.id}>
+                                     {t.name}
+                                  </option>
+                                ))}
+                              </select>
+                           </div>
+                        ) : (
+                            <input
+                              type="text"
+                              value={formData.event}
+                              onChange={(e) =>
+                                setFormData({
+                                  ...formData,
+                                  event: e.target.value
+                                })
+                              }
+                              placeholder={!isPro ? "Ex: Fla vs Pal" : "Ex: Flamengo vs Palmeiras"}
+                              className={inputStyle}
+                            />
+                        )}
                       </div>
                     </div>
 
-                    {/* MARKET */}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    {/* MARKET + SELECTION */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                       <div>
-                        <label className="text-[10px] uppercase tracking-[0.2em] text-[#8E8E93] font-bold mb-2 block">
+                        <label className="text-[10px] uppercase tracking-widest text-slate-500 dark:text-[#8E8E93] font-bold mb-2 block ml-1">
                           Mercado
                         </label>
 
@@ -662,8 +614,7 @@ const NewBetModal: React.FC<NewBetModalProps> = ({
                           onChange={(e) =>
                             setFormData({
                               ...formData,
-                              market:
-                                e.target.value
+                              market: e.target.value
                             })
                           }
                           className={inputStyle}
@@ -699,13 +650,13 @@ const NewBetModal: React.FC<NewBetModalProps> = ({
                               )
                             }
                             placeholder="Nome do mercado"
-                            className={`${inputStyle} mt-3`}
+                            className={`${inputStyle} mt-3 border-indigo-500`}
                           />
                         )}
                       </div>
 
                       <div>
-                        <label className="text-[10px] uppercase tracking-[0.2em] text-[#8E8E93] font-bold mb-2 block">
+                        <label className="text-[10px] uppercase tracking-widest text-slate-500 dark:text-[#8E8E93] font-bold mb-2 block ml-1">
                           Seleção
                         </label>
 
@@ -715,8 +666,7 @@ const NewBetModal: React.FC<NewBetModalProps> = ({
                           onChange={(e) =>
                             setFormData({
                               ...formData,
-                              selection:
-                                e.target.value
+                              selection: e.target.value
                             })
                           }
                           placeholder="Over 2.5"
@@ -724,116 +674,137 @@ const NewBetModal: React.FC<NewBetModalProps> = ({
                         />
                       </div>
                     </div>
+                    
+                    {/* MÉTODO E GESTÃO */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                        <div>
+                            <label className="text-[10px] uppercase tracking-widest text-slate-500 dark:text-[#8E8E93] font-bold mb-2 flex items-center justify-between ml-1">
+                                Método
+                                {!isPro && availableMethods.length === 0 && <Lock size={10} className="text-indigo-500"/>}
+                            </label>
+                            <select
+                              value={formData.method}
+                              onChange={(e) => setFormData({ ...formData, method: e.target.value })}
+                              className={inputStyle}
+                              disabled={!isPro && availableMethods.length === 0}
+                            >
+                              <option value="">{(!isPro && availableMethods.length === 0) ? "Padrão" : "Opcional"}</option>
+                              {availableMethods.map((m) => (
+                                <option key={m.id} value={m.name}>{m.name}</option>
+                              ))}
+                            </select>
+                        </div>
+                        <div>
+                            <label className="text-[10px] uppercase tracking-widest text-slate-500 dark:text-[#8E8E93] font-bold mb-2 flex items-center justify-between ml-1">
+                                Plano de Gestão
+                                {!isPro && <Lock size={10} className="text-indigo-500"/>}
+                            </label>
+                            <select
+                              value={formData.strategy}
+                              onChange={(e) => setFormData({ ...formData, strategy: e.target.value })}
+                              className={inputStyle}
+                              disabled={!isPro || availableStrategies.length === 0}
+                            >
+                              <option value="">{(!isPro) ? "Bloqueado" : "Opcional"}</option>
+                              {availableStrategies.map((s) => (
+                                <option key={s.id} value={s.name}>{s.name}</option>
+                              ))}
+                            </select>
+                        </div>
+                    </div>
 
                     {/* ODDS + STAKE */}
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-2 gap-4 border-t border-slate-100 dark:border-[#2C2C2E] pt-5 mt-2">
                       <div>
-                        <label className="text-[10px] uppercase tracking-[0.2em] text-[#8E8E93] font-bold mb-2 block">
+                        <label className="text-[10px] uppercase tracking-widest text-slate-500 dark:text-[#8E8E93] font-bold mb-2 block ml-1">
                           Odd
                         </label>
-
-                        <input
-                          type="number"
-                          step="0.01"
-                          value={formData.odds}
-                          onChange={(e) =>
-                            setFormData({
-                              ...formData,
-                              odds:
-                                e.target.value
-                            })
-                          }
-                          className={`${inputStyle} font-mono text-xl`}
-                        />
+                        <div className="relative">
+                            <span className="absolute left-3 top-1/2 -translate-y-1/2 font-mono font-bold text-slate-400">@</span>
+                            <input
+                                type="number"
+                                step="0.01"
+                                value={formData.odds}
+                                onChange={(e) => setFormData({ ...formData, odds: e.target.value })}
+                                placeholder="1.85"
+                                className={`${inputStyle} pl-8 font-mono text-base`}
+                            />
+                        </div>
                       </div>
 
                       <div>
-                        <label className="text-[10px] uppercase tracking-[0.2em] text-[#8E8E93] font-bold mb-2 block">
-                          Exposição ({currency})
+                        <label className="text-[10px] uppercase tracking-widest text-slate-500 dark:text-[#8E8E93] font-bold mb-2 block ml-1 truncate">
+                          Stake ({currency})
                         </label>
 
                         <input
                           type="number"
                           step="1"
                           value={formData.stake}
-                          onChange={(e) =>
-                            setFormData({
-                              ...formData,
-                              stake:
-                                e.target.value
-                            })
-                          }
-                          className={`${inputStyle} font-mono text-xl`}
+                          onChange={(e) => setFormData({ ...formData, stake: e.target.value })}
+                          placeholder="100.00"
+                          className={`${inputStyle} font-mono text-base`}
                         />
                       </div>
                     </div>
 
                     {/* CASHOUT */}
-                    {formData.status ===
-                      'cashout' && (
-                      <div>
-                        <label className="text-[10px] uppercase tracking-[0.2em] text-indigo-400 font-bold mb-2 block">
-                          Valor Cashout
+                    {formData.status === 'cashout' && (
+                      <motion.div 
+                        initial={{ opacity: 0, height: 0 }}
+                        animate={{ opacity: 1, height: 'auto' }}
+                        className="col-span-2 pt-2"
+                      >
+                        <label className="text-[10px] uppercase tracking-widest text-indigo-600 dark:text-indigo-400 font-bold mb-2 block ml-1">
+                          Retorno (Cashout)
                         </label>
 
                         <input
                           type="number"
                           step="0.01"
-                          value={
-                            formData.cashoutValue
-                          }
-                          onChange={(e) =>
-                            setFormData({
-                              ...formData,
-                              cashoutValue:
-                                e.target.value
-                            })
-                          }
-                          className={`${inputStyle} border-indigo-500/30`}
+                          value={formData.cashoutValue}
+                          onChange={(e) => setFormData({ ...formData, cashoutValue: e.target.value })}
+                          placeholder="Valor sacado"
+                          className={`${inputStyle} border-indigo-500 text-indigo-600 dark:text-indigo-400 font-mono text-base`}
                         />
-                      </div>
+                      </motion.div>
                     )}
                   </div>
 
                   {/* FOOTER */}
-                  <div className="border-t border-[#2C2C2E] bg-black/80 backdrop-blur-md p-6 flex flex-col sm:flex-row items-center justify-between gap-4">
-                    <div className="bg-[#1C1C1E] border border-[#2C2C2E] rounded-2xl px-5 py-4 w-full sm:w-auto">
-                      <p className="text-[10px] uppercase tracking-[0.2em] text-[#8E8E93] font-bold mb-1">
-                        Resultado
+                  <div className="bg-slate-50 dark:bg-[#000000] border-t border-slate-200 dark:border-[#2C2C2E] p-5 shrink-0 mt-auto flex flex-col sm:flex-row items-center justify-between gap-4">
+                    
+                    <div className="w-full sm:w-auto flex flex-col items-center sm:items-start bg-white dark:bg-[#1C1C1E] border border-slate-200 dark:border-[#3A3A3C] rounded-xl px-5 py-3 shadow-sm">
+                      <p className="text-slate-500 dark:text-[#8E8E93] text-[9px] font-bold uppercase tracking-widest mb-1">
+                        {formData.status === 'pending' ? 'Potencial Estimado' : 'Resultado'}
                       </p>
 
                       <div
-                        className={`text-3xl font-black font-mono ${
+                        className={`text-xl font-bold font-mono tracking-tight ${
                           resultValue > 0
-                            ? 'text-emerald-400'
+                            ? 'text-emerald-600 dark:text-emerald-400'
                             : resultValue < 0
-                            ? 'text-red-400'
-                            : 'text-white'
+                            ? 'text-red-600 dark:text-red-400'
+                            : 'text-slate-900 dark:text-white'
                         }`}
                       >
-                        {resultValue > 0
-                          ? '+'
-                          : ''}
-                        {currency}{' '}
-                        {resultValue.toFixed(2)}
+                        {resultValue > 0 ? '+' : ''}{currency} {resultValue.toFixed(2)}
                       </div>
                     </div>
 
                     <button
                       type="submit"
-                      className="w-full sm:w-[320px] bg-emerald-500 hover:bg-emerald-400 text-black font-black py-5 rounded-2xl transition-all text-sm uppercase tracking-[0.2em] flex items-center justify-center gap-3 shadow-2xl shadow-emerald-500/20"
+                      className="w-full sm:w-auto bg-slate-900 hover:bg-slate-800 text-white dark:bg-emerald-600 dark:hover:bg-emerald-500 dark:text-white font-bold py-4 px-8 rounded-xl transition-all text-xs uppercase tracking-widest flex items-center justify-center gap-2 shadow-sm"
                     >
                       {betToEdit ? (
                         <>
-                          <Save size={18} />
-                          Atualizar Registro
+                          <Save size={16} />
+                          Atualizar
                         </>
                       ) : (
                         <>
-                          <CheckCircle2
-                            size={18}
-                          />
-                          Salvar Operação
+                          <CheckCircle2 size={16} />
+                          Salvar
                         </>
                       )}
                     </button>
