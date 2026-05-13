@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useBetStore, supabase } from '../store/useBetStore';
-import { Trash2, Save, AlertTriangle, PaintBucket, Coins, Layers, User, Image as ImageIcon, CheckCircle, PieChart, Hash, Skull, Loader2, Crown, Calendar, AlertCircle, ArrowRight, ExternalLink } from 'lucide-react';
+// 🔥 FIX: Importações completas incluindo Target e TrendingUp para evitar o crash 🔥
+import { Trash2, Save, PaintBucket, Coins, Layers, User, CheckCircle, PieChart, Hash, Skull, Loader2, Crown, Calendar, AlertCircle, ArrowRight, ExternalLink, Target, TrendingUp } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 const Settings: React.FC = () => {
@@ -105,6 +106,7 @@ const Settings: React.FC = () => {
   const cardClass = "bg-white dark:bg-[#1C1C1E] border border-slate-200 dark:border-[#2C2C2E] rounded-2xl p-6 md:p-8 shadow-sm transition-all";
   const inputClass = "bg-slate-50 dark:bg-[#000000] border border-slate-200 dark:border-[#3A3A3C] text-slate-900 dark:text-white rounded-xl px-4 py-3 text-sm focus:border-indigo-500 dark:focus:border-indigo-500 outline-none transition-colors w-full placeholder:text-slate-400 dark:placeholder:text-[#636366]";
   const sectionTitleClass = "text-xl font-bold text-slate-900 dark:text-white tracking-tight mb-6 flex items-center gap-3";
+  const listItemClass = "flex justify-between items-center py-4 border-b border-slate-100 dark:border-[#2C2C2E] last:border-0";
 
   return (
     <div className="space-y-8 max-w-5xl mx-auto pb-20 w-full overflow-x-hidden font-sans">
@@ -116,7 +118,7 @@ const Settings: React.FC = () => {
               <span className="w-2 h-2 bg-indigo-500 rounded-full animate-pulse shadow-[0_0_8px_#6366f1]"></span>
               System Control
             </div>
-            <h1 className="text-3xl md:text-4xl font-black text-slate-900 dark:text-white tracking-tight">
+            <h1 className="text-3xl md:text-4xl font-bold text-slate-900 dark:text-white tracking-tight">
               Configurações
             </h1>
             <p className="text-slate-500 dark:text-[#8E8E93] text-sm mt-2 font-medium">
@@ -130,7 +132,7 @@ const Settings: React.FC = () => {
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0 }}
-                className="flex items-center gap-2 bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-200 dark:border-emerald-500/20 text-emerald-700 dark:text-emerald-400 px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wider shadow-sm"
+                className="flex items-center gap-2 bg-emerald-50 dark:bg-[#1C1C1E] border border-emerald-200 dark:border-[#2C2C2E] text-emerald-600 dark:text-emerald-400 px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wider shadow-sm"
               >
                 <CheckCircle size={16} /> Configurações Salvas
               </motion.div>
@@ -138,7 +140,7 @@ const Settings: React.FC = () => {
           </AnimatePresence>
         </div>
 
-        {/* --- CARD DE ASSINATURA (ESTILO CARTÃO DE CRÉDITO / MEMBERSHIP) --- */}
+        {/* --- CARD DE ASSINATURA (ESTILO CARTÃO APPLE) --- */}
         <section className={`border rounded-2xl p-6 md:p-8 flex flex-col md:flex-row items-center justify-between gap-6 shadow-sm relative overflow-hidden ${isPro ? 'bg-gradient-to-r from-indigo-50 to-white dark:from-[#1C1C1E] dark:to-[#2C2C2E] border-indigo-200 dark:border-indigo-500/30' : 'bg-white dark:bg-[#1C1C1E] border-slate-200 dark:border-[#2C2C2E]'}`}>
             {isPro && <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-500/5 dark:bg-indigo-500/10 rounded-full blur-[80px] pointer-events-none" />}
             
@@ -181,17 +183,17 @@ const Settings: React.FC = () => {
                         )}
 
                         <div className="flex gap-2 w-full mt-2">
-                            <button onClick={() => navigate('/pro')} className="flex-1 md:flex-none bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2 rounded-lg font-bold text-xs uppercase tracking-widest transition-colors shadow-sm text-center">
+                            <button onClick={() => navigate('/pro')} className="flex-1 md:flex-none bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2 rounded-lg font-bold text-xs transition-colors shadow-sm text-center">
                                 Estender
                             </button>
-                            <a href="https://lastlink.com/login" target="_blank" rel="noreferrer" className="flex-1 md:flex-none bg-white hover:bg-slate-50 dark:bg-[#2C2C2E] dark:hover:bg-[#3A3A3C] text-slate-700 dark:text-white border border-slate-200 dark:border-[#3A3A3C] px-4 py-2 rounded-lg font-bold text-xs uppercase tracking-widest transition-colors text-center flex items-center justify-center gap-1.5">
+                            <a href="https://lastlink.com/login" target="_blank" rel="noreferrer" className="flex-1 md:flex-none bg-white hover:bg-slate-50 dark:bg-[#2C2C2E] dark:hover:bg-[#3A3A3C] text-slate-700 dark:text-white border border-slate-200 dark:border-[#3A3A3C] px-4 py-2 rounded-lg font-bold text-xs transition-colors text-center flex items-center justify-center gap-1.5">
                                 Lastlink <ExternalLink size={12} />
                             </a>
                         </div>
                     </>
                 ) : (
-                    <button onClick={() => navigate('/pro')} className="bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-3 px-6 rounded-xl shadow-sm transition-all flex items-center justify-center gap-2 tracking-widest text-xs uppercase w-full md:w-auto">
-                        Fazer Upgrade <ArrowRight size={14} />
+                    <button onClick={() => navigate('/pro')} className="bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-3 px-6 rounded-xl shadow-sm transition-all flex items-center justify-center gap-2 text-sm w-full md:w-auto">
+                        Fazer Upgrade <ArrowRight size={16} />
                     </button>
                 )}
             </div>
@@ -202,12 +204,12 @@ const Settings: React.FC = () => {
             {/* --- IDENTITY CARD --- */}
             <section className={cardClass}>
                 <h2 className={sectionTitleClass}>
-                  <User className="text-indigo-500" size={24} /> Identidade
+                  <User className="text-indigo-500" size={20} /> Perfil & Gestão
                 </h2>
                 
                 <form onSubmit={handleUpdateProfile} className="space-y-6">
                     <div className="flex items-center gap-4 p-4 bg-slate-50 dark:bg-[#000000] border border-slate-200 dark:border-[#2C2C2E] rounded-xl">
-                        <div className="w-16 h-16 rounded-full overflow-hidden border border-slate-200 dark:border-[#3A3A3C] shrink-0">
+                        <div className="w-14 h-14 rounded-full overflow-hidden border border-slate-200 dark:border-[#3A3A3C] shrink-0">
                             <img src={profileAvatar || `https://ui-avatars.com/api/?name=${profileName}`} alt="" className="w-full h-full object-cover" />
                         </div>
                         <div className="flex-1 min-w-0">
@@ -246,14 +248,14 @@ const Settings: React.FC = () => {
                                      <button 
                                         type="button"
                                         onClick={async () => { await setDisplayMode('currency'); setShowSavedToast(true); setTimeout(() => setShowSavedToast(false), 2000); }}
-                                        className={`flex-1 rounded-lg text-[11px] font-bold transition-all ${displayMode === 'currency' ? 'bg-white dark:bg-[#2C2C2E] text-slate-900 dark:text-white shadow-sm' : 'text-slate-500 dark:text-[#8E8E93]'}`}
+                                        className={`flex-1 rounded-lg text-xs font-bold transition-all ${displayMode === 'currency' ? 'bg-white dark:bg-[#2C2C2E] text-slate-900 dark:text-white shadow-sm' : 'text-slate-500 dark:text-[#8E8E93]'}`}
                                      >
                                         Moeda ({currency})
                                      </button>
                                      <button 
                                         type="button"
                                         onClick={async () => { await setDisplayMode('units'); setShowSavedToast(true); setTimeout(() => setShowSavedToast(false), 2000); }}
-                                        className={`flex-1 rounded-lg text-[11px] font-bold transition-all ${displayMode === 'units' ? 'bg-white dark:bg-[#2C2C2E] text-slate-900 dark:text-white shadow-sm' : 'text-slate-500 dark:text-[#8E8E93]'}`}
+                                        className={`flex-1 rounded-lg text-xs font-bold transition-all ${displayMode === 'units' ? 'bg-white dark:bg-[#2C2C2E] text-slate-900 dark:text-white shadow-sm' : 'text-slate-500 dark:text-[#8E8E93]'}`}
                                      >
                                         Unidades (u)
                                      </button>
@@ -261,7 +263,7 @@ const Settings: React.FC = () => {
                              </div>
                          </div>
                     </div>
-                    <button type="submit" className="w-full bg-slate-900 hover:bg-slate-800 text-white dark:bg-white dark:hover:bg-slate-200 dark:text-slate-900 font-bold py-3.5 rounded-xl transition-all shadow-sm flex items-center justify-center gap-2 uppercase tracking-widest text-xs">
+                    <button type="submit" className="w-full bg-slate-900 hover:bg-slate-800 text-white dark:bg-white dark:hover:bg-slate-200 dark:text-slate-900 font-bold py-3.5 rounded-xl transition-all shadow-sm flex items-center justify-center gap-2 text-sm">
                         <Save size={16} /> Salvar Preferências
                     </button>
                 </form>
@@ -270,9 +272,9 @@ const Settings: React.FC = () => {
             {/* --- METHODS CARD --- */}
             <section className={cardClass}>
                 <h2 className={sectionTitleClass}>
-                  <Layers className="text-indigo-500" size={24} /> Métodos Base
+                  <Layers className="text-indigo-500" size={20} /> Métodos Base
                 </h2>
-                <div className="flex gap-2 mb-6">
+                <div className="flex gap-2 mb-4">
                     <input 
                       type="text" 
                       value={newMethodName} 
@@ -280,17 +282,17 @@ const Settings: React.FC = () => {
                       placeholder="Ex: Back Favorito" 
                       className={inputClass} 
                     />
-                    <button onClick={handleAddMethod} className="bg-indigo-600 hover:bg-indigo-500 text-white px-5 rounded-xl text-xs font-bold transition-colors uppercase tracking-wider shadow-sm">
+                    <button onClick={handleAddMethod} className="bg-slate-900 dark:bg-white text-white dark:text-black px-5 rounded-xl text-xs font-bold transition-colors shadow-sm">
                         Add
                     </button>
                 </div>
-                <div className="space-y-2 max-h-[220px] overflow-y-auto pr-2 custom-scrollbar">
+                <div className="max-h-[260px] overflow-y-auto pr-2 custom-scrollbar">
                     {methods.map(method => (
-                      <div key={method.id} className="flex justify-between items-center p-3.5 bg-slate-50 dark:bg-[#000000] rounded-xl border border-slate-200 dark:border-[#2C2C2E] group hover:border-indigo-500/30 transition-colors">
+                      <div key={method.id} className={listItemClass}>
                         <span className="text-slate-700 dark:text-[#E5E5EA] font-medium text-sm">
                           {method.name}
                         </span>
-                        <button onClick={() => { if (window.confirm('Excluir método?')) removeMethod(method.id); }} className="text-slate-400 hover:text-red-500 transition-colors">
+                        <button onClick={() => { if (window.confirm('Excluir método?')) removeMethod(method.id); }} className="text-slate-400 hover:text-red-500 transition-colors p-1">
                           <Trash2 size={16} />
                         </button>
                       </div>
@@ -304,9 +306,9 @@ const Settings: React.FC = () => {
             {/* --- CUSTOM MARKETS --- */}
             <section className={`${cardClass} flex flex-col`}>
               <h2 className={sectionTitleClass}>
-                  <Target className="text-indigo-500" size={24} /> Mercados Cust.
+                  <Target className="text-indigo-500" size={20} /> Mercados Cust.
               </h2>
-              <div className="flex gap-2 mb-6">
+              <div className="flex gap-2 mb-4">
                 <input
                   type="text"
                   value={newMarketName}
@@ -314,15 +316,15 @@ const Settings: React.FC = () => {
                   placeholder="Ex: Escanteios HT"
                   className={inputClass}
                 />
-                <button onClick={() => { if (newMarketName.trim()) { addCustomMarket(newMarketName.trim()); setNewMarketName(''); } }} className="bg-slate-800 hover:bg-slate-700 dark:bg-[#3A3A3C] dark:hover:bg-[#48484A] text-white px-5 rounded-xl text-xs font-bold transition-colors uppercase tracking-wider shadow-sm">
+                <button onClick={() => { if (newMarketName.trim()) { addCustomMarket(newMarketName.trim()); setNewMarketName(''); } }} className="bg-slate-900 dark:bg-white text-white dark:text-black px-5 rounded-xl text-xs font-bold transition-colors shadow-sm">
                   Add
                 </button>
               </div>
-              <div className="space-y-2 flex-1 max-h-[200px] overflow-y-auto pr-2 custom-scrollbar">
+              <div className="flex-1 max-h-[220px] overflow-y-auto pr-2 custom-scrollbar">
                 {customMarkets.map((m) => (
-                  <div key={m.id} className="flex justify-between items-center p-3.5 bg-slate-50 dark:bg-[#000000] rounded-xl border border-slate-100 dark:border-[#2C2C2E]">
+                  <div key={m.id} className={listItemClass}>
                     <span className="text-slate-700 dark:text-[#E5E5EA] font-medium text-sm">{m.name}</span>
-                    <button onClick={() => { if (window.confirm('Excluir mercado?')) removeCustomMarket(m.id); }} className="text-slate-400 hover:text-red-500 transition-colors">
+                    <button onClick={() => { if (window.confirm('Excluir mercado?')) removeCustomMarket(m.id); }} className="text-slate-400 hover:text-red-500 transition-colors p-1">
                       <Trash2 size={16} />
                     </button>
                   </div>
@@ -333,9 +335,9 @@ const Settings: React.FC = () => {
             {/* --- STRATEGIES --- */}
             <section className={`${cardClass} flex flex-col`}>
               <h2 className={sectionTitleClass}>
-                  <TrendingUp className="text-indigo-500" size={24} /> Gestão / Progressão
+                  <TrendingUp className="text-indigo-500" size={20} /> Gestão / Progressão
               </h2>
-              <div className="flex gap-2 mb-6">
+              <div className="flex gap-2 mb-4">
                 <input
                   type="text"
                   value={newStrategyName}
@@ -343,15 +345,15 @@ const Settings: React.FC = () => {
                   placeholder="Ex: Martingale Adaptativo"
                   className={inputClass}
                 />
-                <button onClick={() => { if (newStrategyName.trim()) { addCustomStrategy(newStrategyName.trim()); setNewStrategyName(''); } }} className="bg-slate-800 hover:bg-slate-700 dark:bg-[#3A3A3C] dark:hover:bg-[#48484A] text-white px-5 rounded-xl text-xs font-bold transition-colors uppercase tracking-wider shadow-sm">
+                <button onClick={() => { if (newStrategyName.trim()) { addCustomStrategy(newStrategyName.trim()); setNewStrategyName(''); } }} className="bg-slate-900 dark:bg-white text-white dark:text-black px-5 rounded-xl text-xs font-bold transition-colors shadow-sm">
                   Add
                 </button>
               </div>
-              <div className="space-y-2 flex-1 max-h-[200px] overflow-y-auto pr-2 custom-scrollbar">
+              <div className="flex-1 max-h-[220px] overflow-y-auto pr-2 custom-scrollbar">
                 {customStrategies.map((s) => (
-                  <div key={s.id} className="flex justify-between items-center p-3.5 bg-slate-50 dark:bg-[#000000] rounded-xl border border-slate-100 dark:border-[#2C2C2E]">
+                  <div key={s.id} className={listItemClass}>
                     <span className="text-slate-700 dark:text-[#E5E5EA] font-medium text-sm">{s.name}</span>
-                    <button onClick={() => { if (window.confirm('Excluir estratégia?')) removeCustomStrategy(s.id); }} className="text-slate-400 hover:text-red-500 transition-colors">
+                    <button onClick={() => { if (window.confirm('Excluir estratégia?')) removeCustomStrategy(s.id); }} className="text-slate-400 hover:text-red-500 transition-colors p-1">
                       <Trash2 size={16} />
                     </button>
                   </div>
@@ -364,7 +366,7 @@ const Settings: React.FC = () => {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
                     <div>
                         <h2 className={sectionTitleClass}>
-                          <PaintBucket className="text-indigo-500" size={24} /> Identidade Visual
+                          <PaintBucket className="text-indigo-500" size={20} /> Identidade Visual
                         </h2>
                         <div className="flex gap-3 flex-wrap">
                             {[
@@ -385,7 +387,7 @@ const Settings: React.FC = () => {
                     </div>
                     <div>
                         <h2 className={sectionTitleClass}>
-                          <Coins className="text-indigo-500" size={24} /> Câmbio (Moeda)
+                          <Coins className="text-indigo-500" size={20} /> Câmbio Base
                         </h2>
                         <div className="flex gap-2 flex-wrap">
                             {['BRL', 'USD', 'EUR', 'GBP'].map(curr => (
@@ -407,26 +409,26 @@ const Settings: React.FC = () => {
             </section>
 
             {/* --- DANGER ZONE --- */}
-            <section className="bg-red-50/50 dark:bg-red-500/5 rounded-2xl p-6 md:p-8 border border-red-200/50 dark:border-red-500/10 lg:col-span-2 flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+            <section className="bg-red-50/50 dark:bg-red-500/5 rounded-2xl p-6 md:p-8 border border-red-200/50 dark:border-red-500/10 lg:col-span-2 flex flex-col md:flex-row justify-between items-start md:items-center gap-6 shadow-sm">
                 <div>
-                    <h3 className="text-lg font-bold text-red-700 dark:text-red-400 mb-1 flex items-center gap-2">
+                    <h3 className="text-lg font-bold text-red-700 dark:text-red-400 mb-1 flex items-center gap-2 tracking-tight">
                         <Skull size={20} /> Zona de Perigo
                     </h3>
-                    <p className="text-red-600/70 dark:text-red-500/60 text-sm font-medium">Excluir conta e dados permanentemente. Irreversível.</p>
+                    <p className="text-red-600/70 dark:text-red-500/60 text-sm font-medium">Ações destrutivas e irreversíveis sobre sua conta e dados.</p>
                 </div>
                 <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto">
                   <button 
                       onClick={handleResetData}
                       disabled={isResetting}
-                      className="bg-white dark:bg-[#1C1C1E] text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-[#3A3A3C] hover:bg-slate-50 dark:hover:bg-[#2C2C2E] px-6 py-3 rounded-xl font-bold text-xs active:scale-95 transition-all flex justify-center items-center gap-2 uppercase tracking-wider disabled:opacity-50"
+                      className="bg-white dark:bg-[#1C1C1E] text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-[#3A3A3C] hover:bg-slate-50 dark:hover:bg-[#2C2C2E] px-6 py-3 rounded-xl font-bold text-sm transition-all flex justify-center items-center gap-2 disabled:opacity-50"
                   >
-                      {isResetting ? <Loader2 className="animate-spin" size={14} /> : "Limpar Dados"}
+                      {isResetting ? <Loader2 className="animate-spin" size={16} /> : "Limpar Base de Dados"}
                   </button>
                   <button 
                       onClick={handleDeleteAccount} 
-                      className="bg-red-600 hover:bg-red-500 text-white px-6 py-3 rounded-xl font-bold text-xs shadow-sm active:scale-95 transition-all flex justify-center items-center gap-2 uppercase tracking-wider"
+                      className="bg-red-600 hover:bg-red-500 text-white px-6 py-3 rounded-xl font-bold text-sm shadow-sm transition-all flex justify-center items-center gap-2"
                   >
-                      EXCLUIR CONTA <Trash2 size={14} />
+                      Excluir Conta <Trash2 size={16} />
                   </button>
                 </div>
             </section>
