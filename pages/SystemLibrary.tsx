@@ -45,18 +45,18 @@ const SystemLibrary: React.FC = () => {
 
   // 🔥 OVERLAY DE VITRINE (EFEITO BLUR) PARA USUÁRIOS FREE 🔥
   const ProBlurOverlay = ({ title, desc }: { title: string, desc: string }) => (
-      <div className="absolute inset-0 z-50 flex items-center justify-center bg-white/40 dark:bg-[#020617]/50 backdrop-blur-md rounded-[2rem]">
-          <div className="bg-white dark:bg-slate-900 border border-emerald-500/30 p-8 rounded-3xl max-w-md text-center shadow-2xl flex flex-col items-center mx-4">
-              <div className="bg-emerald-500/10 p-4 rounded-full mb-4">
-                  <Crown size={32} className="text-emerald-500 dark:text-emerald-400" />
+      <div className="absolute inset-0 z-50 flex items-center justify-center bg-white/40 dark:bg-[#000000]/50 backdrop-blur-md rounded-2xl">
+          <div className="bg-white dark:bg-[#1C1C1E] border border-emerald-500/30 p-8 rounded-2xl max-w-md text-center shadow-xl flex flex-col items-center mx-4">
+              <div className="bg-emerald-500/10 p-4 rounded-xl mb-4 text-emerald-600 dark:text-emerald-400">
+                  <Crown size={28} />
               </div>
-              <h2 className="text-xl font-black text-slate-900 dark:text-white uppercase italic tracking-tighter mb-2">
+              <h2 className="text-xl font-bold text-slate-900 dark:text-white tracking-tight mb-2">
                   {title} <span className="text-emerald-500">PRO</span>
               </h2>
-              <p className="text-slate-600 dark:text-slate-400 mb-6 text-sm leading-relaxed">
+              <p className="text-slate-500 dark:text-[#8E8E93] mb-6 text-sm leading-relaxed">
                   {desc}
               </p>
-              <button onClick={() => navigate('/pro')} className="w-full bg-slate-900 text-white dark:bg-gradient-to-r dark:from-emerald-500 dark:to-emerald-400 dark:text-slate-950 font-black py-4 px-8 rounded-xl shadow-lg shadow-slate-900/20 dark:shadow-emerald-500/20 transition-all hover:scale-105 active:scale-95 text-xs tracking-widest uppercase">
+              <button onClick={() => navigate('/pro')} className="w-full bg-slate-900 hover:bg-slate-800 text-white dark:bg-emerald-600 dark:hover:bg-emerald-500 font-bold py-3.5 px-8 rounded-xl transition-all shadow-sm text-xs tracking-widest uppercase">
                   Desbloquear Acesso
               </button>
           </div>
@@ -64,21 +64,20 @@ const SystemLibrary: React.FC = () => {
   );
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC] dark:bg-[#020617] text-slate-900 dark:text-slate-200 pb-20 md:pl-20 pt-20 md:pt-8 px-4 md:px-8 transition-colors duration-300 font-sans">
+    <div className="min-h-screen bg-[#F8FAFC] dark:bg-[#000000] text-slate-900 dark:text-slate-200 pb-20 md:pl-20 pt-20 md:pt-8 px-4 md:px-8 transition-colors duration-300 font-sans">
       
       {/* HEADER */}
       <div className="max-w-7xl mx-auto mb-8">
-        <div className="flex items-center gap-2 text-emerald-600 dark:text-emerald-500 text-[10px] font-bold uppercase tracking-widest mb-1">
-          <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full"></span>
+        <div className="flex items-center gap-2 text-indigo-600 dark:text-indigo-400 text-[10px] font-bold uppercase tracking-widest mb-2">
+          <span className="w-2 h-2 bg-indigo-500 rounded-full animate-pulse shadow-[0_0_8px_#6366f1]"></span>
           Strategic Intelligence Core
         </div>
         
-        <h1 className="text-3xl md:text-4xl font-black text-slate-900 dark:text-white tracking-tighter uppercase italic flex items-center gap-2">
+        <h1 className="text-3xl md:text-4xl font-bold text-slate-900 dark:text-white tracking-tight">
           Biblioteca Estratégica
-          <span className="text-slate-300 dark:text-slate-700 text-2xl not-italic">///</span>
         </h1>
         
-        <p className="text-slate-500 dark:text-slate-400 text-xs font-bold mt-2 uppercase tracking-widest">
+        <p className="text-slate-500 dark:text-[#8E8E93] text-sm mt-2 font-medium">
           Gerencie estruturas globais, métodos profissionais e modelos de importação.
         </p>
       </div>
@@ -96,7 +95,7 @@ const SystemLibrary: React.FC = () => {
             <select
               value={activeTab}
               onChange={(e) => setActiveTab(e.target.value as any)}
-              className="w-full appearance-none bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white py-3 pl-10 pr-10 rounded-xl font-bold focus:outline-none focus:ring-2 focus:ring-emerald-500 shadow-sm transition-colors"
+              className="w-full appearance-none bg-white dark:bg-[#1C1C1E] border border-slate-200 dark:border-[#2C2C2E] text-slate-900 dark:text-white py-3.5 pl-10 pr-10 rounded-xl font-bold focus:outline-none focus:border-indigo-500 shadow-sm transition-colors text-sm"
             >
               {tabs.map(tab => (
                 <option key={tab.id} value={tab.id}>
@@ -109,8 +108,8 @@ const SystemLibrary: React.FC = () => {
             </div>
           </div>
 
-          {/* DESKTOP: Abas Horizontais */}
-          <div className="hidden md:flex bg-white dark:bg-slate-900 p-1.5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-x-auto max-w-full custom-scrollbar">
+          {/* DESKTOP: Abas Horizontais (Apple Style) */}
+          <div className="hidden md:flex w-full overflow-x-auto bg-slate-100 dark:bg-[#1C1C1E]/50 p-1 rounded-xl border border-slate-200 dark:border-[#2C2C2E] custom-scrollbar">
             {tabs.map((tab) => {
               const isActive = activeTab === tab.id;
               const showLock = tab.pro && !isPro; 
@@ -120,10 +119,10 @@ const SystemLibrary: React.FC = () => {
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id as any)}
                   className={`
-                    flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-sm whitespace-nowrap transition-all duration-200 shrink-0
+                    flex-1 flex items-center justify-center gap-2 px-5 py-2.5 rounded-lg font-bold text-xs uppercase tracking-wider whitespace-nowrap transition-all duration-200 shrink-0
                     ${isActive 
-                      ? 'bg-emerald-500 text-white shadow-md shadow-emerald-500/20' 
-                      : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800'}
+                      ? 'bg-white dark:bg-[#2C2C2E] text-slate-900 dark:text-white shadow-sm border border-slate-200 dark:border-[#3A3A3C]' 
+                      : 'text-slate-500 dark:text-[#8E8E93] hover:text-slate-700 dark:hover:text-slate-300'}
                   `}
                 >
                   <tab.icon size={16} />
@@ -132,8 +131,8 @@ const SystemLibrary: React.FC = () => {
                   {/* Badge de Contagem */}
                   {tab.count > 0 && (
                     <span className={`
-                      text-[10px] px-2 py-0.5 rounded-full font-black ml-1
-                      ${isActive ? 'bg-white/20 text-white' : 'bg-slate-100 dark:bg-slate-800 text-slate-500'}
+                      text-[9px] px-2 py-0.5 rounded font-black ml-1
+                      ${isActive ? 'bg-indigo-100 text-indigo-700 dark:bg-indigo-500/20 dark:text-indigo-400' : 'bg-slate-200 dark:bg-[#3A3A3C] text-slate-500 dark:text-[#8E8E93]'}
                     `}>
                       {tab.count}
                     </span>
@@ -141,7 +140,7 @@ const SystemLibrary: React.FC = () => {
 
                   {/* Cadeado PRO */}
                   {showLock && (
-                      <Lock size={12} className="ml-1 text-slate-400" />
+                      <Lock size={12} className="ml-1 opacity-50" />
                   )}
                 </button>
               );
@@ -184,21 +183,21 @@ const SystemLibrary: React.FC = () => {
                 
                 <div className={!isPro ? 'pointer-events-none select-none blur-[4px] opacity-60 space-y-8' : 'space-y-8'}>
                     {/* 1. SEÇÃO: MINHAS ESTRATÉGIAS */}
-                    <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm">
-                      <h3 className="text-lg font-black text-slate-800 dark:text-white mb-6 flex items-center gap-2 uppercase tracking-tight">
-                        <CheckCircle2 size={18} className="text-emerald-500" /> Meus Planos de Gestão Ativos
+                    <div className="bg-white dark:bg-[#1C1C1E] p-6 rounded-2xl border border-slate-200 dark:border-[#2C2C2E] shadow-sm">
+                      <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-6 tracking-tight flex items-center gap-2">
+                        <CheckCircle2 size={20} className="text-indigo-500" /> Meus Planos de Gestão Ativos
                       </h3>
                       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                         {customStrategies.length === 0 ? (
-                          <div className="col-span-full text-center py-8 text-slate-400 text-sm bg-slate-50 dark:bg-slate-950/50 rounded-xl border border-dashed border-slate-200 dark:border-slate-800">
+                          <div className="col-span-full text-center py-10 text-slate-500 dark:text-[#8E8E93] text-sm bg-slate-50 dark:bg-[#000000] rounded-xl border border-dashed border-slate-200 dark:border-[#3A3A3C]">
                             Nenhum plano de gestão de caixa importado no momento.
                           </div>
                         ) : (
                           customStrategies.map(s => (
-                            <div key={s.id} className="px-5 py-4 bg-slate-50 dark:bg-slate-950 border border-slate-100 dark:border-slate-800 rounded-xl flex justify-between items-center shadow-sm">
-                              <span className="text-sm font-bold text-slate-700 dark:text-slate-200">{s.name}</span>
+                            <div key={s.id} className="p-4 bg-slate-50 dark:bg-[#000000] border border-slate-100 dark:border-[#2C2C2E] rounded-xl flex justify-between items-center shadow-sm">
+                              <span className="text-sm font-bold text-slate-700 dark:text-[#E5E5EA]">{s.name}</span>
                               <div className="flex items-center gap-2">
-                                <span className="text-[10px] bg-emerald-100 text-emerald-600 px-2 py-0.5 rounded font-bold uppercase">Ativa</span>
+                                <span className="text-[10px] bg-emerald-50 text-emerald-600 dark:bg-emerald-500/10 dark:text-emerald-400 px-2 py-0.5 rounded border border-emerald-200 dark:border-emerald-500/20 font-bold uppercase tracking-widest">Ativa</span>
                               </div>
                             </div>
                           ))
