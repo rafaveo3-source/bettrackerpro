@@ -7,7 +7,8 @@ import {
   Trash2,
   ArrowRightLeft,
   DollarSign,
-  AlertTriangle
+  AlertTriangle,
+  ChevronDown
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -343,25 +344,28 @@ const Bankroll: React.FC = () => {
               <p className="text-[10px] text-slate-500 dark:text-[#8E8E93] font-bold uppercase tracking-widest mb-1">
                 Total Alocado (Liquidez)
               </p>
-              <h4 className="text-3xl font-bold text-slate-900 dark:text-white tracking-tight font-mono">
-                {br.id === activeBankrollId && (
-                  <p className={`text-[10px] font-bold uppercase tracking-widest mb-2 ${
-                    currentBankrollBalance >= br.initialBalance
-                      ? 'text-emerald-600 dark:text-emerald-400'
-                      : 'text-red-600 dark:text-red-400'
-                  }`}>
-                    {currentBankrollBalance >= br.initialBalance ? '▲ Em Crescimento' : '▼ Em Drawdown'}
-                  </p>
-                )}
-                {formatCurrency(
-                  br.id === activeBankrollId
-                    ? currentBankrollBalance
-                    : br.initialBalance,
-                  br.currency
-                )}
-              </h4>
-            </div>
+              <div className="text-3xl font-bold text-slate-900 dark:text-white tracking-tight font-mono">
+  {br.id === activeBankrollId && (
+    <p
+      className={`text-[10px] font-bold uppercase tracking-widest mb-2 ${
+        currentBankrollBalance >= br.initialBalance
+          ? 'text-emerald-600 dark:text-emerald-400'
+          : 'text-red-600 dark:text-red-400'
+      }`}
+    >
+      {currentBankrollBalance >= br.initialBalance
+        ? '▲ Em Crescimento'
+        : '▼ Em Drawdown'}
+    </p>
+  )}
 
+  {formatCurrency(
+    br.id === activeBankrollId
+      ? currentBankrollBalance
+      : br.initialBalance,
+    br.currency
+  )}
+</div>
             <button
               onClick={(e) => {
                 e.stopPropagation();
