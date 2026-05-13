@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useBetStore, supabase, isSupabaseConfigured } from '../store/useBetStore';
 import { Eye, EyeOff, Mail, Lock, ArrowLeft, ChevronRight, AlertCircle, ShieldCheck } from 'lucide-react';
@@ -48,7 +47,7 @@ const Auth: React.FC = () => {
     } catch (err: any) {
       console.error("Critical Auth Error:", err);
       if (err.message?.includes('Failed to fetch') || err.message?.includes('NetworkError')) {
-        setError("ERRO DE CONFIGURAÇÃO: O App não conseguiu conectar ao Supabase. Verifique se a URL do projeto (VITE_SUPABASE_URL) está correta e se o projeto existe.");
+        setError("ERRO DE CONFIGURAÇÃO: O App não conseguiu conectar ao Supabase. Verifique se a URL do projeto (VITE_SUPABASE_URL) está correta.");
       } else {
         setError(err.message || "Erro ao conectar com Google. Verifique o console.");
       }
@@ -71,31 +70,31 @@ const Auth: React.FC = () => {
         if (authError) throw authError;
         setSession(data.session);
       } else if (view === 'register') {
-  const { data, error: authError } = await supabase.auth.signUp({ 
-      email, 
-      password,
-      options: {
-          data: { full_name: email.split('@')[0] }
-      }
-  });
+        const { data, error: authError } = await supabase.auth.signUp({ 
+            email, 
+            password,
+            options: {
+                data: { full_name: email.split('@')[0] }
+            }
+        });
 
-  if (authError) throw authError;
+        if (authError) throw authError;
 
-  // 🚀 DISPARO DO EVENTO DE CONVERSÃO META
-  if (typeof window !== 'undefined' && (window as any).fbq) {
-      (window as any).fbq('track', 'CompleteRegistration', {
-          content_name: 'Cadastro Gratuito BetTracker PRO',
-          status: 'success'
-      });
-  }
+        // 🚀 DISPARO DO EVENTO DE CONVERSÃO META
+        if (typeof window !== 'undefined' && (window as any).fbq) {
+            (window as any).fbq('track', 'CompleteRegistration', {
+                content_name: 'Cadastro Gratuito BetTracker PRO',
+                status: 'success'
+            });
+        }
 
-  if (data.session) {
-      setSession(data.session);
-  } else {
-      setError("Confirmação: Conta criada! Verifique seu e-mail para confirmar o cadastro antes de logar.");
-      setView('login');
-  }
-} else {
+        if (data.session) {
+            setSession(data.session);
+        } else {
+            setError("Confirmação: Conta criada! Verifique seu e-mail para confirmar o cadastro antes de logar.");
+            setView('login');
+        }
+      } else {
         const { error: authError } = await supabase.auth.resetPasswordForEmail(email, {
              redirectTo: window.location.origin,
         });
@@ -105,7 +104,7 @@ const Auth: React.FC = () => {
     } catch (err: any) {
       console.error("Auth Exception:", err);
       if (err.message === "Failed to fetch" || err.message?.includes('NetworkError')) {
-        setError("ERRO CRÍTICO: URL do Supabase inválida ou projeto inexistente. Configure o arquivo .env ou useBetStore.ts corretamente.");
+        setError("ERRO CRÍTICO: URL do Supabase inválida ou projeto inexistente.");
       } else if (err.status === 429) {
         setError("Muitas tentativas. Aguarde alguns minutos.");
       } else if (err.message.includes('Invalid login credentials')) {
@@ -127,30 +126,38 @@ const Auth: React.FC = () => {
     </svg>
   );
 
+  const inputClass = "w-full bg-slate-50 dark:bg-[#000000] border border-slate-200 dark:border-[#3A3A3C] text-slate-900 dark:text-white rounded-xl pl-12 pr-4 py-3.5 outline-none focus:border-indigo-500 transition-colors font-medium text-sm placeholder:text-slate-400 dark:placeholder:text-[#636366]";
+
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex flex-col items-center justify-center p-6 relative overflow-hidden font-sans">
-        <div className="absolute top-[-20%] left-[-10%] w-[60%] h-[60%] bg-emerald-500/10 dark:bg-emerald-500/5 rounded-full blur-[120px] pointer-events-none"></div>
+    <div className="min-h-screen bg-slate-50 dark:bg-[#000000] flex flex-col items-center justify-center p-6 relative overflow-hidden font-sans">
+        
+        {/* Glow Background */}
+        <div className="absolute top-[-20%] left-[-10%] w-[60%] h-[60%] bg-indigo-500/10 rounded-full blur-[120px] pointer-events-none"></div>
 
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="w-full max-w-md relative z-10">
-            <div className="flex flex-col items-center mb-10">
-                <Logo size={64} className="mb-4" />
-                <h1 className="text-3xl font-black tracking-tighter text-slate-900 dark:text-white uppercase italic">
-                    Bet<span className="text-emerald-500">Tracker</span>
+            
+            {/* Header Brand */}
+            <div className="flex flex-col items-center mb-8">
+                <Logo size={56} className="mb-4" />
+                <h1 className="text-3xl font-bold tracking-tight text-slate-900 dark:text-white">
+                    BetTracker <span className="text-indigo-600 dark:text-indigo-500">PRO</span>
                 </h1>
-                <p className="text-slate-400 text-[10px] font-black uppercase tracking-[0.4em] mt-2">Intelligence Ecosystem</p>
+                <p className="text-slate-500 dark:text-[#8E8E93] text-[10px] font-bold uppercase tracking-widest mt-2">Intelligence Ecosystem</p>
             </div>
 
-            <div className="glass-card rounded-[2.5rem] p-8 md:p-10">
+            {/* Main Auth Card */}
+            <div className="bg-white dark:bg-[#1C1C1E] border border-slate-200 dark:border-[#2C2C2E] rounded-2xl p-8 md:p-10 shadow-xl">
                 <AnimatePresence mode="wait">
                     {view === 'login' ? (
                         <motion.div key="login" initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }}>
+                            
                             <div className="text-center mb-8">
-                                <h2 className="text-xl font-bold text-slate-900 dark:text-white uppercase tracking-tighter italic">Terminal de Acesso</h2>
-                                <p className="text-slate-500 dark:text-slate-400 text-xs mt-1 uppercase font-bold tracking-widest">Autenticação Requerida</p>
+                                <h2 className="text-xl font-bold text-slate-900 dark:text-white tracking-tight">Terminal de Acesso</h2>
+                                <p className="text-slate-500 dark:text-[#8E8E93] text-[10px] mt-1 uppercase font-bold tracking-widest">Autenticação Requerida</p>
                             </div>
 
                             {error && (
-                                <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="mb-6 bg-red-500/10 border border-red-500/20 p-4 rounded-2xl flex items-start gap-3 text-red-600 dark:text-red-500 text-xs font-bold leading-relaxed">
+                                <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="mb-6 bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/20 p-4 rounded-xl flex items-start gap-3 text-red-600 dark:text-red-400 text-xs font-bold leading-relaxed">
                                     <AlertCircle size={18} className="flex-shrink-0" /> 
                                     <span>{error}</span>
                                 </motion.div>
@@ -159,88 +166,97 @@ const Auth: React.FC = () => {
                             <button 
                                 onClick={handleGoogleLogin} 
                                 disabled={loading}
-                                className="w-full bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800 border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-white py-4 rounded-2xl flex items-center justify-center gap-3 transition-all mb-6 font-bold shadow-sm active:scale-95 disabled:opacity-50"
+                                className="w-full bg-white dark:bg-[#000000] hover:bg-slate-50 dark:hover:bg-[#2C2C2E] border border-slate-200 dark:border-[#3A3A3C] text-slate-700 dark:text-white py-3.5 rounded-xl flex items-center justify-center gap-3 transition-colors font-bold shadow-sm active:scale-95 disabled:opacity-50 text-sm mb-6"
                             >
                                 <GoogleIcon />
                                 <span>{loading ? 'Aguarde...' : 'Entrar com Google'}</span>
                             </button>
 
                             <div className="relative mb-8 text-center">
-                                <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-slate-200 dark:border-slate-800"></div></div>
-                                <span className="relative bg-white dark:bg-slate-900 px-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">ou credenciais</span>
+                                <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-slate-200 dark:border-[#3A3A3C]"></div></div>
+                                <span className="relative bg-white dark:bg-[#1C1C1E] px-4 text-[10px] font-bold text-slate-400 dark:text-[#8E8E93] uppercase tracking-widest">ou credenciais</span>
                             </div>
 
-                            <form onSubmit={handleSubmit} className="space-y-5">
+                            <form onSubmit={handleSubmit} className="space-y-4">
                                 <div>
-                                    <label className="block text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-2 ml-1">E-mail Operacional</label>
+                                    <label className="block text-[10px] font-bold text-slate-500 dark:text-[#8E8E93] uppercase tracking-widest mb-2 ml-1">E-mail Operacional</label>
                                     <div className="relative group">
-                                        <Mail className="absolute left-4 top-4 text-slate-400 group-focus-within:text-emerald-500 transition-colors" size={18} />
-                                        <input type="email" value={email} onChange={e => setEmail(e.target.value)} required placeholder="exemplo@gmail.com" className="w-full bg-slate-50 dark:bg-slate-950/50 border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white rounded-2xl pl-12 pr-4 py-4 outline-none focus:border-emerald-500 transition-all placeholder:text-slate-400" />
+                                        <Mail className="absolute left-4 top-3.5 text-slate-400 group-focus-within:text-indigo-500 transition-colors" size={18} />
+                                        <input type="email" value={email} onChange={e => setEmail(e.target.value)} required placeholder="exemplo@gmail.com" className={inputClass} />
                                     </div>
                                 </div>
 
                                 <div>
-                                    <label className="block text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-2 ml-1">Chave de Acesso</label>
+                                    <label className="block text-[10px] font-bold text-slate-500 dark:text-[#8E8E93] uppercase tracking-widest mb-2 ml-1">Chave de Acesso</label>
                                     <div className="relative group">
-                                        <Lock className="absolute left-4 top-4 text-slate-400 group-focus-within:text-emerald-500 transition-colors" size={18} />
-                                        <input type={showPassword ? "text" : "password"} value={password} onChange={e => setPassword(e.target.value)} required placeholder="••••••••" className="w-full bg-slate-50 dark:bg-slate-950/50 border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white rounded-2xl pl-12 pr-12 py-4 outline-none focus:border-emerald-500 transition-all placeholder:text-slate-400" />
-                                        <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-4 top-4 text-slate-400 hover:text-emerald-500 transition-colors">
+                                        <Lock className="absolute left-4 top-3.5 text-slate-400 group-focus-within:text-indigo-500 transition-colors" size={18} />
+                                        <input type={showPassword ? "text" : "password"} value={password} onChange={e => setPassword(e.target.value)} required placeholder="••••••••" className={inputClass} />
+                                        <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-4 top-3.5 text-slate-400 hover:text-indigo-500 transition-colors">
                                             {showPassword ? <EyeOff size={18}/> : <Eye size={18}/>}
                                         </button>
                                     </div>
                                 </div>
 
-                                <button type="submit" disabled={loading} className="w-full bg-emerald-500 hover:bg-emerald-400 text-white dark:text-[#020617] font-black py-4 rounded-2xl transition-all shadow-xl shadow-emerald-500/20 active:scale-95 flex items-center justify-center gap-2 group disabled:opacity-50">
-                                    {loading ? 'SINCRONIZANDO...' : 'INICIAR SESSÃO'}
-                                    {!loading && <ChevronRight size={18} className="group-hover:translate-x-1 transition-transform" />}
+                                <button type="submit" disabled={loading} className="w-full mt-2 bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-3.5 rounded-xl transition-colors shadow-sm active:scale-95 flex items-center justify-center gap-2 group disabled:opacity-50 text-xs uppercase tracking-widest">
+                                    {loading ? 'Sincronizando...' : 'Iniciar Sessão'}
+                                    {!loading && <ChevronRight size={16} className="group-hover:translate-x-1 transition-transform" />}
                                 </button>
                             </form>
 
                             <div className="mt-8 text-center flex flex-col gap-3">
-                                <button onClick={() => setView('register')} className="text-xs font-black text-emerald-600 dark:text-emerald-500 uppercase tracking-widest hover:underline">Solicitar Acesso</button>
-                                <button onClick={() => setView('recover')} className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter hover:text-slate-600">Esqueci minha senha</button>
+                                <button onClick={() => setView('register')} className="text-xs font-bold text-indigo-600 dark:text-indigo-400 uppercase tracking-widest hover:underline">Solicitar Acesso</button>
+                                <button onClick={() => setView('recover')} className="text-[10px] font-bold text-slate-400 dark:text-[#8E8E93] uppercase tracking-wider hover:text-slate-600 dark:hover:text-white transition-colors">Esqueci minha senha</button>
                             </div>
                         </motion.div>
                     ) : (
                         <motion.div key="alt" initial={{ opacity: 0, x: 10 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -10 }}>
                              <div className="text-center mb-8">
-                                <h2 className="text-xl font-bold text-slate-900 dark:text-white uppercase tracking-tighter italic">{view === 'register' ? 'Nova Licença' : 'Recuperar'}</h2>
-                                <p className="text-slate-500 dark:text-slate-400 text-xs mt-1 uppercase font-bold tracking-widest">Protocolo de Segurança</p>
+                                <h2 className="text-xl font-bold text-slate-900 dark:text-white tracking-tight">{view === 'register' ? 'Nova Licença' : 'Recuperar Senha'}</h2>
+                                <p className="text-slate-500 dark:text-[#8E8E93] text-[10px] mt-1 uppercase font-bold tracking-widest">Protocolo de Segurança</p>
                             </div>
                             
                             {error && (
-                                <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="mb-6 bg-red-500/10 border border-red-500/20 p-4 rounded-2xl flex items-start gap-3 text-red-600 dark:text-red-500 text-xs font-bold leading-relaxed">
+                                <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="mb-6 bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/20 p-4 rounded-xl flex items-start gap-3 text-red-600 dark:text-red-400 text-xs font-bold leading-relaxed">
                                     <AlertCircle size={18} className="flex-shrink-0" /> 
                                     <span>{error}</span>
                                 </motion.div>
                             )}
 
-                            <form onSubmit={handleSubmit} className="space-y-5">
+                            <form onSubmit={handleSubmit} className="space-y-4">
                                 <div>
-                                    <label className="block text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-2 ml-1">E-mail Operacional</label>
-                                    <input type="email" placeholder="seu@gmail.com" value={email} onChange={e => setEmail(e.target.value)} className="w-full bg-slate-50 dark:bg-slate-950/50 border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white rounded-2xl px-6 py-4 outline-none focus:border-emerald-500 transition-all placeholder:text-slate-400" required />
+                                    <label className="block text-[10px] font-bold text-slate-500 dark:text-[#8E8E93] uppercase tracking-widest mb-2 ml-1">E-mail Operacional</label>
+                                    <div className="relative group">
+                                        <Mail className="absolute left-4 top-3.5 text-slate-400 group-focus-within:text-indigo-500 transition-colors" size={18} />
+                                        <input type="email" placeholder="seu@gmail.com" value={email} onChange={e => setEmail(e.target.value)} className={inputClass} required />
+                                    </div>
                                 </div>
                                 {view === 'register' && (
                                     <div>
-                                        <label className="block text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-2 ml-1">Criar Senha (Mín. 6)</label>
-                                        <input type="password" placeholder="••••••••" value={password} onChange={e => setPassword(e.target.value)} className="w-full bg-slate-50 dark:bg-slate-950/50 border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white rounded-2xl px-6 py-4 outline-none focus:border-emerald-500 transition-all placeholder:text-slate-400" required />
+                                        <label className="block text-[10px] font-bold text-slate-500 dark:text-[#8E8E93] uppercase tracking-widest mb-2 ml-1">Criar Senha (Mín. 6)</label>
+                                        <div className="relative group">
+                                            <Lock className="absolute left-4 top-3.5 text-slate-400 group-focus-within:text-indigo-500 transition-colors" size={18} />
+                                            <input type={showPassword ? "text" : "password"} placeholder="••••••••" value={password} onChange={e => setPassword(e.target.value)} className={inputClass} required />
+                                            <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-4 top-3.5 text-slate-400 hover:text-indigo-500 transition-colors">
+                                                {showPassword ? <EyeOff size={18}/> : <Eye size={18}/>}
+                                            </button>
+                                        </div>
                                     </div>
                                 )}
-                                <button type="submit" disabled={loading} className="w-full bg-slate-900 dark:bg-white text-white dark:text-slate-950 font-black py-4 rounded-2xl transition-all shadow-xl active:scale-95 disabled:opacity-50">
-                                    {loading ? 'PROCESSANDO...' : (view === 'register' ? 'SOLICITAR REGISTRO' : 'ENVIAR INSTRUÇÕES')}
+                                <button type="submit" disabled={loading} className="w-full mt-2 bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-3.5 rounded-xl transition-colors shadow-sm active:scale-95 disabled:opacity-50 text-xs uppercase tracking-widest">
+                                    {loading ? 'PROCESSANDO...' : (view === 'register' ? 'Solicitar Registro' : 'Enviar Instruções')}
                                 </button>
                             </form>
-                            <button onClick={() => setView('login')} className="mt-8 text-slate-500 text-sm font-bold hover:text-slate-900 dark:hover:text-white flex items-center justify-center gap-2 mx-auto transition-colors">
-                                <ArrowLeft size={16} /> Voltar ao Terminal
+                            <button onClick={() => setView('login')} className="mt-8 text-slate-500 dark:text-[#8E8E93] text-[10px] uppercase tracking-widest font-bold hover:text-slate-900 dark:hover:text-white flex items-center justify-center gap-2 mx-auto transition-colors">
+                                <ArrowLeft size={14} /> Voltar ao Terminal
                             </button>
                         </motion.div>
                     )}
                 </AnimatePresence>
             </div>
             
-            <div className="mt-10 flex items-center justify-center gap-2 text-slate-400/50">
+            <div className="mt-10 flex items-center justify-center gap-2 text-slate-400 dark:text-[#636366]">
                 <ShieldCheck size={14} />
-                <span className="text-[10px] font-black uppercase tracking-widest">End-to-End Encryption</span>
+                <span className="text-[9px] font-bold uppercase tracking-widest">End-to-End Encryption</span>
             </div>
         </motion.div>
     </div>
