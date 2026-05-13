@@ -22,8 +22,8 @@ const Mindset: React.FC = () => {
     addMindsetEntry,
     deleteMindsetEntry,
     updateMindsetEntry,
-    mindsetHistory = [], // Prevents undefined
-    history = [], // Prevents undefined
+    mindsetHistory = [], 
+    history = [], 
     isPro,
     activateTiltLock,
     tiltLockUntil
@@ -41,18 +41,18 @@ const Mindset: React.FC = () => {
 
   // 🔥 OVERLAY DE VITRINE (EFEITO BLUR) PARA USUÁRIOS FREE 🔥
   const ProBlurOverlay = ({ title, desc }: { title: string, desc: string }) => (
-      <div className="absolute inset-0 z-50 flex items-center justify-center bg-white/40 dark:bg-[#020617]/50 backdrop-blur-md rounded-[2rem]">
-          <div className="bg-white dark:bg-slate-900 border border-emerald-500/30 p-8 rounded-3xl max-w-md text-center shadow-2xl flex flex-col items-center mx-4">
-              <div className="bg-emerald-500/10 p-4 rounded-full mb-4">
-                  <Crown size={32} className="text-emerald-500 dark:text-emerald-400" />
+      <div className="absolute inset-0 z-50 flex items-center justify-center bg-white/40 dark:bg-[#000000]/50 backdrop-blur-md rounded-[2rem]">
+          <div className="bg-white dark:bg-[#1C1C1E] border border-emerald-500/30 p-8 rounded-2xl max-w-md text-center shadow-xl flex flex-col items-center mx-4">
+              <div className="bg-emerald-500/10 p-4 rounded-xl mb-4 text-emerald-600 dark:text-emerald-400">
+                  <Crown size={28} />
               </div>
-              <h2 className="text-xl font-black text-slate-900 dark:text-white uppercase italic tracking-tighter mb-2">
+              <h2 className="text-xl font-bold text-slate-900 dark:text-white tracking-tight mb-2">
                   {title} <span className="text-emerald-500">PRO</span>
               </h2>
-              <p className="text-slate-600 dark:text-slate-400 mb-6 text-sm leading-relaxed">
+              <p className="text-slate-500 dark:text-[#8E8E93] mb-6 text-sm leading-relaxed">
                   {desc}
               </p>
-              <button onClick={() => navigate('/pro')} className="w-full bg-slate-900 text-white dark:bg-gradient-to-r dark:from-emerald-500 dark:to-emerald-400 dark:text-slate-950 font-black py-4 px-8 rounded-xl shadow-lg shadow-slate-900/20 dark:shadow-emerald-500/20 transition-all hover:scale-105 active:scale-95 text-xs tracking-widest uppercase">
+              <button onClick={() => navigate('/pro')} className="w-full bg-slate-900 hover:bg-slate-800 text-white dark:bg-emerald-600 dark:hover:bg-emerald-500 font-bold py-3.5 px-8 rounded-xl transition-all shadow-sm text-xs tracking-widest uppercase">
                   Desbloquear Acesso
               </button>
           </div>
@@ -60,10 +60,10 @@ const Mindset: React.FC = () => {
   );
 
   const moods = [
-    { id: 'confident', label: 'Confiante', icon: '🦁', color: 'text-blue-500', bg: 'bg-blue-500/10', border: 'border-blue-500/30' },
-    { id: 'disciplined', label: 'Disciplinado', icon: '🧘‍♂️', color: 'text-emerald-500', bg: 'bg-emerald-500/10', border: 'border-emerald-500/30' },
-    { id: 'anxious', label: 'Ansioso', icon: '😰', color: 'text-amber-500', bg: 'bg-amber-500/10', border: 'border-amber-500/30' },
-    { id: 'tilted', label: 'Tilted', icon: '🤬', color: 'text-red-500', bg: 'bg-red-500/10', border: 'border-red-500/30' }
+    { id: 'confident', label: 'Confiante', icon: '🦁', color: 'text-blue-500', bg: 'bg-blue-50 dark:bg-[#000000]', border: 'border-blue-200 dark:border-blue-500/30' },
+    { id: 'disciplined', label: 'Disciplinado', icon: '🧘‍♂️', color: 'text-emerald-500', bg: 'bg-emerald-50 dark:bg-[#000000]', border: 'border-emerald-200 dark:border-emerald-500/30' },
+    { id: 'anxious', label: 'Ansioso', icon: '😰', color: 'text-amber-500', bg: 'bg-amber-50 dark:bg-[#000000]', border: 'border-amber-200 dark:border-amber-500/30' },
+    { id: 'tilted', label: 'Tilted', icon: '🤬', color: 'text-red-500', bg: 'bg-red-50 dark:bg-[#000000]', border: 'border-red-200 dark:border-red-500/30' }
   ];
 
   const moodInsights = useMemo(() => {
@@ -143,23 +143,25 @@ const Mindset: React.FC = () => {
       setShowLockConfirm(false);
   };
 
+  const cardClass = "bg-white dark:bg-[#1C1C1E] border border-slate-200 dark:border-[#2C2C2E] rounded-2xl p-6 shadow-sm transition-all";
+
   return (
-    <div className="space-y-10 pb-24 max-w-7xl mx-auto px-4 md:px-8 pt-8 relative">
+    <div className="space-y-8 pb-24 max-w-5xl mx-auto px-4 md:px-8 pt-8 relative font-sans">
       
       {!isPro && <ProBlurOverlay title="Inteligência Emocional" desc="O descontrole emocional é o maior responsável por perdas de capital. O Módulo de Psicologia correlaciona seu estado mental aos seus resultados e possui um sistema de Trava de Segurança (Circuit Breaker) para proteger seus ativos." />}
 
       <div className={!isPro ? 'pointer-events-none select-none blur-[4px] opacity-60' : ''}>
           {/* HEADER PADRONIZADO */}
-          <header className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 border-b border-slate-200 dark:border-slate-800 pb-6">
+          <header className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 border-b border-slate-200 dark:border-[#2C2C2E] pb-6">
             <div>
-              <div className="flex items-center gap-2 text-emerald-500 text-[9px] font-mono font-bold uppercase tracking-widest mb-2">
+              <div className="flex items-center gap-2 text-emerald-600 dark:text-emerald-400 text-[10px] font-bold uppercase tracking-widest mb-2">
                 <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse"></span>
                 System: Online • Mindset Engine
               </div>
-              <h1 className="text-3xl font-black text-slate-900 dark:text-white tracking-tighter uppercase italic">
-                Psicologia & Performance <span className="text-slate-400 dark:text-slate-700 text-lg ml-2">///</span>
+              <h1 className="text-3xl md:text-4xl font-bold text-slate-900 dark:text-white tracking-tight">
+                Psicologia & Performance
               </h1>
-              <p className="text-xs text-slate-500 dark:text-slate-400 font-semibold uppercase tracking-widest mt-2">
+              <p className="text-sm text-slate-500 dark:text-[#8E8E93] font-medium mt-2">
                 Monitoramento emocional e impacto direto na performance operacional
               </p>
             </div>
@@ -169,10 +171,10 @@ const Mindset: React.FC = () => {
                 <button 
                     onClick={() => isLocked ? null : setShowLockConfirm(!showLockConfirm)}
                     disabled={isLocked}
-                    className={`flex items-center gap-2 px-6 py-3 rounded-xl font-black uppercase tracking-widest text-xs transition-all shadow-lg ${
+                    className={`flex items-center gap-2 px-5 py-2.5 rounded-lg font-bold uppercase tracking-widest text-xs transition-colors shadow-sm ${
                         isLocked 
-                        ? 'bg-slate-200 dark:bg-slate-800 text-slate-400 cursor-not-allowed border border-slate-300 dark:border-slate-700' 
-                        : 'bg-red-600 hover:bg-red-500 text-white shadow-red-600/20 hover:shadow-red-500/40 active:scale-95 border border-red-500'
+                        ? 'bg-slate-100 dark:bg-[#2C2C2E] text-slate-400 dark:text-[#636366] cursor-not-allowed border border-transparent' 
+                        : 'bg-red-600 hover:bg-red-500 text-white active:scale-95 border border-red-500'
                     }`}
                 >
                     {isLocked ? <Clock size={16} /> : <ShieldAlert size={16} />}
@@ -186,17 +188,17 @@ const Mindset: React.FC = () => {
                             initial={{ opacity: 0, y: 10, scale: 0.95 }}
                             animate={{ opacity: 1, y: 0, scale: 1 }}
                             exit={{ opacity: 0, y: 10, scale: 0.95 }}
-                            className="absolute top-full right-0 mt-3 w-72 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 shadow-2xl z-50"
+                            className="absolute top-full right-0 mt-3 w-72 bg-white dark:bg-[#1C1C1E] border border-slate-200 dark:border-[#3A3A3C] rounded-xl p-5 shadow-xl z-50"
                         >
-                            <div className="flex items-start gap-3 mb-4 text-red-500">
-                                <AlertTriangle size={24} className="shrink-0" />
-                                <p className="text-xs text-slate-600 dark:text-slate-300 font-medium leading-relaxed">
+                            <div className="flex items-start gap-3 mb-4 text-red-600 dark:text-red-400">
+                                <AlertTriangle size={20} className="shrink-0" />
+                                <p className="text-xs font-medium leading-relaxed">
                                     Perda de Controle? O sistema bloqueará novas operações pelo período selecionado, ativando um bloqueio forçado para preservar sua liquidez e proteger seu capital.
                                 </p>
                             </div>
                             <div className="grid grid-cols-2 gap-2">
-                                <button onClick={() => handleEmergencyLock(12)} className="bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 py-2 rounded-lg text-xs font-bold transition-colors">12 Horas</button>
-                                <button onClick={() => handleEmergencyLock(24)} className="bg-red-100 hover:bg-red-200 dark:bg-red-500/20 dark:hover:bg-red-500/30 text-red-700 dark:text-red-400 py-2 rounded-lg text-xs font-bold transition-colors">24 Horas</button>
+                                <button onClick={() => handleEmergencyLock(12)} className="bg-slate-100 hover:bg-slate-200 dark:bg-[#2C2C2E] dark:hover:bg-[#3A3A3C] text-slate-700 dark:text-white py-2.5 rounded-lg text-xs font-bold transition-colors">12 Horas</button>
+                                <button onClick={() => handleEmergencyLock(24)} className="bg-red-100 hover:bg-red-200 dark:bg-red-500/20 dark:hover:bg-red-500/30 text-red-700 dark:text-red-400 py-2.5 rounded-lg text-xs font-bold transition-colors">24 Horas</button>
                             </div>
                         </motion.div>
                     )}
@@ -205,7 +207,7 @@ const Mindset: React.FC = () => {
           </header>
 
           {/* INSIGHTS */}
-          <section className="grid md:grid-cols-4 gap-6">
+          <section className="grid md:grid-cols-4 gap-5 mt-8">
             <InsightCard
               title="Zona de Performance"
               value={bestMood?.label || '-'}
@@ -221,33 +223,33 @@ const Mindset: React.FC = () => {
             <InsightCard
               title="Score Mental"
               value={mentalScore.toFixed(0)}
-              description="Saúde emocional da operação (0-100)"
+              description="Saúde emocional da operação"
               color={mentalScore > 60 ? 'text-emerald-500' : mentalScore < 40 ? 'text-red-500' : 'text-amber-500'}
             />
             <InsightCard
-              title="Sessões Registradas"
+              title="Sessões"
               value={totalEntries}
               description="Diários de bordo salvos"
             />
           </section>
 
           {/* FORMULÁRIO DE REGISTRO */}
-          <section className="bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-800 p-6 md:p-8 rounded-[2rem] shadow-sm">
-            <h3 className="text-sm font-black uppercase tracking-widest text-slate-900 dark:text-white mb-6">Como está seu controle emocional hoje?</h3>
+          <section className={`${cardClass} mt-6`}>
+            <h3 className="text-sm font-bold uppercase tracking-widest text-slate-900 dark:text-white mb-6 border-b border-slate-100 dark:border-[#2C2C2E] pb-4">Como está seu controle emocional hoje?</h3>
             
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
               {moods.map(m => (
                 <button
                   key={m.id}
                   onClick={() => setSelectedMood(m.id as MoodType)}
-                  className={`p-4 md:p-5 rounded-2xl border transition-all flex flex-col items-center justify-center gap-2 ${
+                  className={`p-4 rounded-xl border transition-all flex flex-col items-center justify-center gap-2 ${
                     selectedMood === m.id
-                      ? `${m.bg} ${m.border} scale-105 shadow-sm`
-                      : 'bg-slate-50 dark:bg-slate-900/50 border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800'
+                      ? `${m.bg} ${m.border} scale-[1.02] shadow-sm`
+                      : 'bg-slate-50 dark:bg-[#000000] border-slate-200 dark:border-[#2C2C2E] hover:border-slate-300 dark:hover:border-[#3A3A3C]'
                   }`}
                 >
-                  <div className="text-3xl">{m.icon}</div>
-                  <div className={`text-xs font-bold ${selectedMood === m.id ? m.color : 'text-slate-500 dark:text-slate-400'}`}>
+                  <div className="text-2xl mb-1">{m.icon}</div>
+                  <div className={`text-xs font-bold ${selectedMood === m.id ? m.color : 'text-slate-500 dark:text-[#8E8E93]'}`}>
                     {m.label}
                   </div>
                 </button>
@@ -258,42 +260,41 @@ const Mindset: React.FC = () => {
               value={note}
               onChange={e => setNote(e.target.value)}
               placeholder="Descreva seu estado mental, fatores de risco e motivações analíticas das operações de hoje..."
-              className="w-full p-6 rounded-2xl border bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-800 min-h-[140px] text-slate-700 dark:text-slate-200 outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all resize-none"
+              className="w-full p-4 rounded-xl border bg-slate-50 dark:bg-[#000000] border-slate-200 dark:border-[#3A3A3C] min-h-[120px] text-sm text-slate-900 dark:text-white outline-none focus:border-indigo-500 transition-colors resize-none placeholder:text-slate-400 dark:placeholder:text-[#636366]"
             />
 
-            <div className="flex justify-between items-center mt-6">
-              <span className="text-xs text-slate-400 font-medium">
+            <div className="flex justify-between items-center mt-4 pt-4 border-t border-slate-100 dark:border-[#2C2C2E]">
+              <span className="text-xs text-slate-500 dark:text-[#8E8E93] font-bold">
                 {note.length} caracteres
               </span>
 
               <button
                 onClick={handleSave}
-                className="px-8 py-3.5 rounded-xl bg-slate-900 hover:bg-slate-800 dark:bg-emerald-500 dark:hover:bg-emerald-400 text-white dark:text-slate-950 text-xs font-black uppercase tracking-widest transition-all active:scale-95 flex items-center gap-2 shadow-lg"
+                className="px-6 py-2.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-white dark:bg-indigo-600 dark:hover:bg-indigo-500 font-bold uppercase tracking-widest transition-colors text-xs shadow-sm flex items-center gap-2"
               >
-                <Book size={16} />
-                {editingId ? 'Atualizar Sessão' : 'Registrar Diário'}
+                <Book size={14} />
+                {editingId ? 'Atualizar Sessão' : 'Registrar'}
               </button>
             </div>
           </section>
 
-          {/* TIMELINE DE DIÁRIOS (MOBILE FIX APLICADO) */}
-          <section className="bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-800 p-6 md:p-8 rounded-[2rem] shadow-sm flex flex-col">
+          {/* TIMELINE DE DIÁRIOS */}
+          <section className={`${cardClass} mt-6 flex flex-col`}>
             
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
-                <h3 className="text-sm font-black uppercase tracking-widest text-slate-900 dark:text-white">Diário de Bordo</h3>
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6 border-b border-slate-100 dark:border-[#2C2C2E] pb-4">
+                <h3 className="text-sm font-bold uppercase tracking-widest text-slate-900 dark:text-white">Diário de Bordo</h3>
                 
-                {/* CORREÇÃO DO LAYOUT VAZANDO NO MOBILE AQUI 👇 */}
                 <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
                     <input
                         placeholder="Buscar palavra-chave..."
                         value={searchQuery}
                         onChange={e => setSearchQuery(e.target.value)}
-                        className="w-full sm:w-48 px-4 py-3 sm:py-2.5 rounded-xl border text-sm font-medium bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-800 outline-none focus:border-emerald-500"
+                        className="w-full sm:w-48 px-3 py-2 rounded-lg border text-xs font-medium bg-slate-50 dark:bg-[#000000] border-slate-200 dark:border-[#3A3A3C] text-slate-900 dark:text-white outline-none focus:border-indigo-500 placeholder:text-slate-400 dark:placeholder:text-[#636366]"
                     />
                     <select
                         value={filterMood}
                         onChange={e => setFilterMood(e.target.value as any)}
-                        className="w-full sm:w-auto px-4 py-3 sm:py-2.5 rounded-xl border text-sm font-bold bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-800 outline-none focus:border-emerald-500 cursor-pointer"
+                        className="w-full sm:w-auto px-3 py-2 rounded-lg border text-xs font-bold bg-slate-50 dark:bg-[#000000] border-slate-200 dark:border-[#3A3A3C] text-slate-900 dark:text-white outline-none focus:border-indigo-500 cursor-pointer"
                     >
                         <option value="all">Todas Emoções</option>
                         {moods.map(m => (
@@ -303,10 +304,10 @@ const Mindset: React.FC = () => {
                 </div>
             </div>
 
-            <div className="space-y-4 max-h-[500px] overflow-y-auto pr-2 custom-scrollbar">
+            <div className="space-y-3 max-h-[500px] overflow-y-auto pr-2 custom-scrollbar">
                 <AnimatePresence>
                 {filteredHistory.length === 0 ? (
-                    <div className="text-center py-12 text-slate-500 font-medium text-sm">
+                    <div className="text-center py-10 text-slate-500 dark:text-[#8E8E93] font-medium text-sm border border-dashed border-slate-200 dark:border-[#3A3A3C] rounded-xl">
                         Nenhum registro encontrado. Comece a catalogar seu emocional.
                     </div>
                 ) : (
@@ -319,16 +320,16 @@ const Mindset: React.FC = () => {
                             initial={{ opacity: 0, y: 10 }}
                             animate={{ opacity: 1, y: 0 }}
                             exit={{ opacity: 0, scale: 0.95 }}
-                            className="p-5 rounded-2xl border bg-slate-50 dark:bg-slate-900/50 border-slate-200 dark:border-slate-800 group transition-colors hover:border-slate-300 dark:hover:border-slate-700"
+                            className="p-5 rounded-xl border bg-slate-50 dark:bg-[#000000] border-slate-200 dark:border-[#2C2C2E] group transition-colors hover:border-slate-300 dark:hover:border-[#3A3A3C]"
                         >
                             <div className="flex justify-between items-start mb-3">
                                 <div className="flex items-center gap-3">
-                                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-xl ${moodConfig?.bg} border ${moodConfig?.border}`}>
+                                    <div className={`w-10 h-10 rounded-lg flex items-center justify-center text-xl ${moodConfig?.bg} border ${moodConfig?.border}`}>
                                         {moodConfig?.icon}
                                     </div>
                                     <div>
-                                        <p className={`text-xs font-black uppercase tracking-wider ${moodConfig?.color}`}>{moodConfig?.label}</p>
-                                        <p className="text-[10px] text-slate-500 font-bold">{entry.date} às {entry.time}</p>
+                                        <p className={`text-[10px] font-bold uppercase tracking-widest ${moodConfig?.color}`}>{moodConfig?.label}</p>
+                                        <p className="text-[10px] text-slate-500 dark:text-[#8E8E93] font-medium mt-0.5">{entry.date} às {entry.time}</p>
                                     </div>
                                 </div>
 
@@ -340,20 +341,20 @@ const Mindset: React.FC = () => {
                                             setNote(entry.note);
                                             window.scrollTo({ top: 0, behavior: 'smooth' });
                                         }}
-                                        className="p-2 bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-400 rounded-lg hover:text-emerald-500 transition-colors"
+                                        className="p-1.5 bg-slate-200 dark:bg-[#2C2C2E] text-slate-600 dark:text-slate-300 rounded-md hover:text-indigo-500 dark:hover:text-indigo-400 transition-colors"
                                     >
                                         <Pencil size={14} />
                                     </button>
                                     <button
                                         onClick={() => deleteMindsetEntry(entry.id)}
-                                        className="p-2 bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-400 rounded-lg hover:text-red-500 transition-colors"
+                                        className="p-1.5 bg-slate-200 dark:bg-[#2C2C2E] text-slate-600 dark:text-slate-300 rounded-md hover:text-red-500 dark:hover:text-red-400 transition-colors"
                                     >
                                         <Trash2 size={14} />
                                     </button>
                                 </div>
                             </div>
 
-                            <p className="text-sm text-slate-700 dark:text-slate-300 leading-relaxed pl-0">
+                            <p className="text-sm text-slate-700 dark:text-[#E5E5EA] leading-relaxed font-medium">
                                 {entry.note}
                             </p>
                         </motion.div>
@@ -371,28 +372,28 @@ const Mindset: React.FC = () => {
 
 /* INSIGHT CARD (Refinado) */
 const InsightCard = ({ title, value, description, positive, negative, color }: any) => (
-  <div className="p-6 rounded-[1.5rem] border bg-white dark:bg-[#0f172a] border-slate-200 dark:border-slate-800 shadow-sm relative overflow-hidden">
-    <p className="text-[10px] uppercase text-slate-500 font-black tracking-widest mb-3">
+  <div className="p-5 rounded-2xl border bg-white dark:bg-[#1C1C1E] border-slate-200 dark:border-[#2C2C2E] shadow-sm relative overflow-hidden">
+    <p className="text-[10px] uppercase text-slate-500 dark:text-[#8E8E93] font-bold tracking-widest mb-2">
       {title}
     </p>
 
-    <div className="flex items-center gap-3">
-      <h3 className={`text-2xl font-black ${color ? color : 'text-slate-900 dark:text-white'}`}>
+    <div className="flex items-center gap-2">
+      <h3 className={`text-2xl font-bold tracking-tight ${color ? color : 'text-slate-900 dark:text-white'}`}>
         {value}
       </h3>
       {positive && (
-        <div className="p-1.5 bg-emerald-100 dark:bg-emerald-500/10 rounded-lg text-emerald-600 dark:text-emerald-500">
-            <TrendingUp size={16} />
+        <div className="p-1 bg-emerald-50 dark:bg-emerald-500/10 rounded text-emerald-600 dark:text-emerald-500">
+            <TrendingUp size={14} />
         </div>
       )}
       {negative && (
-        <div className="p-1.5 bg-red-100 dark:bg-red-500/10 rounded-lg text-red-600 dark:text-red-500">
-            <TrendingDown size={16} />
+        <div className="p-1 bg-red-50 dark:bg-red-500/10 rounded text-red-600 dark:text-red-500">
+            <TrendingDown size={14} />
         </div>
       )}
     </div>
 
-    <p className="text-[10px] text-slate-500 font-bold uppercase tracking-wider mt-4 border-t border-slate-100 dark:border-slate-800 pt-3">
+    <p className="text-[10px] text-slate-500 dark:text-[#8E8E93] font-medium mt-3 border-t border-slate-100 dark:border-[#2C2C2E] pt-3">
       {description}
     </p>
   </div>
