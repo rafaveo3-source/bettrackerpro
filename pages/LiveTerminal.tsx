@@ -57,7 +57,7 @@ const SliderGroup: React.FC<SliderGroupProps> = ({ label, value, max, setter, co
 );
 
 const LiveTerminal: React.FC = () => {
-  const { isPro, currentBankrollBalance } = useBetStore();
+  const { isPro } = useBetStore();
   const navigate = useNavigate();
 
   // 🔥 OVERLAY DE VITRINE PRO 🔥
