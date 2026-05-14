@@ -1,5 +1,6 @@
 import React, { useState, useMemo } from 'react';
-import { Clock, Target, Flag, Goal, TrendingUp, ShieldAlert, BarChart3, Eye, CheckCircle2, AlertTriangle, Crown, ChevronRight, Calculator, Zap, Percent } from 'lucide-react';
+// 🔥 FIX: 'Activity' importado corretamente aqui na primeira linha 👇
+import { Clock, Target, Flag, Goal, TrendingUp, ShieldAlert, BarChart3, Eye, CheckCircle2, AlertTriangle, Crown, ChevronRight, Activity } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { useBetStore } from '../store/useBetStore';
