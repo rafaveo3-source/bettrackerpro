@@ -45,7 +45,14 @@ interface SidebarProps {
 }
 
 const Sidebar: React.FC<SidebarProps> = ({ currentView, setView, isOpen, setIsOpen }) => {
-  const { user, logout, isPro, isDarkMode, toggleTheme, resetTutorial } = useBetStore();
+  // 🔥 CORREÇÃO 3: SELETORES ATÔMICOS DO ZUSTAND (Evita Re-render Global) 🔥
+  const user = useBetStore(s => s.user);
+  const logout = useBetStore(s => s.logout);
+  const isPro = useBetStore(s => s.isPro);
+  const isDarkMode = useBetStore(s => s.isDarkMode);
+  const toggleTheme = useBetStore(s => s.toggleTheme);
+  const resetTutorial = useBetStore(s => s.resetTutorial);
+  
   const navigate = useNavigate();
 
   const menuItems = [
@@ -61,9 +68,12 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, setView, isOpen, setIsOp
     { id: 'settings', label: 'Configurações', icon: Settings },
   ];
 
+  // 🔥 CORREÇÃO 1: REQUEST ANIMATION FRAME (Evita Stale Render no React 18) 🔥
   const handleNavigation = (id: string) => {
-    setView(id);
-    setIsOpen(false);
+    requestAnimationFrame(() => {
+        setView(id);
+        setIsOpen(false);
+    });
   };
 
   const handleLogout = async () => {
@@ -245,7 +255,7 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, setView, isOpen, setIsOp
 
       </aside>
 
-      <AnimatePresence>
+      <AnimatePresence mode="sync">
         {isOpen && (
             <motion.div 
                 initial={{ opacity: 0 }}
