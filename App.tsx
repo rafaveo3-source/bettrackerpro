@@ -119,8 +119,8 @@ const AppContent: React.FC = () => {
         await checkProStatus();
       }
 
-      // 🔥 força um tick completo do React/Zustand
-      await new Promise(resolve => setTimeout(resolve, 0));
+      // 🔥 Aguarda hidratação completa React/Zustand
+      await new Promise((resolve) => setTimeout(resolve, 0));
 
       if (mounted) {
         setIsInitializing(false);
@@ -152,9 +152,6 @@ const AppContent: React.FC = () => {
   };
 }, []);
 
-    return () => subscription.unsubscribe();
-  }, [setSession, checkProStatus]);
-
   // Segura a tela preta/loading por milissegundos enquanto valida o token
   if (isInitializing) {
     return <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex items-center justify-center" />;
@@ -167,18 +164,7 @@ const AppContent: React.FC = () => {
         <Route path="/login" element={isAuthenticated ? <Navigate to="/dashboard" replace /> : <AuthPage />} />
         <Route path="/update-password" element={<UpdatePassword />} />
         {/* Rota Protegida (Aqui a Autorização Manda) */}
-        <Route
-  path="/*"
-  element={
-    isInitializing ? (
-      <div className="min-h-screen bg-slate-50 dark:bg-slate-950" />
-    ) : isAuthenticated ? (
-      <SystemRoutes />
-    ) : (
-      <Navigate to="/login" replace />
-    )
-  }
-/>
+        <Route path="/*" element={isAuthenticated ? <SystemRoutes /> : <Navigate to="/login" replace />} />
       </Routes>
       <Toaster />
     </>
