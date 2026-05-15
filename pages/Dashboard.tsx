@@ -28,6 +28,63 @@ import {
   ResponsiveContainer
 } from 'recharts';
 
+// 🔥 CORREÇÃO: COMPONENTE MOVIDO PARA FORA 🔥
+const KPICard = ({ title, value, subtext, icon: Icon, color, trend, extraInfo }: any) => (
+  <div className="bg-white dark:bg-[#1C1C1E] border border-slate-200 dark:border-[#2C2C2E] rounded-2xl p-6 shadow-sm min-w-0">
+    <div className="flex justify-between items-start mb-6">
+      <div className={`p-3 rounded-xl bg-slate-50 dark:bg-[#2C2C2E] border border-slate-100 dark:border-[#3A3A3C] ${color}`}>
+        <Icon size={20} strokeWidth={2} />
+      </div>
+
+      {trend !== undefined && (
+        <div className={`flex items-center gap-1 text-[10px] font-black px-2 py-1 rounded-md tracking-widest ${
+            trend >= 0 ? 'bg-emerald-50 text-emerald-600 dark:bg-emerald-500/10 dark:text-emerald-400' : 'bg-red-50 text-red-600 dark:bg-red-500/10 dark:text-red-400'
+          }`}
+        >
+          {trend >= 0 ? <ArrowUpRight size={14} /> : <ArrowDownRight size={14} />}
+          {Math.abs(trend).toFixed(1)}%
+        </div>
+      )}
+    </div>
+
+    <p className="text-xs font-bold text-slate-500 dark:text-[#8E8E93] mb-1">
+      {title}
+    </p>
+
+    <h3 className="text-3xl font-black text-slate-900 dark:text-white tracking-tight">
+      {value}
+    </h3>
+
+    <div className="flex justify-between items-center mt-3 pt-3 border-t border-slate-100 dark:border-[#2C2C2E]">
+      <p className="text-[10px] text-slate-400 dark:text-[#636366] font-bold">
+        {subtext}
+      </p>
+
+      {extraInfo && (
+        <span className="text-[10px] text-slate-500 dark:text-[#8E8E93] font-mono font-bold">
+          {extraInfo}
+        </span>
+      )}
+    </div>
+  </div>
+);
+
+// 🔥 CORREÇÃO: COMPONENTE MOVIDO PARA FORA 🔥
+const CustomTooltip = ({ active, payload, label, tooltipBg, tooltipBorder, tooltipText, formatValue }: any) => {
+  if (active && payload && payload.length) {
+    return (
+      <div style={{ backgroundColor: tooltipBg, borderColor: tooltipBorder, color: tooltipText }} className="p-3 border rounded-xl shadow-lg font-sans text-xs font-bold">
+        <p className="mb-1 text-slate-500 dark:text-[#8E8E93]">{label}</p>
+        <p className="text-indigo-600 dark:text-indigo-400 text-sm">Eq: {formatValue(payload[0].value)}</p>
+      </div>
+    );
+  }
+  return null;
+};
+
+// ==========================================
+// COMPONENTE PRINCIPAL
+// ==========================================
 const Dashboard: React.FC = () => {
   const {
     currentBankrollBalance,
@@ -161,61 +218,6 @@ const Dashboard: React.FC = () => {
   const isAtLimit = monthlyBetsCount >= MAX_FREE_BETS;
   const progressPercent = Math.min((monthlyBetsCount / MAX_FREE_BETS) * 100, 100);
 
-  /* -----------------------------
-      KPI CARD PREMIUM (APPLE PRO)
-  ----------------------------- */
-  const KPICard = ({ title, value, subtext, icon: Icon, color, trend, extraInfo }: any) => (
-    <div className="bg-white dark:bg-[#1C1C1E] border border-slate-200 dark:border-[#2C2C2E] rounded-2xl p-6 shadow-sm min-w-0">
-      <div className="flex justify-between items-start mb-6">
-        <div className={`p-3 rounded-xl bg-slate-50 dark:bg-[#2C2C2E] border border-slate-100 dark:border-[#3A3A3C] ${color}`}>
-          <Icon size={20} strokeWidth={2} />
-        </div>
-
-        {trend !== undefined && (
-          <div className={`flex items-center gap-1 text-[10px] font-black px-2 py-1 rounded-md tracking-widest ${
-              trend >= 0 ? 'bg-emerald-50 text-emerald-600 dark:bg-emerald-500/10 dark:text-emerald-400' : 'bg-red-50 text-red-600 dark:bg-red-500/10 dark:text-red-400'
-            }`}
-          >
-            {trend >= 0 ? <ArrowUpRight size={14} /> : <ArrowDownRight size={14} />}
-            {Math.abs(trend).toFixed(1)}%
-          </div>
-        )}
-      </div>
-
-      <p className="text-xs font-bold text-slate-500 dark:text-[#8E8E93] mb-1">
-        {title}
-      </p>
-
-      <h3 className="text-3xl font-black text-slate-900 dark:text-white tracking-tight">
-        {value}
-      </h3>
-
-      <div className="flex justify-between items-center mt-3 pt-3 border-t border-slate-100 dark:border-[#2C2C2E]">
-        <p className="text-[10px] text-slate-400 dark:text-[#636366] font-bold">
-          {subtext}
-        </p>
-
-        {extraInfo && (
-          <span className="text-[10px] text-slate-500 dark:text-[#8E8E93] font-mono font-bold">
-            {extraInfo}
-          </span>
-        )}
-      </div>
-    </div>
-  );
-
-  const CustomTooltip = ({ active, payload, label }: any) => {
-    if (active && payload && payload.length) {
-      return (
-        <div style={{ backgroundColor: tooltipBg, borderColor: tooltipBorder, color: tooltipText }} className="p-3 border rounded-xl shadow-lg font-sans text-xs font-bold">
-          <p className="mb-1 text-slate-500 dark:text-[#8E8E93]">{label}</p>
-          <p className="text-indigo-600 dark:text-indigo-400 text-sm">Eq: {formatValue(payload[0].value)}</p>
-        </div>
-      );
-    }
-    return null;
-  };
-
   return (
     <div className="space-y-8 pb-12 w-full overflow-x-hidden font-sans">
 
@@ -338,7 +340,8 @@ const Dashboard: React.FC = () => {
                   tickFormatter={(val) => displayMode === 'units' ? `${(val / unitSize).toFixed(0)}u` : val} 
                 />
 
-                <Tooltip content={<CustomTooltip />} cursor={{ stroke: gridColor, strokeWidth: 1, strokeDasharray: '4 4' }} />
+                {/* 🔥 CORREÇÃO: PROPS PASSADAS PARA O CUSTOM TOOLTIP 🔥 */}
+                <Tooltip content={<CustomTooltip tooltipBg={tooltipBg} tooltipBorder={tooltipBorder} tooltipText={tooltipText} formatValue={formatValue} />} cursor={{ stroke: gridColor, strokeWidth: 1, strokeDasharray: '4 4' }} />
 
                 <Area type="monotone" dataKey="balance" stroke="#6366f1" strokeWidth={3} fill="url(#colorBal)" dot={false} activeDot={{ r: 6, fill: '#6366f1', stroke: tooltipBg, strokeWidth: 3 }} />
               </AreaChart>
