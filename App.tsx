@@ -91,7 +91,7 @@ const SystemRoutes: React.FC = () => {
 };
 
 const AppContent: React.FC = () => {
-  const { setSession, isAuthenticated, checkProStatus, isDarkMode } = useBetStore();
+  const { setSession, isAuthenticated, isDarkMode } = useBetStore();
   
   // 🔥 ESTADO DE HIDRATAÇÃO: Previne o "F5" de chutar pro login prematuramente
   const [isInitializing, setIsInitializing] = useState(true);
@@ -105,21 +105,22 @@ const AppContent: React.FC = () => {
   }, [isDarkMode]);
 
   useEffect(() => {
-    // Escuta a sessão do Supabase ANTES de renderizar as rotas
+    // Escuta a sessão do Supabase ANTES de renderizar as rotas.
+    // setSession já chama checkProStatus() internamente — não chamar de novo aqui.
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session).then(() => {
-        if (session) checkProStatus();
-        setIsInitializing(false); // Libera o React Router
+        setIsInitializing(false); // Libera o React Router só após hidratação completa
       });
     });
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session);
-      if (session) checkProStatus();
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
+      // ✅ await garante que o estado (isPro, bankrolls, etc.) esteja 100% pronto
+      // antes de qualquer re-render do Router.
+      await setSession(session);
     });
 
     return () => subscription.unsubscribe();
-  }, [setSession, checkProStatus]);
+  }, [setSession]);
 
   // Segura a tela preta/loading por milissegundos enquanto valida o token
   if (isInitializing) {

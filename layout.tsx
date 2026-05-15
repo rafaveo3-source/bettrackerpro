@@ -3,7 +3,6 @@ import Sidebar from './components/Sidebar';
 import NewBetModal from './components/NewBetModal';
 import { Plus, Lock, Rocket, Target, ShieldAlert, BarChart3, Wallet, BrainCircuit, X, CalendarDays, Calculator, BookOpen, Sparkles } from 'lucide-react';
 import { useBetStore, Bet } from './store/useBetStore';
-import Auth from './pages/Auth';
 import Joyride, { Step, CallBackProps, STATUS, TooltipRenderProps } from 'react-joyride';
 
 interface LayoutProps {
@@ -217,7 +216,13 @@ const Layout: React.FC<LayoutProps> = ({ children, currentView, setView }) => {
     }
   };
 
-  if (!isAuthenticated) return <Auth />;
+  // ⚠️ GUARD REMOVIDO INTENCIONALMENTE:
+  // O Layout só é montado dentro de <SystemRoutes />, que já está protegido
+  // pelo guard do App.tsx (isAuthenticated ? <SystemRoutes /> : <Navigate to="/login" />).
+  // Manter esse guard aqui causava freeze em usuários FREE: quando o
+  // onAuthStateChange re-hidratava o estado, isAuthenticated piscava para
+  // false por 1 frame → Layout renderizava <Auth /> em vez da rota atual
+  // → React mantinha o componente montado sem trocar o conteúdo.
 
   return (
     <div className="flex min-h-screen font-sans bg-slate-50 dark:bg-slate-950 transition-colors duration-300 w-full overflow-x-hidden relative">
