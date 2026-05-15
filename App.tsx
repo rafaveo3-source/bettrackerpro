@@ -27,46 +27,9 @@ import UpdatePassword from './pages/UpdatePassword';
 import { useBetStore, supabase } from './store/useBetStore';
 import { Toaster } from './components/ui/Toaster';
 
-// =====================================================================
-// 🔥 CÃO DE GUARDA GLOBAL (ERROR BOUNDARY) 🔥
-// Se uma página tentar congelar o roteador, ele captura o erro na hora.
-// =====================================================================
-class GlobalErrorBoundary extends React.Component<{children: React.ReactNode}, {hasError: boolean, error: Error | null}> {
-  constructor(props: {children: React.ReactNode}) {
-    super(props);
-    this.state = { hasError: false, error: null };
-  }
-  static getDerivedStateFromError(error: Error) {
-    return { hasError: true, error };
-  }
-  componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
-    console.error("🚨 ERRO SILENCIOSO CAPTURADO NA ROTA:", error, errorInfo);
-  }
-  render() {
-    if (this.state.hasError) {
-      return (
-        <div className="min-h-screen bg-red-950 flex flex-col items-center justify-center p-8 text-white font-mono z-[9999] relative">
-          <h1 className="text-4xl font-black mb-4 text-red-400">🚨 TELA CONGELADA (CRASH) 🚨</h1>
-          <p className="text-lg mb-8 text-center max-w-2xl">Um erro de lógica em alguma página abortou a renderização.</p>
-          <div className="bg-black/50 p-6 rounded-xl w-full max-w-4xl overflow-auto text-sm text-red-200 border border-red-500/30">
-            <strong>Causa do Erro:</strong><br />
-            {this.state.error?.toString()}<br /><br />
-            <strong>Rastreamento (Stack):</strong><br />
-            {this.state.error?.stack}
-          </div>
-          <button onClick={() => window.location.href = '/dashboard'} className="mt-8 bg-red-600 hover:bg-red-500 text-white px-8 py-4 rounded-xl font-bold uppercase tracking-widest transition-all">
-            Forçar Retorno ao Dashboard
-          </button>
-        </div>
-      );
-    }
-    return this.props.children;
-  }
-}
-
 const SystemRoutes: React.FC = () => {
   const navigate = useNavigate();
-  const location = useLocation(); // Esse hook capta a alteração da URL
+  const location = useLocation();
 
   const getCurrentViewID = () => {
     const path = location.pathname;
@@ -107,35 +70,30 @@ const SystemRoutes: React.FC = () => {
 
   return (
     <Layout currentView={getCurrentViewID()} setView={handleSetView}>
-      <GlobalErrorBoundary>
-        {/* FIX: Injetar a prop 'location' descongela o React Router forçando re-render na navegação aninhada */}
-        <Routes location={location} key={location.pathname}>
-          <Route path="/dashboard" element={<Dashboard />} />
-          <Route path="/scout" element={<ScoutIA />} /> 
-          <Route path="/terminal-live" element={<LiveTerminal />} />
-          <Route path="/analytics" element={<Analytics />} />
-          <Route path="/goals" element={<Goals />} />
-          <Route path="/mindset" element={<Mindset />} />
-          <Route path="/history" element={<History />} />
-          <Route path="/bankrolls" element={<Bankroll />} />
-          <Route path="/calendar" element={<PerformanceCalendar />} />
-          <Route path="/calculators" element={<Calculators />} />
-          <Route path="/library" element={<SystemLibrary />} />
-          <Route path="/settings" element={<Settings />} />
-          <Route path="/pro" element={<ProPage />} /> 
-          <Route path="*" element={<Navigate to="/dashboard" replace />} />
-        </Routes>
-      </GlobalErrorBoundary>
+      <Routes>
+        <Route path="/dashboard" element={<Dashboard />} />
+        <Route path="/scout" element={<ScoutIA />} /> 
+        <Route path="/terminal-live" element={<LiveTerminal />} />
+        <Route path="/analytics" element={<Analytics />} />
+        <Route path="/goals" element={<Goals />} />
+        <Route path="/mindset" element={<Mindset />} />
+        <Route path="/history" element={<History />} />
+        <Route path="/bankrolls" element={<Bankroll />} />
+        <Route path="/calendar" element={<PerformanceCalendar />} />
+        <Route path="/calculators" element={<Calculators />} />
+        <Route path="/library" element={<SystemLibrary />} />
+        <Route path="/settings" element={<Settings />} />
+        <Route path="/pro" element={<ProPage />} /> 
+        <Route path="*" element={<Navigate to="/dashboard" replace />} />
+      </Routes>
     </Layout>
   );
 };
 
 const AppContent: React.FC = () => {
-  const isAuthenticated = useBetStore(s => s.isAuthenticated);
-  const isDarkMode = useBetStore(s => s.isDarkMode);
-  const setSession = useBetStore(s => s.setSession);
+  const { setSession, isAuthenticated, checkProStatus, isDarkMode } = useBetStore();
   
-  // Inicializa o status de autenticação com checagem real do Supabase.
+  // 🔥 ESTADO DE HIDRATAÇÃO: Previne o "F5" de chutar pro login prematuramente
   const [isInitializing, setIsInitializing] = useState(true);
 
   useEffect(() => {
@@ -147,55 +105,25 @@ const AppContent: React.FC = () => {
   }, [isDarkMode]);
 
   useEffect(() => {
-    let isMounted = true;
-
-    // 🔥 FAILSAFE ABSOLUTO: 2 segundos máximo. Evita loop eterno de Supabase.
-    const failsafe = setTimeout(() => {
-        if (isMounted && isInitializing) {
-            console.warn("⚠️ Failsafe ativado: Liberação forçada de tela.");
-            setIsInitializing(false);
-        }
-    }, 2000);
-
-    const initAuth = async () => {
-        try {
-            const { data: { session } } = await supabase.auth.getSession();
-            await setSession(session);
-        } catch (err) {
-            console.error("Erro na validação do Supabase:", err);
-        } finally {
-            clearTimeout(failsafe);
-            if (isMounted) setIsInitializing(false);
-        }
-    };
-
-    initAuth();
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      if (event === 'INITIAL_SESSION') return;
-      try {
-          await setSession(session);
-      } catch (err) {
-          console.error("Erro de estado (onAuthStateChange):", err);
-      }
+    // Escuta a sessão do Supabase ANTES de renderizar as rotas
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session).then(() => {
+        if (session) checkProStatus();
+        setIsInitializing(false); // Libera o React Router
+      });
     });
 
-    return () => {
-        isMounted = false;
-        clearTimeout(failsafe);
-        subscription.unsubscribe();
-    };
-  }, []); // Dependências vazias para garantir que roda UMA VEZ na montagem
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session);
+      if (session) checkProStatus();
+    });
 
+    return () => subscription.unsubscribe();
+  }, [setSession, checkProStatus]);
+
+  // Segura a tela preta/loading por milissegundos enquanto valida o token
   if (isInitializing) {
-    return (
-        <div className="min-h-screen bg-slate-50 dark:bg-[#000000] flex flex-col items-center justify-center gap-5">
-            <div className="w-8 h-8 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin"></div>
-            <p className="text-slate-500 dark:text-[#8E8E93] text-[10px] font-bold uppercase tracking-widest animate-pulse">
-                Sincronizando Sistema...
-            </p>
-        </div>
-    );
+    return <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex items-center justify-center" />;
   }
 
   return (
@@ -204,6 +132,7 @@ const AppContent: React.FC = () => {
         <Route path="/" element={isAuthenticated ? <Navigate to="/dashboard" replace /> : <LandingPage />} />
         <Route path="/login" element={isAuthenticated ? <Navigate to="/dashboard" replace /> : <AuthPage />} />
         <Route path="/update-password" element={<UpdatePassword />} />
+        {/* Rota Protegida (Aqui a Autorização Manda) */}
         <Route path="/*" element={isAuthenticated ? <SystemRoutes /> : <Navigate to="/login" replace />} />
       </Routes>
       <Toaster />
