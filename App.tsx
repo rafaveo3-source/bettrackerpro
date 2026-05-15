@@ -30,22 +30,12 @@ import { Toaster } from './components/ui/Toaster';
 const SystemRoutes: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { checkProStatus, isAuthenticated } = useBetStore();
-
-  // 🔥 GATILHO GLOBAL CROSS-DEVICE 🔥
-  // Sempre que a rota mudar dentro do sistema logado, força a checagem do plano PRO
-  // Isso mata o bug do celular logar e achar que é FREE por causa de cache antigo.
-  useEffect(() => {
-    if (isAuthenticated) {
-        checkProStatus();
-    }
-  }, [location.pathname, isAuthenticated, checkProStatus]);
 
   const getCurrentViewID = () => {
     const path = location.pathname;
     if (path.includes('/dashboard')) return 'dashboard';
     if (path.includes('/scout')) return 'scout'; 
-    if (path.includes('/terminal-live')) return 'terminal';
+    if (path.includes('/terminal')) return 'terminal';
     if (path.includes('/analytics')) return 'analytics';
     if (path.includes('/goals')) return 'metas';
     if (path.includes('/mindset')) return 'mindset';
