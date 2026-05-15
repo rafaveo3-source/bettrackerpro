@@ -45,7 +45,7 @@ interface SidebarProps {
 }
 
 const Sidebar: React.FC<SidebarProps> = ({ currentView, setView, isOpen, setIsOpen }) => {
-  // 🔥 CORREÇÃO 3: SELETORES ATÔMICOS DO ZUSTAND (Evita Re-render Global) 🔥
+  // SELETORES ATÔMICOS: Previnem que o menu inteiro re-renderize à toa
   const user = useBetStore(s => s.user);
   const logout = useBetStore(s => s.logout);
   const isPro = useBetStore(s => s.isPro);
@@ -68,12 +68,11 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, setView, isOpen, setIsOp
     { id: 'settings', label: 'Configurações', icon: Settings },
   ];
 
-  // 🔥 CORREÇÃO 1: REQUEST ANIMATION FRAME (Evita Stale Render no React 18) 🔥
+  // 🔥 SOLUÇÃO DA TELA CONGELADA: Navegação 100% Síncrona 🔥
+  // O requestAnimationFrame foi removido pois estava quebrando o React Router v6
   const handleNavigation = (id: string) => {
-    requestAnimationFrame(() => {
-        setView(id);
-        setIsOpen(false);
-    });
+    setView(id);
+    setIsOpen(false);
   };
 
   const handleLogout = async () => {
@@ -129,7 +128,6 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, setView, isOpen, setIsOp
 
         <nav className="flex-1 overflow-y-auto py-6 px-4 space-y-1 custom-scrollbar">
             
-            {/* Dashboard Fixo */}
             <button
                 onClick={() => handleNavigation('dashboard')}
                 className={`tour-sidebar-dashboard w-full flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-bold transition-all duration-200 group mb-4
@@ -141,7 +139,6 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, setView, isOpen, setIsOp
                 Visão Geral
             </button>
 
-            {/* Módulos HFT (Flat Design) */}
             <div className="mb-4 space-y-2">
                 <p className="px-4 text-[10px] font-black uppercase tracking-widest text-slate-400 dark:text-[#636366] mb-2">Módulos de IA</p>
                 
@@ -176,7 +173,6 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, setView, isOpen, setIsOp
 
             <p className="px-4 text-[10px] font-black uppercase tracking-widest text-slate-400 dark:text-[#636366] mt-6 mb-2">Core System</p>
 
-            {/* Restante dos Menus */}
             {menuItems.filter(i => i.id !== 'dashboard').map(item => {
                 const isActive = currentView === item.id;
                 
