@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import Sidebar from './components/Sidebar';
 import NewBetModal from './components/NewBetModal';
 import { Plus, Lock, Rocket, Target, ShieldAlert, BarChart3, Wallet, BrainCircuit, X, CalendarDays, Calculator, BookOpen, Sparkles } from 'lucide-react';
@@ -35,11 +35,10 @@ const CustomTooltip = ({
   return (
     <div
       {...tooltipProps}
-      // Largura dinâmica: preenche a tela no mobile com margem, e fixa tamanho no desktop
       className="bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-800 rounded-[2rem] p-5 md:p-6 shadow-2xl w-[calc(100vw-32px)] md:max-w-[360px] mx-auto"
     >
       <div className="flex gap-1.5 mb-4 justify-center">
-        {[...Array(9)].map((_, i) => (
+        {[...Array(10)].map((_, i) => (
           <div key={i} className={`h-1.5 rounded-full transition-all duration-300 ${i === index ? 'w-6 bg-emerald-500' : 'w-1.5 bg-slate-200 dark:bg-slate-800'}`} />
         ))}
       </div>
@@ -88,16 +87,16 @@ const Layout: React.FC<LayoutProps> = ({ children, currentView, setView }) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [betToEdit, setBetToEdit] = useState<Bet | undefined>(undefined);
   const { 
-  isDarkMode, 
-  primaryColor, 
-  isAuthenticated, 
-  isTiltLocked, 
-  tiltLockUntil,
-  toast,
-  setToast,
-  hasSeenTutorial,
-  completeTutorial
-} = useBetStore();
+    isDarkMode, 
+    primaryColor, 
+    isAuthenticated, 
+    isTiltLocked, 
+    tiltLockUntil,
+    toast,
+    setToast,
+    hasSeenTutorial,
+    completeTutorial
+  } = useBetStore();
   const [locked, setLocked] = useState(false);
 
   // 🔥 GARANTIR QUE A SIDEBAR ABRA NO MOBILE PARA O TOUR
@@ -140,8 +139,9 @@ const Layout: React.FC<LayoutProps> = ({ children, currentView, setView }) => {
 
   // ========================================================
   // 🔥 CONFIGURAÇÃO DO TUTORIAL COM NOVAS TELAS
+  // ENVOLVIDO EM useMemo PARA EVITAR RE-RENDERIZAÇÕES QUEBRADAS
   // ========================================================
-  const tutorialSteps: Step[] = [
+  const tutorialSteps: Step[] = useMemo(() => [
     {
       target: 'body',
       placement: 'center',
@@ -203,7 +203,7 @@ const Layout: React.FC<LayoutProps> = ({ children, currentView, setView }) => {
       title: <><ShieldAlert className="text-emerald-500" /> Registre o Green</>,
       content: 'Acabou a operação? Clique aqui para cadastrar a Stake e a Odd. O motor do BetTracker fará todo o cruzamento de dados matemáticos.',
     }
-  ];
+  ], []);
 
   const handleJoyrideCallback = (data: CallBackProps) => {
     const { status } = data;

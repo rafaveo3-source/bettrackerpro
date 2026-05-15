@@ -68,8 +68,6 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, setView, isOpen, setIsOp
     { id: 'settings', label: 'Configurações', icon: Settings },
   ];
 
-  // 🔥 SOLUÇÃO DA TELA CONGELADA: Navegação 100% Síncrona 🔥
-  // O requestAnimationFrame foi removido pois estava quebrando o React Router v6
   const handleNavigation = (id: string) => {
     setView(id);
     setIsOpen(false);
@@ -140,16 +138,16 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, setView, isOpen, setIsOp
             </button>
 
             <div className="mb-4 space-y-2">
-    <p className="px-4 text-[10px] font-black uppercase tracking-widest text-slate-400 dark:text-[#636366] mb-2">Módulos de IA</p>
-    
-    <button
-        onClick={() => handleNavigation('scout')}
-        className={`tour-sidebar-scout w-full flex items-center justify-between px-4 py-2.5 rounded-lg text-sm font-bold transition-all duration-200 group
-        ${currentView === 'scout' 
-            ? 'bg-indigo-50 text-indigo-700 dark:bg-indigo-500/10 dark:text-indigo-400' 
-            : 'text-slate-500 dark:text-[#8E8E93] hover:text-slate-900 dark:hover:text-white hover:bg-slate-50 dark:hover:bg-[#1C1C1E]/50'}`}
-    >
-        <div className="flex items-center gap-3">
+                <p className="px-4 text-[10px] font-black uppercase tracking-widest text-slate-400 dark:text-[#636366] mb-2">Módulos de IA</p>
+                
+                <button
+                    onClick={() => handleNavigation('scout')}
+                    className={`tour-sidebar-scout w-full flex items-center justify-between px-4 py-2.5 rounded-lg text-sm font-bold transition-all duration-200 group
+                    ${currentView === 'scout' 
+                        ? 'bg-indigo-50 text-indigo-700 dark:bg-indigo-500/10 dark:text-indigo-400' 
+                        : 'text-slate-500 dark:text-[#8E8E93] hover:text-slate-900 dark:hover:text-white hover:bg-slate-50 dark:hover:bg-[#1C1C1E]/50'}`}
+                >
+                    <div className="flex items-center gap-3">
                         <Sparkles size={18} className={`${currentView === 'scout' ? 'text-indigo-600 dark:text-indigo-500' : 'text-slate-400 dark:text-[#636366] group-hover:text-indigo-500'}`} />
                         Scout IA
                     </div>
