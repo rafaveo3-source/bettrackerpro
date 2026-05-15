@@ -357,10 +357,7 @@ export const useBetStore = create<BetState>()(
       // 🔥 TRY/CATCH GLOBAL: Protege contra interrupções de navegação SPA se o Supabase falhar
       checkProStatus: async () => {
         const user = get().user;
-        if (!user) {
-          set({ isPro: false, subscriptionValidUntil: null });
-          return;
-        }
+        if (!user) return;
         
         try {
           const { data, error } = await supabase
@@ -369,27 +366,22 @@ export const useBetStore = create<BetState>()(
             .eq('id', user.id)
             .single();
             
-          // Lança o erro apenas se for severo, ignorando "Profile Não Encontrado" (PGRST116)
-          if (error && error.code !== 'PGRST116') {
-             throw error; 
-          }
-            
-          if (data) {
+          if (data && !error) {
             const now = new Date();
             const validUntil = data.valid_until ? new Date(data.valid_until) : null;
             
+            // Aceita ativo MESMO sem data limite (assinatura contínua padrão)
             const isActive = 
-                (data.subscription_status === 'active' && validUntil && validUntil > now) ||
-                (data.subscription_status === 'lifetime'); 
+                data.subscription_status === 'lifetime' || 
+                (data.subscription_status === 'active' && (!validUntil || validUntil > now));
             
             set({ isPro: isActive, subscriptionValidUntil: data.valid_until });
           } else {
-            set({ isPro: false, subscriptionValidUntil: null });
+             set({ isPro: false });
           }
         } catch (e) {
-          // 🔥 GARANTIA DE ACESSO FREE: Mesmo se a API falhar, o usuário continua navegando normalmente
-          console.error("[AUTH] Erro silencioso ao checar PRO (Usuário mantido como FREE):", e);
-          set({ isPro: false, subscriptionValidUntil: null });
+          console.error("Erro ao checar PRO:", e);
+          set({ isPro: false });
         }
       },
 
@@ -525,9 +517,14 @@ export const useBetStore = create<BetState>()(
       logout: async () => {
         try {
           await supabase.auth.signOut();
+        } catch (error) {
+          console.error("Erro de rede ao fazer signOut no Supabase:", error);
         } finally {
+          // Limpeza Marcial (Forçada)
           set({ isAuthenticated: false, user: null });
           localStorage.removeItem('bettracker-storage-v5');
+          // Redireciona e limpa o cache de memória do JS
+          window.location.href = '/login'; 
         }
       },
 
