@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { BrowserRouter, Routes, Route, useNavigate, useLocation, Navigate } from 'react-router-dom';
 
 // Layout do Sistema
@@ -46,7 +46,7 @@ const SystemRoutes: React.FC = () => {
     if (path.includes('/library')) return 'biblioteca';
     if (path.includes('/settings')) return 'settings';
     if (path.includes('/pro')) return 'pro'; 
-    return 'dashboard'; // Fallback seguro
+    return 'dashboard';
   };
 
   const handleSetView = (viewId: string) => {
@@ -84,7 +84,6 @@ const SystemRoutes: React.FC = () => {
         <Route path="/library" element={<SystemLibrary />} />
         <Route path="/settings" element={<Settings />} />
         <Route path="/pro" element={<ProPage />} /> 
-        {/* Rota coringa que protege quebras de URL */}
         <Route path="*" element={<Navigate to="/dashboard" replace />} />
       </Routes>
     </Layout>
@@ -93,8 +92,10 @@ const SystemRoutes: React.FC = () => {
 
 const AppContent: React.FC = () => {
   const { setSession, isAuthenticated, checkProStatus, isDarkMode } = useBetStore();
+  
+  // 🔥 ESTADO DE HIDRATAÇÃO: Previne o "F5" de chutar pro login prematuramente
+  const [isInitializing, setIsInitializing] = useState(true);
 
-  // Gerenciamento de Tema
   useEffect(() => {
     if (isDarkMode) {
       document.documentElement.classList.add('dark');
@@ -103,11 +104,13 @@ const AppContent: React.FC = () => {
     }
   }, [isDarkMode]);
 
-  // Autenticação e Checagem de Plano (Otimizado)
   useEffect(() => {
+    // Escuta a sessão do Supabase ANTES de renderizar as rotas
     supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      if (session) checkProStatus();
+      setSession(session).then(() => {
+        if (session) checkProStatus();
+        setIsInitializing(false); // Libera o React Router
+      });
     });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
@@ -118,13 +121,18 @@ const AppContent: React.FC = () => {
     return () => subscription.unsubscribe();
   }, [setSession, checkProStatus]);
 
+  // Segura a tela preta/loading por milissegundos enquanto valida o token
+  if (isInitializing) {
+    return <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex items-center justify-center" />;
+  }
+
   return (
     <>
       <Routes>
         <Route path="/" element={isAuthenticated ? <Navigate to="/dashboard" replace /> : <LandingPage />} />
         <Route path="/login" element={isAuthenticated ? <Navigate to="/dashboard" replace /> : <AuthPage />} />
         <Route path="/update-password" element={<UpdatePassword />} />
-        {/* Rota Raiz do Sistema Protegida */}
+        {/* Rota Protegida (Aqui a Autorização Manda) */}
         <Route path="/*" element={isAuthenticated ? <SystemRoutes /> : <Navigate to="/login" replace />} />
       </Routes>
       <Toaster />
