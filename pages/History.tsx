@@ -4,6 +4,40 @@ import { useBetStore, Bet } from '../store/useBetStore';
 import { Search, Filter, Download, ArrowUpDown, ChevronDown, RefreshCcw, Trash2, Pencil, Lock } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
+// 🔥 CORREÇÃO: Helper movido para FORA do componente principal 🔥
+const StatusBadge = ({ status }: { status: string }) => {
+    let styles = '';
+    let label = '';
+    
+    switch(status) {
+        case 'won': case 'half-won':
+            styles = 'bg-emerald-50 text-emerald-600 border-emerald-200 dark:bg-emerald-500/10 dark:text-emerald-400 dark:border-emerald-500/20';
+            label = 'Lucro (TP)';
+            break;
+        case 'lost': case 'half-lost':
+            styles = 'bg-red-50 text-red-600 border-red-200 dark:bg-red-500/10 dark:text-red-400 dark:border-red-500/20';
+            label = 'Prejuízo (SL)';
+            break;
+        case 'refunded':
+            styles = 'bg-slate-100 text-slate-600 border-slate-200 dark:bg-[#2C2C2E] dark:text-[#E5E5EA] dark:border-[#3A3A3C]';
+            label = 'Void / Devolvido';
+            break;
+        case 'cashout':
+            styles = 'bg-blue-50 text-blue-600 border-blue-200 dark:bg-blue-500/10 dark:text-blue-400 dark:border-blue-500/20';
+            label = 'Fechamento';
+            break;
+        default:
+            styles = 'bg-amber-50 text-amber-600 border-amber-200 dark:bg-amber-500/10 dark:text-amber-400 dark:border-amber-500/20';
+            label = 'Exposição Aberta';
+    }
+
+    return (
+        <span className={`inline-flex items-center px-2 py-0.5 rounded text-[9px] uppercase tracking-widest font-bold border whitespace-nowrap ${styles}`}>
+            {label}
+        </span>
+    );
+};
+
 const History: React.FC = () => {
   const { history, removeBet, activeBankrollId, getMetrics, displayMode, unitSize, bankrolls, isPro } = useBetStore();
   const navigate = useNavigate();
@@ -115,40 +149,6 @@ const History: React.FC = () => {
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
-  };
-
-  // Helper para renderizar status corporativo
-  const StatusBadge = ({ status }: { status: string }) => {
-      let styles = '';
-      let label = '';
-      
-      switch(status) {
-          case 'won': case 'half-won':
-              styles = 'bg-emerald-50 text-emerald-600 border-emerald-200 dark:bg-emerald-500/10 dark:text-emerald-400 dark:border-emerald-500/20';
-              label = 'Lucro (TP)';
-              break;
-          case 'lost': case 'half-lost':
-              styles = 'bg-red-50 text-red-600 border-red-200 dark:bg-red-500/10 dark:text-red-400 dark:border-red-500/20';
-              label = 'Prejuízo (SL)';
-              break;
-          case 'refunded':
-              styles = 'bg-slate-100 text-slate-600 border-slate-200 dark:bg-[#2C2C2E] dark:text-[#E5E5EA] dark:border-[#3A3A3C]';
-              label = 'Void / Devolvido';
-              break;
-          case 'cashout':
-              styles = 'bg-blue-50 text-blue-600 border-blue-200 dark:bg-blue-500/10 dark:text-blue-400 dark:border-blue-500/20';
-              label = 'Fechamento';
-              break;
-          default:
-              styles = 'bg-amber-50 text-amber-600 border-amber-200 dark:bg-amber-500/10 dark:text-amber-400 dark:border-amber-500/20';
-              label = 'Exposição Aberta';
-      }
-
-      return (
-          <span className={`inline-flex items-center px-2 py-0.5 rounded text-[9px] uppercase tracking-widest font-bold border whitespace-nowrap ${styles}`}>
-              {label}
-          </span>
-      );
   };
 
   const cardClass = "bg-white dark:bg-[#1C1C1E] border border-slate-200 dark:border-[#2C2C2E] rounded-2xl p-6 shadow-sm";
