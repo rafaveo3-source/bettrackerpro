@@ -21,6 +21,26 @@ import ManageMarkets from '../components/ManageMarkets';
 import ManageMethods from '../components/ManageMethods';
 import ManageStrategies from '../components/ManageStrategies';
 
+// 🔥 CORREÇÃO: COMPONENTE MOVIDO PARA FORA DO ESCOPO PRINCIPAL 🔥
+const ProBlurOverlay = ({ title, desc, navigate }: { title: string, desc: string, navigate: any }) => (
+    <div className="absolute inset-0 z-50 flex items-center justify-center bg-white/40 dark:bg-[#000000]/50 backdrop-blur-md rounded-2xl">
+        <div className="bg-white dark:bg-[#1C1C1E] border border-emerald-500/30 p-8 rounded-2xl max-w-md text-center shadow-xl flex flex-col items-center mx-4">
+            <div className="bg-emerald-500/10 p-4 rounded-xl mb-4 text-emerald-600 dark:text-emerald-400">
+                <Crown size={28} />
+            </div>
+            <h2 className="text-xl font-bold text-slate-900 dark:text-white tracking-tight mb-2">
+                {title} <span className="text-emerald-500">PRO</span>
+            </h2>
+            <p className="text-slate-500 dark:text-[#8E8E93] mb-6 text-sm leading-relaxed">
+                {desc}
+            </p>
+            <button onClick={() => navigate('/pro')} className="w-full bg-slate-900 hover:bg-slate-800 text-white dark:bg-emerald-600 dark:hover:bg-emerald-500 font-bold py-3.5 px-8 rounded-xl transition-all shadow-sm text-xs tracking-widest uppercase">
+                Desbloquear Acesso
+            </button>
+        </div>
+    </div>
+);
+
 const SystemLibrary: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'leagues' | 'teams' | 'markets' | 'strategies' | 'methods'>('leagues');
   const navigate = useNavigate();
@@ -42,26 +62,6 @@ const SystemLibrary: React.FC = () => {
     { id: 'strategies', label: 'Gestão/Planos', icon: TrendingUp, count: customStrategies.length, pro: true },
     { id: 'methods', label: 'Métodos/Setups', icon: Target, count: userMethods.length, pro: true },
   ];
-
-  // 🔥 OVERLAY DE VITRINE (EFEITO BLUR) PARA USUÁRIOS FREE 🔥
-  const ProBlurOverlay = ({ title, desc }: { title: string, desc: string }) => (
-      <div className="absolute inset-0 z-50 flex items-center justify-center bg-white/40 dark:bg-[#000000]/50 backdrop-blur-md rounded-2xl">
-          <div className="bg-white dark:bg-[#1C1C1E] border border-emerald-500/30 p-8 rounded-2xl max-w-md text-center shadow-xl flex flex-col items-center mx-4">
-              <div className="bg-emerald-500/10 p-4 rounded-xl mb-4 text-emerald-600 dark:text-emerald-400">
-                  <Crown size={28} />
-              </div>
-              <h2 className="text-xl font-bold text-slate-900 dark:text-white tracking-tight mb-2">
-                  {title} <span className="text-emerald-500">PRO</span>
-              </h2>
-              <p className="text-slate-500 dark:text-[#8E8E93] mb-6 text-sm leading-relaxed">
-                  {desc}
-              </p>
-              <button onClick={() => navigate('/pro')} className="w-full bg-slate-900 hover:bg-slate-800 text-white dark:bg-emerald-600 dark:hover:bg-emerald-500 font-bold py-3.5 px-8 rounded-xl transition-all shadow-sm text-xs tracking-widest uppercase">
-                  Desbloquear Acesso
-              </button>
-          </div>
-      </div>
-  );
 
   return (
     <div className="min-h-screen bg-[#F8FAFC] dark:bg-[#000000] text-slate-900 dark:text-slate-200 pb-20 md:pl-20 pt-20 md:pt-8 px-4 md:px-8 transition-colors duration-300 font-sans">
@@ -160,7 +160,7 @@ const SystemLibrary: React.FC = () => {
 
             {activeTab === 'teams' && (
               <motion.div key="teams" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="relative">
-                {!isPro && <ProBlurOverlay title="Gestão de Clubes" desc="Cataloge times com perfis comportamentais específicos (Ex: Over 2.5, Alta Posse, Retranqueiros) para buscar as melhores odds." />}
+                {!isPro && <ProBlurOverlay title="Gestão de Clubes" desc="Cataloge times com perfis comportamentais específicos (Ex: Over 2.5, Alta Posse, Retranqueiros) para buscar as melhores odds." navigate={navigate} />}
                 <div className={!isPro ? 'pointer-events-none select-none blur-[4px] opacity-60' : ''}>
                     <ManageTeams />
                 </div>
@@ -169,7 +169,7 @@ const SystemLibrary: React.FC = () => {
 
             {activeTab === 'markets' && (
               <motion.div key="markets" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="relative">
-                {!isPro && <ProBlurOverlay title="Gestão de Mercados" desc="Organize mercados avançados (Asiáticos, Minutos, Combos) para ter estatísticas hiper segmentadas do seu histórico." />}
+                {!isPro && <ProBlurOverlay title="Gestão de Mercados" desc="Organize mercados avançados (Asiáticos, Minutos, Combos) para ter estatísticas hiper segmentadas do seu histórico." navigate={navigate} />}
                 <div className={!isPro ? 'pointer-events-none select-none blur-[4px] opacity-60' : ''}>
                     <ManageMarkets />
                 </div>
@@ -179,7 +179,7 @@ const SystemLibrary: React.FC = () => {
             {/* ABA ESTRATÉGIAS OTIMIZADA */}
             {activeTab === 'strategies' && (
               <motion.div key="strategies" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="relative space-y-8">
-                {!isPro && <ProBlurOverlay title="Planos de Gestão" desc="Importe e gerencie planos institucionais de alocação de banca, juros compostos e controle de volatilidade." />}
+                {!isPro && <ProBlurOverlay title="Planos de Gestão" desc="Importe e gerencie planos institucionais de alocação de banca, juros compostos e controle de volatilidade." navigate={navigate} />}
                 
                 <div className={!isPro ? 'pointer-events-none select-none blur-[4px] opacity-60 space-y-8' : 'space-y-8'}>
                     {/* 1. SEÇÃO: MINHAS ESTRATÉGIAS */}
@@ -213,7 +213,7 @@ const SystemLibrary: React.FC = () => {
 
             {activeTab === 'methods' && (
               <motion.div key="methods" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="relative">
-                {!isPro && <ProBlurOverlay title="Setup & Validação" desc="O laboratório de testes do sistema. Cadastre novas teses de apostas (Setups) e deixe a ferramenta dizer, baseado no seu histórico, qual é matematicamente lucrativa." />}
+                {!isPro && <ProBlurOverlay title="Setup & Validação" desc="O laboratório de testes do sistema. Cadastre novas teses de apostas (Setups) e deixe a ferramenta dizer, baseado no seu histórico, qual é matematicamente lucrativa." navigate={navigate} />}
                 <div className={!isPro ? 'pointer-events-none select-none blur-[4px] opacity-60' : ''}>
                     <ManageMethods />
                 </div>
