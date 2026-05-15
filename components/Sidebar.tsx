@@ -158,7 +158,7 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, setView, isOpen, setIsOp
                 >
                     <div className="flex items-center gap-3">
                         <Eye size={18} className={`${currentView === 'terminal' ? 'text-emerald-600 dark:text-emerald-500' : 'text-slate-400 dark:text-[#636366] group-hover:text-emerald-500'}`} />
-                        Oráculo Live
+                        Analista Live
                     </div>
                     {!isPro && <Lock size={12} className="opacity-50" />}
                 </button>
@@ -200,16 +200,16 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, setView, isOpen, setIsOp
         <div className="p-4 border-t border-slate-200 dark:border-[#2C2C2E] bg-slate-50 dark:bg-[#000000] transition-colors duration-300">
             
             {!isPro && (
-                <div className="mb-4 p-5 rounded-2xl bg-slate-900 dark:bg-[#1C1C1E] border border-transparent dark:border-[#3A3A3C] text-center cursor-pointer shadow-sm group" onClick={() => handleNavigation('pro')}>
-                    <Crown size={20} className="text-indigo-400 mx-auto mb-2" />
-                    <h4 className="text-white font-bold text-sm tracking-tight mb-1">Seja Profissional</h4>
-                    <p className="text-[10px] text-slate-400 dark:text-[#8E8E93] mb-3 leading-relaxed">Libere as ferramentas Quantitativas IA.</p>
+                <div className="mb-4 p-5 rounded-2xl bg-white dark:bg-[#1C1C1E] border border-indigo-500/20 dark:border-[#3A3A3C] text-center cursor-pointer shadow-sm group hover:border-indigo-500 transition-colors" onClick={() => handleNavigation('pro')}>
+                    <Crown size={20} className="text-indigo-600 dark:text-indigo-400 mx-auto mb-2 group-hover:scale-110 transition-transform" />
+                    <h4 className="text-slate-900 dark:text-white font-bold text-sm tracking-tight mb-1">Seja Profissional</h4>
+                    <p className="text-[10px] text-slate-500 dark:text-[#8E8E93] mb-3 leading-relaxed">Libere as ferramentas Quantitativas IA.</p>
                     <button 
                         onClick={(e) => {
                             e.stopPropagation();
                             handleNavigation('pro');
                         }}
-                        className="w-full bg-white text-slate-900 dark:bg-indigo-600 dark:text-white py-2 rounded-lg text-[10px] font-black uppercase tracking-widest hover:bg-slate-200 dark:hover:bg-indigo-500 transition-colors flex items-center justify-center gap-1"
+                        className="w-full bg-slate-900 text-white dark:bg-indigo-600 dark:text-white py-2.5 rounded-xl text-[10px] font-bold uppercase tracking-widest hover:bg-slate-800 dark:hover:bg-indigo-500 transition-colors flex items-center justify-center gap-1 shadow-sm"
                     >
                         Fazer Upgrade <ArrowRight size={12}/>
                     </button>
@@ -219,7 +219,7 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, setView, isOpen, setIsOp
             <div className="flex gap-2">
                 <button 
                     onClick={() => { resetTutorial(); if (window.innerWidth < 768) setIsOpen(true); }}
-                    className="flex-1 flex items-center justify-center gap-2 text-slate-600 dark:text-[#8E8E93] hover:text-indigo-600 dark:hover:text-white hover:bg-slate-200 dark:hover:bg-[#1C1C1E] py-2.5 rounded-lg transition-all text-[10px] font-black uppercase tracking-widest border border-slate-200 dark:border-[#2C2C2E]"
+                    className="flex-1 flex items-center justify-center gap-2 text-slate-600 dark:text-[#8E8E93] hover:text-indigo-600 dark:hover:text-white hover:bg-slate-200 dark:hover:bg-[#1C1C1E] py-3 rounded-xl transition-all text-[10px] font-bold uppercase tracking-widest border border-slate-200 dark:border-[#2C2C2E] shadow-sm bg-white dark:bg-[#000000]"
                     title="Rever Tutorial"
                 >
                     <PlayCircle size={16} /> 
@@ -227,7 +227,7 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, setView, isOpen, setIsOp
 
                 <button 
                     onClick={toggleTheme}
-                    className="flex-1 flex items-center justify-center gap-2 text-slate-600 dark:text-[#8E8E93] hover:text-indigo-600 dark:hover:text-white hover:bg-slate-200 dark:hover:bg-[#1C1C1E] py-2.5 rounded-lg transition-all text-[10px] font-black uppercase tracking-widest border border-slate-200 dark:border-[#2C2C2E]"
+                    className="flex-1 flex items-center justify-center gap-2 text-slate-600 dark:text-[#8E8E93] hover:text-indigo-600 dark:hover:text-white hover:bg-slate-200 dark:hover:bg-[#1C1C1E] py-3 rounded-xl transition-all text-[10px] font-bold uppercase tracking-widest border border-slate-200 dark:border-[#2C2C2E] shadow-sm bg-white dark:bg-[#000000]"
                     title="Alternar Tema"
                 >
                     {isDarkMode ? <Sun size={16} /> : <Moon size={16} />}
@@ -235,7 +235,7 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, setView, isOpen, setIsOp
 
                 <button 
                     onClick={handleLogout}
-                    className="flex-1 flex items-center justify-center gap-2 text-slate-600 dark:text-[#8E8E93] hover:text-red-600 dark:hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 py-2.5 rounded-lg transition-all text-[10px] font-black uppercase tracking-widest border border-slate-200 dark:border-[#2C2C2E]"
+                    className="flex-1 flex items-center justify-center gap-2 text-slate-600 dark:text-[#8E8E93] hover:text-red-600 dark:hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 py-3 rounded-xl transition-all text-[10px] font-bold uppercase tracking-widest border border-slate-200 dark:border-[#2C2C2E] shadow-sm bg-white dark:bg-[#000000]"
                     title="Sair"
                 >
                     <LogOut size={16} /> 
@@ -252,7 +252,7 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, setView, isOpen, setIsOp
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
                 onClick={() => setIsOpen(false)}
-                className="fixed inset-0 bg-black/80 backdrop-blur-sm z-40 md:hidden"
+                className="fixed inset-0 bg-slate-900/60 dark:bg-black/80 backdrop-blur-sm z-40 md:hidden"
             />
         )}
       </AnimatePresence>
