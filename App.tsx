@@ -104,58 +104,48 @@ const AppContent: React.FC = () => {
     }
   }, [isDarkMode]);
 
+  // 🔥 CORREÇÃO: useEffect de Autenticação Reescrevido (Limpo e Seguro) 🔥
   useEffect(() => {
-  let mounted = true;
+    let mounted = true;
 
-  const initializeAuth = async () => {
-    try {
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
+    const initializeAuth = async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
 
-      // NÃO usar .then()
-      setSession(session);
-
-      // Verifica PRO apenas se existir sessão
-      if (session) {
-        await checkProStatus();
-      }
-
-      // Aguarda o próximo frame do React
-      requestAnimationFrame(() => {
+        if (mounted) {
+          setSession(session);
+          
+          if (session) {
+            await checkProStatus();
+          }
+          
+          // Libera a tela após resolver tudo
+          setIsInitializing(false);
+        }
+      } catch (error) {
+        console.error('Erro na inicialização auth:', error);
         if (mounted) {
           setIsInitializing(false);
         }
-      });
-    } catch (error) {
-      console.error('Erro na inicialização auth:', error);
-
-      if (mounted) {
-        setIsInitializing(false);
       }
-    }
-  };
+    };
 
-  initializeAuth();
+    initializeAuth();
 
-  const {
-    data: { subscription },
-  } = supabase.auth.onAuthStateChange(async (_event, session) => {
-    setSession(session);
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
+      if (mounted) {
+        setSession(session);
+        if (session) {
+          await checkProStatus();
+        }
+      }
+    });
 
-    if (session) {
-      await checkProStatus();
-    }
-  });
-
-  return () => {
-    mounted = false;
-    subscription.unsubscribe();
-  };
-}, []);
-
-    return () => subscription.unsubscribe();
-  }, []);
+    return () => {
+      mounted = false;
+      subscription.unsubscribe();
+    };
+  }, [setSession, checkProStatus]); // Injeção segura de dependências
 
   // Segura a tela preta/loading por milissegundos enquanto valida o token
   if (isInitializing) {
