@@ -64,6 +64,26 @@ const safeText = (val: any): string => {
     return String(val);
 };
 
+// 🔥 CORREÇÃO: COMPONENTE MOVIDO PARA FORA DO ESCOPO PRINCIPAL 🔥
+const ProBlurOverlay = ({ title, desc, navigate }: { title: string, desc: string, navigate: any }) => (
+    <div className="absolute inset-0 z-50 flex items-center justify-center bg-white/40 dark:bg-[#000000]/50 backdrop-blur-md rounded-[2rem]">
+        <div className="bg-white dark:bg-[#1C1C1E] border border-indigo-500/30 p-8 rounded-2xl max-w-md text-center shadow-xl flex flex-col items-center mx-4">
+            <div className="bg-indigo-500/10 p-4 rounded-xl mb-4 text-indigo-600 dark:text-indigo-400">
+                <Crown size={28} />
+            </div>
+            <h2 className="text-xl font-bold text-slate-900 dark:text-white tracking-tight mb-2">
+                {title} <span className="text-indigo-500">PRO</span>
+            </h2>
+            <p className="text-slate-500 dark:text-[#8E8E93] mb-6 text-sm leading-relaxed">
+                {desc}
+            </p>
+            <button onClick={() => navigate('/pro')} className="w-full bg-slate-900 hover:bg-slate-800 text-white dark:bg-indigo-600 dark:hover:bg-indigo-500 font-bold py-3.5 px-8 rounded-xl transition-all shadow-sm text-xs tracking-widest uppercase">
+                Desbloquear Acesso
+            </button>
+        </div>
+    </div>
+);
+
 const ScoutIA: React.FC = () => {
   const { user, isPro, canUseAiScan, incrementAiScan, setToast } = useBetStore();
   const userEmail = user?.email || "usuario@desconhecido.com"; 
@@ -84,26 +104,6 @@ const ScoutIA: React.FC = () => {
 
   const scoutGridInputRef = useRef<HTMLInputElement>(null);
   const VALID_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
-
-  // 🔥 OVERLAY DE VITRINE (EFEITO BLUR) PARA USUÁRIOS FREE 🔥
-  const ProBlurOverlay = ({ title, desc }: { title: string, desc: string }) => (
-      <div className="absolute inset-0 z-50 flex items-center justify-center bg-white/40 dark:bg-[#000000]/50 backdrop-blur-md rounded-[2rem]">
-          <div className="bg-white dark:bg-[#1C1C1E] border border-indigo-500/30 p-8 rounded-2xl max-w-md text-center shadow-xl flex flex-col items-center mx-4">
-              <div className="bg-indigo-500/10 p-4 rounded-xl mb-4 text-indigo-600 dark:text-indigo-400">
-                  <Crown size={28} />
-              </div>
-              <h2 className="text-xl font-bold text-slate-900 dark:text-white tracking-tight mb-2">
-                  {title} <span className="text-indigo-500">PRO</span>
-              </h2>
-              <p className="text-slate-500 dark:text-[#8E8E93] mb-6 text-sm leading-relaxed">
-                  {desc}
-              </p>
-              <button onClick={() => navigate('/pro')} className="w-full bg-slate-900 hover:bg-slate-800 text-white dark:bg-indigo-600 dark:hover:bg-indigo-500 font-bold py-3.5 px-8 rounded-xl transition-all shadow-sm text-xs tracking-widest uppercase">
-                  Desbloquear Acesso
-              </button>
-          </div>
-      </div>
-  );
 
   useEffect(() => {
     if (scoutMode === 'grid') {
@@ -270,7 +270,8 @@ const ScoutIA: React.FC = () => {
   return (
     <div className="space-y-6 pb-20 w-full overflow-x-hidden font-sans relative">
         
-        {!isPro && <ProBlurOverlay title="Scout IA" desc="O Motor NLP lê textos estatísticos, analisa risco, covariância e monta apostas múltiplas de alto valor matemático. Exclusivo para assinantes PRO." />}
+        {/* ✅ Prop navigate passada corretamente para evitar crash ✅ */}
+        {!isPro && <ProBlurOverlay title="Scout IA" desc="O Motor NLP lê textos estatísticos, analisa risco, covariância e monta apostas múltiplas de alto valor matemático. Exclusivo para assinantes PRO." navigate={navigate} />}
 
         <div className={`flex flex-col gap-2 ${!isPro ? 'pointer-events-none select-none blur-[4px] opacity-60' : ''}`}>
           <div className="flex items-center gap-2 text-indigo-600 dark:text-indigo-400 text-[10px] font-bold uppercase tracking-widest mb-1">
