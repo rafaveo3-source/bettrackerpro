@@ -29,7 +29,7 @@ import { Toaster } from './components/ui/Toaster';
 
 // =====================================================================
 // 🔥 CÃO DE GUARDA GLOBAL (ERROR BOUNDARY) 🔥
-// Captura qualquer "congelamento" ou erro silencioso dentro das páginas
+// Se uma página tentar congelar o roteador, ele captura o erro na hora.
 // =====================================================================
 class GlobalErrorBoundary extends React.Component<{children: React.ReactNode}, {hasError: boolean, error: Error | null}> {
   constructor(props: {children: React.ReactNode}) {
@@ -40,22 +40,22 @@ class GlobalErrorBoundary extends React.Component<{children: React.ReactNode}, {
     return { hasError: true, error };
   }
   componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
-    console.error("🚨 ERRO FATAL SILENCIOSO CAPTURADO:", error, errorInfo);
+    console.error("🚨 ERRO SILENCIOSO CAPTURADO NA ROTA:", error, errorInfo);
   }
   render() {
     if (this.state.hasError) {
       return (
-        <div className="min-h-screen bg-red-900 flex flex-col items-center justify-center p-8 text-white font-mono">
-          <h1 className="text-4xl font-black mb-4">🚨 TELA CONGELADA DETECTADA 🚨</h1>
-          <p className="text-lg mb-8 text-center max-w-2xl">O sistema impediu um congelamento. Um erro dentro da página que você tentou acessar causou um colapso na renderização.</p>
-          <div className="bg-black/50 p-6 rounded-xl w-full max-w-4xl overflow-auto text-sm text-red-200">
+        <div className="min-h-screen bg-red-950 flex flex-col items-center justify-center p-8 text-white font-mono z-[9999] relative">
+          <h1 className="text-4xl font-black mb-4 text-red-400">🚨 TELA CONGELADA (CRASH) 🚨</h1>
+          <p className="text-lg mb-8 text-center max-w-2xl">Um erro de lógica em alguma página abortou a renderização.</p>
+          <div className="bg-black/50 p-6 rounded-xl w-full max-w-4xl overflow-auto text-sm text-red-200 border border-red-500/30">
             <strong>Causa do Erro:</strong><br />
             {this.state.error?.toString()}<br /><br />
-            <strong>Rastreamento:</strong><br />
+            <strong>Rastreamento (Stack):</strong><br />
             {this.state.error?.stack}
           </div>
-          <button onClick={() => window.location.href = '/dashboard'} className="mt-8 bg-white text-red-900 px-8 py-4 rounded-xl font-bold uppercase tracking-widest">
-            Voltar para o Dashboard
+          <button onClick={() => window.location.href = '/dashboard'} className="mt-8 bg-red-600 hover:bg-red-500 text-white px-8 py-4 rounded-xl font-bold uppercase tracking-widest transition-all">
+            Forçar Retorno ao Dashboard
           </button>
         </div>
       );
@@ -130,8 +130,13 @@ const SystemRoutes: React.FC = () => {
 };
 
 const AppContent: React.FC = () => {
-  const { setSession, isAuthenticated, checkProStatus, isDarkMode } = useBetStore();
-  const [isInitializing, setIsInitializing] = useState(true);
+  const isAuthenticated = useBetStore(s => s.isAuthenticated);
+  const isDarkMode = useBetStore(s => s.isDarkMode);
+  const setSession = useBetStore(s => s.setSession);
+  const checkProStatus = useBetStore(s => s.checkProStatus);
+  
+  // Se o LocalStorage já diz que o cara tá logado, nem mostra Loading! Pula direto pro sistema.
+  const [isInitializing, setIsInitializing] = useState(!isAuthenticated);
 
   useEffect(() => {
     if (isDarkMode) {
@@ -144,36 +149,54 @@ const AppContent: React.FC = () => {
   useEffect(() => {
     let isMounted = true;
 
-    const initApp = async () => {
+    // 🔥 FAILSAFE ABSOLUTO: 2 segundos máximo. Evita loop eterno de Supabase.
+    const failsafe = setTimeout(() => {
+        if (isMounted && isInitializing) {
+            console.warn("⚠️ Failsafe ativado: Liberação forçada de tela.");
+            setIsInitializing(false);
+        }
+    }, 2000);
+
+    const initAuth = async () => {
         try {
             const { data: { session } } = await supabase.auth.getSession();
-            await setSession(session);
-            if (session) await checkProStatus();
+            if (session) {
+                // Não tem await no setSession aqui para não prender a tela caso a rede esteja lenta
+                setSession(session).then(() => checkProStatus());
+            }
+        } catch (err) {
+            console.error("Erro na validação do Supabase:", err);
         } finally {
+            clearTimeout(failsafe);
             if (isMounted) setIsInitializing(false);
         }
     };
 
-    initApp();
+    initAuth();
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (event === 'INITIAL_SESSION') return;
-      await setSession(session);
-      if (session) await checkProStatus();
+      try {
+          await setSession(session);
+          if (session) checkProStatus();
+      } catch (err) {
+          console.error("Erro de estado (onAuthStateChange):", err);
+      }
     });
 
     return () => {
         isMounted = false;
+        clearTimeout(failsafe);
         subscription.unsubscribe();
     };
-  }, [setSession, checkProStatus]);
+  }, []); // Dependências vazias para garantir que roda UMA VEZ na montagem
 
   if (isInitializing) {
     return (
         <div className="min-h-screen bg-slate-50 dark:bg-[#000000] flex flex-col items-center justify-center gap-5">
             <div className="w-8 h-8 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin"></div>
             <p className="text-slate-500 dark:text-[#8E8E93] text-[10px] font-bold uppercase tracking-widest animate-pulse">
-                Carregando Sistema...
+                Sincronizando Sistema...
             </p>
         </div>
     );
