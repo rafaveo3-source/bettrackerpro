@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { supabase } from '../store/useBetStore';
+import { useBetStore, supabase } from '../store/useBetStore';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Mail, Lock, Loader2, ArrowRight, CheckCircle2, AlertTriangle, KeyRound, ArrowLeft } from 'lucide-react';
 
@@ -33,6 +33,8 @@ const AuthPage = () => {
     return 'Ocorreu um erro no servidor. Tente novamente.';
   };
 
+  const setSession = useBetStore(s => s.setSession);
+
   const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
@@ -51,16 +53,19 @@ const AuthPage = () => {
       } 
       else if (view === 'login') {
         // LOGIN
-        const { error } = await supabase.auth.signInWithPassword({
+        const { data, error } = await supabase.auth.signInWithPassword({
           email,
           password,
         });
         if (error) throw error;
-        // Redirecionamento automático pelo App.tsx
+        if (data?.session) {
+          await setSession(data.session);
+          navigate('/dashboard', { replace: true });
+        }
       } 
       else {
         // CADASTRO
-        const { error } = await supabase.auth.signUp({
+        const { data, error } = await supabase.auth.signUp({
           email,
           password,
         });
