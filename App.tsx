@@ -35,7 +35,7 @@ const SystemRoutes: React.FC = () => {
     const path = location.pathname;
     if (path.includes('/dashboard')) return 'dashboard';
     if (path.includes('/scout')) return 'scout'; 
-    if (path.includes('/terminal')) return 'terminal';
+    if (path.includes('/terminal-live')) return 'terminal';
     if (path.includes('/analytics')) return 'analytics';
     if (path.includes('/goals')) return 'metas';
     if (path.includes('/mindset')) return 'mindset';
@@ -46,7 +46,7 @@ const SystemRoutes: React.FC = () => {
     if (path.includes('/library')) return 'biblioteca';
     if (path.includes('/settings')) return 'settings';
     if (path.includes('/pro')) return 'pro'; 
-    return 'dashboard';
+    return 'dashboard'; // Fallback seguro
   };
 
   const handleSetView = (viewId: string) => {
@@ -84,6 +84,7 @@ const SystemRoutes: React.FC = () => {
         <Route path="/library" element={<SystemLibrary />} />
         <Route path="/settings" element={<Settings />} />
         <Route path="/pro" element={<ProPage />} /> 
+        {/* Qualquer URL inválida dentro do painel joga pro Dashboard */}
         <Route path="*" element={<Navigate to="/dashboard" replace />} />
       </Routes>
     </Layout>
@@ -93,6 +94,7 @@ const SystemRoutes: React.FC = () => {
 const AppContent: React.FC = () => {
   const { setSession, isAuthenticated, checkProStatus, isDarkMode } = useBetStore();
 
+  // Aplicação do Tema Dark/Light no HTML Root
   useEffect(() => {
     if (isDarkMode) {
       document.documentElement.classList.add('dark');
@@ -101,8 +103,8 @@ const AppContent: React.FC = () => {
     }
   }, [isDarkMode]);
 
+  // Listener de Autenticação Supabase (Otimizado)
   useEffect(() => {
-    // Escuta mudanças de autenticação globais
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
       if (session) checkProStatus();
@@ -122,6 +124,7 @@ const AppContent: React.FC = () => {
         <Route path="/" element={isAuthenticated ? <Navigate to="/dashboard" replace /> : <LandingPage />} />
         <Route path="/login" element={isAuthenticated ? <Navigate to="/dashboard" replace /> : <AuthPage />} />
         <Route path="/update-password" element={<UpdatePassword />} />
+        {/* Rota raiz protegida */}
         <Route path="/*" element={isAuthenticated ? <SystemRoutes /> : <Navigate to="/login" replace />} />
       </Routes>
       <Toaster />
