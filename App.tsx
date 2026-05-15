@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect } from 'react';
 import { BrowserRouter, Routes, Route, useNavigate, useLocation, Navigate } from 'react-router-dom';
 
 // Layout do Sistema
@@ -84,7 +84,6 @@ const SystemRoutes: React.FC = () => {
         <Route path="/library" element={<SystemLibrary />} />
         <Route path="/settings" element={<Settings />} />
         <Route path="/pro" element={<ProPage />} /> 
-        {/* Rota coringa que protege quebras de URL */}
         <Route path="*" element={<Navigate to="/dashboard" replace />} />
       </Routes>
     </Layout>
@@ -92,12 +91,13 @@ const SystemRoutes: React.FC = () => {
 };
 
 const AppContent: React.FC = () => {
-  const { setSession, isAuthenticated, isDarkMode } = useBetStore();
-  
-  // 🔥 ESTADO DE HIDRATAÇÃO
-  const [isInitializing, setIsInitializing] = useState(true);
+  // 🔥 CORREÇÃO SPA FREEZE: Seletores Atômicos. O AppContent não re-renderiza 
+  // à toa quando o usuário Free atinge cotas, evitando o bloqueio da navegação.
+  const isAuthenticated = useBetStore(s => s.isAuthenticated);
+  const isDarkMode = useBetStore(s => s.isDarkMode);
+  const setSession = useBetStore(s => s.setSession);
+  const checkProStatus = useBetStore(s => s.checkProStatus);
 
-  // Aplicação do Tema Dark/Light no HTML Root
   useEffect(() => {
     if (isDarkMode) {
       document.documentElement.classList.add('dark');
@@ -106,46 +106,26 @@ const AppContent: React.FC = () => {
     }
   }, [isDarkMode]);
 
-  // Autenticação Segura com Failsafe
   useEffect(() => {
-    let isMounted = true;
-
-    // 🔥 TIMEOUT FAILSAFE: Garante que a tela de loading nunca trave o sistema por mais de 2.5s
-    const failsafe = setTimeout(() => {
-        if (isMounted) setIsInitializing(false);
-    }, 2500);
-
+    // Hidratação Otimizada sem telas pretas e sem loop infinito
     supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session).finally(() => {
-        clearTimeout(failsafe);
-        if (isMounted) setIsInitializing(false);
-      });
+      if (session) {
+        setSession(session).then(() => checkProStatus());
+      }
     });
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      // Ignora o INITIAL_SESSION para evitar sobrecarga de consultas concorrentes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (event === 'INITIAL_SESSION') return;
-      await setSession(session);
+      
+      if (session) {
+        setSession(session).then(() => checkProStatus());
+      } else {
+        setSession(null);
+      }
     });
 
-    return () => {
-        isMounted = false;
-        clearTimeout(failsafe);
-        subscription.unsubscribe();
-    };
-  }, [setSession]);
-
-  // 🔥 TELA DE LOADING VISUAL: Adeus tela preta fantasma!
-  if (isInitializing) {
-    return (
-        <div className="min-h-screen bg-slate-50 dark:bg-[#000000] flex flex-col items-center justify-center gap-5">
-            <div className="w-8 h-8 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin"></div>
-            <p className="text-slate-500 dark:text-[#8E8E93] text-[10px] font-bold uppercase tracking-widest animate-pulse">
-                Autenticando Sistema...
-            </p>
-        </div>
-    );
-  }
+    return () => subscription.unsubscribe();
+  }, [setSession, checkProStatus]);
 
   return (
     <>
@@ -153,7 +133,6 @@ const AppContent: React.FC = () => {
         <Route path="/" element={isAuthenticated ? <Navigate to="/dashboard" replace /> : <LandingPage />} />
         <Route path="/login" element={isAuthenticated ? <Navigate to="/dashboard" replace /> : <AuthPage />} />
         <Route path="/update-password" element={<UpdatePassword />} />
-        {/* Rota Raiz do Sistema Protegida */}
         <Route path="/*" element={isAuthenticated ? <SystemRoutes /> : <Navigate to="/login" replace />} />
       </Routes>
       <Toaster />
