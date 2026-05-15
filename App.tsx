@@ -84,7 +84,7 @@ const SystemRoutes: React.FC = () => {
         <Route path="/library" element={<SystemLibrary />} />
         <Route path="/settings" element={<Settings />} />
         <Route path="/pro" element={<ProPage />} /> 
-        {/* Qualquer URL inválida dentro do painel joga pro Dashboard */}
+        {/* Rota coringa que protege quebras de URL */}
         <Route path="*" element={<Navigate to="/dashboard" replace />} />
       </Routes>
     </Layout>
@@ -94,7 +94,7 @@ const SystemRoutes: React.FC = () => {
 const AppContent: React.FC = () => {
   const { setSession, isAuthenticated, checkProStatus, isDarkMode } = useBetStore();
 
-  // Aplicação do Tema Dark/Light no HTML Root
+  // Gerenciamento de Tema
   useEffect(() => {
     if (isDarkMode) {
       document.documentElement.classList.add('dark');
@@ -103,7 +103,7 @@ const AppContent: React.FC = () => {
     }
   }, [isDarkMode]);
 
-  // Listener de Autenticação Supabase (Otimizado)
+  // Autenticação e Checagem de Plano (Otimizado)
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
@@ -124,7 +124,7 @@ const AppContent: React.FC = () => {
         <Route path="/" element={isAuthenticated ? <Navigate to="/dashboard" replace /> : <LandingPage />} />
         <Route path="/login" element={isAuthenticated ? <Navigate to="/dashboard" replace /> : <AuthPage />} />
         <Route path="/update-password" element={<UpdatePassword />} />
-        {/* Rota raiz protegida */}
+        {/* Rota Raiz do Sistema Protegida */}
         <Route path="/*" element={isAuthenticated ? <SystemRoutes /> : <Navigate to="/login" replace />} />
       </Routes>
       <Toaster />
