@@ -74,10 +74,9 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, setView, isOpen, setIsOp
   };
 
   const handleLogout = async () => {
-    if(window.confirm('Deseja encerrar a sessão segura?')) {
-        await logout();
-        navigate('/login', { replace: true });
-        window.location.reload(); 
+    if (window.confirm('Deseja encerrar a sessão segura?')) {
+      await logout();
+      navigate('/login', { replace: true });
     }
   };
 

@@ -134,10 +134,9 @@ const AppContent: React.FC = () => {
   const isAuthenticated = useBetStore(s => s.isAuthenticated);
   const isDarkMode = useBetStore(s => s.isDarkMode);
   const setSession = useBetStore(s => s.setSession);
-  const checkProStatus = useBetStore(s => s.checkProStatus);
   
-  // Se o LocalStorage já diz que o cara tá logado, nem mostra Loading! Pula direto pro sistema.
-  const [isInitializing, setIsInitializing] = useState(!isAuthenticated);
+  // Inicializa o status de autenticação com checagem real do Supabase.
+  const [isInitializing, setIsInitializing] = useState(true);
 
   useEffect(() => {
     if (isDarkMode) {
@@ -161,10 +160,7 @@ const AppContent: React.FC = () => {
     const initAuth = async () => {
         try {
             const { data: { session } } = await supabase.auth.getSession();
-            if (session) {
-                // Não tem await no setSession aqui para não prender a tela caso a rede esteja lenta
-                setSession(session).then(() => checkProStatus());
-            }
+            await setSession(session);
         } catch (err) {
             console.error("Erro na validação do Supabase:", err);
         } finally {
@@ -179,7 +175,6 @@ const AppContent: React.FC = () => {
       if (event === 'INITIAL_SESSION') return;
       try {
           await setSession(session);
-          if (session) checkProStatus();
       } catch (err) {
           console.error("Erro de estado (onAuthStateChange):", err);
       }

@@ -362,28 +362,41 @@ export const useBetStore = create<BetState>()(
         try {
           const { data, error } = await supabase
             .from('profiles')
-            .select('subscription_status, valid_until')
+            .select('*')
             .eq('id', user.id)
             .single();
             
           if (data && !error) {
             const now = new Date();
             const validUntil = data.valid_until ? new Date(data.valid_until) : null;
-            
-            // FIX: Normalizar o texto para minúsculo previne falhas de webhook
-            const status = data.subscription_status?.toLowerCase();
-            
-            const isActive = 
-                status === 'lifetime' || 
-                (status === 'active' && (!validUntil || validUntil > now));
-            
-            set({ isPro: isActive, subscriptionValidUntil: data.valid_until });
+
+            const rawStatus =
+              data.subscription_status ||
+              data.status ||
+              data.plan ||
+              data.plan_name ||
+              data.subscription ||
+              '';
+            const status = String(rawStatus).toLowerCase();
+
+            const isActiveStatus =
+              status === 'lifetime' ||
+              status === 'active' ||
+              status === 'pro' ||
+              status === 'paid' ||
+              status.includes('pro') ||
+              status.includes('paid');
+
+            const hasValidUntil = validUntil ? validUntil > now : false;
+            const isActive = isActiveStatus || hasValidUntil;
+
+            set({ isPro: isActive, subscriptionValidUntil: data.valid_until || null });
           } else {
-             set({ isPro: false });
+             set({ isPro: false, subscriptionValidUntil: null });
           }
         } catch (e) {
           console.error("Erro ao checar PRO:", e);
-          set({ isPro: false });
+          set({ isPro: false, subscriptionValidUntil: null });
         }
       },
 
@@ -522,17 +535,11 @@ export const useBetStore = create<BetState>()(
         } catch (error) {
           console.error("Erro de rede ao fazer signOut no Supabase:", error);
         } finally {
-          set({ isAuthenticated: false, user: null });
+          set({ isAuthenticated: false, user: null, isPro: false, subscriptionValidUntil: null });
           localStorage.removeItem('bettracker-storage-v5');
-          
-          // FIX: Nuke total nos tokens residuais do Supabase que causam o re-login automático
-          Object.keys(localStorage).forEach(key => {
-              if (key.startsWith('sb-') && key.endsWith('-auth-token')) {
-                  localStorage.removeItem(key);
-              }
-          });
 
-          window.location.href = '/login'; 
+          const keysToRemove = Object.keys(localStorage).filter(key => key.startsWith('sb-') || key.startsWith('sb:'));
+          keysToRemove.forEach((key) => localStorage.removeItem(key));
         }
       },
 
@@ -1766,7 +1773,8 @@ export const useBetStore = create<BetState>()(
         aiScansUsedToday: state.aiScansUsedToday, 
         lastScanDate: state.lastScanDate,
         // 🔥 A MÁGICA AQUI: O sistema agora LEMBRA que você está logado ao dar F5 🔥
-        isAuthenticated: state.isAuthenticated 
+        isAuthenticated: state.isAuthenticated,
+        user: state.user
       }),
     }
   )
