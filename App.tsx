@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { BrowserRouter, Routes, Route, useNavigate, useLocation, Navigate } from 'react-router-dom';
 
 // Layout do Sistema
@@ -26,6 +26,43 @@ import UpdatePassword from './pages/UpdatePassword';
 
 import { useBetStore, supabase } from './store/useBetStore';
 import { Toaster } from './components/ui/Toaster';
+
+// =====================================================================
+// 🔥 CÃO DE GUARDA GLOBAL (ERROR BOUNDARY) 🔥
+// Captura qualquer "congelamento" ou erro silencioso dentro das páginas
+// =====================================================================
+class GlobalErrorBoundary extends React.Component<{children: React.ReactNode}, {hasError: boolean, error: Error | null}> {
+  constructor(props: {children: React.ReactNode}) {
+    super(props);
+    this.state = { hasError: false, error: null };
+  }
+  static getDerivedStateFromError(error: Error) {
+    return { hasError: true, error };
+  }
+  componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
+    console.error("🚨 ERRO FATAL SILENCIOSO CAPTURADO:", error, errorInfo);
+  }
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="min-h-screen bg-red-900 flex flex-col items-center justify-center p-8 text-white font-mono">
+          <h1 className="text-4xl font-black mb-4">🚨 TELA CONGELADA DETECTADA 🚨</h1>
+          <p className="text-lg mb-8 text-center max-w-2xl">O sistema impediu um congelamento. Um erro dentro da página que você tentou acessar causou um colapso na renderização.</p>
+          <div className="bg-black/50 p-6 rounded-xl w-full max-w-4xl overflow-auto text-sm text-red-200">
+            <strong>Causa do Erro:</strong><br />
+            {this.state.error?.toString()}<br /><br />
+            <strong>Rastreamento:</strong><br />
+            {this.state.error?.stack}
+          </div>
+          <button onClick={() => window.location.href = '/dashboard'} className="mt-8 bg-white text-red-900 px-8 py-4 rounded-xl font-bold uppercase tracking-widest">
+            Voltar para o Dashboard
+          </button>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
 
 const SystemRoutes: React.FC = () => {
   const navigate = useNavigate();
@@ -70,33 +107,31 @@ const SystemRoutes: React.FC = () => {
 
   return (
     <Layout currentView={getCurrentViewID()} setView={handleSetView}>
-      <Routes>
-        <Route path="/dashboard" element={<Dashboard />} />
-        <Route path="/scout" element={<ScoutIA />} /> 
-        <Route path="/terminal-live" element={<LiveTerminal />} />
-        <Route path="/analytics" element={<Analytics />} />
-        <Route path="/goals" element={<Goals />} />
-        <Route path="/mindset" element={<Mindset />} />
-        <Route path="/history" element={<History />} />
-        <Route path="/bankrolls" element={<Bankroll />} />
-        <Route path="/calendar" element={<PerformanceCalendar />} />
-        <Route path="/calculators" element={<Calculators />} />
-        <Route path="/library" element={<SystemLibrary />} />
-        <Route path="/settings" element={<Settings />} />
-        <Route path="/pro" element={<ProPage />} /> 
-        <Route path="*" element={<Navigate to="/dashboard" replace />} />
-      </Routes>
+      <GlobalErrorBoundary>
+        <Routes>
+          <Route path="/dashboard" element={<Dashboard />} />
+          <Route path="/scout" element={<ScoutIA />} /> 
+          <Route path="/terminal-live" element={<LiveTerminal />} />
+          <Route path="/analytics" element={<Analytics />} />
+          <Route path="/goals" element={<Goals />} />
+          <Route path="/mindset" element={<Mindset />} />
+          <Route path="/history" element={<History />} />
+          <Route path="/bankrolls" element={<Bankroll />} />
+          <Route path="/calendar" element={<PerformanceCalendar />} />
+          <Route path="/calculators" element={<Calculators />} />
+          <Route path="/library" element={<SystemLibrary />} />
+          <Route path="/settings" element={<Settings />} />
+          <Route path="/pro" element={<ProPage />} /> 
+          <Route path="*" element={<Navigate to="/dashboard" replace />} />
+        </Routes>
+      </GlobalErrorBoundary>
     </Layout>
   );
 };
 
 const AppContent: React.FC = () => {
-  // 🔥 CORREÇÃO SPA FREEZE: Seletores Atômicos. O AppContent não re-renderiza 
-  // à toa quando o usuário Free atinge cotas, evitando o bloqueio da navegação.
-  const isAuthenticated = useBetStore(s => s.isAuthenticated);
-  const isDarkMode = useBetStore(s => s.isDarkMode);
-  const setSession = useBetStore(s => s.setSession);
-  const checkProStatus = useBetStore(s => s.checkProStatus);
+  const { setSession, isAuthenticated, checkProStatus, isDarkMode } = useBetStore();
+  const [isInitializing, setIsInitializing] = useState(true);
 
   useEffect(() => {
     if (isDarkMode) {
@@ -107,25 +142,42 @@ const AppContent: React.FC = () => {
   }, [isDarkMode]);
 
   useEffect(() => {
-    // Hidratação Otimizada sem telas pretas e sem loop infinito
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session) {
-        setSession(session).then(() => checkProStatus());
-      }
-    });
+    let isMounted = true;
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+    const initApp = async () => {
+        try {
+            const { data: { session } } = await supabase.auth.getSession();
+            await setSession(session);
+            if (session) await checkProStatus();
+        } finally {
+            if (isMounted) setIsInitializing(false);
+        }
+    };
+
+    initApp();
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (event === 'INITIAL_SESSION') return;
-      
-      if (session) {
-        setSession(session).then(() => checkProStatus());
-      } else {
-        setSession(null);
-      }
+      await setSession(session);
+      if (session) await checkProStatus();
     });
 
-    return () => subscription.unsubscribe();
+    return () => {
+        isMounted = false;
+        subscription.unsubscribe();
+    };
   }, [setSession, checkProStatus]);
+
+  if (isInitializing) {
+    return (
+        <div className="min-h-screen bg-slate-50 dark:bg-[#000000] flex flex-col items-center justify-center gap-5">
+            <div className="w-8 h-8 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin"></div>
+            <p className="text-slate-500 dark:text-[#8E8E93] text-[10px] font-bold uppercase tracking-widest animate-pulse">
+                Carregando Sistema...
+            </p>
+        </div>
+    );
+  }
 
   return (
     <>

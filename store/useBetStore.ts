@@ -1755,8 +1755,10 @@ export const useBetStore = create<BetState>()(
         unitSize: state.unitSize,
         hasSeenTutorial: state.hasSeenTutorial,
         activeBankrollId: state.activeBankrollId,
-        aiScansUsedToday: state.aiScansUsedToday, // 🔥 Salva os usos de hoje
-        lastScanDate: state.lastScanDate          // 🔥 Salva a data do último uso
+        aiScansUsedToday: state.aiScansUsedToday, 
+        lastScanDate: state.lastScanDate,
+        // 🔥 A MÁGICA AQUI: O sistema agora LEMBRA que você está logado ao dar F5 🔥
+        isAuthenticated: state.isAuthenticated 
       }),
     }
   )
