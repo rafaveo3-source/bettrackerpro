@@ -104,7 +104,7 @@ const AppContent: React.FC = () => {
     }
   }, [isDarkMode]);
 
-  // 🔥 CORREÇÃO: useEffect de Autenticação Reescrevido (Limpo e Seguro) 🔥
+  // 🔥 CORREÇÃO: useEffect de Autenticação Blindado contra Loop Infinito 🔥
   useEffect(() => {
     let mounted = true;
 
@@ -116,14 +116,17 @@ const AppContent: React.FC = () => {
           setSession(session);
           
           if (session) {
-            await checkProStatus();
+            try {
+              await checkProStatus();
+            } catch (err) {
+              console.error('Erro ao checar status PRO:', err);
+            }
           }
-          
-          // Libera a tela após resolver tudo
-          setIsInitializing(false);
         }
       } catch (error) {
         console.error('Erro na inicialização auth:', error);
+      } finally {
+        // O finally garante que a tela preta VAI sair, independentemente de sucesso ou erro
         if (mounted) {
           setIsInitializing(false);
         }
@@ -136,18 +139,22 @@ const AppContent: React.FC = () => {
       if (mounted) {
         setSession(session);
         if (session) {
-          await checkProStatus();
+          try {
+            await checkProStatus();
+          } catch (err) {
+            console.error('Erro na mudança de auth:', err);
+          }
         }
       }
     });
 
     return () => {
       mounted = false;
-      subscription.unsubscribe();
+      subscription?.unsubscribe();
     };
-  }, [setSession, checkProStatus]); // Injeção segura de dependências
+  }, []); // <-- ARRAY VAZIO AQUI: Roda apenas uma vez! Impede a tela preta do loop.
 
-  // Segura a tela preta/loading por milissegundos enquanto valida o token
+  // Segura a tela por milissegundos enquanto valida o token
   if (isInitializing) {
     return <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex items-center justify-center" />;
   }
