@@ -105,18 +105,52 @@ const AppContent: React.FC = () => {
   }, [isDarkMode]);
 
   useEffect(() => {
-    // Escuta a sessão do Supabase ANTES de renderizar as rotas
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session).then(() => {
-        if (session) checkProStatus();
-        setIsInitializing(false); // Libera o React Router
-      });
-    });
+  let mounted = true;
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session);
-      if (session) checkProStatus();
-    });
+  const initializeAuth = async () => {
+    try {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+
+      await setSession(session);
+
+      if (session) {
+        await checkProStatus();
+      }
+
+      // 🔥 força um tick completo do React/Zustand
+      await new Promise(resolve => setTimeout(resolve, 0));
+
+      if (mounted) {
+        setIsInitializing(false);
+      }
+    } catch (error) {
+      console.error('Erro na inicialização auth:', error);
+
+      if (mounted) {
+        setIsInitializing(false);
+      }
+    }
+  };
+
+  initializeAuth();
+
+  const {
+    data: { subscription },
+  } = supabase.auth.onAuthStateChange(async (_event, session) => {
+    await setSession(session);
+
+    if (session) {
+      await checkProStatus();
+    }
+  });
+
+  return () => {
+    mounted = false;
+    subscription.unsubscribe();
+  };
+}, []);
 
     return () => subscription.unsubscribe();
   }, [setSession, checkProStatus]);
@@ -133,7 +167,18 @@ const AppContent: React.FC = () => {
         <Route path="/login" element={isAuthenticated ? <Navigate to="/dashboard" replace /> : <AuthPage />} />
         <Route path="/update-password" element={<UpdatePassword />} />
         {/* Rota Protegida (Aqui a Autorização Manda) */}
-        <Route path="/*" element={isAuthenticated ? <SystemRoutes /> : <Navigate to="/login" replace />} />
+        <Route
+  path="/*"
+  element={
+    isInitializing ? (
+      <div className="min-h-screen bg-slate-50 dark:bg-slate-950" />
+    ) : isAuthenticated ? (
+      <SystemRoutes />
+    ) : (
+      <Navigate to="/login" replace />
+    )
+  }
+/>
       </Routes>
       <Toaster />
     </>
