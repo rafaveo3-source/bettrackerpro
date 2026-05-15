@@ -94,8 +94,8 @@ const Settings: React.FC = () => {
             const { error } = await supabase.rpc('delete_own_user');
             if (error) throw error;
             resetData(); 
-            logout(); 
-            window.location.href = '/'; 
+            await logout(); 
+            window.location.assign('/login'); 
         } catch (error: any) {
             alert("Erro ao deletar conta: " + error.message);
         }

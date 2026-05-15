@@ -109,7 +109,7 @@ const SystemRoutes: React.FC = () => {
     <Layout currentView={getCurrentViewID()} setView={handleSetView}>
       <GlobalErrorBoundary>
         {/* FIX: Injetar a prop 'location' descongela o React Router forçando re-render na navegação aninhada */}
-        <Routes location={location}>
+        <Routes location={location} key={location.pathname}>
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/scout" element={<ScoutIA />} /> 
           <Route path="/terminal-live" element={<LiveTerminal />} />

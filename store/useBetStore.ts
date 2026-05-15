@@ -368,7 +368,6 @@ export const useBetStore = create<BetState>()(
             
           if (data && !error) {
             const now = new Date();
-            const validUntil = data.valid_until ? new Date(data.valid_until) : null;
 
             const rawStatus =
               data.subscription_status ||
@@ -376,21 +375,40 @@ export const useBetStore = create<BetState>()(
               data.plan ||
               data.plan_name ||
               data.subscription ||
+              data.pro_status ||
+              data.subscription_status_name ||
               '';
             const status = String(rawStatus).toLowerCase();
+
+            const dateCandidates = [
+              data.valid_until,
+              data.subscription_valid_until,
+              data.expires_at,
+              data.expires_on,
+              data.expiration_date,
+              data.valid_until_date,
+            ];
+
+            const validUntil = dateCandidates
+              .map((value) => (value ? new Date(value) : null))
+              .filter((date) => date instanceof Date && !isNaN(date.getTime()))
+              .sort((a, b) => (a!.getTime() - b!.getTime()))[0] || null;
 
             const isActiveStatus =
               status === 'lifetime' ||
               status === 'active' ||
               status === 'pro' ||
               status === 'paid' ||
+              status === 'approved' ||
               status.includes('pro') ||
-              status.includes('paid');
+              status.includes('paid') ||
+              status.includes('ativo');
 
             const hasValidUntil = validUntil ? validUntil > now : false;
             const isActive = isActiveStatus || hasValidUntil;
 
-            set({ isPro: isActive, subscriptionValidUntil: data.valid_until || null });
+            const subscriptionValidUntil = validUntil ? validUntil.toISOString() : null;
+            set({ isPro: isActive, subscriptionValidUntil });
           } else {
              set({ isPro: false, subscriptionValidUntil: null });
           }
@@ -538,8 +556,23 @@ export const useBetStore = create<BetState>()(
           set({ isAuthenticated: false, user: null, isPro: false, subscriptionValidUntil: null });
           localStorage.removeItem('bettracker-storage-v5');
 
-          const keysToRemove = Object.keys(localStorage).filter(key => key.startsWith('sb-') || key.startsWith('sb:'));
+          const keysToRemove = Object.keys(localStorage).filter(key =>
+            key.startsWith('sb-') ||
+            key.startsWith('sb:') ||
+            key.startsWith('supabase') ||
+            key === 'supabase.auth.token' ||
+            key === 'supabase.auth.refresh-token'
+          );
           keysToRemove.forEach((key) => localStorage.removeItem(key));
+
+          try {
+            const { data: { session } } = await supabase.auth.getSession();
+            if (session) {
+              await supabase.auth.signOut();
+            }
+          } catch (error) {
+            console.debug('Logout extra: não foi possível validar sessão Supabase após signOut.', error);
+          }
         }
       },
 
