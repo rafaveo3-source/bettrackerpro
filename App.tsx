@@ -105,45 +105,20 @@ const AppContent: React.FC = () => {
   }, [isDarkMode]);
 
   useEffect(() => {
-    let mounted = true;
-
-    const initializeAuth = async () => {
-      try {
-        const { data: { session } } = await supabase.auth.getSession();
-        
-        if (mounted) {
-          // Removido o .then() causador do erro fatal
-          await setSession(session); 
-          
-          if (session) {
-            await checkProStatus();
-          }
-        }
-      } catch (error) {
-        console.error('Erro na inicialização auth:', error);
-      } finally {
-        // 🔥 BLINDAGEM: O finally garante que a tela preta SEMPRE vai sair
-        if (mounted) {
-          setIsInitializing(false);
-        }
-      }
-    };
-
-    initializeAuth();
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
-      if (mounted) {
-        await setSession(session);
-        if (session) {
-          await checkProStatus();
-        }
-      }
+    // Escuta a sessão do Supabase ANTES de renderizar as rotas
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session).then(() => {
+        if (session) checkProStatus();
+        setIsInitializing(false); // Libera o React Router
+      });
     });
 
-    return () => {
-      mounted = false;
-      subscription?.unsubscribe();
-    };
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session);
+      if (session) checkProStatus();
+    });
+
+    return () => subscription.unsubscribe();
   }, [setSession, checkProStatus]);
 
   // Segura a tela preta/loading por milissegundos enquanto valida o token
