@@ -151,9 +151,9 @@ const Analytics: React.FC = () => {
     return [
       { name: 'Green', value: counts.won, color: '#10b981' },
       { name: 'Red', value: counts.lost, color: '#ef4444' },
-      { name: 'Devolvido', value: '#8E8E93', color: '#636366' },
+      { name: 'Devolvido', value: counts.refunded, color: '#636366' },
       { name: 'Aberto', value: counts.pending, color: '#f59e0b' }
-    ].filter(d => d.value > 0);
+    ].filter(d => Number(d.value) > 0);
   }, [history, activeBankrollId]);
 
   const CustomTooltip = ({ active, payload, label }: any) => {
