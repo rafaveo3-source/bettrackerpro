@@ -92,8 +92,6 @@ const SystemRoutes: React.FC = () => {
 
 const AppContent: React.FC = () => {
   const { setSession, isAuthenticated, isDarkMode } = useBetStore();
-  
-  // 🔥 ESTADO DE HIDRATAÇÃO: Previne o "F5" de chutar pro login prematuramente
   const [isInitializing, setIsInitializing] = useState(true);
 
   useEffect(() => {
@@ -105,24 +103,47 @@ const AppContent: React.FC = () => {
   }, [isDarkMode]);
 
   useEffect(() => {
-    // Escuta a sessão do Supabase ANTES de renderizar as rotas.
-    // setSession já chama checkProStatus() internamente — não chamar de novo aqui.
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session).then(() => {
-        setIsInitializing(false); // Libera o React Router só após hidratação completa
-      });
+    let isMounted = true;
+
+    const initializeAuth = async () => {
+      try {
+        // 1. Puxa a sessão primária
+        const { data: { session }, error } = await supabase.auth.getSession();
+        if (error) throw error;
+        
+        // 2. Hidrata todo o Zustand (o try/catch interno do setSession protege contra falhas)
+        await setSession(session);
+      } catch (error) {
+        console.error("[AUTH] Erro fatal na hidratação inicial:", error);
+        // Em caso de falha severa, garante que o app não trave carregando
+        await setSession(null);
+      } finally {
+        // 3. Libera o roteamento incondicionalmente, mesmo se der erro.
+        if (isMounted) setIsInitializing(false);
+      }
+    };
+
+    // Roda a hidratação
+    initializeAuth();
+
+    // 4. Cadastra o listener de eventos (apenas para mudanças futuras)
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      // 🔥 O SEGREDO: Ignora o INITIAL_SESSION para matar a concorrência de Promises 🔥
+      if (event === 'INITIAL_SESSION') return;
+      
+      try {
+        await setSession(session);
+      } catch (error) {
+        console.error("[AUTH] Erro durante a mudança de estado (onAuthStateChange):", error);
+      }
     });
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
-      // ✅ await garante que o estado (isPro, bankrolls, etc.) esteja 100% pronto
-      // antes de qualquer re-render do Router.
-      await setSession(session);
-    });
-
-    return () => subscription.unsubscribe();
+    return () => {
+      isMounted = false;
+      subscription.unsubscribe();
+    };
   }, [setSession]);
 
-  // Segura a tela preta/loading por milissegundos enquanto valida o token
   if (isInitializing) {
     return <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex items-center justify-center" />;
   }
@@ -133,7 +154,6 @@ const AppContent: React.FC = () => {
         <Route path="/" element={isAuthenticated ? <Navigate to="/dashboard" replace /> : <LandingPage />} />
         <Route path="/login" element={isAuthenticated ? <Navigate to="/dashboard" replace /> : <AuthPage />} />
         <Route path="/update-password" element={<UpdatePassword />} />
-        {/* Rota Protegida (Aqui a Autorização Manda) */}
         <Route path="/*" element={isAuthenticated ? <SystemRoutes /> : <Navigate to="/login" replace />} />
       </Routes>
       <Toaster />

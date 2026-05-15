@@ -354,16 +354,25 @@ export const useBetStore = create<BetState>()(
       userTeams: [],
       isLoadingTeams: false,
 
+      // 🔥 TRY/CATCH GLOBAL: Protege contra interrupções de navegação SPA se o Supabase falhar
       checkProStatus: async () => {
         const user = get().user;
-        if (!user) return;
+        if (!user) {
+          set({ isPro: false, subscriptionValidUntil: null });
+          return;
+        }
         
         try {
-          const { data } = await supabase
+          const { data, error } = await supabase
             .from('profiles')
             .select('subscription_status, valid_until')
             .eq('id', user.id)
             .single();
+            
+          // Lança o erro apenas se for severo, ignorando "Profile Não Encontrado" (PGRST116)
+          if (error && error.code !== 'PGRST116') {
+             throw error; 
+          }
             
           if (data) {
             const now = new Date();
@@ -374,134 +383,142 @@ export const useBetStore = create<BetState>()(
                 (data.subscription_status === 'lifetime'); 
             
             set({ isPro: isActive, subscriptionValidUntil: data.valid_until });
+          } else {
+            set({ isPro: false, subscriptionValidUntil: null });
           }
         } catch (e) {
-          console.error("Erro ao checar PRO:", e);
+          // 🔥 GARANTIA DE ACESSO FREE: Mesmo se a API falhar, o usuário continua navegando normalmente
+          console.error("[AUTH] Erro silencioso ao checar PRO (Usuário mantido como FREE):", e);
+          set({ isPro: false, subscriptionValidUntil: null });
         }
       },
 
       setSession: async (session) => {
-        if (session?.user) {
-          set({
-            isAuthenticated: true,
-            user: {
-              id: session.user.id,
-              email: session.user.email,
-              name: session.user.user_metadata?.full_name || session.user.email?.split('@')[0] || 'Usuário',
-              avatar: session.user.user_metadata?.avatar_url,
-            },
-          });
-          
-          await get().checkProStatus();
-
-          const userId = session.user.id;
-
-          const { data: betsData } = await supabase.from('bets').select('*').eq('user_id', userId);
-          if (betsData) {
-            const formattedBets = betsData.map((bet: any) => ({
-              ...bet,
-              bankrollId: bet.bankroll_id,
-              stake: Number(bet.stake),
-              odds: Number(bet.odds),
-              profit: Number(bet.profit),
-            }));
-            set({ history: formattedBets });
-          }
-
-          const { data: methodsData } = await supabase.from('methods').select('*').eq('user_id', userId);
-          if (methodsData) set({ methods: methodsData });
-        
-          const { data: userMarketsData } = await supabase.from('user_markets').select('id, name').eq('user_id', userId);
-          if (userMarketsData) set({ customMarkets: userMarketsData });
-
-          const { data: userStrategies } = await supabase.from('user_strategies').select('*').eq('user_id', userId);
-          if (userStrategies) set({ customStrategies: userStrategies });
-
-          const { data: bankrollsData } = await supabase.from('bankrolls').select('*').eq('user_id', userId);
-          if (bankrollsData) {
-            const formattedBankrolls = bankrollsData.map((b: any) => ({
-              id: b.id,
-              name: b.name,
-              currency: b.currency,
-              initialBalance: Number(b.initial_balance)
-            }));
-            
-            // 🔥 LÓGICA DE PERSISTÊNCIA DA BANCA
-            const savedBankrollId = get().activeBankrollId;
-            // Verifica se o ID salvo ainda existe (caso tenha sido deletado em outro PC)
-            const isValidSavedId = formattedBankrolls.some(b => b.id === savedBankrollId);
-
+        try {
+          if (session?.user) {
             set({
-              bankrolls: formattedBankrolls,
-              activeBankrollId: isValidSavedId ? savedBankrollId : (formattedBankrolls.length > 0 ? formattedBankrolls[0].id : '')
+              isAuthenticated: true,
+              user: {
+                id: session.user.id,
+                email: session.user.email,
+                name: session.user.user_metadata?.full_name || session.user.email?.split('@')[0] || 'Usuário',
+                avatar: session.user.user_metadata?.avatar_url,
+              },
+            });
+            
+            await get().checkProStatus();
+
+            const userId = session.user.id;
+
+            const { data: betsData } = await supabase.from('bets').select('*').eq('user_id', userId);
+            if (betsData) {
+              const formattedBets = betsData.map((bet: any) => ({
+                ...bet,
+                bankrollId: bet.bankroll_id,
+                stake: Number(bet.stake),
+                odds: Number(bet.odds),
+                profit: Number(bet.profit),
+              }));
+              set({ history: formattedBets });
+            }
+
+            const { data: methodsData } = await supabase.from('methods').select('*').eq('user_id', userId);
+            if (methodsData) set({ methods: methodsData });
+          
+            const { data: userMarketsData } = await supabase.from('user_markets').select('id, name').eq('user_id', userId);
+            if (userMarketsData) set({ customMarkets: userMarketsData });
+
+            const { data: userStrategies } = await supabase.from('user_strategies').select('*').eq('user_id', userId);
+            if (userStrategies) set({ customStrategies: userStrategies });
+
+            const { data: bankrollsData } = await supabase.from('bankrolls').select('*').eq('user_id', userId);
+            if (bankrollsData) {
+              const formattedBankrolls = bankrollsData.map((b: any) => ({
+                id: b.id,
+                name: b.name,
+                currency: b.currency,
+                initialBalance: Number(b.initial_balance)
+              }));
+              
+              const savedBankrollId = get().activeBankrollId;
+              const isValidSavedId = formattedBankrolls.some(b => b.id === savedBankrollId);
+
+              set({
+                bankrolls: formattedBankrolls,
+                activeBankrollId: isValidSavedId ? savedBankrollId : (formattedBankrolls.length > 0 ? formattedBankrolls[0].id : '')
+              });
+            }
+
+            const { data: txData } = await supabase.from('transactions').select('*').eq('user_id', userId).order('created_at', { ascending: false });
+            if (txData) {
+              const formattedTx = txData.map((t: any) => ({
+                id: t.id,
+                bankrollId: t.bankroll_id,
+                date: t.created_at,
+                type: t.type,
+                amount: Number(t.amount),
+                description: t.description
+              }));
+              set({ transactions: formattedTx });
+            }
+
+            const { data: mindsetData } = await supabase.from('mindset_entries').select('*').eq('user_id', userId).order('date', { ascending: false });
+            if (mindsetData) {
+              const formattedMindset = mindsetData.map((m: any) => ({
+                id: m.id,
+                date: m.date,
+                time: m.time,
+                mood: m.mood,
+                note: m.note,
+                tags: m.tags ? m.tags : [] 
+              }));
+              set({ mindsetHistory: formattedMindset });
+            }
+
+            const { data: goalsData } = await supabase.from('goals').select('*').eq('user_id', userId);
+            if (goalsData) {
+              const formattedGoals = goalsData.map((g: any) => ({
+                ...g,
+                createdAt: g.created_at,
+                target: Number(g.target),
+                current: Number(g.current)
+              }));
+              set({ goals: formattedGoals });
+            }
+
+            const { data: userLeaguesData } = await supabase.from('user_leagues').select('league_id').eq('user_id', userId);
+            const { data: userTeamsData } = await supabase.from('user_teams').select('team_id').eq('user_id', userId);
+
+            set({ 
+              userLeagues: userLeaguesData ? userLeaguesData.map((ul: any) => ul.league_id) : [],
+              userTeams: userTeamsData ? userTeamsData.map((ut: any) => ut.team_id) : []
+            });
+            
+            await get().loadUserSettings();
+            get().recalculateBankroll();
+          } else {
+            set({
+              isAuthenticated: false,
+              user: null,
+              history: [],
+              transactions: [],
+              mindsetHistory: [],
+              goals: [],
+              bankrolls: [],
+              activeBankrollId: '',
+              currentBankrollBalance: 0,
+              userLeagues: [],
+              globalLeagues: [],
+              globalMarkets: [],
+              customMarkets: [],
+              globalSystemMethods: [],
+              globalStrategies: []
             });
           }
-
-          const { data: txData } = await supabase.from('transactions').select('*').eq('user_id', userId).order('created_at', { ascending: false });
-          if (txData) {
-            const formattedTx = txData.map((t: any) => ({
-              id: t.id,
-              bankrollId: t.bankroll_id,
-              date: t.created_at,
-              type: t.type,
-              amount: Number(t.amount),
-              description: t.description
-            }));
-            set({ transactions: formattedTx });
-          }
-
-          const { data: mindsetData } = await supabase.from('mindset_entries').select('*').eq('user_id', userId).order('date', { ascending: false });
-          if (mindsetData) {
-            const formattedMindset = mindsetData.map((m: any) => ({
-              id: m.id,
-              date: m.date,
-              time: m.time,
-              mood: m.mood,
-              note: m.note,
-              tags: m.tags ? m.tags : [] 
-            }));
-            set({ mindsetHistory: formattedMindset });
-          }
-
-          const { data: goalsData } = await supabase.from('goals').select('*').eq('user_id', userId);
-          if (goalsData) {
-            const formattedGoals = goalsData.map((g: any) => ({
-              ...g,
-              createdAt: g.created_at,
-              target: Number(g.target),
-              current: Number(g.current)
-            }));
-            set({ goals: formattedGoals });
-          }
-
-          const { data: userLeaguesData } = await supabase.from('user_leagues').select('league_id').eq('user_id', userId);
-          const { data: userTeamsData } = await supabase.from('user_teams').select('team_id').eq('user_id', userId);
-
-          set({ 
-            userLeagues: userLeaguesData ? userLeaguesData.map((ul: any) => ul.league_id) : [],
-            userTeams: userTeamsData ? userTeamsData.map((ut: any) => ut.team_id) : []
-          });
-          
-          await get().loadUserSettings();
-          get().recalculateBankroll();
-        } else {
-          set({
-            isAuthenticated: false,
-            user: null,
-            history: [],
-            transactions: [],
-            mindsetHistory: [],
-            goals: [],
-            bankrolls: [],
-            activeBankrollId: '',
-            currentBankrollBalance: 0,
-            userLeagues: [],
-            globalLeagues: [],
-            globalMarkets: [],
-            customMarkets: [],
-            globalSystemMethods: [],
-            globalStrategies: []
-          });
+        } catch (error) {
+          // 🔥 GARANTIA DE ESTADO SEGURO: A aplicação não trava se houver falha de rede/hidratação
+          console.error("[AUTH] Erro fatal durante a hidratação do setSession:", error);
+          set({ isAuthenticated: !!session?.user });
         }
       },
 
