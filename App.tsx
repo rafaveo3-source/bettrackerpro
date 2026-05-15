@@ -104,29 +104,25 @@ const AppContent: React.FC = () => {
     }
   }, [isDarkMode]);
 
-  // 🔥 CORREÇÃO: useEffect de Autenticação Blindado contra Loop Infinito 🔥
   useEffect(() => {
     let mounted = true;
 
     const initializeAuth = async () => {
       try {
         const { data: { session } } = await supabase.auth.getSession();
-
+        
         if (mounted) {
-          setSession(session);
+          // Removido o .then() causador do erro fatal
+          await setSession(session); 
           
           if (session) {
-            try {
-              await checkProStatus();
-            } catch (err) {
-              console.error('Erro ao checar status PRO:', err);
-            }
+            await checkProStatus();
           }
         }
       } catch (error) {
         console.error('Erro na inicialização auth:', error);
       } finally {
-        // O finally garante que a tela preta VAI sair, independentemente de sucesso ou erro
+        // 🔥 BLINDAGEM: O finally garante que a tela preta SEMPRE vai sair
         if (mounted) {
           setIsInitializing(false);
         }
@@ -137,13 +133,9 @@ const AppContent: React.FC = () => {
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
       if (mounted) {
-        setSession(session);
+        await setSession(session);
         if (session) {
-          try {
-            await checkProStatus();
-          } catch (err) {
-            console.error('Erro na mudança de auth:', err);
-          }
+          await checkProStatus();
         }
       }
     });
@@ -152,9 +144,9 @@ const AppContent: React.FC = () => {
       mounted = false;
       subscription?.unsubscribe();
     };
-  }, []); // <-- ARRAY VAZIO AQUI: Roda apenas uma vez! Impede a tela preta do loop.
+  }, [setSession, checkProStatus]);
 
-  // Segura a tela por milissegundos enquanto valida o token
+  // Segura a tela preta/loading por milissegundos enquanto valida o token
   if (isInitializing) {
     return <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex items-center justify-center" />;
   }
