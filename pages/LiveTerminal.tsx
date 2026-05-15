@@ -1,16 +1,19 @@
 import React, { useState, useMemo } from 'react';
-import { Clock, Target, Flag, TrendingUp, ShieldAlert, BarChart3, Eye, CheckCircle2, AlertTriangle, Crown, ChevronRight, Zap, ShieldCheck } from 'lucide-react';
+import { 
+    Clock, Target, Flag, TrendingUp, ShieldAlert, BarChart3, Eye, 
+    CheckCircle2, AlertTriangle, Crown, ChevronRight, Zap, 
+    ShieldCheck, Goal, Layers, RectangleHorizontal, Info
+} from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { useBetStore } from '../store/useBetStore';
 
 // ==========================================
-// FUNÇÕES AUXILIARES MATEMÁTICAS
+// FUNÇÕES MATEMÁTICAS QUANTITATIVAS
 // ==========================================
 const factorial = (n: number): number => {
   if (n === 0 || n === 1) return 1;
-  let result = 1;
-  for (let i = 2; i <= n; i++) result *= i;
+  let result = 1; for (let i = 2; i <= n; i++) result *= i;
   return result;
 };
 
@@ -18,41 +21,36 @@ const poisson = (lambda: number, k: number) => {
   return (Math.pow(lambda, k) * Math.exp(-lambda)) / factorial(k);
 };
 
-// 🔥 COMPONENTE DE ANIMAÇÃO DE NÚMEROS 🔥
+// Probabilidade de sair MAIS de "k" eventos (Over k.5)
+const poissonOver = (lambda: number, required: number) => {
+    if (required <= 0) return 1;
+    let cumulative = 0;
+    for (let i = 0; i < required; i++) {
+        cumulative += poisson(lambda, i);
+    }
+    return Math.max(0.01, Math.min(0.99, 1 - cumulative));
+};
+
+const calcFairOdd = (prob: number) => prob > 0.01 ? (1 / prob).toFixed(2) : '99.00';
+
+// Componente de Animação de Números
 const AnimatedNumber = ({ value, prefix = "", suffix = "", className = "" }: { value: string | number, prefix?: string, suffix?: string, className?: string }) => (
     <AnimatePresence mode="popLayout">
-        <motion.span
-            key={value}
-            initial={{ opacity: 0.5, y: -2 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.2 }}
-            className={`inline-block font-mono ${className}`}
-        >
+        <motion.span key={value} initial={{ opacity: 0.5, y: -2 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.2 }} className={`inline-block font-mono ${className}`}>
             {prefix}{value}{suffix}
         </motion.span>
     </AnimatePresence>
 );
 
-// 🔥 COMPONENTE DE SLIDER APPLE PRO 🔥
-interface SliderGroupProps {
-  label: string;
-  value: number;
-  max: number;
-  setter: (val: number) => void;
-  colorClass: string;
-}
-
+// Slider Estilo Apple PRO
+interface SliderGroupProps { label: string; value: number; max: number; setter: (val: number) => void; colorClass: string; }
 const SliderGroup: React.FC<SliderGroupProps> = ({ label, value, max, setter, colorClass }) => (
-  <div className="bg-white dark:bg-[#1C1C1E] border border-slate-200 dark:border-[#2C2C2E] p-4 rounded-xl shadow-sm min-w-0">
+  <div className="bg-white dark:bg-[#1C1C1E] border border-slate-200 dark:border-[#2C2C2E] p-3.5 sm:p-4 rounded-xl shadow-sm min-w-0">
     <div className="flex justify-between items-center mb-3">
        <label className="text-[10px] font-bold text-slate-500 dark:text-[#8E8E93] uppercase tracking-widest truncate mr-2">{label}</label>
        <span className={`text-lg font-bold font-mono ${colorClass}`}>{value}</span>
     </div>
-    <input 
-      type="range" min="0" max={max} value={value} 
-      onChange={(e) => setter(Number(e.target.value))} 
-      className={`w-full h-2.5 bg-slate-100 dark:bg-[#000000] rounded-lg appearance-none cursor-pointer accent-indigo-600 dark:accent-indigo-500 transition-all`} 
-    />
+    <input type="range" min="0" max={max} value={value} onChange={(e) => setter(Number(e.target.value))} className={`w-full h-2.5 bg-slate-100 dark:bg-[#000000] rounded-lg appearance-none cursor-pointer accent-indigo-600 dark:accent-indigo-500 transition-all`} />
   </div>
 );
 
@@ -60,134 +58,129 @@ const LiveTerminal: React.FC = () => {
   const { isPro } = useBetStore();
   const navigate = useNavigate();
 
-  // 🔥 OVERLAY DE VITRINE PRO 🔥
-  const ProBlurOverlay = ({ title, desc }: { title: string, desc: string }) => (
+  // OVERLAY PRO
+  const ProBlurOverlay = () => (
       <div className="absolute inset-0 z-50 flex items-center justify-center bg-white/40 dark:bg-[#000000]/60 backdrop-blur-md rounded-2xl">
           <div className="bg-white dark:bg-[#1C1C1E] border border-indigo-500/30 p-8 rounded-2xl max-w-md text-center shadow-xl flex flex-col items-center mx-4">
-              <div className="bg-indigo-500/10 p-4 rounded-xl mb-4 text-indigo-600 dark:text-indigo-400">
-                  <Crown size={32} />
-              </div>
-              <h2 className="text-xl font-bold text-slate-900 dark:text-white tracking-tight mb-2 uppercase">
-                  {title} <span className="text-indigo-500">PRO</span>
-              </h2>
-              <p className="text-slate-500 dark:text-[#8E8E93] mb-6 text-sm leading-relaxed font-medium">
-                  {desc}
-              </p>
-              <button onClick={() => navigate('/pro')} className="w-full bg-slate-900 hover:bg-slate-800 text-white dark:bg-indigo-600 dark:hover:bg-indigo-500 font-bold py-4 px-8 rounded-xl transition-all shadow-sm text-xs tracking-widest uppercase">
-                  Desbloquear Acesso
-              </button>
+              <div className="bg-indigo-500/10 p-4 rounded-xl mb-4 text-indigo-600 dark:text-indigo-400 mx-auto"><Crown size={32} /></div>
+              <h2 className="text-xl font-bold text-slate-900 dark:text-white tracking-tight mb-2 uppercase">Terminal Preditivo <span className="text-indigo-500">PRO</span></h2>
+              <p className="text-slate-500 dark:text-[#8E8E93] mb-6 text-sm leading-relaxed font-medium">Acesse a IA que simula milhares de cenários e prevê o resultado exato (Gols, Cantos e Cartões) para montar a aposta perfeita no intervalo.</p>
+              <button onClick={() => navigate('/pro')} className="w-full bg-slate-900 hover:bg-slate-800 text-white dark:bg-indigo-600 dark:hover:bg-indigo-500 font-bold py-4 px-8 rounded-xl transition-all shadow-sm text-xs tracking-widest uppercase">Desbloquear Acesso</button>
           </div>
       </div>
   );
 
-  const [minute, setMinute] = useState<number>(65);
-  const [targetHalf, setTargetHalf] = useState<'HT' | 'FT'>('FT');
+  const [minute, setMinute] = useState<number>(45);
+  
   const [scoreH, setScoreH] = useState<number>(0);
-  const [scoreA, setScoreA] = useState<number>(0);
   const [cornersH, setCornersH] = useState<number>(2);
-  const [cornersA, setCornersA] = useState<number>(1);
-  const [apH, setApH] = useState<number>(45);
-  const [apA, setApA] = useState<number>(30);
-  const [sotH, setSotH] = useState<number>(3);
-  const [sotA, setSotA] = useState<number>(1);
+  const [cardsH, setCardsH] = useState<number>(1);
+  const [apH, setApH] = useState<number>(50);
+  const [sotH, setSotH] = useState<number>(1);
 
-  // Inputs do Usuário (Odds da Casa de Aposta)
-  const [bookieOddGoal, setBookieOddGoal] = useState<string>('');
-  const [bookieOddCorner, setBookieOddCorner] = useState<string>('');
+  const [scoreA, setScoreA] = useState<number>(0);
+  const [cornersA, setCornersA] = useState<number>(0);
+  const [cardsA, setCardsA] = useState<number>(1);
+  const [apA, setApA] = useState<number>(37);
+  const [sotA, setSotA] = useState<number>(0);
 
   const applyPreset = (type: 'blitz_casa' | 'blitz_fora' | 'equilibrado') => {
+      setMinute(45);
       if (type === 'blitz_casa') {
-          setMinute(75); setTargetHalf('FT'); setScoreH(0); setScoreA(1); setCornersH(6); setCornersA(1); setApH(85); setApA(20); setSotH(5); setSotA(1);
+          setScoreH(0); setScoreA(1); setCornersH(5); setCornersA(1); setCardsH(1); setCardsA(3); setApH(70); setApA(20); setSotH(4); setSotA(1);
       } else if (type === 'blitz_fora') {
-          setMinute(75); setTargetHalf('FT'); setScoreH(1); setScoreA(0); setCornersH(2); setCornersA(7); setApH(25); setApA(90); setSotH(2); setSotA(6);
+          setScoreH(1); setScoreA(0); setCornersH(1); setCornersA(5); setCardsH(3); setCardsA(1); setApH(20); setApA(70); setSotH(1); setSotA(4);
       } else {
-          setMinute(30); setTargetHalf('HT'); setScoreH(0); setScoreA(0); setCornersH(2); setCornersA(2); setApH(25); setApA(25); setSotH(1); setSotA(1);
+          setScoreH(0); setScoreA(0); setCornersH(2); setCornersA(2); setCardsH(1); setCardsA(1); setApH(35); setApA(35); setSotH(1); setSotA(1);
       }
-      setBookieOddGoal('');
-      setBookieOddCorner('');
   };
 
-  const handleHalfToggle = (half: 'HT' | 'FT') => {
-      setTargetHalf(half);
-      if (half === 'HT' && minute > 45) setMinute(45);
-  };
-
-  const { goalStats, cornerStats, gameScript, momentum, topPicks, closed, stats } = useMemo(() => {
-    const extraTime = targetHalf === 'HT' ? 3 : 6; 
-    const maxTime = (targetHalf === 'HT' ? 45 : 90) + extraTime;
+  // ==========================================
+  // O CÉREBRO PREDITIVO (NOVO MOTOR PANORÂMICO)
+  // ==========================================
+  const predictions = useMemo(() => {
+    const maxTime = 95; // Foco sempre em projetar o final do jogo (FT) com acréscimos médios
     const timeLeft = Math.max(0, maxTime - minute);
-
     const safeMin = Math.max(1, minute);
+
     const apRateH = apH / safeMin;
     const apRateA = apA / safeMin;
-    const totalPPM = apRateH + apRateA; // Pressure Per Minute
+    const totalPPM = apRateH + apRateA;
 
-    const closedRec = { status: 'FECHADO', conf: 'NULA', color: 'text-slate-400', bg: 'bg-slate-50 dark:bg-[#1C1C1E] border-slate-200 dark:border-[#2C2C2E]' };
-    const defaultReturn = {
-        goalStats: { p05: 0, odd05: 0, p15: 0, odd15: 0, expTotal: scoreH + scoreA, rec: closedRec },
-        cornerStats: { p05: 0, odd05: 0, p10Win: 0, p10Void: 0, odd10: 0, expTotal: cornersH + cornersA, rec: closedRec },
-        gameScript: "MERCADO ENCERRADO (FORA DA JANELA)",
-        momentum: { ppm: totalPPM, level: 'Neutro', color: 'text-slate-500' },
-        topPicks: [],
-        closed: true,
-        stats: { hWin: 0, draw: 0, aWin: 0, btts: 0, expGoals: 0, expCorners: 0 }
-    };
-
-    if (timeLeft <= 0) return defaultReturn;
+    if (timeLeft <= 0) {
+      return { closed: true, script: "MERCADO ENCERRADO (FORA DA JANELA)", momentum: { ppm: 0, level: 'Neutro', color: 'text-slate-500' } };
+    }
 
     const sotRateH = sotH / safeMin;
     const sotRateA = sotA / safeMin;
 
-    let baseGoalH = (apRateH * 0.015) + (sotRateH * 0.15);
-    let baseGoalA = (apRateA * 0.015) + (sotRateA * 0.15);
-    let baseCornerH = (apRateH * 0.12) + (sotRateH * 0.1);
-    let baseCornerA = (apRateA * 0.12) + (sotRateA * 0.1);
-
+    // Ajuste de "Desespero" pelo Placar
     const scoreDiff = scoreH - scoreA;
-    let stateModH = 1.0;
-    let stateModA = 1.0;
+    let stateModH = 1.0; let stateModA = 1.0;
+    if (Math.abs(scoreDiff) >= 3) { stateModH = 0.6; stateModA = 0.6; } // Game over
+    else if (scoreDiff < 0) { stateModH = 1.25; stateModA = 0.85; } // Casa perdendo (ataca mais)
+    else if (scoreDiff > 0) { stateModH = 0.85; stateModA = 1.25; } // Fora perdendo (ataca mais)
 
-    if (Math.abs(scoreDiff) >= 3) {
-      stateModH = 0.6; stateModA = 0.6;
-    } else if (scoreDiff < 0) {
-      stateModH = 1.35; stateModA = 0.8;
-    } else if (scoreDiff > 0) {
-      stateModH = 0.8; stateModA = 1.35;
-    }
-
+    // Ajuste Exponencial (Fim de Jogo)
     let timeMod = 1.0;
-    if (targetHalf === 'FT' && minute > 75) timeMod = Math.exp((minute - 75) / 25);
-    else if (targetHalf === 'HT' && minute > 38) timeMod = 1.2;
+    if (minute > 75) timeMod = Math.exp((minute - 75) / 20);
 
-    const lambdaGoalH = (baseGoalH * stateModH) * timeLeft * timeMod;
-    const lambdaGoalA = (baseGoalA * stateModA) * timeLeft * timeMod;
+    // ==========================================
+    // FORÇAS (LAMBDAS) PARA O RESTANTE DO JOGO
+    // Coeficientes ajustados para a realidade do futebol (média 2.5 gols, 10 cantos, 4.5 cartões)
+    // ==========================================
+    const lambdaGoalH = ((apRateH * 0.012) + (sotRateH * 0.08)) * stateModH * timeLeft * timeMod;
+    const lambdaGoalA = ((apRateA * 0.012) + (sotRateA * 0.08)) * stateModA * timeLeft * timeMod;
     const lambdaGoalTotal = lambdaGoalH + lambdaGoalA;
 
-    const lambdaCornerH = (baseCornerH * stateModH) * timeLeft * timeMod;
-    const lambdaCornerA = (baseCornerA * stateModA) * timeLeft * timeMod;
+    const lambdaCornerH = ((apRateH * 0.055) + (sotRateH * 0.04)) * stateModH * timeLeft * timeMod;
+    const lambdaCornerA = ((apRateA * 0.055) + (sotRateA * 0.04)) * stateModA * timeLeft * timeMod;
     const lambdaCornerTotal = lambdaCornerH + lambdaCornerA;
 
-    const pTotal0 = poisson(lambdaGoalTotal, 0);
-    const pTotal1 = poisson(lambdaGoalTotal, 1);
-    const pGoal05 = 1 - pTotal0;
-    const pGoal15 = 1 - pTotal0 - pTotal1;
+    // Cartões são influenciados pela tensão do jogo (PPM) e faltas simuladas
+    const lambdaCardH = (apRateA * 0.03 + 0.01) * timeLeft; // Sofre ataques = toma cartões
+    const lambdaCardA = (apRateH * 0.03 + 0.01) * timeLeft;
+    const lambdaCardTotal = lambdaCardH + lambdaCardA;
 
-    const pCorner0 = poisson(lambdaCornerTotal, 0);
-    const pCorner1 = poisson(lambdaCornerTotal, 1);
-    const pCorner05 = 1 - pCorner0;
-    const pCorner10Void = pCorner1;
-    const pCorner10Win = 1 - pCorner0 - pCorner1;
+    // TOTAIS ESPERADOS (FT)
+    const expGoalsFT = scoreH + scoreA + lambdaGoalTotal;
+    const expCornersFT = cornersH + cornersA + lambdaCornerTotal;
+    const expCardsFT = cardsH + cardsA + lambdaCardTotal;
 
-    const calcOdd = (prob: number) => prob > 0.01 ? 1 / prob : 99.0;
-    const oddAsiatica10 = pCorner10Win > 0.01 ? (1 - pCorner10Void) / pCorner10Win : 99.0;
+    // ==========================================
+    // CÁLCULO DE PROBABILIDADES DAS LINHAS (BOOKIES)
+    // ==========================================
+    const currentGoals = scoreH + scoreA;
+    const currentCorners = cornersH + cornersA;
+    const currentCards = cardsH + cardsA;
 
-    const getRecommendation = (prob: number) => {
-        if (prob >= 0.65) return { status: 'APROVADO', conf: 'ALTA', color: 'text-emerald-600 dark:text-emerald-400', bg: 'bg-emerald-50 dark:bg-emerald-500/10 border-emerald-200 dark:border-emerald-500/30' };
-        if (prob >= 0.45) return { status: 'MODERADO', conf: 'MÉDIA', color: 'text-amber-600 dark:text-amber-400', bg: 'bg-amber-50 dark:bg-amber-500/10 border-amber-200 dark:border-amber-500/30' };
-        return { status: 'RISCO', conf: 'BAIXA', color: 'text-red-600 dark:text-red-400', bg: 'bg-red-50 dark:bg-red-500/10 border-red-200 dark:border-red-500/30' };
-    };
+    // GOLS: Projetar as próximas 3 linhas asiáticas acima do placar atual
+    const probGoal1 = poissonOver(lambdaGoalTotal, 1); // +0.5 gols
+    const probGoal2 = poissonOver(lambdaGoalTotal, 2); // +1.5 gols
+    const probGoal3 = poissonOver(lambdaGoalTotal, 3); // +2.5 gols
 
-    // 1X2 Probabilities
+    // CANTOS: Projetar as linhas realistas (Ex: Se tem 2, projeto O7.5, O8.5, O9.5)
+    // A linha base da casa de aposta geralmente é Floor(expCornersFT).
+    const baseCornerLine = Math.max(currentCorners + 1, Math.floor(expCornersFT));
+    
+    // A quantidade de cantos NECESSÁRIOS para bater as linhas (Subtraindo os que já saíram)
+    const reqC1 = Math.max(1, baseCornerLine - currentCorners);
+    const reqC2 = reqC1 + 1;
+    const reqC3 = reqC2 + 1;
+
+    const probCorner1 = poissonOver(lambdaCornerTotal, reqC1);
+    const probCorner2 = poissonOver(lambdaCornerTotal, reqC2);
+    const probCorner3 = poissonOver(lambdaCornerTotal, reqC3);
+
+    // CARTÕES: Linhas reais
+    const baseCardLine = Math.max(currentCards + 1, Math.floor(expCardsFT));
+    const reqCard1 = Math.max(1, baseCardLine - currentCards);
+    const reqCard2 = reqCard1 + 1;
+
+    const probCard1 = poissonOver(lambdaCardTotal, reqCard1);
+    const probCard2 = poissonOver(lambdaCardTotal, reqCard2);
+
+    // MATCH ODDS (1 X 2 FT)
     let probHomeWinFT = 0; let probDrawFT = 0; let probAwayWinFT = 0;
     for (let i = 0; i <= 5; i++) {
         for (let j = 0; j <= 5; j++) {
@@ -200,193 +193,245 @@ const LiveTerminal: React.FC = () => {
         }
     }
 
-    const probBtts = (1 - Math.exp(-lambdaGoalH)) * (1 - Math.exp(-lambdaGoalA));
+    const probHomeScore = 1 - Math.exp(-lambdaGoalH);
+    const probAwayScore = 1 - Math.exp(-lambdaGoalA);
+    const probBtts = ((scoreH > 0) ? 1 : probHomeScore) * ((scoreA > 0) ? 1 : probAwayScore);
 
-    // MOTOR DE SINAIS (RECOMENDAÇÕES)
-    const recommendations: Array<{title: string, prob: number, fairOdd: number, type: 'goal' | 'corner' | 'match'}> = [];
-    const currentGoals = scoreH + scoreA;
-    const currentCorners = cornersH + cornersA;
+    // =====================================
+    // CONSTRUTOR DE APOSTAS (BET BUILDER COMBOS)
+    // =====================================
+    const combos = [];
+    
+    // Combo 1: Favorito/Pressão + Gols
+    if (scoreDiff <= 0 && lambdaGoalH > 0.8 && probGoal1 > 0.6) {
+        const p = (probHomeWinFT + probDrawFT) * probGoal1;
+        combos.push({ title: "Casa ou Empate + Mais de 0.5 Gols", prob: p, odd: calcFairOdd(p) });
+    } else if (scoreDiff >= 0 && lambdaGoalA > 0.8 && probGoal1 > 0.6) {
+        const p = (probAwayWinFT + probDrawFT) * probGoal1;
+        combos.push({ title: "Fora ou Empate + Mais de 0.5 Gols", prob: p, odd: calcFairOdd(p) });
+    }
 
-    if (pGoal05 > 0.6) recommendations.push({ title: `Over ${currentGoals + 0.5} Gols`, prob: pGoal05, fairOdd: calcOdd(pGoal05), type: 'goal' });
-    if (pGoal15 > 0.45) recommendations.push({ title: `Over ${currentGoals + 1.5} Gols`, prob: pGoal15, fairOdd: calcOdd(pGoal15), type: 'goal' });
-    if (pCorner05 > 0.7) recommendations.push({ title: `Asiático +${currentCorners + 1.0} Cantos`, prob: pCorner10Win, fairOdd: calcOdd(pCorner10Win), type: 'corner' });
-    if ((scoreH === 0 || scoreA === 0) && probBtts > 0.5) recommendations.push({ title: "Ambas Marcam (Sim)", prob: probBtts, fairOdd: calcOdd(probBtts), type: 'goal' });
-    if (scoreDiff <= 0 && lambdaGoalH > 0.8 && probHomeWinFT > 0.5) recommendations.push({ title: "Dupla Chance (Casa ou Empate)", prob: probHomeWinFT + probDrawFT, fairOdd: calcOdd(probHomeWinFT + probDrawFT), type: 'match' });
-    if (scoreDiff >= 0 && lambdaGoalA > 0.8 && probAwayWinFT > 0.5) recommendations.push({ title: "Dupla Chance (Fora ou Empate)", prob: probAwayWinFT + probDrawFT, fairOdd: calcOdd(probAwayWinFT + probDrawFT), type: 'match' });
+    // Combo 2: BTTS + Cantos
+    if (probBtts > 0.5 && probCorner1 > 0.6) {
+        const p = probBtts * probCorner1;
+        combos.push({ title: `Ambas Marcam + Mais de ${baseCornerLine - 0.5} Cantos`, prob: p, odd: calcFairOdd(p) });
+    }
 
-    const topPicks = recommendations.sort((a, b) => b.prob - a.prob).slice(0, 3);
+    // Combo 3: Amasso Total (Vitória + Gols + Cantos)
+    if (lambdaGoalH > 1.2 && probCorner2 > 0.5) {
+        const p = probHomeWinFT * probGoal2 * probCorner2;
+        combos.push({ title: `Vitória Casa + Over 1.5 Gols + Over ${baseCornerLine + 0.5} Cantos`, prob: p, odd: calcFairOdd(p) });
+    } else if (lambdaGoalA > 1.2 && probCorner2 > 0.5) {
+        const p = probAwayWinFT * probGoal2 * probCorner2;
+        combos.push({ title: `Vitória Fora + Over 1.5 Gols + Over ${baseCornerLine + 0.5} Cantos`, prob: p, odd: calcFairOdd(p) });
+    }
 
+    // Fallback combo se o jogo estiver lento
+    if (combos.length === 0) {
+        const pUnder = Math.exp(-lambdaGoalTotal);
+        const pUnderCorner = 1 - probCorner1;
+        const p = pUnder * pUnderCorner;
+        combos.push({ title: `Under ${currentGoals + 1.5} Gols + Under ${baseCornerLine + 0.5} Cantos`, prob: p, odd: calcFairOdd(p) });
+    }
+
+    // =====================================
+    // DIAGNÓSTICO DO SCRIPT E MOMENTUM
+    // =====================================
     let script = "";
-    if (Math.abs(scoreDiff) >= 3) script = "❄️ GAME KILL: Jogo resolvido. A tendência para o Under é forte.";
-    else if (totalPPM < 0.8) script = "💤 JOGO LENTO: Frequência baixa de ataques. Evite linhas de Gols.";
-    else if (lambdaGoalH > lambdaGoalA * 2.5) script = "🔥 BLITZ MANDANTE: O time da casa está sufocando o adversário na defesa.";
-    else if (lambdaGoalA > lambdaGoalH * 2.5) script = "🔥 BLITZ VISITANTE: Amasso do visitante. A defesa mandante vai ceder em breve.";
-    else script = "⚔️ TROCAÇÃO FRANCA: Jogo aberto de transição rápida. Cenário perfeito para Gols e Cantos.";
+    if (Math.abs(scoreDiff) >= 3) script = "JOGO DECIDIDO: Foco na gestão de tempo. Linhas de Over perdem valor.";
+    else if (totalPPM < 0.8) script = "JOGO TRUNCADO: Alta chance de Under. Frequência de ataques muito baixa.";
+    else if (lambdaGoalH > lambdaGoalA * 2.5) script = "AMASSO DO MANDANTE: Pressão absurda da Casa. Excelente cenário para Gols/Cantos a favor.";
+    else if (lambdaGoalA > lambdaGoalH * 2.5) script = "DOMÍNIO VISITANTE: Fora controlando as ações. Linhas a favor do Visitante têm valor.";
+    else script = "TROCAÇÃO FRANCA (LÁ E CÁ): Transições rápidas de ambos os lados. Cenário ideal para BTTS e Cantos.";
 
     let momentumLvl = { ppm: totalPPM, level: 'Baixo', color: 'text-slate-500' };
     if (totalPPM >= 1.5) momentumLvl = { ppm: totalPPM, level: 'Esmagamento', color: 'text-emerald-500' };
     else if (totalPPM >= 1.0) momentumLvl = { ppm: totalPPM, level: 'Intenso', color: 'text-indigo-500' };
     else if (totalPPM >= 0.6) momentumLvl = { ppm: totalPPM, level: 'Moderado', color: 'text-amber-500' };
 
-    return {
-      goalStats: {
-        p05: Math.min(0.99, Math.max(0.01, pGoal05)), odd05: Math.min(99, calcOdd(pGoal05)),
-        p15: Math.min(0.99, Math.max(0.01, pGoal15)), odd15: Math.min(99, calcOdd(pGoal15)),
-        expTotal: scoreH + scoreA + lambdaGoalTotal, rec: getRecommendation(pGoal05)
-      },
-      cornerStats: {
-        p05: Math.min(0.99, Math.max(0.01, pCorner05)), odd05: Math.min(99, calcOdd(pCorner05)),
-        p10Win: Math.min(0.99, Math.max(0.01, pCorner10Win)), p10Void: Math.min(0.99, Math.max(0.01, pCorner10Void)), odd10: Math.min(99, oddAsiatica10),
-        expTotal: cornersH + cornersA + lambdaCornerTotal, rec: getRecommendation(pCorner05)
-      },
-      gameScript: script,
-      momentum: momentumLvl,
-      topPicks,
-      closed: false,
-      stats: { hWin: probHomeWinFT, draw: probDrawFT, aWin: probAwayWinFT, btts: probBtts, expGoals: scoreH + scoreA + lambdaGoalTotal, expCorners: cornersH + cornersA + lambdaCornerTotal }
+    return { 
+        closed: false, script, momentum: momentumLvl, combos: combos.slice(0, 3),
+        totals: { goals: expGoalsFT, corners: expCornersFT, cards: expCardsFT },
+        lines: {
+            goals: [
+                { line: `Over ${currentGoals + 0.5}`, prob: probGoal1, odd: calcFairOdd(probGoal1) },
+                { line: `Over ${currentGoals + 1.5}`, prob: probGoal2, odd: calcFairOdd(probGoal2) },
+                { line: `Over ${currentGoals + 2.5}`, prob: probGoal3, odd: calcFairOdd(probGoal3) }
+            ],
+            corners: [
+                { line: `Mais de ${baseCornerLine - 0.5}`, prob: probCorner1, odd: calcFairOdd(probCorner1) },
+                { line: `Mais de ${baseCornerLine + 0.5}`, prob: probCorner2, odd: calcFairOdd(probCorner2) },
+                { line: `Mais de ${baseCornerLine + 1.5}`, prob: probCorner3, odd: calcFairOdd(probCorner3) }
+            ],
+            cards: [
+                { line: `Mais de ${baseCardLine - 0.5}`, prob: probCard1, odd: calcFairOdd(probCard1) },
+                { line: `Mais de ${baseCardLine + 0.5}`, prob: probCard2, odd: calcFairOdd(probCard2) }
+            ]
+        },
+        stats: { hWin: probHomeWinFT, draw: probDrawFT, aWin: probAwayWinFT, btts: probBtts } 
     };
-  }, [minute, scoreH, scoreA, cornersH, cornersA, apH, apA, sotH, sotA, targetHalf]);
 
-  // Funções de Cálculo EV
-  const calcEV = (prob: number, odd: number) => ((prob * odd) - 1) * 100;
-  const calcKelly = (evRaw: number, odd: number) => {
-      if (evRaw <= 0 || odd <= 1) return 0;
-      return ((evRaw / (odd - 1)) / 4) * 100; // Kelly Seguro (1/4)
-  };
-
-  const userGoalOddNum = parseFloat(bookieOddGoal) || 0;
-  const evGoal = userGoalOddNum > 1 ? calcEV(goalStats.p05, userGoalOddNum) : null;
-  const kellyGoal = evGoal !== null && evGoal > 0 ? calcKelly(evGoal / 100, userGoalOddNum) : 0;
-
-  const userCornerOddNum = parseFloat(bookieOddCorner) || 0;
-  const evCorner = userCornerOddNum > 1 ? calcEV(cornerStats.p10Win, userCornerOddNum) : null;
-  const kellyCorner = evCorner !== null && evCorner > 0 ? calcKelly(evCorner / 100, userCornerOddNum) : 0;
-
-  const cardClass = "bg-white dark:bg-[#1C1C1E] border border-slate-200 dark:border-[#2C2C2E] rounded-2xl p-6 shadow-sm relative overflow-hidden flex flex-col";
-  const inputClass = "w-full bg-slate-50 dark:bg-[#000000] border border-slate-200 dark:border-[#3A3A3C] text-slate-900 dark:text-white rounded-xl px-3 py-2.5 md:py-2 outline-none focus:border-indigo-500 transition-colors text-base md:text-sm font-bold placeholder:text-slate-400 dark:placeholder:text-[#636366] min-w-0";
+  }, [minute, scoreH, scoreA, cornersH, cornersA, cardsH, cardsA, apH, apA, sotH, sotA]);
 
   return (
     <div className="max-w-6xl mx-auto space-y-6 pb-20 px-4 md:px-8 pt-8 font-sans">
         
-      {!isPro && <ProBlurOverlay title="Motor Preditivo IA" desc="Utilizamos a Matriz de Poisson adaptada com Decay de Tempo para prever o Resultado Final e encontrar apostas de Valor Esperado Positivo (+EV)." />}
+      {!isPro && <ProBlurOverlay />}
       
       <div className={!isPro ? 'pointer-events-none select-none blur-[4px] opacity-60' : ''}>
         
-        {/* HEADER */}
-        <div className="flex flex-col gap-2 mb-8 border-b border-slate-200 dark:border-[#2C2C2E] pb-6">
+        {/* HEADER EDUCATIVO (BCSGPT STYLE) */}
+        <div className="flex flex-col gap-2 mb-6 border-b border-slate-200 dark:border-[#2C2C2E] pb-6">
           <div className="flex items-center gap-2 text-indigo-600 dark:text-indigo-400 text-[10px] font-bold uppercase tracking-widest">
             <span className="w-2 h-2 bg-indigo-500 rounded-full animate-pulse shadow-[0_0_8px_#6366f1]"></span>
             Quant-Live Predictive Engine
           </div>
           <h1 className="text-3xl md:text-4xl font-bold text-slate-900 dark:text-white tracking-tight flex items-center gap-3">
-            Scanner de Oportunidades
+            Prognóstico Live (FT)
           </h1>
-          <p className="text-slate-500 dark:text-[#8E8E93] text-sm font-medium mt-1">Análise em tempo real de Fair Lines (Odds Justas) e Projeções de Fim de Jogo.</p>
+          <div className="bg-indigo-50 dark:bg-indigo-500/10 border border-indigo-200 dark:border-indigo-500/20 p-3 sm:p-4 rounded-xl flex items-start gap-3 mt-2 shadow-sm">
+             <Info className="text-indigo-600 dark:text-indigo-400 shrink-0 mt-0.5" size={18} />
+             <p className="text-xs sm:text-sm text-indigo-800 dark:text-indigo-300 font-medium leading-relaxed">
+                <strong>Análise de Intervalo (HT) ao Final do Jogo (FT):</strong> Insira as estatísticas exatas da partida atual. A Inteligência Artificial vai projetar o 2º tempo e gerar a <strong>Fair Line (Odd Justa)</strong> dos principais mercados. Cruze nossa odd com a da Bet365 e aposte se houver valor (+EV).
+             </p>
+          </div>
         </div>
 
-        {/* HUD: RELATÓRIO PREDITIVO (O CÉREBRO) */}
-        {!closed ? (
+        {!predictions.closed ? (
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 mb-8">
               
-              {/* PAINEL ESQUERDO: TOP INDICAÇÕES (+EV) */}
-              <div className="lg:col-span-7 bg-white dark:bg-[#1C1C1E] border border-slate-200 dark:border-[#2C2C2E] rounded-2xl p-6 md:p-8 shadow-sm flex flex-col">
+              {/* PAINEL ESQUERDO: MESA DE OPERAÇÕES (LINHAS E ODDS) */}
+              <div className="lg:col-span-7 bg-white dark:bg-[#1C1C1E] border border-slate-200 dark:border-[#2C2C2E] rounded-2xl p-5 sm:p-8 shadow-sm flex flex-col">
                   <div className="flex items-center gap-3 mb-6 border-b border-slate-100 dark:border-[#2C2C2E] pb-4">
-                      <div className="bg-emerald-50 dark:bg-emerald-500/10 p-2.5 rounded-xl text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-500/20"><Target size={18}/></div>
-                      <h3 className="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-widest">Sinais de Entrada (+EV)</h3>
+                      <div className="bg-indigo-50 dark:bg-indigo-500/10 p-2.5 rounded-xl text-indigo-600 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-500/20"><Layers size={18}/></div>
+                      <h3 className="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-widest">Painel de Precificação (Fair Lines)</h3>
                   </div>
 
-                  <div className="space-y-4 flex-1">
-                      {topPicks?.length === 0 ? (
-                          <div className="flex items-center justify-center h-full text-[10px] font-bold uppercase tracking-widest text-slate-400 dark:text-[#636366] border border-dashed border-slate-200 dark:border-[#3A3A3C] rounded-xl">
-                              Sem oportunidades claras no momento.
+                  <div className="space-y-6 flex-1">
+                      
+                      {/* TABELA GOLS */}
+                      <div>
+                          <div className="flex items-center gap-2 mb-3 text-slate-500 dark:text-[#8E8E93]">
+                             <Goal size={14}/> <h4 className="text-[10px] uppercase font-bold tracking-widest">Mercado de Gols (Projeção Total: <strong className="text-slate-900 dark:text-white">{predictions.totals?.goals.toFixed(2)}</strong>)</h4>
                           </div>
-                      ) : (
-                          topPicks?.map((pick, idx) => (
-                              <div key={idx} className="bg-slate-50 dark:bg-[#000000] p-4 rounded-xl border border-slate-200 dark:border-[#3A3A3C] shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4 transition-all hover:border-indigo-500/50">
-                                  <div className="flex items-center gap-3">
-                                      <div className={`p-2 rounded-lg ${pick.type === 'goal' ? 'bg-orange-500/10 text-orange-500' : pick.type === 'corner' ? 'bg-indigo-500/10 text-indigo-500' : 'bg-sky-500/10 text-sky-500'}`}>
-                                          {pick.type === 'goal' ? <Target size={16}/> : pick.type === 'corner' ? <Flag size={16}/> : <TrendingUp size={16}/>}
-                                      </div>
+                          <div className="grid grid-cols-3 gap-2 sm:gap-4">
+                              {predictions.lines?.goals.map((line, i) => (
+                                  <div key={i} className="bg-slate-50 dark:bg-[#000000] p-3 sm:p-4 rounded-xl border border-slate-200 dark:border-[#3A3A3C] text-center shadow-sm">
+                                      <p className="text-[10px] font-bold uppercase text-slate-700 dark:text-white mb-2 truncate">{line.line}</p>
+                                      <p className={`text-lg sm:text-xl font-bold font-mono tracking-tight mb-1 ${line.prob > 0.6 ? 'text-emerald-600 dark:text-emerald-400' : line.prob > 0.4 ? 'text-amber-600 dark:text-amber-400' : 'text-red-600 dark:text-red-400'}`}>
+                                          {(line.prob * 100).toFixed(1)}%
+                                      </p>
+                                      <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Justa: <strong className="text-slate-900 dark:text-white text-xs">@{line.odd}</strong></p>
+                                  </div>
+                              ))}
+                          </div>
+                      </div>
+
+                      {/* TABELA CANTOS */}
+                      <div>
+                          <div className="flex items-center gap-2 mb-3 text-slate-500 dark:text-[#8E8E93]">
+                             <Flag size={14}/> <h4 className="text-[10px] uppercase font-bold tracking-widest">Escanteios (Projeção Total: <strong className="text-slate-900 dark:text-white">{predictions.totals?.corners.toFixed(1)}</strong>)</h4>
+                          </div>
+                          <div className="grid grid-cols-3 gap-2 sm:gap-4">
+                              {predictions.lines?.corners.map((line, i) => (
+                                  <div key={i} className="bg-slate-50 dark:bg-[#000000] p-3 sm:p-4 rounded-xl border border-slate-200 dark:border-[#3A3A3C] text-center shadow-sm">
+                                      <p className="text-[10px] font-bold uppercase text-slate-700 dark:text-white mb-2 truncate">{line.line}</p>
+                                      <p className={`text-lg sm:text-xl font-bold font-mono tracking-tight mb-1 ${line.prob > 0.6 ? 'text-indigo-600 dark:text-indigo-400' : line.prob > 0.4 ? 'text-amber-600 dark:text-amber-400' : 'text-red-600 dark:text-red-400'}`}>
+                                          {(line.prob * 100).toFixed(1)}%
+                                      </p>
+                                      <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Justa: <strong className="text-slate-900 dark:text-white text-xs">@{line.odd}</strong></p>
+                                  </div>
+                              ))}
+                          </div>
+                      </div>
+
+                      {/* TABELA CARTÕES */}
+                      <div>
+                          <div className="flex items-center gap-2 mb-3 text-slate-500 dark:text-[#8E8E93]">
+                             <RectangleHorizontal size={14} className="text-yellow-500" fill="currentColor"/> <h4 className="text-[10px] uppercase font-bold tracking-widest">Cartões (Projeção Total: <strong className="text-slate-900 dark:text-white">{predictions.totals?.cards.toFixed(1)}</strong>)</h4>
+                          </div>
+                          <div className="grid grid-cols-2 gap-4">
+                              {predictions.lines?.cards.map((line, i) => (
+                                  <div key={i} className="bg-slate-50 dark:bg-[#000000] p-3 sm:p-4 rounded-xl border border-slate-200 dark:border-[#3A3A3C] flex items-center justify-between shadow-sm">
                                       <div>
-                                          <p className="text-sm font-bold text-slate-900 dark:text-white tracking-tight">{pick.title}</p>
-                                          <div className="flex items-center gap-2 mt-1">
-                                              <span className={`text-[10px] font-black uppercase tracking-widest ${pick.prob >= 0.65 ? 'text-emerald-500' : 'text-amber-500'}`}>
-                                                  {pick.prob >= 0.65 ? 'Confiança Alta' : 'Confiança Média'}
-                                              </span>
-                                              <span className="text-slate-400 text-[10px]">• {(pick.prob * 100).toFixed(0)}% Win Rate</span>
-                                          </div>
+                                          <p className="text-[10px] font-bold uppercase text-slate-700 dark:text-white mb-1 truncate">{line.line}</p>
+                                          <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Justa: <strong className="text-slate-900 dark:text-white text-xs">@{line.odd}</strong></p>
                                       </div>
+                                      <p className={`text-xl font-bold font-mono tracking-tight ${line.prob > 0.6 ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-500 dark:text-[#8E8E93]'}`}>
+                                          {(line.prob * 100).toFixed(1)}%
+                                      </p>
                                   </div>
-                                  <div className="flex flex-row sm:flex-col items-center sm:items-end justify-between border-t sm:border-t-0 border-slate-200 dark:border-[#2C2C2E] pt-3 sm:pt-0">
-                                      <span className="text-[9px] uppercase font-bold text-slate-500 dark:text-[#8E8E93] tracking-widest">Odd Justa Sugerida</span>
-                                      <span className="text-lg font-mono font-bold text-slate-900 dark:text-white">@{pick.fairOdd.toFixed(2)}</span>
-                                  </div>
-                              </div>
-                          ))
-                      )}
+                              ))}
+                          </div>
+                      </div>
+
                   </div>
               </div>
 
-              {/* PAINEL DIREITO: PROJEÇÃO DO PLACAR E ESTATÍSTICAS */}
-              <div className="lg:col-span-5 bg-white dark:bg-[#1C1C1E] border border-slate-200 dark:border-[#2C2C2E] rounded-2xl p-6 md:p-8 shadow-sm flex flex-col">
-                  <div className="flex items-center gap-3 mb-6 border-b border-slate-100 dark:border-[#2C2C2E] pb-4">
-                      <div className="bg-indigo-50 dark:bg-indigo-500/10 p-2.5 rounded-xl text-indigo-600 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-500/20"><BarChart3 size={18}/></div>
-                      <h3 className="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-widest">Projeção da IA ({targetHalf})</h3>
+              {/* PAINEL DIREITO: BET BUILDER & MATCH ODDS */}
+              <div className="lg:col-span-5 flex flex-col gap-6">
+                  
+                  {/* BET BUILDER (COMBOS DE OURO) */}
+                  <div className="bg-white dark:bg-[#1C1C1E] border border-slate-200 dark:border-[#2C2C2E] rounded-2xl p-6 md:p-8 shadow-sm flex-1">
+                      <div className="flex items-center gap-3 mb-6 border-b border-slate-100 dark:border-[#2C2C2E] pb-4">
+                          <div className="bg-amber-50 dark:bg-amber-500/10 p-2.5 rounded-xl text-amber-600 dark:text-amber-400 border border-amber-200 dark:border-amber-500/20"><Crown size={18}/></div>
+                          <h3 className="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-widest">Criar Aposta (Bet Builder)</h3>
+                      </div>
+                      
+                      <div className="space-y-3">
+                          {predictions.combos?.map((combo, i) => (
+                              <div key={i} className="bg-slate-50 dark:bg-[#000000] border border-slate-200 dark:border-[#3A3A3C] p-4 rounded-xl flex items-center justify-between gap-4 shadow-sm hover:border-amber-500/50 transition-colors">
+                                  <div className="flex-1 min-w-0">
+                                      <p className="text-xs font-bold text-slate-900 dark:text-white leading-snug">{combo.title}</p>
+                                      <p className="text-[9px] font-bold uppercase tracking-widest text-slate-400 mt-1">Win Rate: <span className="text-amber-600 dark:text-amber-500">{(combo.prob * 100).toFixed(1)}%</span></p>
+                                  </div>
+                                  <div className="text-right shrink-0">
+                                      <p className="text-[9px] font-bold uppercase tracking-widest text-slate-500 mb-0.5">Odd Justa</p>
+                                      <p className="text-lg font-bold font-mono text-slate-900 dark:text-white tracking-tight">@{combo.odd}</p>
+                                  </div>
+                              </div>
+                          ))}
+                      </div>
                   </div>
 
-                  <div className="space-y-5 flex-1">
-                      {/* Expected Goals & Corners */}
-                      <div className="grid grid-cols-2 gap-4">
-                          <div className="bg-slate-50 dark:bg-[#000000] p-4 rounded-xl border border-slate-200 dark:border-[#3A3A3C] text-center shadow-sm">
-                              <p className="text-[9px] uppercase font-bold text-slate-500 dark:text-[#8E8E93] tracking-widest mb-1">Gols Finais Exp.</p>
-                              <AnimatedNumber value={stats?.expGoals.toFixed(2) || 0} className="text-xl font-bold font-mono text-slate-900 dark:text-white" />
-                          </div>
-                          <div className="bg-slate-50 dark:bg-[#000000] p-4 rounded-xl border border-slate-200 dark:border-[#3A3A3C] text-center shadow-sm">
-                              <p className="text-[9px] uppercase font-bold text-slate-500 dark:text-[#8E8E93] tracking-widest mb-1">Cantos Finais Exp.</p>
-                              <AnimatedNumber value={stats?.expCorners.toFixed(1) || 0} className="text-xl font-bold font-mono text-slate-900 dark:text-white" />
-                          </div>
-                      </div>
-
-                      {/* Match Odds (1X2) Progress Bars */}
-                      <div className="space-y-4 pt-2">
-                          <p className="text-[10px] uppercase font-bold text-slate-500 dark:text-[#8E8E93] tracking-widest">Probabilidades do Placar (Match Odds)</p>
-                          
+                  {/* MATCH ODDS 1X2 */}
+                  <div className="bg-white dark:bg-[#1C1C1E] border border-slate-200 dark:border-[#2C2C2E] rounded-2xl p-6 shadow-sm">
+                      <p className="text-[10px] uppercase font-bold text-slate-500 dark:text-[#8E8E93] tracking-widest mb-4">Probabilidades Finais (Match Odds)</p>
+                      <div className="space-y-4">
                           <div>
                               <div className="flex justify-between text-[10px] font-bold uppercase mb-1">
                                   <span className="text-slate-700 dark:text-white">Vitória Mandante (1)</span>
-                                  <span className="text-slate-500 dark:text-[#8E8E93] font-mono">{((stats?.hWin || 0) * 100).toFixed(1)}%</span>
+                                  <span className="text-slate-500 dark:text-[#8E8E93] font-mono">{((predictions.stats?.hWin || 0) * 100).toFixed(1)}%</span>
                               </div>
                               <div className="w-full h-1.5 bg-slate-100 dark:bg-[#2C2C2E] rounded-full overflow-hidden">
-                                  <motion.div className="h-full bg-indigo-500" initial={{width:0}} animate={{width: `${(stats?.hWin || 0) * 100}%`}} />
+                                  <motion.div className="h-full bg-indigo-500" initial={{width:0}} animate={{width: `${(predictions.stats?.hWin || 0) * 100}%`}} />
                               </div>
                           </div>
-
                           <div>
                               <div className="flex justify-between text-[10px] font-bold uppercase mb-1">
                                   <span className="text-slate-700 dark:text-white">Empate (X)</span>
-                                  <span className="text-slate-500 dark:text-[#8E8E93] font-mono">{((stats?.draw || 0) * 100).toFixed(1)}%</span>
+                                  <span className="text-slate-500 dark:text-[#8E8E93] font-mono">{((predictions.stats?.draw || 0) * 100).toFixed(1)}%</span>
                               </div>
                               <div className="w-full h-1.5 bg-slate-100 dark:bg-[#2C2C2E] rounded-full overflow-hidden">
-                                  <motion.div className="h-full bg-amber-500" initial={{width:0}} animate={{width: `${(stats?.draw || 0) * 100}%`}} />
+                                  <motion.div className="h-full bg-slate-400" initial={{width:0}} animate={{width: `${(predictions.stats?.draw || 0) * 100}%`}} />
                               </div>
                           </div>
-
                           <div>
                               <div className="flex justify-between text-[10px] font-bold uppercase mb-1">
                                   <span className="text-slate-700 dark:text-white">Vitória Visitante (2)</span>
-                                  <span className="text-slate-500 dark:text-[#8E8E93] font-mono">{((stats?.aWin || 0) * 100).toFixed(1)}%</span>
+                                  <span className="text-slate-500 dark:text-[#8E8E93] font-mono">{((predictions.stats?.aWin || 0) * 100).toFixed(1)}%</span>
                               </div>
                               <div className="w-full h-1.5 bg-slate-100 dark:bg-[#2C2C2E] rounded-full overflow-hidden">
-                                  <motion.div className="h-full bg-emerald-500" initial={{width:0}} animate={{width: `${(stats?.aWin || 0) * 100}%`}} />
+                                  <motion.div className="h-full bg-emerald-500" initial={{width:0}} animate={{width: `${(predictions.stats?.aWin || 0) * 100}%`}} />
                               </div>
                           </div>
-
-                          <div className="pt-2 border-t border-slate-100 dark:border-[#2C2C2E] mt-4 flex items-center justify-between">
+                          <div className="pt-3 border-t border-slate-100 dark:border-[#2C2C2E] mt-4 flex items-center justify-between">
                               <span className="text-[10px] uppercase font-bold text-slate-500 dark:text-[#8E8E93] tracking-widest">Ambas Marcam (BTTS)</span>
-                              <span className="text-sm font-bold font-mono text-slate-900 dark:text-white">{((stats?.btts || 0) * 100).toFixed(1)}%</span>
+                              <span className={`text-sm font-bold font-mono tracking-tight ${(predictions.stats?.btts || 0) > 0.5 ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-900 dark:text-white'}`}>{((predictions.stats?.btts || 0) * 100).toFixed(1)}%</span>
                           </div>
                       </div>
                   </div>
+
               </div>
 
             </div>
@@ -400,64 +445,63 @@ const LiveTerminal: React.FC = () => {
         {/* MOMENTUM & SCRIPT DO JOGO */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-5 mb-8">
             <div className="bg-white dark:bg-[#1C1C1E] border border-slate-200 dark:border-[#2C2C2E] p-5 rounded-2xl flex items-center gap-4 shadow-sm">
-                <div className={`p-3 rounded-xl ${momentum.ppm >= 1.0 ? 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-500 border border-emerald-100 dark:border-emerald-500/20' : 'bg-slate-50 dark:bg-[#000000] text-slate-400 border border-slate-200 dark:border-[#3A3A3C]'}`}>
+                <div className={`p-3 rounded-xl ${predictions.momentum.ppm >= 1.0 ? 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-500 border border-emerald-100 dark:border-emerald-500/20' : 'bg-slate-50 dark:bg-[#000000] text-slate-400 border border-slate-200 dark:border-[#3A3A3C]'}`}>
                     <Zap size={20} />
                 </div>
                 <div>
                     <p className="text-[10px] uppercase font-bold tracking-widest text-slate-500 dark:text-[#8E8E93] mb-0.5">Momentum (PPM)</p>
-                    <p className={`font-bold font-mono ${momentum.color}`}>{momentum.ppm.toFixed(2)} <span className="font-sans text-[10px] ml-1 uppercase">({momentum.level})</span></p>
+                    <p className={`font-bold font-mono ${predictions.momentum.color}`}>{predictions.momentum.ppm.toFixed(2)} <span className="font-sans text-[10px] ml-1 uppercase">({predictions.momentum.level})</span></p>
                 </div>
             </div>
             <div className="md:col-span-2 bg-indigo-600 dark:bg-indigo-500 text-white p-5 rounded-2xl flex items-center gap-4 shadow-sm">
                 <ShieldCheck size={24} className="shrink-0 text-indigo-200" />
                 <div>
-                    <p className="text-[10px] uppercase font-bold tracking-widest text-indigo-200 mb-0.5">Leitura do Cenário (Game Script)</p>
-                    <p className="text-sm font-bold tracking-wide">{gameScript}</p>
+                    <p className="text-[10px] uppercase font-bold tracking-widest text-indigo-200 mb-0.5">Leitura Tática (Game Script)</p>
+                    <p className="text-sm font-bold tracking-wide">{predictions.script}</p>
                 </div>
             </div>
         </div>
 
-        {/* PAINEL DE CONTROLE DE ESTATÍSTICAS (INPUTS DO USUÁRIO) */}
+        {/* PAINEL DE INPUTS (OS SLIDERS DO USUÁRIO) */}
         <div className="bg-white dark:bg-[#1C1C1E] border border-slate-200 dark:border-[#2C2C2E] rounded-2xl p-6 md:p-8 shadow-sm">
           
           <div className="flex flex-col md:flex-row items-start md:items-center justify-between mb-8 border-b border-slate-100 dark:border-[#2C2C2E] pb-6 gap-6">
-              <div className="flex flex-wrap gap-2 w-full md:w-auto">
-                  <span className="w-full text-[10px] font-bold uppercase tracking-widest text-slate-400 dark:text-[#636366] mb-1">Cenários Prontos:</span>
-                  {['blitz_casa', 'blitz_fora', 'equilibrado'].map((p) => (
-                      <button key={p} onClick={() => applyPreset(p as any)} className="flex-1 md:flex-none text-[10px] uppercase font-bold tracking-wider px-4 py-2 rounded-lg border border-slate-200 dark:border-[#3A3A3C] bg-slate-50 dark:bg-[#000000] text-slate-600 dark:text-[#8E8E93] hover:border-indigo-500 hover:text-indigo-600 transition-colors capitalize text-center">
-                          {p.replace('_', ' ')}
-                      </button>
-                  ))}
-              </div>
-
-              <div className="flex bg-slate-100 dark:bg-[#000000] p-1.5 rounded-xl border border-slate-200 dark:border-[#2C2C2E] w-full md:w-[250px]">
-                <button onClick={() => handleHalfToggle('HT')} className={`flex-1 rounded-lg text-[10px] font-bold uppercase tracking-widest py-2 transition-all ${targetHalf === 'HT' ? 'bg-white dark:bg-[#2C2C2E] text-slate-900 dark:text-white shadow-sm border border-slate-200 dark:border-[#3A3A3C]' : 'text-slate-500 dark:text-[#8E8E93]'}`}>1º Tempo</button>
-                <button onClick={() => handleHalfToggle('FT')} className={`flex-1 rounded-lg text-[10px] font-bold uppercase tracking-widest py-2 transition-all ${targetHalf === 'FT' ? 'bg-white dark:bg-[#2C2C2E] text-slate-900 dark:text-white shadow-sm border border-slate-200 dark:border-[#3A3A3C]' : 'text-slate-500 dark:text-[#8E8E93]'}`}>2º Tempo</button>
+              <div className="w-full md:w-auto">
+                  <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400 dark:text-[#636366] mb-3 block">Ambiente de Teste (Mock):</span>
+                  <div className="flex flex-wrap gap-2">
+                    {['blitz_casa', 'blitz_fora', 'equilibrado'].map((p) => (
+                        <button key={p} onClick={() => applyPreset(p as any)} className="flex-1 md:flex-none text-[9px] uppercase font-bold tracking-wider px-3 py-2 rounded-lg border border-slate-200 dark:border-[#3A3A3C] bg-slate-50 dark:bg-[#000000] text-slate-600 dark:text-[#8E8E93] hover:border-indigo-500 hover:text-indigo-600 transition-colors capitalize text-center">
+                            {p.replace('_', ' ')}
+                        </button>
+                    ))}
+                  </div>
               </div>
           </div>
 
           <div className="mb-10 w-full max-w-xl mx-auto">
               <div className="flex justify-between mb-3 px-1">
-                  <label className="text-[10px] font-bold text-slate-500 dark:text-[#8E8E93] uppercase tracking-widest flex items-center gap-2"><Clock size={14}/> Minuto Atual</label>
+                  <label className="text-[10px] font-bold text-slate-500 dark:text-[#8E8E93] uppercase tracking-widest flex items-center gap-2"><Clock size={14}/> Minuto Atual da Partida</label>
                   <span className="text-indigo-600 dark:text-indigo-400 font-mono font-black text-2xl">{minute}'</span>
               </div>
-              <input type="range" min="1" max={targetHalf === 'HT' ? 45 : 99} value={minute} onChange={(e) => setMinute(Number(e.target.value))} className="w-full h-2.5 bg-slate-200 dark:bg-[#2C2C2E] rounded-lg appearance-none cursor-pointer accent-indigo-600" />
+              <input type="range" min="1" max={90} value={minute} onChange={(e) => setMinute(Number(e.target.value))} className="w-full h-3 bg-slate-200 dark:bg-[#2C2C2E] rounded-lg appearance-none cursor-pointer accent-indigo-600" />
           </div>
 
-          {/* DADOS DOS TIMES (SLIDERS) */}
+          {/* SLIDERS (GRID) */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
               <div className="space-y-4">
-                <h4 className="text-[11px] font-bold text-slate-900 dark:text-white uppercase tracking-[0.2em] border-l-4 border-indigo-500 pl-3 mb-2">Mandante (Casa)</h4>
-                <SliderGroup label="Placar" value={scoreH} max={10} setter={setScoreH} colorClass="text-slate-900 dark:text-white" />
+                <h4 className="text-[11px] font-bold text-slate-900 dark:text-white uppercase tracking-[0.2em] border-l-4 border-indigo-500 pl-3 mb-4">Estatísticas Mandante (Casa)</h4>
+                <SliderGroup label="Gols Marcados" value={scoreH} max={10} setter={setScoreH} colorClass="text-slate-900 dark:text-white" />
                 <SliderGroup label="Escanteios" value={cornersH} max={25} setter={setCornersH} colorClass="text-slate-900 dark:text-white" />
+                <SliderGroup label="Cartões Recebidos" value={cardsH} max={10} setter={setCardsH} colorClass="text-amber-500" />
                 <SliderGroup label="Ataques Perigosos" value={apH} max={150} setter={setApH} colorClass="text-indigo-600 dark:text-indigo-400" />
                 <SliderGroup label="Chutes no Alvo" value={sotH} max={20} setter={setSotH} colorClass="text-emerald-600 dark:text-emerald-500" />
               </div>
 
               <div className="space-y-4">
-                <h4 className="text-[11px] font-bold text-slate-900 dark:text-white uppercase tracking-[0.2em] border-l-4 border-indigo-500 pl-3 mb-2">Visitante (Fora)</h4>
-                <SliderGroup label="Placar" value={scoreA} max={10} setter={setScoreA} colorClass="text-slate-900 dark:text-white" />
+                <h4 className="text-[11px] font-bold text-slate-900 dark:text-white uppercase tracking-[0.2em] border-l-4 border-indigo-500 pl-3 mb-4">Estatísticas Visitante (Fora)</h4>
+                <SliderGroup label="Gols Marcados" value={scoreA} max={10} setter={setScoreA} colorClass="text-slate-900 dark:text-white" />
                 <SliderGroup label="Escanteios" value={cornersA} max={25} setter={setCornersA} colorClass="text-slate-900 dark:text-white" />
+                <SliderGroup label="Cartões Recebidos" value={cardsA} max={10} setter={setCardsA} colorClass="text-amber-500" />
                 <SliderGroup label="Ataques Perigosos" value={apA} max={150} setter={setApA} colorClass="text-indigo-600 dark:text-indigo-400" />
                 <SliderGroup label="Chutes no Alvo" value={sotA} max={20} setter={setSotA} colorClass="text-emerald-600 dark:text-emerald-500" />
               </div>
