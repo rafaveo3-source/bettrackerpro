@@ -105,18 +105,54 @@ const AppContent: React.FC = () => {
   }, [isDarkMode]);
 
   useEffect(() => {
-    // Escuta a sessão do Supabase ANTES de renderizar as rotas
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session).then(() => {
-        if (session) checkProStatus();
-        setIsInitializing(false); // Libera o React Router
-      });
-    });
+  let mounted = true;
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+  const initializeAuth = async () => {
+    try {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+
+      // NÃO usar .then()
       setSession(session);
-      if (session) checkProStatus();
-    });
+
+      // Verifica PRO apenas se existir sessão
+      if (session) {
+        await checkProStatus();
+      }
+
+      // Aguarda o próximo frame do React
+      requestAnimationFrame(() => {
+        if (mounted) {
+          setIsInitializing(false);
+        }
+      });
+    } catch (error) {
+      console.error('Erro na inicialização auth:', error);
+
+      if (mounted) {
+        setIsInitializing(false);
+      }
+    }
+  };
+
+  initializeAuth();
+
+  const {
+    data: { subscription },
+  } = supabase.auth.onAuthStateChange(async (_event, session) => {
+    setSession(session);
+
+    if (session) {
+      await checkProStatus();
+    }
+  });
+
+  return () => {
+    mounted = false;
+    subscription.unsubscribe();
+  };
+}, []);
 
     return () => subscription.unsubscribe();
   }, [setSession, checkProStatus]);
