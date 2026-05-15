@@ -370,10 +370,12 @@ export const useBetStore = create<BetState>()(
             const now = new Date();
             const validUntil = data.valid_until ? new Date(data.valid_until) : null;
             
-            // Aceita ativo MESMO sem data limite (assinatura contínua padrão)
+            // FIX: Normalizar o texto para minúsculo previne falhas de webhook
+            const status = data.subscription_status?.toLowerCase();
+            
             const isActive = 
-                data.subscription_status === 'lifetime' || 
-                (data.subscription_status === 'active' && (!validUntil || validUntil > now));
+                status === 'lifetime' || 
+                (status === 'active' && (!validUntil || validUntil > now));
             
             set({ isPro: isActive, subscriptionValidUntil: data.valid_until });
           } else {
@@ -520,10 +522,16 @@ export const useBetStore = create<BetState>()(
         } catch (error) {
           console.error("Erro de rede ao fazer signOut no Supabase:", error);
         } finally {
-          // Limpeza Marcial (Forçada)
           set({ isAuthenticated: false, user: null });
           localStorage.removeItem('bettracker-storage-v5');
-          // Redireciona e limpa o cache de memória do JS
+          
+          // FIX: Nuke total nos tokens residuais do Supabase que causam o re-login automático
+          Object.keys(localStorage).forEach(key => {
+              if (key.startsWith('sb-') && key.endsWith('-auth-token')) {
+                  localStorage.removeItem(key);
+              }
+          });
+
           window.location.href = '/login'; 
         }
       },

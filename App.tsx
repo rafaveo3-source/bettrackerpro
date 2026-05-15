@@ -66,7 +66,7 @@ class GlobalErrorBoundary extends React.Component<{children: React.ReactNode}, {
 
 const SystemRoutes: React.FC = () => {
   const navigate = useNavigate();
-  const location = useLocation();
+  const location = useLocation(); // Esse hook capta a alteração da URL
 
   const getCurrentViewID = () => {
     const path = location.pathname;
@@ -108,7 +108,8 @@ const SystemRoutes: React.FC = () => {
   return (
     <Layout currentView={getCurrentViewID()} setView={handleSetView}>
       <GlobalErrorBoundary>
-        <Routes>
+        {/* FIX: Injetar a prop 'location' descongela o React Router forçando re-render na navegação aninhada */}
+        <Routes location={location}>
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/scout" element={<ScoutIA />} /> 
           <Route path="/terminal-live" element={<LiveTerminal />} />
