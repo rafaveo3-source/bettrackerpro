@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useBetStore, MoodType } from '../store/useBetStore';
+import { useBetStore } from '../store/useBetStore';
 import {
   Book,
   Pencil,
@@ -17,7 +17,25 @@ import {
 import TiltModal from '../components/TiltModal';
 import { motion, AnimatePresence } from 'framer-motion';
 
-// 🔥 CORREÇÃO: COMPONENTE MOVIDO PARA FORA 🔥
+// ==========================================
+// CONFIGURAÇÕES MENTAIS E BLINDAGEM DE ERROS
+// ==========================================
+type MoodType = 'disciplined' | 'confident' | 'anxious' | 'angry' | 'tired' | string;
+
+const moodConfig: Record<string, { label: string, color: string }> = {
+  disciplined: { label: 'Disciplinado', color: 'bg-emerald-50 text-emerald-600 border-emerald-200 dark:bg-emerald-500/10 dark:text-emerald-400 dark:border-emerald-500/20' },
+  confident:   { label: 'Confiante', color: 'bg-blue-50 text-blue-600 border-blue-200 dark:bg-blue-500/10 dark:text-blue-400 dark:border-blue-500/20' },
+  anxious:     { label: 'Ansioso / Hesitante', color: 'bg-amber-50 text-amber-600 border-amber-200 dark:bg-amber-500/10 dark:text-amber-400 dark:border-amber-500/20' },
+  angry:       { label: 'Irritado / Tilt', color: 'bg-red-50 text-red-600 border-red-200 dark:bg-red-500/10 dark:text-red-400 dark:border-red-500/20' },
+  tired:       { label: 'Exausto / Desatento', color: 'bg-slate-100 text-slate-600 border-slate-200 dark:bg-[#2C2C2E] dark:text-[#E5E5EA] dark:border-[#3A3A3C]' },
+};
+
+// Se vier um log antigo ou corrompido, essa função garante que a tela não dê Black Screen
+const getMoodConfig = (mood: string) => moodConfig[mood] || { label: mood || 'Desconhecido', color: 'bg-slate-100 text-slate-600 border-slate-200 dark:bg-[#2C2C2E] dark:text-[#E5E5EA] dark:border-[#3A3A3C]' };
+
+// ==========================================
+// COMPONENTES DE INTERFACE GLOBAIS
+// ==========================================
 const ProBlurOverlay = ({ title, desc, navigate }: { title: string, desc: string, navigate: any }) => (
     <div className="absolute inset-0 z-50 flex items-center justify-center bg-white/40 dark:bg-[#020617]/50 backdrop-blur-md rounded-2xl">
         <div className="bg-white dark:bg-[#1C1C1E] border border-orange-500/30 p-8 rounded-2xl max-w-md text-center shadow-xl flex flex-col items-center mx-4">
@@ -37,7 +55,6 @@ const ProBlurOverlay = ({ title, desc, navigate }: { title: string, desc: string
     </div>
 );
 
-/* INSIGHT CARD (Refinado) */
 const InsightCard = ({ title, value, description, positive, negative, color }: any) => (
   <div className="p-5 rounded-2xl border bg-white dark:bg-[#1C1C1E] border-slate-200 dark:border-[#2C2C2E] shadow-sm relative overflow-hidden">
     <p className="text-[10px] uppercase text-slate-500 dark:text-[#8E8E93] font-bold tracking-widest mb-2">
@@ -66,13 +83,15 @@ const InsightCard = ({ title, value, description, positive, negative, color }: a
   </div>
 );
 
+// ==========================================
+// COMPONENTE PRINCIPAL
+// ==========================================
 const Mindset: React.FC = () => {
   const {
     addMindsetEntry,
     deleteMindsetEntry,
     updateMindsetEntry,
     mindsetHistory = [], 
-    history = [], 
     isPro,
     activateTiltLock,
     tiltLockUntil
@@ -87,14 +106,6 @@ const Mindset: React.FC = () => {
   const [filterMood, setFilterMood] = useState<MoodType | 'all'>('all');
   const [showTiltModal, setShowTiltModal] = useState(false);
   const [showLockConfirm, setShowLockConfirm] = useState(false);
-
-  const moodConfig = {
-    disciplined: { label: 'Disciplinado', color: 'bg-emerald-50 text-emerald-600 border-emerald-200 dark:bg-emerald-500/10 dark:text-emerald-400 dark:border-emerald-500/20' },
-    confident:   { label: 'Confiante', color: 'bg-blue-50 text-blue-600 border-blue-200 dark:bg-blue-500/10 dark:text-blue-400 dark:border-blue-500/20' },
-    anxious:     { label: 'Ansioso / Hesitante', color: 'bg-amber-50 text-amber-600 border-amber-200 dark:bg-amber-500/10 dark:text-amber-400 dark:border-amber-500/20' },
-    angry:       { label: 'Irritado / Tilt', color: 'bg-red-50 text-red-600 border-red-200 dark:bg-red-500/10 dark:text-red-400 dark:border-red-500/20' },
-    tired:       { label: 'Exausto / Desatento', color: 'bg-slate-100 text-slate-600 border-slate-200 dark:bg-[#2C2C2E] dark:text-[#E5E5EA] dark:border-[#3A3A3C]' },
-  };
 
   // 🔥 ESTATÍSTICAS E INSIGHTS MENTAIS 🔥
   const metrics = useMemo(() => {
@@ -112,10 +123,20 @@ const Mindset: React.FC = () => {
     const riskScore = total > 0 ? (tiltCount / total) * 100 : 0;
 
     let maxCount = 0; let best = 'N/A';
-    ['disciplined', 'confident'].forEach(m => { if ((moodCounts[m]||0) > maxCount) { maxCount = moodCounts[m]; best = moodConfig[m as MoodType].label; } });
+    ['disciplined', 'confident'].forEach(m => { 
+        if ((moodCounts[m]||0) > maxCount) { 
+            maxCount = moodCounts[m]; 
+            best = getMoodConfig(m).label; 
+        } 
+    });
 
     let maxBad = 0; let worst = 'N/A';
-    ['angry', 'anxious', 'tired'].forEach(m => { if ((moodCounts[m]||0) > maxBad) { maxBad = moodCounts[m]; worst = moodConfig[m as MoodType].label; } });
+    ['angry', 'anxious', 'tired'].forEach(m => { 
+        if ((moodCounts[m]||0) > maxBad) { 
+            maxBad = moodCounts[m]; 
+            worst = getMoodConfig(m).label; 
+        } 
+    });
 
     return { tiltCount, disciplinedCount, bestMood: best, worstMood: worst, riskScore };
   }, [mindsetHistory]);
@@ -141,7 +162,7 @@ const Mindset: React.FC = () => {
 
   const handleEdit = (entry: any) => {
     setEditingId(entry.id);
-    setSelectedMood(entry.mood as MoodType);
+    setSelectedMood(entry.mood);
     setNote(entry.note);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
@@ -230,7 +251,7 @@ const Mindset: React.FC = () => {
                     <div>
                         <label className="text-[10px] font-bold text-slate-500 dark:text-[#8E8E93] uppercase tracking-widest mb-3 block">1. Como você se sentiu hoje?</label>
                         <div className="grid grid-cols-1 gap-2">
-                        {(Object.keys(moodConfig) as MoodType[]).map((mood) => (
+                        {Object.keys(moodConfig).map((mood) => (
                             <button
                                 key={mood}
                                 type="button"
@@ -295,11 +316,11 @@ const Mindset: React.FC = () => {
                 />
                 <select 
                     value={filterMood}
-                    onChange={(e) => setFilterMood(e.target.value as any)}
+                    onChange={(e) => setFilterMood(e.target.value)}
                     className="w-full sm:w-48 bg-white dark:bg-[#1C1C1E] border border-slate-200 dark:border-[#2C2C2E] rounded-xl px-4 py-3 text-[10px] font-bold uppercase tracking-widest outline-none cursor-pointer text-slate-700 dark:text-white"
                 >
                     <option value="all">Todos os Estados</option>
-                    {(Object.keys(moodConfig) as MoodType[]).map((mood) => (
+                    {Object.keys(moodConfig).map((mood) => (
                         <option key={mood} value={mood}>{moodConfig[mood].label}</option>
                     ))}
                 </select>
@@ -315,7 +336,7 @@ const Mindset: React.FC = () => {
                     </motion.div>
                 ) : (
                     filteredHistory.map((entry) => {
-                        const config = moodConfig[entry.mood];
+                        const config = getMoodConfig(entry.mood);
                         return (
                         <motion.div 
                             key={entry.id}
