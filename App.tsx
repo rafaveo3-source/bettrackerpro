@@ -155,7 +155,7 @@ const AppContent: React.FC = () => {
 }, []);
 
     return () => subscription.unsubscribe();
-  }, [setSession, checkProStatus]);
+  }, []);
 
   // Segura a tela preta/loading por milissegundos enquanto valida o token
   if (isInitializing) {
