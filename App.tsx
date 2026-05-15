@@ -113,18 +113,20 @@ const AppContent: React.FC = () => {
         data: { session },
       } = await supabase.auth.getSession();
 
-      await setSession(session);
+      // Atualiza sessão
+      setSession(session);
 
+      // Verifica PRO apenas se existir sessão
       if (session) {
         await checkProStatus();
       }
 
-      // 🔥 Aguarda hidratação completa React/Zustand
-      await new Promise((resolve) => setTimeout(resolve, 0));
-
-      if (mounted) {
-        setIsInitializing(false);
-      }
+      // Aguarda o React concluir o ciclo
+      requestAnimationFrame(() => {
+        if (mounted) {
+          setIsInitializing(false);
+        }
+      });
     } catch (error) {
       console.error('Erro na inicialização auth:', error);
 
@@ -139,7 +141,7 @@ const AppContent: React.FC = () => {
   const {
     data: { subscription },
   } = supabase.auth.onAuthStateChange(async (_event, session) => {
-    await setSession(session);
+    setSession(session);
 
     if (session) {
       await checkProStatus();
