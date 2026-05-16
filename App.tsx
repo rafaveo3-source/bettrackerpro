@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { BrowserRouter, Routes, Route, useNavigate, useLocation, Navigate } from 'react-router-dom';
+import { Lock } from 'lucide-react';
 
 // Layout do Sistema
 import Layout from './layout';
@@ -26,6 +27,47 @@ import UpdatePassword from './pages/UpdatePassword';
 
 import { useBetStore, supabase } from './store/useBetStore';
 import { Toaster } from './components/ui/Toaster';
+
+// =====================================================================
+// 🔥 PRO GATE: Isolamento seguro de páginas Premium
+// Garante que o blur não ultrapasse a Sidebar no Mobile.
+// =====================================================================
+const ProGate: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const isPro = useBetStore(s => s.isPro);
+  const navigate = useNavigate();
+
+  if (isPro) {
+    return <>{children}</>;
+  }
+
+  // Renderização para Usuário FREE: Efeito Blur confinado com Card de Upgrade
+  return (
+    <div className="relative w-full min-h-[70vh] flex flex-col items-center justify-center overflow-hidden rounded-3xl bg-slate-50 dark:bg-[#1C1C1E]/30">
+      
+      {/* Blur isolado na camada de baixo (Z-0) */}
+      <div className="absolute inset-0 z-0 pointer-events-none filter blur-xl opacity-30 select-none overflow-hidden">
+        {children}
+      </div>
+
+      {/* Card de Upgrade na camada de cima (Z-10) */}
+      <div className="relative z-10 max-w-md w-full mx-4 bg-white dark:bg-[#1C1C1E] border border-indigo-500/20 dark:border-indigo-500/30 rounded-3xl p-8 text-center shadow-2xl">
+        <div className="w-16 h-16 bg-indigo-50 dark:bg-indigo-500/10 rounded-2xl flex items-center justify-center mx-auto mb-6">
+           <Lock size={32} className="text-indigo-600 dark:text-indigo-400" />
+        </div>
+        <h2 className="text-2xl font-black text-slate-900 dark:text-white mb-3">Acesso Restrito</h2>
+        <p className="text-sm text-slate-500 dark:text-[#8E8E93] mb-8 leading-relaxed font-medium">
+          Este módulo de inteligência é exclusivo para membros PRO. Eleve sua gestão e tome decisões matemáticas precisas.
+        </p>
+        <button
+          onClick={() => navigate('/pro')}
+          className="w-full bg-slate-900 hover:bg-slate-800 text-white dark:bg-indigo-600 dark:hover:bg-indigo-500 dark:text-white py-4 rounded-xl text-xs font-black uppercase tracking-widest transition-all shadow-lg active:scale-95"
+        >
+          Desbloquear Módulo
+        </button>
+      </div>
+    </div>
+  );
+};
 
 const SystemRoutes: React.FC = () => {
   const navigate = useNavigate();
@@ -72,16 +114,19 @@ const SystemRoutes: React.FC = () => {
     <Layout currentView={getCurrentViewID()} setView={handleSetView}>
       <Routes>
         <Route path="/dashboard" element={<Dashboard />} />
-        <Route path="/scout" element={<ScoutIA />} /> 
-        <Route path="/terminal-live" element={<LiveTerminal />} />
+        {/* 🔥 PÁGINAS PROTEGIDAS ENVOLVIDAS NO ProGate 🔥 */}
+        <Route path="/scout" element={<ProGate><ScoutIA /></ProGate>} /> 
+        <Route path="/terminal-live" element={<ProGate><LiveTerminal /></ProGate>} />
+        <Route path="/calculators" element={<ProGate><Calculators /></ProGate>} />
+        <Route path="/library" element={<ProGate><SystemLibrary /></ProGate>} />
+        
+        {/* Páginas Livres */}
         <Route path="/analytics" element={<Analytics />} />
         <Route path="/goals" element={<Goals />} />
         <Route path="/mindset" element={<Mindset />} />
         <Route path="/history" element={<History />} />
         <Route path="/bankrolls" element={<Bankroll />} />
         <Route path="/calendar" element={<PerformanceCalendar />} />
-        <Route path="/calculators" element={<Calculators />} />
-        <Route path="/library" element={<SystemLibrary />} />
         <Route path="/settings" element={<Settings />} />
         <Route path="/pro" element={<ProPage />} /> 
         <Route path="*" element={<Navigate to="/dashboard" replace />} />
@@ -93,7 +138,6 @@ const SystemRoutes: React.FC = () => {
 const AppContent: React.FC = () => {
   const { setSession, isAuthenticated, checkProStatus, isDarkMode } = useBetStore();
   
-  // 🔥 ESTADO DE HIDRATAÇÃO: Previne o "F5" de chutar pro login prematuramente
   const [isInitializing, setIsInitializing] = useState(true);
 
   useEffect(() => {
@@ -105,11 +149,10 @@ const AppContent: React.FC = () => {
   }, [isDarkMode]);
 
   useEffect(() => {
-    // Escuta a sessão do Supabase ANTES de renderizar as rotas
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session).then(() => {
         if (session) checkProStatus();
-        setIsInitializing(false); // Libera o React Router
+        setIsInitializing(false); 
       });
     });
 
@@ -121,9 +164,8 @@ const AppContent: React.FC = () => {
     return () => subscription.unsubscribe();
   }, [setSession, checkProStatus]);
 
-  // Segura a tela preta/loading por milissegundos enquanto valida o token
   if (isInitializing) {
-    return <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex items-center justify-center" />;
+    return <div className="min-h-screen bg-slate-50 dark:bg-[#000000] flex items-center justify-center" />;
   }
 
   return (
@@ -132,7 +174,6 @@ const AppContent: React.FC = () => {
         <Route path="/" element={isAuthenticated ? <Navigate to="/dashboard" replace /> : <LandingPage />} />
         <Route path="/login" element={isAuthenticated ? <Navigate to="/dashboard" replace /> : <AuthPage />} />
         <Route path="/update-password" element={<UpdatePassword />} />
-        {/* Rota Protegida (Aqui a Autorização Manda) */}
         <Route path="/*" element={isAuthenticated ? <SystemRoutes /> : <Navigate to="/login" replace />} />
       </Routes>
       <Toaster />
