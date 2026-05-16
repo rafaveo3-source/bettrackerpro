@@ -2,7 +2,7 @@ import React from 'react';
 import { 
   LayoutDashboard, BarChart2, Target, BrainCircuit, History, Wallet, 
   CalendarDays, Calculator, Settings, Menu, X, BookOpen, LogOut, Crown, 
-  Moon, Sun, PlayCircle, Sparkles, Eye, Lock, ArrowRight 
+  Moon, Sun, Sparkles, Eye, Lock, ArrowRight 
 } from 'lucide-react';
 import { useBetStore } from '../store/useBetStore';
 import { useNavigate, useLocation } from 'react-router-dom';
@@ -30,7 +30,6 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, setIsOpen }) => {
   const isPro = useBetStore(s => s.isPro);
   const isDarkMode = useBetStore(s => s.isDarkMode);
   const toggleTheme = useBetStore(s => s.toggleTheme);
-  const resetTutorial = useBetStore(s => s.resetTutorial);
   
   const navigate = useNavigate();
   const location = useLocation();
@@ -120,7 +119,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, setIsOpen }) => {
             
             <button
                 onClick={() => handleNavigation('/dashboard')}
-                className={`tour-sidebar-dashboard w-full flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-bold transition-all duration-200 group mb-4
+                className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-bold transition-all duration-200 group mb-4
                 ${currentView === 'dashboard' 
                     ? 'bg-slate-100 text-slate-900 dark:bg-[#1C1C1E] dark:text-white' 
                     : 'text-slate-500 dark:text-[#8E8E93] hover:text-slate-900 dark:hover:text-white hover:bg-slate-50 dark:hover:bg-[#1C1C1E]/50'}`}
@@ -134,7 +133,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, setIsOpen }) => {
                 
                 <button
                     onClick={() => handleNavigation('/scout')}
-                    className={`tour-sidebar-scout w-full flex items-center justify-between px-4 py-2.5 rounded-lg text-sm font-bold transition-all duration-200 group
+                    className={`w-full flex items-center justify-between px-4 py-2.5 rounded-lg text-sm font-bold transition-all duration-200 group
                     ${currentView === 'scout' 
                         ? 'bg-indigo-50 text-indigo-700 dark:bg-indigo-500/10 dark:text-indigo-400' 
                         : 'text-slate-500 dark:text-[#8E8E93] hover:text-slate-900 dark:hover:text-white hover:bg-slate-50 dark:hover:bg-[#1C1C1E]/50'}`}
@@ -201,14 +200,11 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, setIsOpen }) => {
             )}
 
             <div className="flex gap-2">
-                <button onClick={() => { resetTutorial(); if (window.innerWidth < 768) setIsOpen(true); navigate('/dashboard'); }} className="flex-1 flex items-center justify-center gap-2 text-slate-600 dark:text-[#8E8E93] hover:text-indigo-600 dark:hover:text-white hover:bg-slate-200 dark:hover:bg-[#1C1C1E] py-3 rounded-xl transition-all text-[10px] font-bold uppercase tracking-widest border border-slate-200 dark:border-[#2C2C2E] shadow-sm bg-white dark:bg-[#000000]">
-                    <PlayCircle size={16} /> 
-                </button>
                 <button onClick={toggleTheme} className="flex-1 flex items-center justify-center gap-2 text-slate-600 dark:text-[#8E8E93] hover:text-indigo-600 dark:hover:text-white hover:bg-slate-200 dark:hover:bg-[#1C1C1E] py-3 rounded-xl transition-all text-[10px] font-bold uppercase tracking-widest border border-slate-200 dark:border-[#2C2C2E] shadow-sm bg-white dark:bg-[#000000]">
-                    {isDarkMode ? <Sun size={16} /> : <Moon size={16} />}
+                    {isDarkMode ? <Sun size={16} /> : <Moon size={16} />} Alternar
                 </button>
                 <button onClick={handleLogout} className="flex-1 flex items-center justify-center gap-2 text-slate-600 dark:text-[#8E8E93] hover:text-red-600 dark:hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 py-3 rounded-xl transition-all text-[10px] font-bold uppercase tracking-widest border border-slate-200 dark:border-[#2C2C2E] shadow-sm bg-white dark:bg-[#000000]">
-                    <LogOut size={16} /> 
+                    <LogOut size={16} /> Sair
                 </button>
             </div>
         </div>
