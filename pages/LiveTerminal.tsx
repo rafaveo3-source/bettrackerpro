@@ -186,8 +186,9 @@ const LiveTerminal: React.FC = () => {
     if (effA < 0.04 && inputs.apA > 35) qualModA = 0.5;
     else if (effA > 0.15 && inputs.apA < 40) qualModA = 1.4;
 
-    const xgProxyH = ((apRateH * 0.01) + (sotRateH * 0.15)) * qualModH;
-    const xgProxyA = ((apRateA * 0.01) + (sotRateA * 0.15)) * qualModA;
+    // xG Proxy Realista: SoT vale ~5x mais que um AP (Ex: AP = 0.03 xG, SoT = 0.15 xG)
+    const xgProxyH = ((apRateH * 0.03) + (sotRateH * 0.15)) * qualModH;
+    const xgProxyA = ((apRateA * 0.03) + (sotRateA * 0.15)) * qualModA;
 
     // 3. EVENT MEMORY & GAME STATE
     let eventVolatility = inputs.recentEvent ? 1.25 : 1.0;
@@ -209,9 +210,10 @@ const LiveTerminal: React.FC = () => {
         if (scoreDiff !== 0) { mutH *= 0.6; mutA *= 0.6; }
     }
 
+    // Late Goal Bias (Viés de Fim de Jogo)
     let timeDecay = 1.0;
     if (inputs.minute > 75) {
-        timeDecay = (inputs.isKnockout || inputs.isFavLosing) ? 1.3 : 0.7;
+        timeDecay = (inputs.isKnockout || inputs.isFavLosing) ? 1.8 : 1.2;
     }
 
     // 4. TRAP SCORE (SIGMOIDE CONTÍNUO)
@@ -222,6 +224,10 @@ const LiveTerminal: React.FC = () => {
     if (inputs.gamePace === 'slow' && inputs.minute > 75) rawTrapScore += 35; 
     if (totalPPM < 0.6 && inputs.minute < 60) rawTrapScore += 30; 
     
+    // Penalizar severamente posse estéril (Muito AP, Zero SoT)
+    if (inputs.apH >= 30 && inputs.sotH === 0) rawTrapScore += 50;
+    if (inputs.apA >= 30 && inputs.sotA === 0) rawTrapScore += 50;
+    
     const trapScore = sigmoid(rawTrapScore, 0.15, 45); 
     const isTrap = trapScore > 60;
     const noBet = trapScore > 80;
@@ -230,14 +236,20 @@ const LiveTerminal: React.FC = () => {
     const baseLambdaMinH = (xgProxyH / 90) * validatedPace * eventVolatility * mutH * timeDecay * volatilityMod;
     const baseLambdaMinA = (xgProxyA / 90) * validatedPace * eventVolatility * mutA * timeDecay * volatilityMod;
     
-    const lambdaGoalTotalH = baseLambdaMinH * timeLeft;
-    const lambdaGoalTotalA = baseLambdaMinA * timeLeft;
+    // Supressão de Anomalias de Poisson (Capping)
+    const MAX_LAMBDA_GOAL = 1.8;
+    const lambdaGoalTotalH = Math.min(MAX_LAMBDA_GOAL, baseLambdaMinH * timeLeft);
+    const lambdaGoalTotalA = Math.min(MAX_LAMBDA_GOAL, baseLambdaMinA * timeLeft);
     const lambdaGoalTotal = lambdaGoalTotalH + lambdaGoalTotalA;
 
-    // Ajuste de Cantos (Menos impacto do AP estéril)
-    const lambdaCornerH = ((apRateH * 0.08) + (qualModH * 0.04)) * validatedDomH * validatedPace * timeLeft;
-    const lambdaCornerA = ((apRateA * 0.08) + (qualModA * 0.04)) * validatedDomA * validatedPace * timeLeft;
-    const lambdaCornerTotal = lambdaCornerH + lambdaCornerA;
+    // Curva de Escanteios (Corners)
+    const cornerPaceMod = inputs.gamePace === 'chaotic' ? 1.4 : inputs.gamePace === 'slow' ? 0.7 : 1.0;
+    const cornerFavMod = inputs.isFavLosing ? 1.6 : 1.0;
+    
+    const lambdaCornerH = ((apRateH * 0.05) + (sotRateH * 0.10)) * validatedDomH * cornerPaceMod * (inputs.gameDominance === 'home' ? cornerFavMod : 1.0) * timeLeft;
+    const lambdaCornerA = ((apRateA * 0.05) + (sotRateA * 0.10)) * validatedDomA * cornerPaceMod * (inputs.gameDominance === 'away' ? cornerFavMod : 1.0) * timeLeft;
+    
+    const lambdaCornerTotal = Math.min(5.0, lambdaCornerH + lambdaCornerA);
 
     const lambdaCardTotal = (totalPPM * 0.035) * validatedPace * timeLeft * (inputs.isKnockout ? 1.3 : 1.0);
 
