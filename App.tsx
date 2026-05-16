@@ -1,172 +1,167 @@
-import React, { useState, useEffect, useMemo } from 'react';
-import Sidebar from './components/Sidebar';
-import NewBetModal from './components/NewBetModal';
-import { Plus, Lock, Rocket, Target, ShieldAlert, BarChart3, Wallet, BrainCircuit, X, CalendarDays, Calculator, BookOpen, Sparkles } from 'lucide-react';
-import { useBetStore, Bet } from './store/useBetStore';
-import Joyride, { Step, CallBackProps, STATUS, TooltipRenderProps } from 'react-joyride';
+import React, { useEffect, useState } from 'react';
+import { BrowserRouter, Routes, Route, useNavigate, useLocation, Navigate } from 'react-router-dom';
+import { Lock } from 'lucide-react';
 
-interface LayoutProps {
-  children: React.ReactNode;
-  currentView: string;
-  setView: (view: string) => void;
-}
+import Layout from './layout';
+import Dashboard from './pages/Dashboard';
+import Analytics from './pages/Analytics';
+import History from './pages/History';
+import Bankroll from './pages/Bankroll';
+import Settings from './pages/Settings';
+import PerformanceCalendar from './pages/PerformanceCalendar';
+import Calculators from './pages/Calculators';
+import Mindset from './pages/Mindset';
+import Goals from './pages/Goals';
+import SystemLibrary from './pages/SystemLibrary';
+import ProPage from './pages/ProPage'; 
+import ScoutIA from './pages/ScoutIA'; 
+import LiveTerminal from './pages/LiveTerminal';
+import LandingPage from './pages/LandingPage';
+import AuthPage from './pages/AuthPage';
+import UpdatePassword from './pages/UpdatePassword';
 
-const colorPalettes: Record<string, any> = {
-  emerald: { 50: '236 253 245', 100: '209 250 229', 500: '16 185 129', 600: '5 150 105' },
-  blue: { 50: '239 246 255', 100: '219 234 254', 500: '59 130 246', 600: '37 99 235' },
-  purple: { 50: '250 245 255', 100: '243 232 255', 500: '168 85 247', 600: '147 51 234' },
-  orange: { 50: '255 247 237', 100: '255 237 213', 500: '249 115 22', 600: '234 88 12' },
-  gold: { 50: '255 251 235', 100: '254 243 199', 500: '245 158 11', 600: '217 119 6' }
-};
+import { useBetStore, supabase } from './store/useBetStore';
+import { Toaster } from './components/ui/Toaster';
 
-const CustomTooltip = ({ index, step, tooltipProps, primaryProps, backProps, skipProps, isLastStep }: TooltipRenderProps) => {
+const ProGate: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const isPro = useBetStore(s => s.isPro);
+  const navigate = useNavigate();
+
+  if (isPro) return <>{children}</>;
+
   return (
-    <div {...tooltipProps} className="bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-800 rounded-[2rem] p-5 md:p-6 shadow-2xl w-[calc(100vw-32px)] md:max-w-[360px] mx-auto">
-      <div className="flex gap-1.5 mb-4 justify-center">
-        {[...Array(10)].map((_, i) => (
-          <div key={i} className={`h-1.5 rounded-full transition-all duration-300 ${i === index ? 'w-6 bg-emerald-500' : 'w-1.5 bg-slate-200 dark:bg-slate-800'}`} />
-        ))}
-      </div>
-      <div className="flex items-start justify-between gap-4 mb-3">
-        <h3 className="text-base md:text-lg font-black text-slate-900 dark:text-white uppercase tracking-tighter italic flex items-center gap-2">
-          {step.title}
-        </h3>
-      </div>
-      <div className="text-xs md:text-sm text-slate-600 dark:text-slate-400 font-medium leading-relaxed mb-6">
-        {step.content}
-      </div>
-      <div className="flex items-center justify-between mt-auto">
-        <button {...skipProps} className="text-[10px] font-bold text-slate-400 hover:text-red-500 uppercase tracking-widest transition-colors flex items-center gap-1">
-          <X size={12} /> Pular
-        </button>
-        <div className="flex gap-2">
-          {index > 0 && (
-            <button {...backProps} className="px-4 py-2 rounded-xl text-[10px] font-bold text-slate-500 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 uppercase tracking-widest transition-colors">Voltar</button>
-          )}
-          <button {...primaryProps} className="px-5 py-2 rounded-xl text-[10px] font-black text-white bg-emerald-500 hover:bg-emerald-400 uppercase tracking-widest transition-all shadow-lg shadow-emerald-500/20 active:scale-95">
-            {isLastStep ? 'Finalizar' : 'Avançar'}
-          </button>
+    <div className="relative w-full min-h-[70vh] flex flex-col items-center justify-center overflow-hidden rounded-3xl bg-slate-50 dark:bg-[#1C1C1E]/30">
+      <div className="absolute inset-0 z-0 bg-indigo-500/5 dark:bg-indigo-500/10 pointer-events-none" />
+      <div className="relative z-10 max-w-md w-full mx-4 bg-white dark:bg-[#1C1C1E] border border-indigo-500/20 dark:border-indigo-500/30 rounded-3xl p-8 text-center shadow-2xl">
+        <div className="w-16 h-16 bg-indigo-50 dark:bg-indigo-500/10 rounded-2xl flex items-center justify-center mx-auto mb-6">
+           <Lock size={32} className="text-indigo-600 dark:text-indigo-400" />
         </div>
+        <h2 className="text-2xl font-black text-slate-900 dark:text-white mb-3">Acesso Restrito</h2>
+        <p className="text-sm text-slate-500 dark:text-[#8E8E93] mb-8 leading-relaxed font-medium">
+          Este módulo de inteligência é exclusivo para membros PRO. Eleve sua gestão e tome decisões matemáticas precisas.
+        </p>
+        <button onClick={() => navigate('/pro')} className="w-full bg-slate-900 hover:bg-slate-800 text-white dark:bg-indigo-600 dark:hover:bg-indigo-500 py-4 rounded-xl text-xs font-black uppercase tracking-widest transition-all shadow-lg active:scale-95">
+          Desbloquear Módulo
+        </button>
       </div>
     </div>
   );
 };
 
-const Layout: React.FC<LayoutProps> = ({ children, currentView, setView }) => {
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [betToEdit, setBetToEdit] = useState<Bet | undefined>(undefined);
-  const { isDarkMode, primaryColor, isAuthenticated, isTiltLocked, tiltLockUntil, toast, setToast, hasSeenTutorial, completeTutorial } = useBetStore();
-  const [locked, setLocked] = useState(false);
+const SystemRoutes: React.FC = () => {
+  const navigate = useNavigate();
+  const location = useLocation();
 
-  useEffect(() => {
-    if (!hasSeenTutorial && isAuthenticated && window.innerWidth < 768) {
-      setIsSidebarOpen(true);
-    }
-  }, [hasSeenTutorial, isAuthenticated]);
+  const getCurrentViewID = () => {
+    const path = location.pathname;
+    if (path.includes('/dashboard')) return 'dashboard';
+    if (path.includes('/scout')) return 'scout'; 
+    if (path.includes('/terminal-live')) return 'terminal';
+    if (path.includes('/analytics')) return 'analytics';
+    if (path.includes('/goals')) return 'metas';
+    if (path.includes('/mindset')) return 'mindset';
+    if (path.includes('/history')) return 'historico';
+    if (path.includes('/bankrolls')) return 'bancas';
+    if (path.includes('/calendar')) return 'calendar';
+    if (path.includes('/calculators')) return 'calculators';
+    if (path.includes('/library')) return 'biblioteca';
+    if (path.includes('/settings')) return 'settings';
+    if (path.includes('/pro')) return 'pro'; 
+    return 'dashboard';
+  };
 
-  useEffect(() => {
-     const interval = setInterval(() => setLocked(isTiltLocked()), 1000);
-     return () => clearInterval(interval);
-  }, [isTiltLocked]);
-
-  useEffect(() => {
-    if (isDarkMode) { document.documentElement.classList.add('dark'); } 
-    else { document.documentElement.classList.remove('dark'); }
-    
-    const palette = colorPalettes[primaryColor] || colorPalettes.gold;
-    const root = document.documentElement;
-    Object.entries(palette).forEach(([key, val]) => {
-      root.style.setProperty(`--color-primary-${key}`, val as string);
-    });
-  }, [isDarkMode, primaryColor]);
-
-  useEffect(() => {
-    const handleEditBet = (e: any) => { setBetToEdit(e.detail); setIsModalOpen(true); };
-    window.addEventListener('editBet', handleEditBet);
-    return () => window.removeEventListener('editBet', handleEditBet);
-  }, []);
-
-  useEffect(() => {
-    if (!toast) return;
-    const timer = setTimeout(() => { setToast(null); }, 3000);
-    return () => clearTimeout(timer);
-  }, [toast, setToast]);
-
-  const tutorialSteps: Step[] = useMemo(() => [
-    { target: 'body', placement: 'center', title: <><Rocket className="text-emerald-500" /> Start do Sistema</>, content: 'Bem-vindo ao BetTracker PRO. Esqueça planilhas amadoras. Vamos blindar o seu capital.', disableBeacon: true },
-    { target: '.tour-sidebar-dashboard', placement: 'right', title: <><BarChart3 className="text-blue-500" /> Cockpit de Análise</>, content: 'Onde o dinheiro é medido. Aqui você acompanha sua Win Rate real e descobre o EV+.' },
-    { target: '.tour-sidebar-scout', placement: 'right', title: <><Sparkles className="text-indigo-500" /> Motor Scout IA (PRO)</>, content: 'A joia da coroa. Nossa Inteligência Artificial lê suas estatísticas e calcula covariância.' },
-    { target: '.tour-sidebar-bankroll', placement: 'right', title: <><Wallet className="text-amber-500" /> Gestão de Caixas</>, content: 'Nunca misture o dinheiro. Crie múltiplos Portfólios.' },
-    { target: '.tour-sidebar-metas', placement: 'right', title: <><Target className="text-purple-500" /> Sistema Take Profit</>, content: 'O mercado não tem fim, mas sua meta deve ter. Configure alvos de lucro.' },
-    { target: '.tour-sidebar-mindset', placement: 'right', title: <><BrainCircuit className="text-orange-500" /> Módulo Psicológico</>, content: 'A maioria quebra por descontrole emocional (Tilt). Registre como você se sentiu.' },
-    { target: '.tour-sidebar-calendar', placement: 'right', title: <><CalendarDays className="text-pink-500" /> Calendário Financeiro</>, content: 'Acompanhe seus dias de Green e Red de forma visual.' },
-    { target: '.tour-sidebar-calculators', placement: 'right', title: <><Calculator className="text-teal-500" /> Calculadoras PRO</>, content: 'Valide suas entradas antes de apostar usando matemática.' },
-    { target: '.tour-sidebar-biblioteca', placement: 'right', title: <><BookOpen className="text-indigo-500" /> Playbooks e Gestão</>, content: 'Acesse métodos validados por profissionais e blueprints.' },
-    { target: '.tour-fab-button', placement: 'top-end', title: <><ShieldAlert className="text-emerald-500" /> Registre o Green</>, content: 'Acabou a operação? Clique aqui para cadastrar a Stake e a Odd.' }
-  ], []);
-
-  const handleJoyrideCallback = (data: CallBackProps) => {
-    const { status } = data;
-    if ([STATUS.FINISHED, STATUS.SKIPPED].includes(status as any)) {
-      completeTutorial();
-      if (window.innerWidth < 768) setIsSidebarOpen(false); 
+  const handleSetView = (viewId: string) => {
+    switch (viewId) {
+      case 'dashboard': navigate('/dashboard'); break;
+      case 'scout': navigate('/scout'); break; 
+      case 'terminal': navigate('/terminal-live'); break;
+      case 'analytics': navigate('/analytics'); break;
+      case 'metas': navigate('/goals'); break;
+      case 'mindset': navigate('/mindset'); break;
+      case 'historico': navigate('/history'); break;
+      case 'bancas': navigate('/bankrolls'); break;
+      case 'calendar': navigate('/calendar'); break;
+      case 'calculators': navigate('/calculators'); break;
+      case 'biblioteca': navigate('/library'); break;
+      case 'settings': navigate('/settings'); break;
+      case 'pro': navigate('/pro'); break; 
+      default: navigate('/dashboard'); break;
     }
   };
 
-  // 🔥 KAIROS FIX: O Joyride só monta se o usuário estiver na tela inicial. 
-  // Isso impede que o Joyride quebre o React Router ao tentar renderizar tooltips de páginas que já fecharam.
-  const isDashboard = currentView === 'dashboard';
-  const shouldRunTour = !hasSeenTutorial && isAuthenticated && isDashboard;
-
   return (
-    <div className="flex min-h-screen font-sans bg-slate-50 dark:bg-slate-950 transition-colors duration-300 w-full overflow-x-hidden relative">
-      
-      {shouldRunTour && (
-        <Joyride
-          steps={tutorialSteps}
-          run={true}
-          continuous={true}
-          showProgress={false} 
-          showSkipButton={true}
-          callback={handleJoyrideCallback}
-          tooltipComponent={CustomTooltip}
-          floaterProps={{ disableAnimation: true }}
-          styles={{ options: { zIndex: 10000, overlayColor: 'rgba(2, 6, 23, 0.85)' } }}
-        />
-      )}
-
-      <Sidebar currentView={currentView} setView={setView} isOpen={isSidebarOpen} setIsOpen={setIsSidebarOpen} />
-
-      <div className="flex-1 lg:ml-72 transition-all duration-300 min-w-0">
-        {locked && (
-            <div className="bg-red-600 text-white px-4 py-3 text-center text-[10px] font-black flex items-center justify-center gap-2 sticky top-0 z-50 uppercase tracking-widest shadow-xl">
-                <Lock size={14} /> Protocolo de Tilt Ativo. Bloqueio até {new Date(tiltLockUntil!).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
-            </div>
-        )}
-        <div className="p-4 pt-20 lg:p-12 lg:pt-12 max-w-[1400px] mx-auto w-full">
-          {children}
-        </div>
-      </div>
-
-      {!locked && (
-          <button onClick={() => { setBetToEdit(undefined); setIsModalOpen(true); }} className="tour-fab-button fixed bottom-6 right-6 lg:bottom-10 lg:right-10 bg-emerald-500 hover:bg-emerald-400 text-white dark:text-[#020617] p-4 lg:p-5 rounded-[2rem] shadow-2xl shadow-emerald-500/20 transition-all hover:scale-110 active:scale-95 z-40 flex items-center gap-3 group border-4 border-white dark:border-slate-900">
-            <Plus size={24} />
-            <span className="max-w-0 overflow-hidden group-hover:max-w-xs transition-all duration-300 whitespace-nowrap font-black uppercase text-xs tracking-widest hidden md:inline-block">Registrar Entrada</span>
-          </button>
-      )}
-
-      {toast && (
-        <div className="fixed top-6 right-6 z-[999] animate-in fade-in slide-in-from-right duration-300">
-          <div className={`px-6 py-4 rounded-2xl shadow-2xl border text-sm font-bold uppercase tracking-wider backdrop-blur-xl ${toast.type === 'success' ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-500' : 'bg-red-500/10 border-red-500/30 text-red-500'}`}>
-            {toast.message}
-          </div>
-        </div>
-      )}
-
-      <NewBetModal isOpen={isModalOpen} betToEdit={betToEdit} onClose={() => { setIsModalOpen(false); setBetToEdit(undefined); }} />
-    </div>
+    <Layout currentView={getCurrentViewID()} setView={handleSetView}>
+      {/* 🔥 FIX: Removido o key={location.pathname} para voltar a navegação instantânea */}
+      <Routes>
+        <Route path="/dashboard" element={<Dashboard />} />
+        
+        <Route path="/scout" element={<ProGate><ScoutIA /></ProGate>} /> 
+        <Route path="/terminal-live" element={<ProGate><LiveTerminal /></ProGate>} />
+        <Route path="/calculators" element={<ProGate><Calculators /></ProGate>} />
+        <Route path="/library" element={<ProGate><SystemLibrary /></ProGate>} />
+        
+        <Route path="/analytics" element={<Analytics />} />
+        <Route path="/goals" element={<Goals />} />
+        <Route path="/mindset" element={<Mindset />} />
+        <Route path="/history" element={<History />} />
+        <Route path="/bankrolls" element={<Bankroll />} />
+        <Route path="/calendar" element={<PerformanceCalendar />} />
+        <Route path="/settings" element={<Settings />} />
+        <Route path="/pro" element={<ProPage />} /> 
+        <Route path="*" element={<Navigate to="/dashboard" replace />} />
+      </Routes>
+    </Layout>
   );
 };
 
-export default Layout;
+const AppContent: React.FC = () => {
+  const { setSession, isAuthenticated, checkProStatus, isDarkMode } = useBetStore();
+  const [isInitializing, setIsInitializing] = useState(true);
+
+  useEffect(() => {
+    if (isDarkMode) document.documentElement.classList.add('dark');
+    else document.documentElement.classList.remove('dark');
+  }, [isDarkMode]);
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session).then(() => {
+        if (session) checkProStatus();
+        setIsInitializing(false); 
+      });
+    });
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session);
+      if (session) checkProStatus();
+    });
+
+    return () => subscription.unsubscribe();
+  }, [setSession, checkProStatus]);
+
+  if (isInitializing) {
+    return <div className="min-h-screen bg-slate-50 dark:bg-[#000000] flex items-center justify-center" />;
+  }
+
+  return (
+    <>
+      <Routes>
+        <Route path="/" element={isAuthenticated ? <Navigate to="/dashboard" replace /> : <LandingPage />} />
+        <Route path="/login" element={isAuthenticated ? <Navigate to="/dashboard" replace /> : <AuthPage />} />
+        <Route path="/update-password" element={<UpdatePassword />} />
+        <Route path="/*" element={isAuthenticated ? <SystemRoutes /> : <Navigate to="/login" replace />} />
+      </Routes>
+      <Toaster />
+    </>
+  );
+};
+
+const App: React.FC = () => {
+  return (
+    <BrowserRouter>
+      <AppContent />
+    </BrowserRouter>
+  );
+};
+
+export default App;
