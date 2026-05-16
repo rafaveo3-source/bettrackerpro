@@ -60,7 +60,7 @@ const ProGate: React.FC<{ children: React.ReactNode }> = ({ children }) => {
         </p>
         <button
           onClick={() => navigate('/pro')}
-          className="w-full bg-slate-900 hover:bg-slate-800 text-white dark:bg-indigo-600 dark:hover:bg-indigo-500 dark:text-white py-4 rounded-xl text-xs font-black uppercase tracking-widest transition-all shadow-lg active:scale-95"
+          className="w-full bg-slate-900 hover:bg-slate-800 text-white dark:bg-indigo-600 dark:hover:bg-indigo-500 py-4 rounded-xl text-xs font-black uppercase tracking-widest transition-all shadow-lg active:scale-95"
         >
           Desbloquear Módulo
         </button>
@@ -112,8 +112,10 @@ const SystemRoutes: React.FC = () => {
 
   return (
     <Layout currentView={getCurrentViewID()} setView={handleSetView}>
-      <Routes>
+      {/* 🔥 FIX: Adicionado location e key para forçar o unmount/mount e destravar o congelamento */}
+      <Routes location={location} key={location.pathname}>
         <Route path="/dashboard" element={<Dashboard />} />
+        
         {/* 🔥 PÁGINAS PROTEGIDAS ENVOLVIDAS NO ProGate 🔥 */}
         <Route path="/scout" element={<ProGate><ScoutIA /></ProGate>} /> 
         <Route path="/terminal-live" element={<ProGate><LiveTerminal /></ProGate>} />
