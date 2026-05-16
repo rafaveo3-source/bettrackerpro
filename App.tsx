@@ -32,6 +32,8 @@ import { Toaster } from './components/ui/Toaster';
 // 🔥 PRO GATE: Isolamento seguro de páginas Premium
 // Garante que o blur não ultrapasse a Sidebar no Mobile.
 // =====================================================================
+// Substitua apenas este bloco no seu App.tsx atual
+
 const ProGate: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const isPro = useBetStore(s => s.isPro);
   const navigate = useNavigate();
@@ -40,16 +42,15 @@ const ProGate: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     return <>{children}</>;
   }
 
-  // Renderização para Usuário FREE: Efeito Blur confinado com Card de Upgrade
+  // 🔥 KAIROS FIX: Não renderizamos o {children} para usuários FREE.
+  // Isso impede que o processador do celular congele ao tentar aplicar Blur em DOMs pesados.
   return (
     <div className="relative w-full min-h-[70vh] flex flex-col items-center justify-center overflow-hidden rounded-3xl bg-slate-50 dark:bg-[#1C1C1E]/30">
       
-      {/* Blur isolado na camada de baixo (Z-0) */}
-      <div className="absolute inset-0 z-0 pointer-events-none filter blur-xl opacity-30 select-none overflow-hidden">
-        {children}
-      </div>
+      {/* Background Decorativo Super Leve no lugar do blur pesado */}
+      <div className="absolute inset-0 z-0 bg-indigo-500/5 dark:bg-indigo-500/10 pointer-events-none" />
 
-      {/* Card de Upgrade na camada de cima (Z-10) */}
+      {/* Card de Upgrade na camada de cima */}
       <div className="relative z-10 max-w-md w-full mx-4 bg-white dark:bg-[#1C1C1E] border border-indigo-500/20 dark:border-indigo-500/30 rounded-3xl p-8 text-center shadow-2xl">
         <div className="w-16 h-16 bg-indigo-50 dark:bg-indigo-500/10 rounded-2xl flex items-center justify-center mx-auto mb-6">
            <Lock size={32} className="text-indigo-600 dark:text-indigo-400" />
@@ -68,7 +69,6 @@ const ProGate: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     </div>
   );
 };
-
 const SystemRoutes: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
