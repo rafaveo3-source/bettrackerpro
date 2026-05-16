@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import Sidebar from './components/Sidebar';
 import NewBetModal from './components/NewBetModal';
 import { Plus, Lock } from 'lucide-react';
@@ -30,8 +31,8 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   }, [isTiltLocked]);
 
   useEffect(() => {
-    if (isDarkMode) document.documentElement.classList.add('dark'); 
-    else document.documentElement.classList.remove('dark'); 
+    if (isDarkMode) { document.documentElement.classList.add('dark'); } 
+    else { document.documentElement.classList.remove('dark'); }
     
     const palette = colorPalettes[primaryColor] || colorPalettes.gold;
     const root = document.documentElement;
@@ -51,6 +52,8 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
     const timer = setTimeout(() => { setToast(null); }, 3000);
     return () => clearTimeout(timer);
   }, [toast, setToast]);
+
+  // 🔥 REMOVEMOS O JOYRIDE PARA PREVENIR O CONGELAMENTO DO BODY 🔥
 
   return (
     <div className="flex min-h-screen font-sans bg-slate-50 dark:bg-slate-950 transition-colors duration-300 w-full overflow-x-hidden relative">
