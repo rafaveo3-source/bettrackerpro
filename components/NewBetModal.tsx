@@ -20,6 +20,8 @@ import {
 import { useBetStore, BetStatus, Bet } from '../store/useBetStore';
 import TicketScanner from './TicketScanner';
 
+const EMPTY_ARRAY: any[] = [];
+
 interface NewBetModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -74,9 +76,9 @@ const NewBetModal: React.FC<NewBetModalProps> = ({
     cashoutValue: ''
   });
 
-  const availableStrategies = isPro ? customStrategies : [];
-  const availableMarkets = isPro ? customMarkets : [];
-  const availableMethods = isPro ? methods : [];
+  const availableStrategies = isPro ? customStrategies : EMPTY_ARRAY;
+  const availableMarkets = isPro ? customMarkets : EMPTY_ARRAY;
+  const availableMethods = isPro ? methods : EMPTY_ARRAY;
 
   useEffect(() => {
     if (isOpen && globalLeagues.length === 0) {
