@@ -267,13 +267,24 @@ const LiveTerminal: React.FC = () => {
     const currentGoals = inputs.scoreH + inputs.scoreA;
     const currentCorners = inputs.cornersH + inputs.cornersA;
 
-    const probGoal1 = poissonOver(lambdaGoalTotal, 1); 
-    const probGoal2 = poissonOver(lambdaGoalTotal, 2); 
+    // Buscador Dinâmico de Linhas de Valor (Gols) - Odd >= 1.50 (Prob <= 0.66)
+    let goalLineOffset = 1;
+    let probGoal1 = poissonOver(lambdaGoalTotal, goalLineOffset);
+    while (probGoal1 > 0.66 && goalLineOffset < 5) {
+        goalLineOffset++;
+        probGoal1 = poissonOver(lambdaGoalTotal, goalLineOffset);
+    }
+    const probGoal2 = poissonOver(lambdaGoalTotal, goalLineOffset + 1); 
 
+    // Buscador Dinâmico de Linhas de Valor (Cantos)
     const baseCornerLine = Math.max(currentCorners + 1, Math.floor(expCornersFT));
-    const reqC1 = Math.max(1, baseCornerLine - currentCorners);
-    const probCorner1 = poissonOver(lambdaCornerTotal, reqC1); 
-    const probCorner2 = poissonOver(lambdaCornerTotal, reqC1 + 1);
+    let cornerLineOffset = Math.max(1, baseCornerLine - currentCorners);
+    let probCorner1 = poissonOver(lambdaCornerTotal, cornerLineOffset);
+    while (probCorner1 > 0.66 && cornerLineOffset < 10) {
+        cornerLineOffset++;
+        probCorner1 = poissonOver(lambdaCornerTotal, cornerLineOffset);
+    }
+    const probCorner2 = poissonOver(lambdaCornerTotal, cornerLineOffset + 1);
 
     // Bivariada Simples 1X2
     let probHomeWinFT = 0; let probDrawFT = 0; let probAwayWinFT = 0;
@@ -316,16 +327,39 @@ const LiveTerminal: React.FC = () => {
     // 8. COMBOS EV+ CORRELACIONADOS (Entradas Diretas)
     const combos = [];
     if (!finalNoBet) {
-        if (inputs.gamePace === 'slow' && trapScore < 40) {
-            const probUnderGoal = poissonUnder(lambdaGoalTotal, 1);
-            combos.push({ title: `Entrar para Under ${currentGoals + 1.5} Gols`, prob: probUnderGoal, odd: calcFairOdd(probUnderGoal), type: 'goal' });
+        if (inputs.sotA - inputs.sotH >= 3) {
+            const oddAWin = probAwayWinFT > 0 ? 1 / probAwayWinFT : 99;
+            if (oddAWin >= 1.50) {
+                combos.push({ title: "Vitória Seca do Visitante", prob: probAwayWinFT, odd: calcFairOdd(probAwayWinFT), type: 'match' });
+            } else {
+                const reqG = currentGoals === 0 ? 2 : 1;
+                const pCombo = probAwayWinFT * poissonOver(lambdaGoalTotal, reqG) * 0.95;
+                combos.push({ title: `Vitória Visitante + Over ${currentGoals === 0 ? 1.5 : currentGoals + 0.5} Gols`, prob: pCombo, odd: calcFairOdd(pCombo), type: 'match' });
+            }
+        } else if (inputs.sotH - inputs.sotA >= 3) {
+            const oddHWin = probHomeWinFT > 0 ? 1 / probHomeWinFT : 99;
+            if (oddHWin >= 1.50) {
+                combos.push({ title: "Vitória Seca do Mandante", prob: probHomeWinFT, odd: calcFairOdd(probHomeWinFT), type: 'match' });
+            } else {
+                const reqG = currentGoals === 0 ? 2 : 1;
+                const pCombo = probHomeWinFT * poissonOver(lambdaGoalTotal, reqG) * 0.95;
+                combos.push({ title: `Vitória Mandante + Over ${currentGoals === 0 ? 1.5 : currentGoals + 0.5} Gols`, prob: pCombo, odd: calcFairOdd(pCombo), type: 'match' });
+            }
+        } else if (trapScore > 50 || inputs.gamePace === 'slow') {
+            let underLimit = 0;
+            let probUnderGoal = poissonUnder(lambdaGoalTotal, underLimit);
+            while (probUnderGoal > 0.66 && underLimit < 5) {
+                underLimit++;
+                probUnderGoal = poissonUnder(lambdaGoalTotal, underLimit);
+            }
+            combos.push({ title: `Entrar para Under ${currentGoals + underLimit + 0.5} Gols`, prob: probUnderGoal, odd: calcFairOdd(probUnderGoal), type: 'goal' });
         } else if (inputs.gamePace === 'chaotic' && lambdaCornerTotal > 2.0) {
             const probOverCorner = poissonOver(lambdaCornerTotal, 2);
             combos.push({ title: `Entrar para Over ${currentCorners + 1.5} Cantos`, prob: probOverCorner, odd: calcFairOdd(probOverCorner), type: 'corner' });
         } else if (lambdaGoalTotal > 0.8 && lambdaCornerTotal > 1.5) {
             const pGoal = poissonOver(lambdaGoalTotal, 1);
             const pCorner = poissonOver(lambdaCornerTotal, 1);
-            const pCombo = pGoal * pCorner * 0.95; // correlação
+            const pCombo = pGoal * pCorner * 0.95; 
             combos.push({ title: `Entrar para Over ${currentGoals + 0.5} Gols + Over ${currentCorners + 0.5} Cantos`, prob: pCombo, odd: calcFairOdd(pCombo), type: 'match' });
         } else if (lambdaGoalTotal > 0.85) {
             const pGoal = poissonOver(lambdaGoalTotal, 1);
@@ -336,6 +370,8 @@ const LiveTerminal: React.FC = () => {
     // 9. DIAGNÓSTICO DO SCRIPT
     let script = "";
     if (isTrap || finalNoBet) script = `🚫 ${finalReason}`;
+    else if (inputs.sotA - inputs.sotH >= 3) script = "🔥 AMASSO DO VISITANTE: Pressão absurda com chutes ao gol. Busque linhas a favor do Visitante.";
+    else if (inputs.sotH - inputs.sotA >= 3) script = "🔥 AMASSO DO MANDANTE: Pressão absurda com chutes ao gol. Busque linhas a favor do Mandante.";
     else if (validatedPace > 1.1 && validatedDomH === 1.0 && validatedDomA === 1.0) script = "⚔️ JOGO CAÓTICO: Transições constantes, defesas expostas. Cenário operável para BTTS.";
     else if (qualModH > 1.2 && inputs.gameDominance === 'home') script = "🔥 TRANSIÇÃO LETAL (CASA): Eficiência brutal de ataque. Cenário forte para Gols a favor do Mandante.";
     else if (qualModA > 1.2 && inputs.gameDominance === 'away') script = "🔥 TRANSIÇÃO LETAL (FORA): Contra-ataques venenosos do Visitante. A defesa não vai suportar.";
@@ -358,12 +394,12 @@ const LiveTerminal: React.FC = () => {
         ev: { goal: evGoal, corner: evCorner },
         lines: {
             goals: [
-                { line: `Over ${currentGoals + 0.5}`, prob: probGoal1, odd: calcFairOdd(probGoal1) },
-                { line: `Over ${currentGoals + 1.5}`, prob: probGoal2, odd: calcFairOdd(probGoal2) }
+                { line: `Over ${currentGoals + goalLineOffset - 0.5}`, prob: probGoal1, odd: calcFairOdd(probGoal1) },
+                { line: `Over ${currentGoals + goalLineOffset + 0.5}`, prob: probGoal2, odd: calcFairOdd(probGoal2) }
             ],
             corners: [
-                { line: `Asiático ${baseCornerLine}.0`, prob: probCorner1, odd: calcFairOdd(probCorner1) },
-                { line: `Asiático ${baseCornerLine + 1}.0`, prob: probCorner2, odd: calcFairOdd(probCorner2) }
+                { line: `Asiático ${currentCorners + cornerLineOffset}.0`, prob: probCorner1, odd: calcFairOdd(probCorner1) },
+                { line: `Asiático ${currentCorners + cornerLineOffset + 1}.0`, prob: probCorner2, odd: calcFairOdd(probCorner2) }
             ]
         },
         stats: { hWin: probHomeWinFT, draw: probDrawFT, aWin: probAwayWinFT, btts: bttsProb },
