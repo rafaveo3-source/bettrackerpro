@@ -30,6 +30,12 @@ const poissonOver = (lambda: number, required: number) => {
     return Math.max(0.01, Math.min(0.99, 1 - cumulative));
 };
 
+const poissonUnder = (lambda: number, limit: number) => {
+    let cumulative = 0;
+    for (let i = 0; i <= limit; i++) cumulative += poisson(lambda, i);
+    return Math.max(0.01, Math.min(0.99, cumulative));
+};
+
 const calcFairOdd = (prob: number) => prob > 0.02 ? (1 / prob).toFixed(2) : '50.00';
 
 const sigmoid = (x: number, k: number = 0.1, x0: number = 50) => {
@@ -233,8 +239,8 @@ const LiveTerminal: React.FC = () => {
     const noBet = trapScore > 80;
 
     // 5. SIMULAÇÃO PROBABILÍSTICA DISCRETA (Matriz Bivariada)
-    const baseLambdaMinH = (xgProxyH / 90) * validatedPace * eventVolatility * mutH * timeDecay * volatilityMod;
-    const baseLambdaMinA = (xgProxyA / 90) * validatedPace * eventVolatility * mutA * timeDecay * volatilityMod;
+    const baseLambdaMinH = xgProxyH * validatedPace * eventVolatility * mutH * timeDecay * volatilityMod;
+    const baseLambdaMinA = xgProxyA * validatedPace * eventVolatility * mutA * timeDecay * volatilityMod;
     
     // Supressão de Anomalias de Poisson (Capping)
     const MAX_LAMBDA_GOAL = 1.8;
@@ -246,8 +252,8 @@ const LiveTerminal: React.FC = () => {
     const cornerPaceMod = inputs.gamePace === 'chaotic' ? 1.4 : inputs.gamePace === 'slow' ? 0.7 : 1.0;
     const cornerFavMod = inputs.isFavLosing ? 1.6 : 1.0;
     
-    const lambdaCornerH = ((apRateH * 0.05) + (sotRateH * 0.10)) * validatedDomH * cornerPaceMod * (inputs.gameDominance === 'home' ? cornerFavMod : 1.0) * timeLeft;
-    const lambdaCornerA = ((apRateA * 0.05) + (sotRateA * 0.10)) * validatedDomA * cornerPaceMod * (inputs.gameDominance === 'away' ? cornerFavMod : 1.0) * timeLeft;
+    const lambdaCornerH = ((apRateH * 0.09) + (sotRateH * 0.10)) * validatedDomH * cornerPaceMod * (inputs.gameDominance === 'home' ? cornerFavMod : 1.0) * timeLeft;
+    const lambdaCornerA = ((apRateA * 0.09) + (sotRateA * 0.10)) * validatedDomA * cornerPaceMod * (inputs.gameDominance === 'away' ? cornerFavMod : 1.0) * timeLeft;
     
     const lambdaCornerTotal = Math.min(5.0, lambdaCornerH + lambdaCornerA);
 
@@ -307,20 +313,23 @@ const LiveTerminal: React.FC = () => {
         finalReason = "ODD ESMAGADA: O mercado ajustou a linha perfeitamente. Sem Edge Matemático (+EV) para cobrir a variância.";
     }
 
-    // 8. COMBOS EV+ CORRELACIONADOS
+    // 8. COMBOS EV+ CORRELACIONADOS (Entradas Diretas)
     const combos = [];
     if (!finalNoBet) {
-        if (scoreDiff <= 0 && lambdaGoalTotalH > 0.6 && probGoal1 > 0.55 && inputs.gameDominance === 'home') {
-            const p = (probHomeWinFT + probDrawFT) * probGoal1 * 0.95; 
-            combos.push({ title: "Casa ou Empate + Over 0.5 Gols", prob: p, odd: calcFairOdd(p), type: 'match' });
-        } else if (scoreDiff >= 0 && lambdaGoalTotalA > 0.6 && probGoal1 > 0.55 && inputs.gameDominance === 'away') {
-            const p = (probAwayWinFT + probDrawFT) * probGoal1 * 0.95;
-            combos.push({ title: "Fora ou Empate + Over 0.5 Gols", prob: p, odd: calcFairOdd(p), type: 'match' });
-        }
-
-        if (bttsProb > 0.50 && probCorner1 > 0.60) {
-            const p = bttsProb * probCorner1 * 0.88; 
-            combos.push({ title: `Ambas Marcam + Mais de ${baseCornerLine - 0.5} Cantos`, prob: p, odd: calcFairOdd(p), type: 'goal' });
+        if (inputs.gamePace === 'slow' && trapScore < 40) {
+            const probUnderGoal = poissonUnder(lambdaGoalTotal, 1);
+            combos.push({ title: `Entrar para Under ${currentGoals + 1.5} Gols`, prob: probUnderGoal, odd: calcFairOdd(probUnderGoal), type: 'goal' });
+        } else if (inputs.gamePace === 'chaotic' && lambdaCornerTotal > 2.0) {
+            const probOverCorner = poissonOver(lambdaCornerTotal, 2);
+            combos.push({ title: `Entrar para Over ${currentCorners + 1.5} Cantos`, prob: probOverCorner, odd: calcFairOdd(probOverCorner), type: 'corner' });
+        } else if (lambdaGoalTotal > 0.8 && lambdaCornerTotal > 1.5) {
+            const pGoal = poissonOver(lambdaGoalTotal, 1);
+            const pCorner = poissonOver(lambdaCornerTotal, 1);
+            const pCombo = pGoal * pCorner * 0.95; // correlação
+            combos.push({ title: `Entrar para Over ${currentGoals + 0.5} Gols + Over ${currentCorners + 0.5} Cantos`, prob: pCombo, odd: calcFairOdd(pCombo), type: 'match' });
+        } else if (lambdaGoalTotal > 0.85) {
+            const pGoal = poissonOver(lambdaGoalTotal, 1);
+            combos.push({ title: `Entrar para Over ${currentGoals + 0.5} Gols`, prob: pGoal, odd: calcFairOdd(pGoal), type: 'goal' });
         }
     }
 
