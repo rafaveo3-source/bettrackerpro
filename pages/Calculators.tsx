@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import { useBetStore, supabase } from '../store/useBetStore';
 import { motion, AnimatePresence } from 'framer-motion';
+import ProTeaserBlock from '../components/ProTeaserBlock';
 
 // ==========================================
 // MÓDULOS MATEMÁTICOS & MONTE CARLO V10
@@ -27,7 +28,7 @@ const factorial = (n: number): number => {
 // COMPONENTE PRINCIPAL
 // ==========================================
 const Calculators: React.FC = () => {
-  const { user, currentBankrollBalance, history = [], methods = [], settings } = useBetStore();
+  const { user, currentBankrollBalance, history = [], methods = [], settings, isPro } = useBetStore();
   const navigate = useNavigate();
 
   const [activeTab, setActiveTab] = useState<'compound'|'dutching'|'kelly'|'value'|'arb'|'stake'|'odds'>('compound');
@@ -510,6 +511,9 @@ const Calculators: React.FC = () => {
             {/* ========================================== */}
             {activeTab === 'compound' && (
                 <div className="relative">
+                    {!isPro ? (
+                        <ProTeaserBlock />
+                    ) : (
                     <div className="space-y-6">
                         
                         {/* CARD 1: O ALVO E A BANCA */}
@@ -899,6 +903,7 @@ const Calculators: React.FC = () => {
                             </>
                         )}
                     </div>
+                    )}
                 </div>
             )}
 
@@ -909,6 +914,10 @@ const Calculators: React.FC = () => {
                 <div className="relative">
                    <div className={cardClass}>
                        <h2 className={sectionTitleClass}><Target size={20} className="text-emerald-500"/> Value Bet Finder</h2>
+                       {!isPro ? (
+                           <ProTeaserBlock />
+                       ) : (
+                       <>
                        <div className="grid grid-cols-2 gap-4 mb-8">
                           <div>
                               <label className="text-[10px] font-bold text-slate-500 dark:text-[#8E8E93] uppercase block mb-2 tracking-widest">Odd Oferecida</label>
@@ -935,6 +944,8 @@ const Calculators: React.FC = () => {
                               </div>
                           )}
                        </div>
+                       </>
+                       )}
                     </div>
                 </div>
             )}
@@ -946,6 +957,10 @@ const Calculators: React.FC = () => {
                 <div className="relative">
                    <div className={cardClass}>
                        <h2 className={sectionTitleClass}><Scale size={20} className="text-blue-500"/> Arbitragem (2-Way)</h2>
+                       {!isPro ? (
+                           <ProTeaserBlock />
+                       ) : (
+                       <>
                        <div className="mb-6">
                           <label className="text-[10px] font-bold text-slate-500 dark:text-[#8E8E93] uppercase block mb-2 tracking-widest">Investimento Total (R$)</label>
                           <input type="number" value={arbTotalStake} onChange={e => setArbTotalStake(e.target.value)} className="w-full bg-slate-50 dark:bg-[#000000] border border-slate-200 dark:border-[#3A3A3C] text-slate-900 dark:text-white rounded-xl px-4 py-3 outline-none focus:border-indigo-500 font-mono font-bold text-lg transition-colors" />
@@ -973,6 +988,8 @@ const Calculators: React.FC = () => {
                           <span className="font-bold text-3xl tracking-tight">{arbRoi.toFixed(2)}%</span>
                        </div>
                        {arbRoi > 0 && <p className="text-center text-sm font-bold text-emerald-600 dark:text-emerald-500 mt-4">Lucro líquido: R$ {arbProfit.toFixed(2)}</p>}
+                       </>
+                       )}
                     </div>
                 </div>
             )}
@@ -1008,6 +1025,10 @@ const Calculators: React.FC = () => {
             {activeTab === 'kelly' && (
                 <div className={cardClass}>
                     <h2 className={sectionTitleClass}>Critério de Kelly</h2>
+                    {!isPro ? (
+                        <ProTeaserBlock />
+                    ) : (
+                    <>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
                         <div>
                              <label className="text-[10px] font-bold text-slate-500 dark:text-[#8E8E93] uppercase block mb-2 tracking-widest">Banca (Auto-Sync)</label>
@@ -1035,6 +1056,8 @@ const Calculators: React.FC = () => {
                         <h3 className="text-5xl font-bold tracking-tight text-indigo-700 dark:text-indigo-400">{parseFloat(kellyResult) > 0 ? kellyResult : '0.00'}%</h3>
                         <p className="text-sm font-mono text-indigo-800 dark:text-indigo-300 mt-3 font-bold">R$ {parseFloat(kellyResult) > 0 ? kellyMoney.toFixed(2) : '0.00'}</p>
                     </div>
+                    </>
+                    )}
                 </div>
             )}
 

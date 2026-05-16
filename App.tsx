@@ -109,9 +109,9 @@ const SystemRoutes: React.FC = () => {
     <Layout currentView={getCurrentViewID()} setView={handleSetView}>
       <Routes>
         <Route path="/dashboard" element={<Dashboard />} />
-        <Route path="/scout" element={<ProGate><ScoutIA /></ProGate>} /> 
-        <Route path="/terminal-live" element={<ProGate><LiveTerminal /></ProGate>} />
-        <Route path="/calculators" element={<ProGate><Calculators /></ProGate>} />
+        <Route path="/scout" element={<ScoutIA />} /> 
+        <Route path="/terminal-live" element={<LiveTerminal />} />
+        <Route path="/calculators" element={<Calculators />} />
         <Route path="/library" element={<ProGate><SystemLibrary /></ProGate>} />
         
         <Route path="/analytics" element={<Analytics />} />

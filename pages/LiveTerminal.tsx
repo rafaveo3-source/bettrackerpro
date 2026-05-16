@@ -8,6 +8,7 @@ import {
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { useBetStore, supabase } from '../store/useBetStore';
+import ProTeaserBlock from '../components/ProTeaserBlock';
 
 // ==========================================
 // MATEMÁTICA QUANTITATIVA CORE
@@ -74,7 +75,7 @@ const SensorButton = ({ label, active, onClick, color }: { label: string, active
 );
 
 const LiveTerminal: React.FC = () => {
-  const { session } = useBetStore();
+  const { session, isPro } = useBetStore();
   const navigate = useNavigate();
   const [isLogging, setIsLogging] = useState(false);
 
@@ -419,6 +420,10 @@ const LiveTerminal: React.FC = () => {
           </div>
         </div>
 
+        {!isPro ? (
+            <ProTeaserBlock />
+        ) : (
+          <>
         {/* 🚨 ANOMALY DETECTION ALERT 🚨 */}
         <AnimatePresence>
             {!engine.closed && engine.isAnomaly && (
@@ -737,6 +742,8 @@ const LiveTerminal: React.FC = () => {
           </div>
 
         </div>
+        </>
+        )}
       </div>
     </div>
   );

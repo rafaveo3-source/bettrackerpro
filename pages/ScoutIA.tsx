@@ -6,6 +6,7 @@ import {
   ShieldAlert, Activity, Info, TrendingUp, TrendingDown, Calculator, FileText, Eraser, AlertTriangle
 } from 'lucide-react';
 import { useBetStore } from '../store/useBetStore';
+import ProTeaserBlock from '../components/ProTeaserBlock';
 
 // 🔥 COMPRESSOR DE IMAGEM HFT
 const fileToBase64 = async (file: File): Promise<string> => {
@@ -64,7 +65,7 @@ const safeText = (val: any): string => {
 };
 
 const ScoutIA: React.FC = () => {
-  const { user, canUseAiScan, incrementAiScan, setToast } = useBetStore();
+  const { user, canUseAiScan, incrementAiScan, setToast, isPro } = useBetStore();
   const userEmail = user?.email || "usuario@desconhecido.com"; 
 
   const [scoutMode, setScoutMode] = useState<'grid' | 'builder'>('grid');
@@ -257,7 +258,10 @@ const ScoutIA: React.FC = () => {
           </div>
         </div>
 
-        <div className={`${cardClass} relative overflow-hidden`}>
+        {!isPro ? (
+            <ProTeaserBlock />
+        ) : (
+            <div className={`${cardClass} relative overflow-hidden`}>
            <div className="flex bg-slate-100 dark:bg-[#000000] p-1 rounded-xl border border-slate-200 dark:border-[#2C2C2E] mb-8">
               <button onClick={() => setScoutMode('grid')} className={`flex-1 py-2 text-[10px] sm:text-xs font-bold uppercase tracking-wider rounded-lg transition-all ${scoutMode === 'grid' ? 'bg-white dark:bg-[#2C2C2E] text-slate-900 dark:text-white shadow-sm' : 'text-slate-500 dark:text-[#8E8E93] hover:text-slate-700 dark:hover:text-slate-300'}`}>
                   1. Radar de Grade (Imagem)
@@ -613,6 +617,7 @@ const ScoutIA: React.FC = () => {
            )}
 
         </div>
+        )}
     </div>
   );
 };

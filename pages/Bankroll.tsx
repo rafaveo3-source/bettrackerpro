@@ -8,9 +8,11 @@ import {
   ArrowRightLeft,
   DollarSign,
   AlertTriangle,
-  ChevronDown
+  ChevronDown,
+  Lock
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useNavigate } from 'react-router-dom';
 
 const Bankroll: React.FC = () => {
   const {
@@ -22,8 +24,10 @@ const Bankroll: React.FC = () => {
     currentBankrollBalance,
     addTransaction,
     removeTransaction,
-    transactions
+    transactions,
+    isPro
   } = useBetStore();
+  const navigate = useNavigate();
 
   const [showAddForm, setShowAddForm] = useState(false);
   const [newBRName, setNewBRName] = useState('');
@@ -119,13 +123,23 @@ const Bankroll: React.FC = () => {
           </p>
         </div>
 
-        <button
-          onClick={() => setShowAddForm((prev) => !prev)}
-          className="bg-indigo-600 hover:bg-indigo-500 text-white px-6 py-3 rounded-xl flex items-center justify-center gap-2 font-bold text-xs uppercase tracking-wider transition-colors shadow-sm w-full md:w-auto"
-        >
-          <Plus size={16} />
-          Novo Portfólio
-        </button>
+        {!isPro && bankrolls.length >= 1 ? (
+          <button
+            onClick={() => navigate('/pro')}
+            className="bg-slate-900 hover:bg-slate-800 text-white dark:bg-indigo-600 dark:hover:bg-indigo-500 px-6 py-3 rounded-xl flex items-center justify-center gap-2 font-bold text-xs uppercase tracking-wider transition-colors shadow-sm w-full md:w-auto"
+          >
+            <Lock size={16} />
+            Múltiplas Bancas (PRO)
+          </button>
+        ) : (
+          <button
+            onClick={() => setShowAddForm((prev) => !prev)}
+            className="bg-indigo-600 hover:bg-indigo-500 text-white px-6 py-3 rounded-xl flex items-center justify-center gap-2 font-bold text-xs uppercase tracking-wider transition-colors shadow-sm w-full md:w-auto"
+          >
+            <Plus size={16} />
+            Novo Portfólio
+          </button>
+        )}
       </header>
 
       {/* RESUMO */}
