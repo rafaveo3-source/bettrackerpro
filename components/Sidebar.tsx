@@ -1,29 +1,11 @@
 import React from 'react';
 import { 
-  LayoutDashboard, 
-  BarChart2, 
-  Target, 
-  BrainCircuit, 
-  History, 
-  Wallet, 
-  CalendarDays, 
-  Calculator, 
-  Settings, 
-  Menu, 
-  X,
-  BookOpen,
-  LogOut,
-  Crown,
-  Moon,
-  Sun,
-  PlayCircle,
-  Sparkles, 
-  Eye, 
-  Lock,
-  ArrowRight
+  LayoutDashboard, BarChart2, Target, BrainCircuit, History, Wallet, 
+  CalendarDays, Calculator, Settings, Menu, X, BookOpen, LogOut, Crown, 
+  Moon, Sun, PlayCircle, Sparkles, Eye, Lock, ArrowRight 
 } from 'lucide-react';
 import { useBetStore } from '../store/useBetStore';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 
 const Logo = () => (
@@ -38,14 +20,11 @@ const Logo = () => (
 );
 
 interface SidebarProps {
-    currentView: string;
-    setView: (view: string) => void;
     isOpen: boolean;
     setIsOpen: (val: boolean) => void;
 }
 
-const Sidebar: React.FC<SidebarProps> = ({ currentView, setView, isOpen, setIsOpen }) => {
-  // SELETORES ATÔMICOS: Previnem que o menu inteiro re-renderize à toa
+const Sidebar: React.FC<SidebarProps> = ({ isOpen, setIsOpen }) => {
   const user = useBetStore(s => s.user);
   const logout = useBetStore(s => s.logout);
   const isPro = useBetStore(s => s.isPro);
@@ -54,22 +33,30 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, setView, isOpen, setIsOp
   const resetTutorial = useBetStore(s => s.resetTutorial);
   
   const navigate = useNavigate();
+  const location = useLocation();
 
-  const menuItems = [
-    { id: 'dashboard', label: 'Visão Geral', icon: LayoutDashboard },
-    { id: 'analytics', label: 'Análise de Dados', icon: BarChart2 },
-    { id: 'metas', label: 'Metas (Take Profit)', icon: Target },
-    { id: 'mindset', label: 'Psicologia', icon: BrainCircuit },
-    { id: 'historico', label: 'Diário de Operações', icon: History },
-    { id: 'bancas', label: 'Portfólios', icon: Wallet },
-    { id: 'calendar', label: 'Calendário', icon: CalendarDays },
-    { id: 'calculators', label: 'Calculadoras', icon: Calculator },
-    { id: 'biblioteca', label: 'Playbooks PRO', icon: BookOpen },
-    { id: 'settings', label: 'Configurações', icon: Settings },
-  ];
+  const getCurrentViewID = () => {
+    const path = location.pathname;
+    if (path.includes('/dashboard')) return 'dashboard';
+    if (path.includes('/scout')) return 'scout'; 
+    if (path.includes('/terminal-live')) return 'terminal';
+    if (path.includes('/analytics')) return 'analytics';
+    if (path.includes('/goals')) return 'metas';
+    if (path.includes('/mindset')) return 'mindset';
+    if (path.includes('/history')) return 'historico';
+    if (path.includes('/bankrolls')) return 'bancas';
+    if (path.includes('/calendar')) return 'calendar';
+    if (path.includes('/calculators')) return 'calculators';
+    if (path.includes('/library')) return 'biblioteca';
+    if (path.includes('/settings')) return 'settings';
+    if (path.includes('/pro')) return 'pro'; 
+    return 'dashboard';
+  };
 
-  const handleNavigation = (id: string) => {
-    setView(id);
+  const currentView = getCurrentViewID();
+
+  const handleNavigation = (path: string) => {
+    navigate(path);
     setIsOpen(false);
   };
 
@@ -77,15 +64,23 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, setView, isOpen, setIsOp
     if (window.confirm('Deseja encerrar a sessão segura?')) {
       await logout();
       navigate('/login', { replace: true });
-      if (window.location.pathname !== '/login') {
-        window.location.assign('/login');
-      }
     }
   };
 
+  const menuItems = [
+    { path: '/analytics', id: 'analytics', label: 'Análise de Dados', icon: BarChart2 },
+    { path: '/goals', id: 'metas', label: 'Metas (Take Profit)', icon: Target },
+    { path: '/mindset', id: 'mindset', label: 'Psicologia', icon: BrainCircuit },
+    { path: '/history', id: 'historico', label: 'Diário de Operações', icon: History },
+    { path: '/bankrolls', id: 'bancas', label: 'Portfólios', icon: Wallet },
+    { path: '/calendar', id: 'calendar', label: 'Calendário', icon: CalendarDays },
+    { path: '/calculators', id: 'calculators', label: 'Calculadoras', icon: Calculator },
+    { path: '/library', id: 'biblioteca', label: 'Playbooks PRO', icon: BookOpen },
+    { path: '/settings', id: 'settings', label: 'Configurações', icon: Settings },
+  ];
+
   return (
     <>
-      {/* MOBILE HEADER */}
       <div className="md:hidden fixed top-0 left-0 w-full h-16 bg-white dark:bg-[#000000] border-b border-slate-200 dark:border-[#2C2C2E] flex items-center justify-between px-4 z-50 transition-colors duration-300">
         <Logo />
         <button onClick={() => setIsOpen(!isOpen)} className="text-slate-900 dark:text-white p-2">
@@ -93,7 +88,6 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, setView, isOpen, setIsOp
         </button>
       </div>
 
-      {/* SIDEBAR CONTAINER */}
       <aside className={`
         fixed top-0 left-0 h-full bg-white dark:bg-[#000000] border-r border-slate-200 dark:border-[#2C2C2E] z-50 transition-transform duration-300 w-64 flex flex-col font-sans
         ${isOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}
@@ -107,11 +101,7 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, setView, isOpen, setIsOp
         <div className="p-6 border-b border-slate-200 dark:border-[#2C2C2E] transition-colors duration-300">
             <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-full bg-slate-100 dark:bg-[#1C1C1E] overflow-hidden border border-slate-200 dark:border-[#3A3A3C] shrink-0">
-                    <img 
-                        src={user?.avatar || `https://ui-avatars.com/api/?name=${user?.name || 'User'}&background=4f46e5&color=fff`} 
-                        alt="Profile" 
-                        className="w-full h-full object-cover"
-                    />
+                    <img src={user?.avatar || `https://ui-avatars.com/api/?name=${user?.name || 'User'}&background=4f46e5&color=fff`} alt="Profile" className="w-full h-full object-cover"/>
                 </div>
                 <div className="flex-1 min-w-0">
                     <p className="text-sm font-bold text-slate-900 dark:text-white truncate">{user?.name || 'Trader'}</p>
@@ -129,7 +119,7 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, setView, isOpen, setIsOp
         <nav className="flex-1 overflow-y-auto py-6 px-4 space-y-1 custom-scrollbar">
             
             <button
-                onClick={() => handleNavigation('dashboard')}
+                onClick={() => handleNavigation('/dashboard')}
                 className={`tour-sidebar-dashboard w-full flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-bold transition-all duration-200 group mb-4
                 ${currentView === 'dashboard' 
                     ? 'bg-slate-100 text-slate-900 dark:bg-[#1C1C1E] dark:text-white' 
@@ -143,7 +133,7 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, setView, isOpen, setIsOp
                 <p className="px-4 text-[10px] font-black uppercase tracking-widest text-slate-400 dark:text-[#636366] mb-2">Módulos de IA</p>
                 
                 <button
-                    onClick={() => handleNavigation('scout')}
+                    onClick={() => handleNavigation('/scout')}
                     className={`tour-sidebar-scout w-full flex items-center justify-between px-4 py-2.5 rounded-lg text-sm font-bold transition-all duration-200 group
                     ${currentView === 'scout' 
                         ? 'bg-indigo-50 text-indigo-700 dark:bg-indigo-500/10 dark:text-indigo-400' 
@@ -157,7 +147,7 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, setView, isOpen, setIsOp
                 </button>
 
                 <button
-                    onClick={() => handleNavigation('terminal')}
+                    onClick={() => handleNavigation('/terminal-live')}
                     className={`w-full flex items-center justify-between px-4 py-2.5 rounded-lg text-sm font-bold transition-all duration-200 group
                     ${currentView === 'terminal' 
                         ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400' 
@@ -173,23 +163,14 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, setView, isOpen, setIsOp
 
             <p className="px-4 text-[10px] font-black uppercase tracking-widest text-slate-400 dark:text-[#636366] mt-6 mb-2">Core System</p>
 
-            {menuItems.filter(i => i.id !== 'dashboard').map(item => {
+            {menuItems.map(item => {
                 const isActive = currentView === item.id;
                 
-                let tourClass = '';
-                if (item.id === 'bancas') tourClass = 'tour-sidebar-bankroll';
-                if (item.id === 'mindset') tourClass = 'tour-sidebar-mindset';
-                if (item.id === 'metas') tourClass = 'tour-sidebar-metas';
-                if (item.id === 'calendar') tourClass = 'tour-sidebar-calendar';
-                if (item.id === 'calculators') tourClass = 'tour-sidebar-calculators';
-                if (item.id === 'biblioteca') tourClass = 'tour-sidebar-biblioteca';
-
                 return (
                     <button
                         key={item.id}
-                        onClick={() => handleNavigation(item.id)}
+                        onClick={() => handleNavigation(item.path)}
                         className={`
-                            ${tourClass}
                             w-full flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-bold transition-all duration-200 group
                             ${isActive 
                                 ? 'bg-slate-100 text-slate-900 dark:bg-[#1C1C1E] dark:text-white' 
@@ -206,15 +187,12 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, setView, isOpen, setIsOp
         <div className="p-4 border-t border-slate-200 dark:border-[#2C2C2E] bg-slate-50 dark:bg-[#000000] transition-colors duration-300">
             
             {!isPro && (
-                <div className="mb-4 p-5 rounded-2xl bg-white dark:bg-[#1C1C1E] border border-indigo-500/20 dark:border-[#3A3A3C] text-center cursor-pointer shadow-sm group hover:border-indigo-500 transition-colors" onClick={() => handleNavigation('pro')}>
+                <div className="mb-4 p-5 rounded-2xl bg-white dark:bg-[#1C1C1E] border border-indigo-500/20 dark:border-[#3A3A3C] text-center cursor-pointer shadow-sm group hover:border-indigo-500 transition-colors" onClick={() => handleNavigation('/pro')}>
                     <Crown size={20} className="text-indigo-600 dark:text-indigo-400 mx-auto mb-2 group-hover:scale-110 transition-transform" />
                     <h4 className="text-slate-900 dark:text-white font-bold text-sm tracking-tight mb-1">Seja Profissional</h4>
                     <p className="text-[10px] text-slate-500 dark:text-[#8E8E93] mb-3 leading-relaxed">Libere as ferramentas Quantitativas IA.</p>
                     <button 
-                        onClick={(e) => {
-                            e.stopPropagation();
-                            handleNavigation('pro');
-                        }}
+                        onClick={(e) => { e.stopPropagation(); handleNavigation('/pro'); }}
                         className="w-full bg-slate-900 text-white dark:bg-indigo-600 dark:text-white py-2.5 rounded-xl text-[10px] font-bold uppercase tracking-widest hover:bg-slate-800 dark:hover:bg-indigo-500 transition-colors flex items-center justify-center gap-1 shadow-sm"
                     >
                         Fazer Upgrade <ArrowRight size={12}/>
@@ -223,43 +201,22 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, setView, isOpen, setIsOp
             )}
 
             <div className="flex gap-2">
-                <button 
-                    onClick={() => { resetTutorial(); if (window.innerWidth < 768) setIsOpen(true); }}
-                    className="flex-1 flex items-center justify-center gap-2 text-slate-600 dark:text-[#8E8E93] hover:text-indigo-600 dark:hover:text-white hover:bg-slate-200 dark:hover:bg-[#1C1C1E] py-3 rounded-xl transition-all text-[10px] font-bold uppercase tracking-widest border border-slate-200 dark:border-[#2C2C2E] shadow-sm bg-white dark:bg-[#000000]"
-                    title="Rever Tutorial"
-                >
+                <button onClick={() => { resetTutorial(); if (window.innerWidth < 768) setIsOpen(true); navigate('/dashboard'); }} className="flex-1 flex items-center justify-center gap-2 text-slate-600 dark:text-[#8E8E93] hover:text-indigo-600 dark:hover:text-white hover:bg-slate-200 dark:hover:bg-[#1C1C1E] py-3 rounded-xl transition-all text-[10px] font-bold uppercase tracking-widest border border-slate-200 dark:border-[#2C2C2E] shadow-sm bg-white dark:bg-[#000000]">
                     <PlayCircle size={16} /> 
                 </button>
-
-                <button 
-                    onClick={toggleTheme}
-                    className="flex-1 flex items-center justify-center gap-2 text-slate-600 dark:text-[#8E8E93] hover:text-indigo-600 dark:hover:text-white hover:bg-slate-200 dark:hover:bg-[#1C1C1E] py-3 rounded-xl transition-all text-[10px] font-bold uppercase tracking-widest border border-slate-200 dark:border-[#2C2C2E] shadow-sm bg-white dark:bg-[#000000]"
-                    title="Alternar Tema"
-                >
+                <button onClick={toggleTheme} className="flex-1 flex items-center justify-center gap-2 text-slate-600 dark:text-[#8E8E93] hover:text-indigo-600 dark:hover:text-white hover:bg-slate-200 dark:hover:bg-[#1C1C1E] py-3 rounded-xl transition-all text-[10px] font-bold uppercase tracking-widest border border-slate-200 dark:border-[#2C2C2E] shadow-sm bg-white dark:bg-[#000000]">
                     {isDarkMode ? <Sun size={16} /> : <Moon size={16} />}
                 </button>
-
-                <button 
-                    onClick={handleLogout}
-                    className="flex-1 flex items-center justify-center gap-2 text-slate-600 dark:text-[#8E8E93] hover:text-red-600 dark:hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 py-3 rounded-xl transition-all text-[10px] font-bold uppercase tracking-widest border border-slate-200 dark:border-[#2C2C2E] shadow-sm bg-white dark:bg-[#000000]"
-                    title="Sair"
-                >
+                <button onClick={handleLogout} className="flex-1 flex items-center justify-center gap-2 text-slate-600 dark:text-[#8E8E93] hover:text-red-600 dark:hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 py-3 rounded-xl transition-all text-[10px] font-bold uppercase tracking-widest border border-slate-200 dark:border-[#2C2C2E] shadow-sm bg-white dark:bg-[#000000]">
                     <LogOut size={16} /> 
                 </button>
             </div>
         </div>
-
       </aside>
 
       <AnimatePresence mode="sync">
         {isOpen && (
-            <motion.div 
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                onClick={() => setIsOpen(false)}
-                className="fixed inset-0 bg-slate-900/60 dark:bg-black/80 backdrop-blur-sm z-40 md:hidden"
-            />
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setIsOpen(false)} className="fixed inset-0 bg-slate-900/60 dark:bg-black/80 backdrop-blur-sm z-40 md:hidden" />
         )}
       </AnimatePresence>
     </>
