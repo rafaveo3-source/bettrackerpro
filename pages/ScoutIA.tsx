@@ -1,10 +1,9 @@
-import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { motion, AnimatePresence } from 'framer-motion';
+import React, { useState, useEffect, useRef } from 'react';
+import { motion } from 'framer-motion';
 import { 
   Sparkles, Scan, Layers, Clock, Zap, Target, CheckCircle2, 
   Square, Goal, Flag, ArrowRight, Plus, ArrowRightLeft, 
-  ShieldAlert, Activity, Crown, Info, TrendingUp, TrendingDown, Calculator, FileText, Eraser, AlertTriangle
+  ShieldAlert, Activity, Info, TrendingUp, TrendingDown, Calculator, FileText, Eraser, AlertTriangle
 } from 'lucide-react';
 import { useBetStore } from '../store/useBetStore';
 
@@ -64,30 +63,9 @@ const safeText = (val: any): string => {
     return String(val);
 };
 
-// 🔥 CORREÇÃO: COMPONENTE MOVIDO PARA FORA DO ESCOPO PRINCIPAL 🔥
-const ProBlurOverlay = ({ title, desc, navigate }: { title: string, desc: string, navigate: any }) => (
-    <div className="absolute inset-0 z-50 flex items-center justify-center bg-white/40 dark:bg-[#000000]/50 backdrop-blur-md rounded-[2rem]">
-        <div className="bg-white dark:bg-[#1C1C1E] border border-indigo-500/30 p-8 rounded-2xl max-w-md text-center shadow-xl flex flex-col items-center mx-4">
-            <div className="bg-indigo-500/10 p-4 rounded-xl mb-4 text-indigo-600 dark:text-indigo-400">
-                <Crown size={28} />
-            </div>
-            <h2 className="text-xl font-bold text-slate-900 dark:text-white tracking-tight mb-2">
-                {title} <span className="text-indigo-500">PRO</span>
-            </h2>
-            <p className="text-slate-500 dark:text-[#8E8E93] mb-6 text-sm leading-relaxed">
-                {desc}
-            </p>
-            <button onClick={() => navigate('/pro')} className="w-full bg-slate-900 hover:bg-slate-800 text-white dark:bg-indigo-600 dark:hover:bg-indigo-500 font-bold py-3.5 px-8 rounded-xl transition-all shadow-sm text-xs tracking-widest uppercase">
-                Desbloquear Acesso
-            </button>
-        </div>
-    </div>
-);
-
 const ScoutIA: React.FC = () => {
   const { user, isPro, canUseAiScan, incrementAiScan, setToast } = useBetStore();
   const userEmail = user?.email || "usuario@desconhecido.com"; 
-  const navigate = useNavigate();
 
   const [scoutMode, setScoutMode] = useState<'grid' | 'builder'>('grid');
   const [scoutGridImage, setScoutGridImage] = useState<string | null>(null);
@@ -269,11 +247,7 @@ const ScoutIA: React.FC = () => {
 
   return (
     <div className="space-y-6 pb-20 w-full overflow-x-hidden font-sans relative">
-        
-        {/* ✅ Prop navigate passada corretamente para evitar crash ✅ */}
-        {!isPro && <ProBlurOverlay title="Scout IA" desc="O Motor NLP lê textos estatísticos, analisa risco, covariância e monta apostas múltiplas de alto valor matemático. Exclusivo para assinantes PRO." navigate={navigate} />}
-
-        <div className={`flex flex-col gap-2 ${!isPro ? 'pointer-events-none select-none blur-[4px] opacity-60' : ''}`}>
+        <div className="flex flex-col gap-2">
           <div className="flex items-center gap-2 text-indigo-600 dark:text-indigo-400 text-[10px] font-bold uppercase tracking-widest mb-1">
             <span className="w-1.5 h-1.5 bg-indigo-500 rounded-full animate-pulse shadow-[0_0_8px_#6366f1]"></span>
             HFT ENGINE ATIVO
@@ -285,8 +259,7 @@ const ScoutIA: React.FC = () => {
           </div>
         </div>
 
-        <div className={`${cardClass} relative overflow-hidden ${!isPro ? 'pointer-events-none select-none blur-[4px] opacity-60' : ''}`}>
-            
+        <div className={`${cardClass} relative overflow-hidden`}>
            <div className="flex bg-slate-100 dark:bg-[#000000] p-1 rounded-xl border border-slate-200 dark:border-[#2C2C2E] mb-8">
               <button onClick={() => setScoutMode('grid')} className={`flex-1 py-2 text-[10px] sm:text-xs font-bold uppercase tracking-wider rounded-lg transition-all ${scoutMode === 'grid' ? 'bg-white dark:bg-[#2C2C2E] text-slate-900 dark:text-white shadow-sm' : 'text-slate-500 dark:text-[#8E8E93] hover:text-slate-700 dark:hover:text-slate-300'}`}>
                   1. Radar de Grade (Imagem)
@@ -429,7 +402,7 @@ const ScoutIA: React.FC = () => {
                      )}
 
                      {selectedMatchesForBuilder.length > 0 && (
-                         <motion.div initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} className="sticky bottom-6 mt-10 flex justify-center z-40 pointer-events-none">
+                         <motion.div initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} className="sticky bottom-6 mt-10 flex justify-center z-40">
                              <button onClick={() => setScoutMode('builder')} className="bg-indigo-600 hover:bg-indigo-500 text-white font-bold uppercase tracking-widest text-xs px-8 py-4 rounded-xl shadow-lg border border-indigo-500 flex items-center gap-3 transition-transform active:scale-95 pointer-events-auto">
                                 <Layers size={16} /> Ir para Construtor ({selectedMatchesForBuilder.length}) <ArrowRight size={16} />
                              </button>
@@ -471,17 +444,12 @@ const ScoutIA: React.FC = () => {
                     </div>
                 </div>
 
-                {/* 🔥 O CARD DE INPUT (AGORA COM BARRA DE AÇÃO INTEGRADA E FEEDBACK VISUAL) 🔥 */}
                 <div className="relative overflow-hidden rounded-2xl border border-slate-200 dark:border-[#2C2C2E] focus-within:border-indigo-500 dark:focus-within:border-indigo-500 bg-white dark:bg-[#000000] transition-all flex flex-col">
-                   
-                   {/* HEADER DO INPUT */}
                    <div className="flex items-center justify-between p-4 border-b border-slate-100 dark:border-[#2C2C2E] bg-slate-50/50 dark:bg-[#1C1C1E]/50">
                       <div className="flex items-center gap-2 text-slate-500 dark:text-[#8E8E93]">
                           <FileText size={16} className="text-indigo-500 dark:text-indigo-400"/>
                           <span className="text-[10px] font-bold uppercase tracking-widest">3. Base de Dados NLP (Cole o Texto Aqui)</span>
                       </div>
-                      
-                      {/* FEEDBACK DE CARACTERES LIDOS */}
                       {scoutTextData.length > 0 && (
                           <div className="flex items-center gap-1.5 text-[9px] font-bold uppercase tracking-widest text-emerald-600 dark:text-emerald-400">
                              <CheckCircle2 size={12} /> {scoutTextData.length} Lidos
@@ -489,7 +457,6 @@ const ScoutIA: React.FC = () => {
                       )}
                    </div>
 
-                   {/* A CAIXA DE TEXTO */}
                    <textarea
                        value={scoutTextData}
                        onChange={(e) => setScoutTextData(e.target.value)}
@@ -498,7 +465,6 @@ const ScoutIA: React.FC = () => {
                        disabled={isScanningScout}
                    />
 
-                   {/* TELA DE LOADING (OVERLAY) */}
                    {isScanningScout && (
                        <div className="absolute inset-0 bg-white/90 dark:bg-[#000000]/90 backdrop-blur-sm flex flex-col items-center justify-center z-20">
                            <motion.div initial={{ width: '0%' }} animate={{ width: '100%' }} transition={{ repeat: Infinity, duration: 2 }} className="absolute bottom-0 left-0 h-1 bg-indigo-500 shadow-[0_0_30px_#6366f1]" />
@@ -507,7 +473,6 @@ const ScoutIA: React.FC = () => {
                        </div>
                    )}
 
-                   {/* BARRA DE AÇÃO FIXA (NO RODAPÉ DO INPUT) */}
                    <div className="flex flex-col sm:flex-row items-center justify-between gap-3 p-4 bg-slate-50 dark:bg-[#1C1C1E]/50 border-t border-slate-100 dark:border-[#2C2C2E]">
                        <button onClick={clearBuilder} className="w-full sm:w-auto text-[10px] font-bold uppercase tracking-widest text-slate-500 hover:text-slate-700 dark:text-[#8E8E93] dark:hover:text-white bg-white dark:bg-[#2C2C2E] border border-slate-200 dark:border-[#3A3A3C] px-5 py-2.5 rounded-lg transition-colors flex items-center justify-center gap-2">
                            <Eraser size={14} /> Limpar
@@ -518,7 +483,6 @@ const ScoutIA: React.FC = () => {
                    </div>
                 </div>
 
-                {/* RESULTADO GERADO PELO MOTOR NLP */}
                 {scoutBuilderResult && scoutBuilderResult.selections && (
                     <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="bg-white dark:bg-[#1C1C1E] border border-indigo-200 dark:border-indigo-500/30 rounded-2xl p-6 shadow-sm relative overflow-hidden mt-10">
                         <div className="absolute top-0 right-0 w-80 h-80 bg-indigo-500/5 dark:bg-indigo-500/10 rounded-full blur-[80px] -mr-20 -mt-20 pointer-events-none"></div>
@@ -545,9 +509,6 @@ const ScoutIA: React.FC = () => {
                             ))}
                         </div>
 
-                        {/* ======================================================== */}
-                        {/* 🔥 AUDITORIA DINÂMICA DE EV% COM INTERFACE ALARMANTE 🔥  */}
-                        {/* ======================================================== */}
                         <div className={`border p-6 rounded-2xl mb-8 relative z-10 transition-colors duration-500 ${
                             evStatus === 'negative' 
                               ? 'bg-red-50 dark:bg-red-500/10 border-red-200 dark:border-red-500/30' 
@@ -582,7 +543,7 @@ const ScoutIA: React.FC = () => {
                                             }}
                                             className={`w-full text-left font-mono text-sm py-2.5 pl-8 pr-3 rounded-lg outline-none transition-colors ${
                                                 evStatus === 'negative' 
-                                                  ? 'bg-white dark:bg-[#1C1C1E] border border-red-400 dark:border-red-500 text-red-600 dark:text-red-400 placeholder:text-red-300 dark:placeholder:text-red-500/50'
+                                                  ? 'bg-white dark:bg-[#1C1C1E] border border-red-400 dark:border-red-50 text-red-600 dark:text-red-400 placeholder:text-red-300 dark:placeholder:text-red-500/50'
                                                   : 'bg-white dark:bg-[#1C1C1E] border border-slate-300 dark:border-[#3A3A3C] focus:border-indigo-500 text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-[#636366]'
                                             }`}
                                         />
