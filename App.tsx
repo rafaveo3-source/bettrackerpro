@@ -2,10 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { BrowserRouter, Routes, Route, useNavigate, Navigate } from 'react-router-dom';
 import { Lock } from 'lucide-react';
 
-// Layout do Sistema
 import Layout from './layout';
-
-// Páginas do Sistema
 import Dashboard from './pages/Dashboard';
 import Analytics from './pages/Analytics';
 import History from './pages/History';
@@ -19,8 +16,6 @@ import SystemLibrary from './pages/SystemLibrary';
 import ProPage from './pages/ProPage'; 
 import ScoutIA from './pages/ScoutIA'; 
 import LiveTerminal from './pages/LiveTerminal';
-
-// Páginas Públicas
 import LandingPage from './pages/LandingPage';
 import AuthPage from './pages/AuthPage';
 import UpdatePassword from './pages/UpdatePassword';
@@ -28,18 +23,12 @@ import UpdatePassword from './pages/UpdatePassword';
 import { useBetStore, supabase } from './store/useBetStore';
 import { Toaster } from './components/ui/Toaster';
 
-// =====================================================================
-// 🔥 PRO GATE: Bloqueio Seguro (Apenas o Card, sem re-renders pesados)
-// =====================================================================
 const ProGate: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const isPro = useBetStore(s => s.isPro);
   const navigate = useNavigate();
 
-  if (isPro) {
-    return <>{children}</>;
-  }
+  if (isPro) return <>{children}</>;
 
-  // Para usuários FREE: Renderiza o aviso limpo e protege o DOM.
   return (
     <div className="relative w-full min-h-[70vh] flex flex-col items-center justify-center overflow-hidden rounded-3xl bg-slate-50 dark:bg-[#1C1C1E]/30">
       <div className="absolute inset-0 z-0 bg-indigo-500/5 dark:bg-indigo-500/10 pointer-events-none" />
@@ -59,18 +48,31 @@ const ProGate: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   );
 };
 
-// =====================================================================
-// 🔥 PROTECTED ROUTE: Evita aninhamento complexo de rotas (Gargalo RRv6)
-// =====================================================================
-const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const isAuthenticated = useBetStore(s => s.isAuthenticated);
-  
-  if (!isAuthenticated) {
-    return <Navigate to="/login" replace />;
-  }
-
-  // O Layout agora abraça diretamente o componente renderizado.
-  return <Layout>{children}</Layout>;
+// Mantemos o Layout fixo, e o React Router troca apenas o componente de dentro.
+const SystemRoutes: React.FC = () => {
+  return (
+    <Layout>
+      <Routes>
+        <Route path="/dashboard" element={<Dashboard />} />
+        
+        <Route path="/scout" element={<ProGate><ScoutIA /></ProGate>} /> 
+        <Route path="/terminal-live" element={<ProGate><LiveTerminal /></ProGate>} />
+        <Route path="/calculators" element={<ProGate><Calculators /></ProGate>} />
+        <Route path="/library" element={<ProGate><SystemLibrary /></ProGate>} />
+        
+        <Route path="/analytics" element={<Analytics />} />
+        <Route path="/goals" element={<Goals />} />
+        <Route path="/mindset" element={<Mindset />} />
+        <Route path="/history" element={<History />} />
+        <Route path="/bankrolls" element={<Bankroll />} />
+        <Route path="/calendar" element={<PerformanceCalendar />} />
+        <Route path="/settings" element={<Settings />} />
+        <Route path="/pro" element={<ProPage />} /> 
+        
+        <Route path="*" element={<Navigate to="/dashboard" replace />} />
+      </Routes>
+    </Layout>
+  );
 };
 
 const AppContent: React.FC = () => {
@@ -78,11 +80,8 @@ const AppContent: React.FC = () => {
   const [isInitializing, setIsInitializing] = useState(true);
 
   useEffect(() => {
-    if (isDarkMode) {
-      document.documentElement.classList.add('dark');
-    } else {
-      document.documentElement.classList.remove('dark');
-    }
+    if (isDarkMode) document.documentElement.classList.add('dark');
+    else document.documentElement.classList.remove('dark');
   }, [isDarkMode]);
 
   useEffect(() => {
@@ -94,8 +93,9 @@ const AppContent: React.FC = () => {
     });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session);
-      if (session) checkProStatus();
+      setSession(session).then(() => {
+        if (session) checkProStatus();
+      });
     });
 
     return () => subscription.unsubscribe();
@@ -108,38 +108,11 @@ const AppContent: React.FC = () => {
   return (
     <>
       <Routes>
-        {/* ================================== */}
-        {/* ROTAS PÚBLICAS                     */}
-        {/* ================================== */}
         <Route path="/" element={isAuthenticated ? <Navigate to="/dashboard" replace /> : <LandingPage />} />
         <Route path="/login" element={isAuthenticated ? <Navigate to="/dashboard" replace /> : <AuthPage />} />
         <Route path="/update-password" element={<UpdatePassword />} />
-
-        {/* ================================== */}
-        {/* ROTAS PRIVADAS (FREE & PRO)        */}
-        {/* ================================== */}
-        <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
-        <Route path="/analytics" element={<ProtectedRoute><Analytics /></ProtectedRoute>} />
-        <Route path="/goals" element={<ProtectedRoute><Goals /></ProtectedRoute>} />
-        <Route path="/mindset" element={<ProtectedRoute><Mindset /></ProtectedRoute>} />
-        <Route path="/history" element={<ProtectedRoute><History /></ProtectedRoute>} />
-        <Route path="/bankrolls" element={<ProtectedRoute><Bankroll /></ProtectedRoute>} />
-        <Route path="/calendar" element={<ProtectedRoute><PerformanceCalendar /></ProtectedRoute>} />
-        <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
-        <Route path="/pro" element={<ProtectedRoute><ProPage /></ProtectedRoute>} /> 
-        
-        {/* ================================== */}
-        {/* ROTAS EXCLUSIVAS (PRO GATE)        */}
-        {/* ================================== */}
-        <Route path="/scout" element={<ProtectedRoute><ProGate><ScoutIA /></ProGate></ProtectedRoute>} /> 
-        <Route path="/terminal-live" element={<ProtectedRoute><ProGate><LiveTerminal /></ProGate></ProtectedRoute>} />
-        <Route path="/calculators" element={<ProtectedRoute><ProGate><Calculators /></ProGate></ProtectedRoute>} />
-        <Route path="/library" element={<ProtectedRoute><ProGate><SystemLibrary /></ProGate></ProtectedRoute>} />
-
-        {/* ================================== */}
-        {/* FALLBACK (Rota Inexistente)        */}
-        {/* ================================== */}
-        <Route path="*" element={<Navigate to={isAuthenticated ? "/dashboard" : "/login"} replace />} />
+        {/* Rota Mestre: Se estiver logado, joga para o SystemRoutes */}
+        <Route path="/*" element={isAuthenticated ? <SystemRoutes /> : <Navigate to="/login" replace />} />
       </Routes>
       <Toaster />
     </>
