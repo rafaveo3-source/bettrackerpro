@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import Sidebar from './components/Sidebar';
 import NewBetModal from './components/NewBetModal';
+import OnboardingModal from './components/OnboardingModal';
 import { Plus, Lock } from 'lucide-react';
 import { useBetStore, Bet } from './store/useBetStore';
 
@@ -68,10 +69,16 @@ const Layout: React.FC<LayoutProps> = ({ children, currentView, setView }) => {
   useEffect(() => {
     document.body.style.overflow = '';
     document.body.style.pointerEvents = '';
+
+    return () => {
+      document.body.style.overflow = '';
+      document.body.style.pointerEvents = '';
+    };
   }, [currentView]);
 
   return (
     <div className="flex min-h-screen font-sans bg-slate-50 dark:bg-slate-950 transition-colors duration-300 w-full overflow-x-hidden relative">
+      <OnboardingModal />
       
       {/* O componente Joyride foi removido para evitar o estrangulamento do DOM */}
 
