@@ -74,7 +74,7 @@ const SensorButton = ({ label, active, onClick, color }: { label: string, active
 );
 
 const LiveTerminal: React.FC = () => {
-  const { isPro, session } = useBetStore();
+  const { session } = useBetStore();
   const navigate = useNavigate();
   const [isLogging, setIsLogging] = useState(false);
 
@@ -395,19 +395,7 @@ const LiveTerminal: React.FC = () => {
   return (
     <div className="max-w-6xl mx-auto space-y-6 pb-20 px-4 md:px-8 pt-8 font-sans relative">
         
-      {/* RENDERIZADO DIRETAMENTE PARA EVITAR UNMOUNTING E TRAVAMENTOS */}
-      {!isPro && (
-        <div className="absolute inset-0 z-50 flex items-center justify-center bg-white/40 dark:bg-[#000000]/60 backdrop-blur-md rounded-2xl">
-            <div className="bg-white dark:bg-[#1C1C1E] border border-indigo-500/30 p-8 rounded-2xl max-w-md text-center shadow-xl flex flex-col items-center mx-4">
-                <div className="bg-indigo-500/10 p-4 rounded-xl mb-4 text-indigo-600 dark:text-indigo-400 mx-auto"><Crown size={32} /></div>
-                <h2 className="text-xl font-bold text-slate-900 dark:text-white tracking-tight mb-2 uppercase">Assistente Analítico <span className="text-indigo-500">PRO</span></h2>
-                <p className="text-slate-500 dark:text-[#8E8E93] mb-6 text-sm leading-relaxed font-medium">Acesse a nossa ferramenta de apoio à decisão live. O motor cruza dados e sensores táticos para calcular Fair Lines e evitar armadilhas comuns em apostas.</p>
-                <button onClick={() => navigate('/pro')} className="w-full bg-slate-900 hover:bg-slate-800 text-white dark:bg-indigo-600 dark:hover:bg-indigo-500 font-bold py-4 px-8 rounded-xl transition-all shadow-sm text-xs tracking-widest uppercase">Desbloquear Assistente</button>
-            </div>
-        </div>
-      )}
-      
-      <div className={!isPro ? 'pointer-events-none select-none blur-[4px] opacity-60' : ''}>
+      <div className="w-full">
         
         {/* HEADER EDUCATIVO */}
         <div className="flex flex-col gap-2 mb-6 border-b border-slate-200 dark:border-[#2C2C2E] pb-6">

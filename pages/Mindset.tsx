@@ -36,24 +36,7 @@ const getMoodConfig = (mood: string) => moodConfig[mood] || { label: mood || 'De
 // ==========================================
 // COMPONENTES DE INTERFACE GLOBAIS
 // ==========================================
-const ProBlurOverlay = ({ title, desc, navigate }: { title: string, desc: string, navigate: any }) => (
-    <div className="absolute inset-0 z-50 flex items-center justify-center bg-white/40 dark:bg-[#020617]/50 backdrop-blur-md rounded-2xl">
-        <div className="bg-white dark:bg-[#1C1C1E] border border-orange-500/30 p-8 rounded-2xl max-w-md text-center shadow-xl flex flex-col items-center mx-4">
-            <div className="bg-orange-500/10 p-4 rounded-xl mb-4 text-orange-600 dark:text-orange-400">
-                <Crown size={28} />
-            </div>
-            <h2 className="text-xl font-bold text-slate-900 dark:text-white tracking-tight mb-2">
-                {title} <span className="text-orange-500">PRO</span>
-            </h2>
-            <p className="text-slate-500 dark:text-[#8E8E93] mb-6 text-sm leading-relaxed">
-                {desc}
-            </p>
-            <button onClick={() => navigate('/pro')} className="w-full bg-slate-900 hover:bg-slate-800 text-white dark:bg-orange-600 dark:hover:bg-orange-500 font-bold py-3.5 px-8 rounded-xl transition-all shadow-sm text-xs tracking-widest uppercase">
-                Desbloquear Acesso
-            </button>
-        </div>
-    </div>
-);
+
 
 const InsightCard = ({ title, value, description, positive, negative, color }: any) => (
   <div className="p-5 rounded-2xl border bg-white dark:bg-[#1C1C1E] border-slate-200 dark:border-[#2C2C2E] shadow-sm relative overflow-hidden">
@@ -235,12 +218,20 @@ const Mindset: React.FC = () => {
           <InsightCard title="Gatilho Principal" value={metrics.worstMood} description="O que mais te derruba" color="text-orange-600 dark:text-orange-500" />
       </div>
 
+      {!isPro ? (
+          <div className="w-full bg-slate-100 dark:bg-[#1C1C1E] flex flex-col items-center justify-center rounded-2xl border border-slate-200 dark:border-[#2C2C2E] py-20 px-6 text-center">
+              <div className="w-16 h-16 bg-slate-200 dark:bg-[#2C2C2E] rounded-full flex items-center justify-center mb-4">
+                  <Lock className="text-slate-500 dark:text-slate-400" size={24} />
+              </div>
+              <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-2">Módulo Psicológico PRO</h3>
+              <p className="text-slate-500 dark:text-[#8E8E93] text-sm mb-6 max-w-md">Descubra a correlação matemática entre o seu estado emocional e o seu lucro/prejuízo no mercado.</p>
+              <button onClick={() => navigate('/pro')} className="bg-slate-900 dark:bg-indigo-600 hover:bg-slate-800 dark:hover:bg-indigo-500 text-white py-3 px-6 rounded-xl text-xs font-bold uppercase tracking-widest transition-colors shadow-sm">
+                  Desbloquear Acesso
+              </button>
+          </div>
+      ) : (
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 relative">
-          
-          {/* BLOQUEIO PRO NA ÁREA PRINCIPAL */}
-          {!isPro && <ProBlurOverlay title="Módulo Psicológico" desc="Descubra a correlação matemática entre o seu estado emocional e o seu lucro/prejuízo no mercado." navigate={navigate} />}
-          
-          <div className={`lg:col-span-1 space-y-6 ${!isPro ? 'pointer-events-none select-none blur-md opacity-50' : ''}`}>
+          <div className="lg:col-span-1 space-y-6">
             <section className={cardClass}>
                 <div className="flex items-center gap-3 mb-6 border-b border-slate-100 dark:border-[#2C2C2E] pb-4">
                     <div className="p-2.5 bg-orange-50 dark:bg-orange-500/10 text-orange-600 dark:text-orange-400 rounded-xl border border-orange-100 dark:border-orange-500/20"><BrainCircuit size={18} /></div>
@@ -303,7 +294,7 @@ const Mindset: React.FC = () => {
             )}
           </div>
 
-          <section className={`lg:col-span-2 space-y-4 ${!isPro ? 'pointer-events-none select-none blur-md opacity-50' : ''}`}>
+          <section className="lg:col-span-2 space-y-4">
             
             {/* FILTROS DO HISTÓRICO */}
             <div className="flex flex-col sm:flex-row gap-3">
@@ -371,6 +362,7 @@ const Mindset: React.FC = () => {
             </div>
           </section>
       </div>
+      )}
       <TiltModal isOpen={showTiltModal} onClose={() => setShowTiltModal(false)} />
     </div>
   );

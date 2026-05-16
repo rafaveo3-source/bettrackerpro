@@ -22,31 +22,12 @@ const factorial = (n: number): number => {
   return result;
 };
 
-// 🔥 CORREÇÃO: COMPONENTE MOVIDO PARA FORA 🔥
-const ProBlurOverlay = ({ title, desc, navigate }: { title: string, desc: string, navigate: any }) => (
-    <div className="absolute inset-0 z-50 flex items-center justify-center bg-white/40 dark:bg-[#020617]/50 backdrop-blur-md rounded-2xl">
-        <div className="bg-white dark:bg-[#1C1C1E] border border-emerald-500/30 p-8 rounded-2xl max-w-md text-center shadow-xl flex flex-col items-center mx-4">
-            <div className="bg-emerald-500/10 p-4 rounded-xl mb-4 text-emerald-600 dark:text-emerald-400">
-                <Crown size={28} />
-            </div>
-            <h2 className="text-xl font-bold text-slate-900 dark:text-white tracking-tight mb-2">
-                {title} <span className="text-emerald-500">PRO</span>
-            </h2>
-            <p className="text-slate-500 dark:text-[#8E8E93] mb-6 text-sm leading-relaxed">
-                {desc}
-            </p>
-            <button onClick={() => navigate('/pro')} className="w-full bg-slate-900 hover:bg-slate-800 text-white dark:bg-emerald-600 dark:hover:bg-emerald-500 font-bold py-3.5 px-8 rounded-xl transition-all shadow-sm text-xs tracking-widest uppercase">
-                Desbloquear Acesso
-            </button>
-        </div>
-    </div>
-);
 
 // ==========================================
 // COMPONENTE PRINCIPAL
 // ==========================================
 const Calculators: React.FC = () => {
-  const { user, currentBankrollBalance, isPro, history = [], methods = [], settings } = useBetStore();
+  const { user, currentBankrollBalance, history = [], methods = [], settings } = useBetStore();
   const navigate = useNavigate();
 
   const [activeTab, setActiveTab] = useState<'compound'|'dutching'|'kelly'|'value'|'arb'|'stake'|'odds'>('compound');
@@ -516,7 +497,6 @@ const Calculators: React.FC = () => {
                 : 'text-slate-500 dark:text-[#8E8E93] hover:text-slate-700 dark:hover:text-slate-300'
             }`}
           >
-            {tab.pro && !isPro && <Lock size={12} className="opacity-50" />}
             {tab.label}
           </button>
         ))}
@@ -530,8 +510,7 @@ const Calculators: React.FC = () => {
             {/* ========================================== */}
             {activeTab === 'compound' && (
                 <div className="relative">
-                    {!isPro && <ProBlurOverlay title="Plano de Metas" desc="Descubra a Stake Matemática exata para bater a sua meta financeira e audite seu histórico de apostas automaticamente." navigate={navigate} />}
-                    <div className={`space-y-6 ${!isPro ? 'pointer-events-none select-none blur-md opacity-50' : ''}`}>
+                    <div className="space-y-6">
                         
                         {/* CARD 1: O ALVO E A BANCA */}
                         <div className={`${cardClass} relative overflow-hidden`}>
@@ -928,8 +907,7 @@ const Calculators: React.FC = () => {
             {/* ========================================== */}
             {activeTab === 'value' && (
                 <div className="relative">
-                   {!isPro && <ProBlurOverlay title="Value Bet Finder" desc="Cruzamos a odd oferecida com a sua estatística real para achar o Valor Esperado e calcular o Critério de Kelly exato de investimento." navigate={navigate} />}
-                   <div className={`${cardClass} ${!isPro ? 'pointer-events-none select-none blur-[4px] opacity-60' : ''}`}>
+                   <div className={cardClass}>
                        <h2 className={sectionTitleClass}><Target size={20} className="text-emerald-500"/> Value Bet Finder</h2>
                        <div className="grid grid-cols-2 gap-4 mb-8">
                           <div>
@@ -966,8 +944,7 @@ const Calculators: React.FC = () => {
             {/* ========================================== */}
             {activeTab === 'arb' && (
                 <div className="relative">
-                   {!isPro && <ProBlurOverlay title="Calculadora de Arbitragem" desc="Ache oportunidades onde a divergência entre duas casas de apostas garante lucro 100% livre de risco." navigate={navigate} />}
-                   <div className={`${cardClass} ${!isPro ? 'pointer-events-none select-none blur-[4px] opacity-60' : ''}`}>
+                   <div className={cardClass}>
                        <h2 className={sectionTitleClass}><Scale size={20} className="text-blue-500"/> Arbitragem (2-Way)</h2>
                        <div className="mb-6">
                           <label className="text-[10px] font-bold text-slate-500 dark:text-[#8E8E93] uppercase block mb-2 tracking-widest">Investimento Total (R$)</label>

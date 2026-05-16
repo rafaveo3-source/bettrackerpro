@@ -64,7 +64,7 @@ const safeText = (val: any): string => {
 };
 
 const ScoutIA: React.FC = () => {
-  const { user, isPro, canUseAiScan, incrementAiScan, setToast } = useBetStore();
+  const { user, canUseAiScan, incrementAiScan, setToast } = useBetStore();
   const userEmail = user?.email || "usuario@desconhecido.com"; 
 
   const [scoutMode, setScoutMode] = useState<'grid' | 'builder'>('grid');
@@ -133,7 +133,6 @@ const ScoutIA: React.FC = () => {
   };
 
   const handleAddScoutGridImage = async (file: File) => {
-      if (!isPro) { setToast({ type: 'error', message: 'Recurso exclusivo para Membros PRO.' }); return; }
       if (!checkAiLimit()) { setToast({ type: 'error', message: 'Limite de IA atingido.' }); return; }
 
       setScoutGridImage(URL.createObjectURL(file));
@@ -173,7 +172,6 @@ const ScoutIA: React.FC = () => {
           return;
       }
 
-      if (!isPro) { setToast({ type: 'error', message: 'Recurso exclusivo PRO.' }); return; }
       if (!checkAiLimit()) { setToast({ type: 'error', message: 'Limite de IA atingido.' }); return; }
 
       setIsScanningScout(true); 
