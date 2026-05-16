@@ -20,12 +20,7 @@ const colorPalettes: Record<string, any> = {
 
 const CustomTooltip = ({ index, step, tooltipProps, primaryProps, backProps, skipProps, isLastStep }: TooltipRenderProps) => {
   return (
-    <div {...tooltipProps} className="bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-800 rounded-[2rem] p-5 md:p-6 shadow-2xl w-[calc(100vw-32px)] md:max-w-[360px] mx-auto">
-      <div className="flex gap-1.5 mb-4 justify-center">
-        {[...Array(10)].map((_, i) => (
-          <div key={i} className={`h-1.5 rounded-full transition-all duration-300 ${i === index ? 'w-6 bg-emerald-500' : 'w-1.5 bg-slate-200 dark:bg-slate-800'}`} />
-        ))}
-      </div>
+    <div {...tooltipProps} className="bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-800 rounded-[2rem] p-5 md:p-6 shadow-2xl w-[calc(100vw-32px)] md:max-w-[360px] mx-auto z-50 relative">
       <div className="flex items-start justify-between gap-4 mb-3">
         <h3 className="text-base md:text-lg font-black text-slate-900 dark:text-white uppercase tracking-tighter italic flex items-center gap-2">
           {step.title}
@@ -60,6 +55,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   const location = useLocation();
 
   useEffect(() => {
+    // Se o usuário tentar sair da tela do dashboard e o tutorial não acabou, mata o tutorial pra não travar a tela.
     if (!hasSeenTutorial && location.pathname !== '/dashboard') {
         completeTutorial();
     }
@@ -100,7 +96,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   }, [toast, setToast]);
 
   const tutorialSteps: Step[] = useMemo(() => [
-    { target: 'body', placement: 'center', title: <><Rocket className="text-emerald-500" /> Start do Sistema</>, content: 'Bem-vindo ao BetTracker PRO. Esqueça planilhas amadoras.', disableBeacon: true },
+    { target: 'body', placement: 'center', title: <><Rocket className="text-emerald-500" /> Start do Sistema</>, content: 'Bem-vindo ao BetTracker PRO.', disableBeacon: true },
     { target: '.tour-sidebar-dashboard', placement: 'right', title: <><BarChart3 className="text-blue-500" /> Cockpit de Análise</>, content: 'Aqui você acompanha sua Win Rate real e descobre o EV+.' },
     { target: '.tour-sidebar-scout', placement: 'right', title: <><Sparkles className="text-indigo-500" /> Motor Scout IA (PRO)</>, content: 'Nossa Inteligência Artificial lê suas estatísticas e calcula covariância.' },
     { target: '.tour-sidebar-bankroll', placement: 'right', title: <><Wallet className="text-amber-500" /> Gestão de Caixas</>, content: 'Crie múltiplos Portfólios.' },
@@ -134,7 +130,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
         />
       )}
 
-      {/* FIREWALL: Sidebar agora roda sozinha */}
+      {/* FIREWALL: Sidebar agora usa as rotas livremente */}
       <Sidebar isOpen={isSidebarOpen} setIsOpen={setIsSidebarOpen} />
 
       <div className="flex-1 lg:ml-72 transition-all duration-300 min-w-0">
