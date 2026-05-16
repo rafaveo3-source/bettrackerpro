@@ -238,6 +238,12 @@ const LiveTerminal: React.FC = () => {
     const isTrap = trapScore > 60;
     const noBet = trapScore > 80;
 
+    // Kill-State (Morte Térmica da Partida)
+    const isKillState = trapScore > 65 || (totalPPM < 0.7 && inputs.minute > 70);
+    if (isKillState) {
+        timeDecay = 0.3; // Decay super agressivo para punir Overs
+    }
+
     // 5. SIMULAÇÃO PROBABILÍSTICA DISCRETA (Matriz Bivariada)
     const baseLambdaMinH = xgProxyH * validatedPace * eventVolatility * mutH * timeDecay * volatilityMod;
     const baseLambdaMinA = xgProxyA * validatedPace * eventVolatility * mutA * timeDecay * volatilityMod;
@@ -267,20 +273,19 @@ const LiveTerminal: React.FC = () => {
     const currentGoals = inputs.scoreH + inputs.scoreA;
     const currentCorners = inputs.cornersH + inputs.cornersA;
 
-    // Buscador Dinâmico de Linhas de Valor (Gols) - Odd >= 1.50 (Prob <= 0.66)
+    // Buscador Dinâmico de Linhas Justas (EV-First - Gols)
     let goalLineOffset = 1;
     let probGoal1 = poissonOver(lambdaGoalTotal, goalLineOffset);
-    while (probGoal1 > 0.66 && goalLineOffset < 5) {
+    while (probGoal1 > 0.55 && goalLineOffset < (lambdaGoalTotal + 1.5) && goalLineOffset < 5) {
         goalLineOffset++;
         probGoal1 = poissonOver(lambdaGoalTotal, goalLineOffset);
     }
     const probGoal2 = poissonOver(lambdaGoalTotal, goalLineOffset + 1); 
 
-    // Buscador Dinâmico de Linhas de Valor (Cantos)
-    const baseCornerLine = Math.max(currentCorners + 1, Math.floor(expCornersFT));
-    let cornerLineOffset = Math.max(1, baseCornerLine - currentCorners);
+    // Buscador Dinâmico de Linhas Justas (EV-First - Cantos)
+    let cornerLineOffset = 1;
     let probCorner1 = poissonOver(lambdaCornerTotal, cornerLineOffset);
-    while (probCorner1 > 0.66 && cornerLineOffset < 10) {
+    while (probCorner1 > 0.55 && cornerLineOffset < (lambdaCornerTotal + 1.5) && cornerLineOffset < 10) {
         cornerLineOffset++;
         probCorner1 = poissonOver(lambdaCornerTotal, cornerLineOffset);
     }
@@ -319,15 +324,15 @@ const LiveTerminal: React.FC = () => {
     let finalNoBet = noBet;
     let finalReason = noBet ? "SCORE DE ARMADILHA ALTO: " + (trapScore > 80 ? "Condições matemáticas corrompidas. Aborte." : "Falso domínio detectado.") : "";
 
-    if (!finalNoBet && ((evGoal !== null && evGoal <= 3) || (evCorner !== null && evCorner <= 3))) {
+    if (!finalNoBet && ((evGoal !== null && evGoal <= 4) || (evCorner !== null && evCorner <= 4))) {
         finalNoBet = true;
-        finalReason = "ODD ESMAGADA: O mercado ajustou a linha perfeitamente. Sem Edge Matemático (+EV) para cobrir a variância.";
+        finalReason = "ODD ESMAGADA (Sem Valor Matemático): O mercado precificou perfeitamente a linha. Opere apenas com EV >= +4%.";
     }
 
     // 8. COMBOS EV+ CORRELACIONADOS (Entradas Diretas)
     const combos = [];
     if (!finalNoBet) {
-        if (inputs.sotA - inputs.sotH >= 3) {
+        if (inputs.sotA - inputs.sotH >= 3 && qualModA > 1.2) {
             const oddAWin = probAwayWinFT > 0 ? 1 / probAwayWinFT : 99;
             if (oddAWin >= 1.50) {
                 combos.push({ title: "Vitória Seca do Visitante", prob: probAwayWinFT, odd: calcFairOdd(probAwayWinFT), type: 'match' });
@@ -336,7 +341,7 @@ const LiveTerminal: React.FC = () => {
                 const pCombo = probAwayWinFT * poissonOver(lambdaGoalTotal, reqG) * 0.95;
                 combos.push({ title: `Vitória Visitante + Over ${currentGoals === 0 ? 1.5 : currentGoals + 0.5} Gols`, prob: pCombo, odd: calcFairOdd(pCombo), type: 'match' });
             }
-        } else if (inputs.sotH - inputs.sotA >= 3) {
+        } else if (inputs.sotH - inputs.sotA >= 3 && qualModH > 1.2) {
             const oddHWin = probHomeWinFT > 0 ? 1 / probHomeWinFT : 99;
             if (oddHWin >= 1.50) {
                 combos.push({ title: "Vitória Seca do Mandante", prob: probHomeWinFT, odd: calcFairOdd(probHomeWinFT), type: 'match' });
@@ -345,10 +350,10 @@ const LiveTerminal: React.FC = () => {
                 const pCombo = probHomeWinFT * poissonOver(lambdaGoalTotal, reqG) * 0.95;
                 combos.push({ title: `Vitória Mandante + Over ${currentGoals === 0 ? 1.5 : currentGoals + 0.5} Gols`, prob: pCombo, odd: calcFairOdd(pCombo), type: 'match' });
             }
-        } else if (trapScore > 50 || inputs.gamePace === 'slow') {
+        } else if (isKillState || inputs.gamePace === 'slow') {
             let underLimit = 0;
             let probUnderGoal = poissonUnder(lambdaGoalTotal, underLimit);
-            while (probUnderGoal > 0.66 && underLimit < 5) {
+            while (probUnderGoal > 0.55 && underLimit < (lambdaGoalTotal + 1.5) && underLimit < 5) {
                 underLimit++;
                 probUnderGoal = poissonUnder(lambdaGoalTotal, underLimit);
             }
