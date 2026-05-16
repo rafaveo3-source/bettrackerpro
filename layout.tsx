@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import { useLocation } from 'react-router-dom';
 import Sidebar from './components/Sidebar';
 import NewBetModal from './components/NewBetModal';
 import { Plus, Lock, Rocket, Target, ShieldAlert, BarChart3, Wallet, BrainCircuit, X, CalendarDays, Calculator, BookOpen, Sparkles } from 'lucide-react';
@@ -7,8 +8,6 @@ import Joyride, { Step, CallBackProps, STATUS, TooltipRenderProps } from 'react-
 
 interface LayoutProps {
   children: React.ReactNode;
-  currentView: string;
-  setView: (view: string) => void;
 }
 
 const colorPalettes: Record<string, any> = {
@@ -52,12 +51,19 @@ const CustomTooltip = ({ index, step, tooltipProps, primaryProps, backProps, ski
   );
 };
 
-const Layout: React.FC<LayoutProps> = ({ children, currentView, setView }) => {
+const Layout: React.FC<LayoutProps> = ({ children }) => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [betToEdit, setBetToEdit] = useState<Bet | undefined>(undefined);
   const { isDarkMode, primaryColor, isAuthenticated, isTiltLocked, tiltLockUntil, toast, setToast, hasSeenTutorial, completeTutorial } = useBetStore();
   const [locked, setLocked] = useState(false);
+  const location = useLocation();
+
+  useEffect(() => {
+    if (!hasSeenTutorial && location.pathname !== '/dashboard') {
+        completeTutorial();
+    }
+  }, [location.pathname, hasSeenTutorial, completeTutorial]);
 
   useEffect(() => {
     if (!hasSeenTutorial && isAuthenticated && window.innerWidth < 768) {
@@ -94,16 +100,11 @@ const Layout: React.FC<LayoutProps> = ({ children, currentView, setView }) => {
   }, [toast, setToast]);
 
   const tutorialSteps: Step[] = useMemo(() => [
-    { target: 'body', placement: 'center', title: <><Rocket className="text-emerald-500" /> Start do Sistema</>, content: 'Bem-vindo ao BetTracker PRO. Esqueça planilhas amadoras. Vamos blindar o seu capital.', disableBeacon: true },
-    { target: '.tour-sidebar-dashboard', placement: 'right', title: <><BarChart3 className="text-blue-500" /> Cockpit de Análise</>, content: 'Onde o dinheiro é medido. Aqui você acompanha sua Win Rate real e descobre o EV+.' },
-    { target: '.tour-sidebar-scout', placement: 'right', title: <><Sparkles className="text-indigo-500" /> Motor Scout IA (PRO)</>, content: 'A joia da coroa. Nossa Inteligência Artificial lê suas estatísticas e calcula covariância.' },
-    { target: '.tour-sidebar-bankroll', placement: 'right', title: <><Wallet className="text-amber-500" /> Gestão de Caixas</>, content: 'Nunca misture o dinheiro. Crie múltiplos Portfólios.' },
-    { target: '.tour-sidebar-metas', placement: 'right', title: <><Target className="text-purple-500" /> Sistema Take Profit</>, content: 'O mercado não tem fim, mas sua meta deve ter. Configure alvos de lucro.' },
-    { target: '.tour-sidebar-mindset', placement: 'right', title: <><BrainCircuit className="text-orange-500" /> Módulo Psicológico</>, content: 'A maioria quebra por descontrole emocional (Tilt). Registre como você se sentiu.' },
-    { target: '.tour-sidebar-calendar', placement: 'right', title: <><CalendarDays className="text-pink-500" /> Calendário Financeiro</>, content: 'Acompanhe seus dias de Green e Red de forma visual.' },
-    { target: '.tour-sidebar-calculators', placement: 'right', title: <><Calculator className="text-teal-500" /> Calculadoras PRO</>, content: 'Valide suas entradas antes de apostar usando matemática.' },
-    { target: '.tour-sidebar-biblioteca', placement: 'right', title: <><BookOpen className="text-indigo-500" /> Playbooks e Gestão</>, content: 'Acesse métodos validados por profissionais e blueprints.' },
-    { target: '.tour-fab-button', placement: 'top-end', title: <><ShieldAlert className="text-emerald-500" /> Registre o Green</>, content: 'Acabou a operação? Clique aqui para cadastrar a Stake e a Odd.' }
+    { target: 'body', placement: 'center', title: <><Rocket className="text-emerald-500" /> Start do Sistema</>, content: 'Bem-vindo ao BetTracker PRO. Esqueça planilhas amadoras.', disableBeacon: true },
+    { target: '.tour-sidebar-dashboard', placement: 'right', title: <><BarChart3 className="text-blue-500" /> Cockpit de Análise</>, content: 'Aqui você acompanha sua Win Rate real e descobre o EV+.' },
+    { target: '.tour-sidebar-scout', placement: 'right', title: <><Sparkles className="text-indigo-500" /> Motor Scout IA (PRO)</>, content: 'Nossa Inteligência Artificial lê suas estatísticas e calcula covariância.' },
+    { target: '.tour-sidebar-bankroll', placement: 'right', title: <><Wallet className="text-amber-500" /> Gestão de Caixas</>, content: 'Crie múltiplos Portfólios.' },
+    { target: '.tour-fab-button', placement: 'top-end', title: <><ShieldAlert className="text-emerald-500" /> Registre o Green</>, content: 'Clique aqui para cadastrar a Stake e a Odd.' }
   ], []);
 
   const handleJoyrideCallback = (data: CallBackProps) => {
@@ -114,14 +115,11 @@ const Layout: React.FC<LayoutProps> = ({ children, currentView, setView }) => {
     }
   };
 
-  // 🔥 KAIROS FIX: O Joyride só monta se o usuário estiver na tela inicial. 
-  // Isso impede que o Joyride quebre o React Router ao tentar renderizar tooltips de páginas que já fecharam.
-  const isDashboard = currentView === 'dashboard';
+  const isDashboard = location.pathname.includes('/dashboard');
   const shouldRunTour = !hasSeenTutorial && isAuthenticated && isDashboard;
 
   return (
     <div className="flex min-h-screen font-sans bg-slate-50 dark:bg-slate-950 transition-colors duration-300 w-full overflow-x-hidden relative">
-      
       {shouldRunTour && (
         <Joyride
           steps={tutorialSteps}
@@ -136,7 +134,8 @@ const Layout: React.FC<LayoutProps> = ({ children, currentView, setView }) => {
         />
       )}
 
-      <Sidebar currentView={currentView} setView={setView} isOpen={isSidebarOpen} setIsOpen={setIsSidebarOpen} />
+      {/* FIREWALL: Sidebar agora roda sozinha */}
+      <Sidebar isOpen={isSidebarOpen} setIsOpen={setIsSidebarOpen} />
 
       <div className="flex-1 lg:ml-72 transition-all duration-300 min-w-0">
         {locked && (
