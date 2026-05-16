@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
-import { BrowserRouter, Routes, Route, useNavigate, useLocation, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { Lock } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
 import Layout from './layout';
 import Dashboard from './pages/Dashboard';
@@ -19,7 +20,6 @@ import LiveTerminal from './pages/LiveTerminal';
 import LandingPage from './pages/LandingPage';
 import AuthPage from './pages/AuthPage';
 import UpdatePassword from './pages/UpdatePassword';
-
 import { useBetStore, supabase } from './store/useBetStore';
 import { Toaster } from './components/ui/Toaster';
 
@@ -49,57 +49,18 @@ const ProGate: React.FC<{ children: React.ReactNode }> = ({ children }) => {
 };
 
 const SystemRoutes: React.FC = () => {
-  const navigate = useNavigate();
-  const location = useLocation();
-
-  const getCurrentViewID = () => {
-    const path = location.pathname;
-    if (path.includes('/dashboard')) return 'dashboard';
-    if (path.includes('/scout')) return 'scout'; 
-    if (path.includes('/terminal-live')) return 'terminal';
-    if (path.includes('/analytics')) return 'analytics';
-    if (path.includes('/goals')) return 'metas';
-    if (path.includes('/mindset')) return 'mindset';
-    if (path.includes('/history')) return 'historico';
-    if (path.includes('/bankrolls')) return 'bancas';
-    if (path.includes('/calendar')) return 'calendar';
-    if (path.includes('/calculators')) return 'calculators';
-    if (path.includes('/library')) return 'biblioteca';
-    if (path.includes('/settings')) return 'settings';
-    if (path.includes('/pro')) return 'pro'; 
-    return 'dashboard';
-  };
-
-  const handleSetView = (viewId: string) => {
-    switch (viewId) {
-      case 'dashboard': navigate('/dashboard'); break;
-      case 'scout': navigate('/scout'); break; 
-      case 'terminal': navigate('/terminal-live'); break;
-      case 'analytics': navigate('/analytics'); break;
-      case 'metas': navigate('/goals'); break;
-      case 'mindset': navigate('/mindset'); break;
-      case 'historico': navigate('/history'); break;
-      case 'bancas': navigate('/bankrolls'); break;
-      case 'calendar': navigate('/calendar'); break;
-      case 'calculators': navigate('/calculators'); break;
-      case 'biblioteca': navigate('/library'); break;
-      case 'settings': navigate('/settings'); break;
-      case 'pro': navigate('/pro'); break; 
-      default: navigate('/dashboard'); break;
-    }
-  };
-
   return (
-    <Layout currentView={getCurrentViewID()} setView={handleSetView}>
-      {/* 🔥 FIX: Removido o key={location.pathname} para voltar a navegação instantânea */}
+    <Layout>
       <Routes>
         <Route path="/dashboard" element={<Dashboard />} />
         
+        {/* Páginas PRO */}
         <Route path="/scout" element={<ProGate><ScoutIA /></ProGate>} /> 
         <Route path="/terminal-live" element={<ProGate><LiveTerminal /></ProGate>} />
         <Route path="/calculators" element={<ProGate><Calculators /></ProGate>} />
         <Route path="/library" element={<ProGate><SystemLibrary /></ProGate>} />
         
+        {/* Páginas Livres */}
         <Route path="/analytics" element={<Analytics />} />
         <Route path="/goals" element={<Goals />} />
         <Route path="/mindset" element={<Mindset />} />
