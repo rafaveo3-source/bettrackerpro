@@ -254,12 +254,28 @@ const LiveTerminal: React.FC = () => {
     const lambdaGoalTotalA = Math.min(MAX_LAMBDA_GOAL, baseLambdaMinA * timeLeft);
     const lambdaGoalTotal = lambdaGoalTotalH + lambdaGoalTotalA;
 
-    // Curva de Escanteios (Corners)
+    // Curva de Escanteios (Corners) & Game Script Engine
     const cornerPaceMod = inputs.gamePace === 'chaotic' ? 1.4 : inputs.gamePace === 'slow' ? 0.7 : 1.0;
     const cornerFavMod = inputs.isFavLosing ? 1.6 : 1.0;
     
-    const lambdaCornerH = ((apRateH * 0.09) + (sotRateH * 0.10)) * validatedDomH * cornerPaceMod * (inputs.gameDominance === 'home' ? cornerFavMod : 1.0) * timeLeft;
-    const lambdaCornerA = ((apRateA * 0.09) + (sotRateA * 0.10)) * validatedDomA * cornerPaceMod * (inputs.gameDominance === 'away' ? cornerFavMod : 1.0) * timeLeft;
+    let gameScriptCornerMod = 1.0;
+    if (scoreDiff !== 0) {
+        const winningTeam = scoreDiff > 0 ? 'home' : 'away';
+        const losingTeam = scoreDiff > 0 ? 'away' : 'home';
+        
+        if (inputs.gameDominance === winningTeam) {
+            gameScriptCornerMod = 0.6; // Jogo esfria, quem ganha domina a posse e gasta tempo
+        } else if (inputs.gameDominance === losingTeam) {
+            const losingAP = losingTeam === 'home' ? inputs.apH : inputs.apA;
+            const losingSoT = losingTeam === 'home' ? inputs.sotH : inputs.sotA;
+            if (losingAP > 20 && losingSoT > 0) {
+                gameScriptCornerMod = 1.5; // Abafa massivo de quem está perdendo gera explosão de cantos
+            }
+        }
+    }
+    
+    const lambdaCornerH = ((apRateH * 0.09) + (sotRateH * 0.10)) * validatedDomH * cornerPaceMod * (inputs.gameDominance === 'home' ? cornerFavMod : 1.0) * gameScriptCornerMod * timeLeft;
+    const lambdaCornerA = ((apRateA * 0.09) + (sotRateA * 0.10)) * validatedDomA * cornerPaceMod * (inputs.gameDominance === 'away' ? cornerFavMod : 1.0) * gameScriptCornerMod * timeLeft;
     
     const lambdaCornerTotal = Math.min(5.0, lambdaCornerH + lambdaCornerA);
 
@@ -269,27 +285,49 @@ const LiveTerminal: React.FC = () => {
     const expCornersFT = inputs.cornersH + inputs.cornersA + lambdaCornerTotal;
     const expCardsFT = inputs.cardsH + inputs.cardsA + lambdaCardTotal;
 
-    // 6. MARKET VALIDATOR
+    // 6. MARKET LADDER ENGINE (Linhas Reais + EV-First)
     const currentGoals = inputs.scoreH + inputs.scoreA;
     const currentCorners = inputs.cornersH + inputs.cornersA;
 
-    // Buscador Dinâmico de Linhas Justas (EV-First - Gols)
-    let goalLineOffset = 1;
-    let probGoal1 = poissonOver(lambdaGoalTotal, goalLineOffset);
-    while (probGoal1 > 0.55 && goalLineOffset < (lambdaGoalTotal + 1.5) && goalLineOffset < 5) {
-        goalLineOffset++;
-        probGoal1 = poissonOver(lambdaGoalTotal, goalLineOffset);
-    }
-    const probGoal2 = poissonOver(lambdaGoalTotal, goalLineOffset + 1); 
+    const calcEV = (prob: number, oddStr: string) => {
+        const odd = parseFloat(oddStr);
+        if (!odd || odd <= 1) return null;
+        return ((prob * odd) - 1) * 100;
+    };
 
-    // Buscador Dinâmico de Linhas Justas (EV-First - Cantos)
-    let cornerLineOffset = 1;
-    let probCorner1 = poissonOver(lambdaCornerTotal, cornerLineOffset);
-    while (probCorner1 > 0.55 && cornerLineOffset < (lambdaCornerTotal + 1.5) && cornerLineOffset < 10) {
-        cornerLineOffset++;
-        probCorner1 = poissonOver(lambdaCornerTotal, cornerLineOffset);
+    // Ladder de Gols
+    const marketLadderGoals = [1, 2, 3, 4]; 
+    let bestGoalLine = 1;
+    let probGoal1 = poissonOver(lambdaGoalTotal, 1);
+    for (const offset of marketLadderGoals) {
+        if (offset > lambdaGoalTotal + 1.5) break; // Proteção de Distância Máxima
+        const pOver = poissonOver(lambdaGoalTotal, offset);
+        const ev = calcEV(pOver, inputs.oddGoal);
+        if (ev !== null && ev >= 3) {
+            bestGoalLine = offset;
+            probGoal1 = pOver;
+            break;
+        }
     }
-    const probCorner2 = poissonOver(lambdaCornerTotal, cornerLineOffset + 1);
+    const probGoal2 = poissonOver(lambdaGoalTotal, bestGoalLine + 1);
+
+    // Ladder de Cantos (Asiáticos Base Line real)
+    const cornerBaseOffset = Math.max(1, Math.ceil((90 - inputs.minute) / 10));
+    const marketLadderCorners = [cornerBaseOffset - 1, cornerBaseOffset, cornerBaseOffset + 1, cornerBaseOffset + 2].filter(o => o >= 1);
+    
+    let bestCornerLine = cornerBaseOffset;
+    let probCorner1 = poissonOver(lambdaCornerTotal, cornerBaseOffset);
+    for (const offset of marketLadderCorners) {
+        if (offset > lambdaCornerTotal + 1.5) break; // Proteção de Distância Máxima
+        const pOver = poissonOver(lambdaCornerTotal, offset);
+        const ev = calcEV(pOver, inputs.oddCorner);
+        if (ev !== null && ev >= 3) {
+            bestCornerLine = offset;
+            probCorner1 = pOver;
+            break;
+        }
+    }
+    const probCorner2 = poissonOver(lambdaCornerTotal, bestCornerLine + 1);
 
     // Bivariada Simples 1X2
     let probHomeWinFT = 0; let probDrawFT = 0; let probAwayWinFT = 0;
@@ -306,27 +344,26 @@ const LiveTerminal: React.FC = () => {
     const probAScores = inputs.scoreA > 0 ? 1 : (1 - Math.exp(-lambdaGoalTotalA));
     const bttsProb = Math.min(0.97, probHScores * probAScores * ((inputs.scoreH === 0 && inputs.scoreA === 0) ? 0.92 : 0.97));
 
-    // 7. SYSTEM STABILITY SCORE (Antigo Confidence)
+    // 7. SYSTEM STABILITY SCORE
     let stabilityScore = 100 - trapScore;
     if (volatilityMod < 1.0) stabilityScore *= 0.85;
 
     const confLevel = noBet ? 'NO BET (BLOQUEADO)' : stabilityScore > 75 ? 'Alta Estabilidade' : stabilityScore > 50 ? 'Moderada' : 'Baixa Estabilidade';
     const confColor = noBet ? 'text-red-500' : stabilityScore > 75 ? 'text-emerald-500' : stabilityScore > 50 ? 'text-indigo-500' : 'text-amber-500';
 
-    const calcEV = (prob: number, oddStr: string) => {
-        const odd = parseFloat(oddStr);
-        if (!odd || odd <= 1) return null;
-        return ((prob * odd) - 1) * 100;
-    };
     const evGoal = calcEV(probGoal1, inputs.oddGoal);
     const evCorner = calcEV(probCorner1, inputs.oddCorner);
 
     let finalNoBet = noBet;
     let finalReason = noBet ? "SCORE DE ARMADILHA ALTO: " + (trapScore > 80 ? "Condições matemáticas corrompidas. Aborte." : "Falso domínio detectado.") : "";
 
-    if (!finalNoBet && ((evGoal !== null && evGoal <= 4) || (evCorner !== null && evCorner <= 4))) {
+    // Bloqueia apenas se AMBAS as linhas estiverem sem valor (ou nulas)
+    const goalHasNoValue = evGoal !== null && evGoal < 3;
+    const cornerHasNoValue = evCorner !== null && evCorner < 3;
+    
+    if (!finalNoBet && goalHasNoValue && cornerHasNoValue) {
         finalNoBet = true;
-        finalReason = "ODD ESMAGADA (Sem Valor Matemático): O mercado precificou perfeitamente a linha. Opere apenas com EV >= +4%.";
+        finalReason = "MERCADO CARO (Sem Valor Matemático): Nenhuma linha operacional real do Ladder possui EV >= +3%. A casa esmagou a Odd.";
     }
 
     // 8. COMBOS EV+ CORRELACIONADOS (Entradas Diretas)
@@ -337,18 +374,18 @@ const LiveTerminal: React.FC = () => {
             if (oddAWin >= 1.50) {
                 combos.push({ title: "Vitória Seca do Visitante", prob: probAwayWinFT, odd: calcFairOdd(probAwayWinFT), type: 'match' });
             } else {
-                const reqG = currentGoals === 0 ? 2 : 1;
+                const reqG = bestGoalLine;
                 const pCombo = probAwayWinFT * poissonOver(lambdaGoalTotal, reqG) * 0.95;
-                combos.push({ title: `Vitória Visitante + Over ${currentGoals === 0 ? 1.5 : currentGoals + 0.5} Gols`, prob: pCombo, odd: calcFairOdd(pCombo), type: 'match' });
+                combos.push({ title: `Vitória Visitante + Over ${currentGoals + bestGoalLine - 0.5} Gols`, prob: pCombo, odd: calcFairOdd(pCombo), type: 'match' });
             }
         } else if (inputs.sotH - inputs.sotA >= 3 && qualModH > 1.2) {
             const oddHWin = probHomeWinFT > 0 ? 1 / probHomeWinFT : 99;
             if (oddHWin >= 1.50) {
                 combos.push({ title: "Vitória Seca do Mandante", prob: probHomeWinFT, odd: calcFairOdd(probHomeWinFT), type: 'match' });
             } else {
-                const reqG = currentGoals === 0 ? 2 : 1;
+                const reqG = bestGoalLine;
                 const pCombo = probHomeWinFT * poissonOver(lambdaGoalTotal, reqG) * 0.95;
-                combos.push({ title: `Vitória Mandante + Over ${currentGoals === 0 ? 1.5 : currentGoals + 0.5} Gols`, prob: pCombo, odd: calcFairOdd(pCombo), type: 'match' });
+                combos.push({ title: `Vitória Mandante + Over ${currentGoals + bestGoalLine - 0.5} Gols`, prob: pCombo, odd: calcFairOdd(pCombo), type: 'match' });
             }
         } else if (isKillState || inputs.gamePace === 'slow') {
             let underLimit = 0;
@@ -359,16 +396,16 @@ const LiveTerminal: React.FC = () => {
             }
             combos.push({ title: `Entrar para Under ${currentGoals + underLimit + 0.5} Gols`, prob: probUnderGoal, odd: calcFairOdd(probUnderGoal), type: 'goal' });
         } else if (inputs.gamePace === 'chaotic' && lambdaCornerTotal > 2.0) {
-            const probOverCorner = poissonOver(lambdaCornerTotal, 2);
-            combos.push({ title: `Entrar para Over ${currentCorners + 1.5} Cantos`, prob: probOverCorner, odd: calcFairOdd(probOverCorner), type: 'corner' });
+            const pOverCorner = poissonOver(lambdaCornerTotal, bestCornerLine);
+            combos.push({ title: `Entrar para Over ${currentCorners + bestCornerLine - 0.5} Cantos`, prob: pOverCorner, odd: calcFairOdd(pOverCorner), type: 'corner' });
         } else if (lambdaGoalTotal > 0.8 && lambdaCornerTotal > 1.5) {
-            const pGoal = poissonOver(lambdaGoalTotal, 1);
-            const pCorner = poissonOver(lambdaCornerTotal, 1);
+            const pGoal = poissonOver(lambdaGoalTotal, bestGoalLine);
+            const pCorner = poissonOver(lambdaCornerTotal, bestCornerLine);
             const pCombo = pGoal * pCorner * 0.95; 
-            combos.push({ title: `Entrar para Over ${currentGoals + 0.5} Gols + Over ${currentCorners + 0.5} Cantos`, prob: pCombo, odd: calcFairOdd(pCombo), type: 'match' });
+            combos.push({ title: `Entrar para Over ${currentGoals + bestGoalLine - 0.5} Gols + Over ${currentCorners + bestCornerLine - 0.5} Cantos`, prob: pCombo, odd: calcFairOdd(pCombo), type: 'match' });
         } else if (lambdaGoalTotal > 0.85) {
-            const pGoal = poissonOver(lambdaGoalTotal, 1);
-            combos.push({ title: `Entrar para Over ${currentGoals + 0.5} Gols`, prob: pGoal, odd: calcFairOdd(pGoal), type: 'goal' });
+            const pGoal = poissonOver(lambdaGoalTotal, bestGoalLine);
+            combos.push({ title: `Entrar para Over ${currentGoals + bestGoalLine - 0.5} Gols`, prob: pGoal, odd: calcFairOdd(pGoal), type: 'goal' });
         }
     }
 
@@ -399,12 +436,12 @@ const LiveTerminal: React.FC = () => {
         ev: { goal: evGoal, corner: evCorner },
         lines: {
             goals: [
-                { line: `Over ${currentGoals + goalLineOffset - 0.5}`, prob: probGoal1, odd: calcFairOdd(probGoal1) },
-                { line: `Over ${currentGoals + goalLineOffset + 0.5}`, prob: probGoal2, odd: calcFairOdd(probGoal2) }
+                { line: `Over ${currentGoals + bestGoalLine - 0.5}`, prob: probGoal1, odd: calcFairOdd(probGoal1) },
+                { line: `Over ${currentGoals + bestGoalLine + 0.5}`, prob: probGoal2, odd: calcFairOdd(probGoal2) }
             ],
             corners: [
-                { line: `Asiático ${currentCorners + cornerLineOffset}.0`, prob: probCorner1, odd: calcFairOdd(probCorner1) },
-                { line: `Asiático ${currentCorners + cornerLineOffset + 1}.0`, prob: probCorner2, odd: calcFairOdd(probCorner2) }
+                { line: `Asiático ${currentCorners + bestCornerLine}.0`, prob: probCorner1, odd: calcFairOdd(probCorner1) },
+                { line: `Asiático ${currentCorners + bestCornerLine + 1}.0`, prob: probCorner2, odd: calcFairOdd(probCorner2) }
             ]
         },
         stats: { hWin: probHomeWinFT, draw: probDrawFT, aWin: probAwayWinFT, btts: bttsProb },
