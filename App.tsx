@@ -48,33 +48,6 @@ const ProGate: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   );
 };
 
-// Mantemos o Layout fixo, e o React Router troca apenas o componente de dentro.
-const SystemRoutes: React.FC = () => {
-  return (
-    <Layout>
-      <Routes>
-        <Route path="/dashboard" element={<Dashboard />} />
-        
-        <Route path="/scout" element={<ProGate><ScoutIA /></ProGate>} /> 
-        <Route path="/terminal-live" element={<ProGate><LiveTerminal /></ProGate>} />
-        <Route path="/calculators" element={<ProGate><Calculators /></ProGate>} />
-        <Route path="/library" element={<ProGate><SystemLibrary /></ProGate>} />
-        
-        <Route path="/analytics" element={<Analytics />} />
-        <Route path="/goals" element={<Goals />} />
-        <Route path="/mindset" element={<Mindset />} />
-        <Route path="/history" element={<History />} />
-        <Route path="/bankrolls" element={<Bankroll />} />
-        <Route path="/calendar" element={<PerformanceCalendar />} />
-        <Route path="/settings" element={<Settings />} />
-        <Route path="/pro" element={<ProPage />} /> 
-        
-        <Route path="*" element={<Navigate to="/dashboard" replace />} />
-      </Routes>
-    </Layout>
-  );
-};
-
 const AppContent: React.FC = () => {
   const { setSession, isAuthenticated, checkProStatus, isDarkMode } = useBetStore();
   const [isInitializing, setIsInitializing] = useState(true);
@@ -102,18 +75,53 @@ const AppContent: React.FC = () => {
   }, [setSession, checkProStatus]);
 
   if (isInitializing) {
-    return <div className="min-h-screen bg-slate-50 dark:bg-[#000000] flex items-center justify-center" />;
+    return <div className="min-h-screen bg-slate-50 dark:bg-[#000000]" />;
   }
 
+  // =========================================================
+  // 🔴 SE NÃO ESTIVER LOGADO (Renderiza apenas o lado público)
+  // =========================================================
+  if (!isAuthenticated) {
+    return (
+      <>
+        <Routes>
+          <Route path="/" element={<LandingPage />} />
+          <Route path="/login" element={<AuthPage />} />
+          <Route path="/update-password" element={<UpdatePassword />} />
+          {/* Qualquer outra URL joga pro Login */}
+          <Route path="*" element={<Navigate to="/login" replace />} />
+        </Routes>
+        <Toaster />
+      </>
+    );
+  }
+
+  // =========================================================
+  // 🟢 SE ESTIVER LOGADO (Renderiza apenas o lado privado)
+  // =========================================================
   return (
     <>
-      <Routes>
-        <Route path="/" element={isAuthenticated ? <Navigate to="/dashboard" replace /> : <LandingPage />} />
-        <Route path="/login" element={isAuthenticated ? <Navigate to="/dashboard" replace /> : <AuthPage />} />
-        <Route path="/update-password" element={<UpdatePassword />} />
-        {/* Rota Mestre: Se estiver logado, joga para o SystemRoutes */}
-        <Route path="/*" element={isAuthenticated ? <SystemRoutes /> : <Navigate to="/login" replace />} />
-      </Routes>
+      <Layout>
+        <Routes>
+          <Route path="/dashboard" element={<Dashboard />} />
+          <Route path="/analytics" element={<Analytics />} />
+          <Route path="/goals" element={<Goals />} />
+          <Route path="/mindset" element={<Mindset />} />
+          <Route path="/history" element={<History />} />
+          <Route path="/bankrolls" element={<Bankroll />} />
+          <Route path="/calendar" element={<PerformanceCalendar />} />
+          <Route path="/settings" element={<Settings />} />
+          <Route path="/pro" element={<ProPage />} /> 
+
+          {/* Bloqueados via ProGate */}
+          <Route path="/scout" element={<ProGate><ScoutIA /></ProGate>} /> 
+          <Route path="/terminal-live" element={<ProGate><LiveTerminal /></ProGate>} />
+          <Route path="/calculators" element={<ProGate><Calculators /></ProGate>} />
+          <Route path="/library" element={<ProGate><SystemLibrary /></ProGate>} />
+
+          <Route path="*" element={<Navigate to="/dashboard" replace />} />
+        </Routes>
+      </Layout>
       <Toaster />
     </>
   );
