@@ -59,14 +59,6 @@ const Layout: React.FC<LayoutProps> = ({ children, currentView, setView }) => {
   const { isDarkMode, primaryColor, isAuthenticated, isTiltLocked, tiltLockUntil, toast, setToast, hasSeenTutorial, completeTutorial } = useBetStore();
   const [locked, setLocked] = useState(false);
 
-  // 🔥 KAIROS FIX: Se o usuário tentar navegar manualmente no meio do tour (ou se ele ficou travado no limbo),
-  // matamos o tutorial instantaneamente para evitar o "DOM Crash" que congela a tela do user FREE.
-  useEffect(() => {
-    if (!hasSeenTutorial && currentView !== 'dashboard') {
-        completeTutorial();
-    }
-  }, [currentView, hasSeenTutorial, completeTutorial]);
-
   useEffect(() => {
     if (!hasSeenTutorial && isAuthenticated && window.innerWidth < 768) {
       setIsSidebarOpen(true);
@@ -122,9 +114,15 @@ const Layout: React.FC<LayoutProps> = ({ children, currentView, setView }) => {
     }
   };
 
+  // 🔥 KAIROS FIX: O Joyride só monta se o usuário estiver na tela inicial. 
+  // Isso impede que o Joyride quebre o React Router ao tentar renderizar tooltips de páginas que já fecharam.
+  const isDashboard = currentView === 'dashboard';
+  const shouldRunTour = !hasSeenTutorial && isAuthenticated && isDashboard;
+
   return (
     <div className="flex min-h-screen font-sans bg-slate-50 dark:bg-slate-950 transition-colors duration-300 w-full overflow-x-hidden relative">
-      {!hasSeenTutorial && isAuthenticated && (
+      
+      {shouldRunTour && (
         <Joyride
           steps={tutorialSteps}
           run={true}
