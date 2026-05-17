@@ -209,13 +209,9 @@ const ScoutIA: React.FC = () => {
           }
 
           if (data && Array.isArray(data.selections)) {
-              // Filtro de Sanitização (Double Check) Anti-Alucinação
+              // Filtro de Sanitização (Double Check) Anti-Alucinação Refinado
               const safeSelections = data.selections.filter((sel: any) => 
-                  builderMarkets.some(m => 
-                      (sel.marketCategory && m === sel.marketCategory) || 
-                      (sel.market && typeof sel.market === 'string' && typeof m === 'string' && 
-                       (sel.market.toLowerCase().includes(m.toLowerCase().split(' ')[0]) || m.toLowerCase().includes(sel.market.toLowerCase().split(' ')[0])))
-                  )
+                  builderMarkets.includes(sel.marketCategory) || sel.marketCategory === 'Bet Builder Combinado'
               );
 
               if (safeSelections.length === 0) {

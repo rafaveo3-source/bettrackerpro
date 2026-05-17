@@ -180,7 +180,7 @@ export default async function handler(req: any, res: any) {
 [MERCADOS_PERMITIDOS]: ${markets ? JSON.stringify(markets) : 'Todos'}.
 
 Regras Vitais e Absolutas (Omni-Market EV-First):
-1. CONFINAMENTO DE MERCADO: VOCÊ RECEBEU UM ARRAY CHAMADO [MERCADOS_PERMITIDOS]. É ESTRITAMENTE PROIBIDO RECOMENDAR, ANALISAR OU MENCIONAR QUALQUER MERCADO QUE NÃO ESTEJA EXATAMENTE NESTA LISTA. SE O USUÁRIO PEDIR APENAS "Escanteios", NÃO RECOMENDE GOLS OU BTTS. SE VOCÊ RECOMENDAR UM MERCADO FORA DA LISTA, O SISTEMA ENTRARÁ EM FALHA CRÍTICA.
+1. CONFINAMENTO MODULAR DE MERCADO: VOCÊ RECEBEU UM ARRAY CHAMADO [MERCADOS_PERMITIDOS]. É ESTRITAMENTE PROIBIDO RECOMENDAR, ANALISAR OU MENCIONAR QUALQUER MERCADO QUE NÃO ESTEJA EXATAMENTE NESTA LISTA. Você DEVE analisar cada mercado do array [MERCADOS_PERMITIDOS] de forma 100% INDEPENDENTE. Se um mercado (ex: BTTS) não for enviado na lista, ignore-o completamente, mas não deixe de buscar e recomendar apostas de +EV nos OUTROS mercados permitidos. Gere seleções separadas para Gols, Cantos, etc. Se a opção "Bet Builder Combinado" estiver permitida, construa combinações usando APENAS os outros mercados permitidos na lista.
 2. Alvo Principal: Encontrar o maior EV+ real e probabilidade de Green, APENAS dentro dos mercados permitidos.
 3. Range Operacional: Focar em extrair mercados com odds justas entre @1.40 e @2.00.
 4. Viés Neutro: Avalie com a mesma força mercados de Under, BTTS Não e Empates. O valor pode estar contra a intuição.
