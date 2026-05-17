@@ -3,7 +3,7 @@ import { motion } from 'framer-motion';
 import { 
   Sparkles, Scan, Layers, Clock, Zap, Target, CheckCircle2, 
   Square, Goal, Flag, ArrowRight, Plus, ArrowRightLeft, 
-  ShieldAlert, Activity, Info, TrendingUp, TrendingDown, Calculator, FileText, Eraser, AlertTriangle
+  ShieldAlert, Activity, Info, TrendingUp, TrendingDown, Calculator, FileText, Eraser, AlertTriangle, Ban
 } from 'lucide-react';
 import { useBetStore } from '../store/useBetStore';
 import ProTeaserBlock from '../components/ProTeaserBlock';
@@ -78,8 +78,17 @@ const ScoutIA: React.FC = () => {
   const [isScanningScout, setIsScanningScout] = useState(false);
   const [userOdd, setUserOdd] = useState<string>('');
 
-  const AVAILABLE_MARKETS = ['Gols (Overs, Unders, HT/FT)', 'Escanteios (Overs, HT/FT)', 'Bet Builder Combinado'];
+  const AVAILABLE_MARKETS = ['Match Odds (1X2 & Dupla Chance)', 'Gols (Over/Under HT/FT)', 'Escanteios (Over/Under HT/FT)', 'Escanteios (Primeiros 10 Min)', 'Cartões & Faltas (Over/Under)', 'Ambas Marcam (BTTS Sim/Não)'];
   const [builderMarkets, setBuilderMarkets] = useState<string[]>([...AVAILABLE_MARKETS]);
+
+  const dataHelperText = React.useMemo(() => {
+      let msg = "";
+      if (builderMarkets.some(m => m.includes('Cartões'))) msg += "⚠️ Para cartões, é obrigatório colar estatísticas de faltas e histórico do árbitro. ";
+      if (builderMarkets.some(m => m.includes('10 Min') || m.includes('Escanteios'))) msg += "⚠️ Certifique-se de colar os gráficos de pressão por minuto (AP). ";
+      if (builderMarkets.some(m => m.includes('Gols') || m.includes('1X2'))) msg += "⚠️ Inclua dados de Chutes no Alvo, xG e Desfalques. ";
+      if (!msg) msg = "⚠️ Selecione mercados acima para ver os dados necessários.";
+      return msg.trim();
+  }, [builderMarkets]);
 
   const scoutGridInputRef = useRef<HTMLInputElement>(null);
   const VALID_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
@@ -192,6 +201,13 @@ const ScoutIA: React.FC = () => {
           const data = await response.json();
           if (!response.ok) throw new Error(data.error || 'Falha no processamento NLP.');
           
+          if (data && data.NO_BET) {
+              setScoutBuilderResult(data);
+              handleIncrementScan();
+              setToast({ type: 'success', message: 'Análise Quantitativa Finalizada.' });
+              return;
+          }
+
           if (data && Array.isArray(data.selections)) {
               setScoutBuilderResult(data);
               handleIncrementScan();
@@ -459,6 +475,10 @@ const ScoutIA: React.FC = () => {
                       )}
                    </div>
 
+                   <div className="bg-amber-50/50 dark:bg-amber-500/10 border-b border-amber-200/50 dark:border-amber-500/20 px-4 py-2.5">
+                       <p className="text-[10px] font-bold text-amber-600 dark:text-amber-400 leading-relaxed uppercase tracking-widest flex items-start sm:items-center gap-2"><AlertTriangle size={14} className="shrink-0 mt-0.5 sm:mt-0" /> <span>{dataHelperText}</span></p>
+                   </div>
+
                    <textarea
                        value={scoutTextData}
                        onChange={(e) => setScoutTextData(e.target.value)}
@@ -484,6 +504,14 @@ const ScoutIA: React.FC = () => {
                        </button>
                    </div>
                 </div>
+
+                {scoutBuilderResult && scoutBuilderResult.NO_BET && (
+                    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/30 rounded-2xl p-6 shadow-sm relative mt-10 text-center">
+                        <Ban size={48} className="text-red-500 mx-auto mb-4" />
+                        <h3 className="text-xl font-black text-red-600 dark:text-red-400 uppercase tracking-widest mb-2">NO BET / SEM VALOR</h3>
+                        <p className="text-sm font-medium text-red-500/80 dark:text-red-400/80 max-w-lg mx-auto">{scoutBuilderResult.reason}</p>
+                    </motion.div>
+                )}
 
                 {scoutBuilderResult && scoutBuilderResult.selections && (
                     <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="bg-white dark:bg-[#1C1C1E] border border-indigo-200 dark:border-indigo-500/30 rounded-2xl p-6 shadow-sm relative overflow-hidden mt-10">

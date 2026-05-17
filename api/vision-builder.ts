@@ -176,20 +176,28 @@ export default async function handler(req: any, res: any) {
     // ==========================================
     let finalValidJson = null; 
 
-    const prompt = `Atue como um Extrator Quantitativo de Dados Pinnacle. Leia o texto colado e estruture estritamente em JSON.
-Regras Vitais:
-1. Identifique os times (Ex: "Salford City v Walsall").
-2. Extraia "matchOdds1x2" se houver.
-3. Extraia o "teamStats" (Média de Gols, Cantos a Favor e Remates/Shots). Se não achar Remates, assuma 10.0.
-4. Na chave "viablePicks", extraia linhas de Gols (FT e HT), Cantos e Races presentes no texto.
+    const prompt = `Atue como um Analista Quantitativo Institucional e Extrator de Dados Pinnacle. Leia o texto colado e estruture estritamente em JSON.
+Mercados Selecionados pelo Usuário: ${markets ? markets.join(', ') : 'Todos'}.
+
+Regras Vitais e Absolutas (Omni-Market EV-First):
+1. Alvo Principal: Encontrar o maior EV+ real e probabilidade de Green.
+2. Range Operacional: Focar em extrair mercados com odds justas entre @1.40 e @2.00.
+3. Viés Neutro: Avalie com a mesma força mercados de Under, BTTS Não e Empates. O valor pode estar contra a intuição.
+4. Kill Switch (Regra de Aborto): Se o texto colado não contiver dados suficientes para embasar matematicamente uma aposta, ou se NENHUM mercado tiver EV+ claro, VOCÊ DEVE RETORNAR ESTRITAMENTE: {"NO_BET": true, "reason": "Faltam dados críticos (ex: xG, cantos) ou não há valor (+EV) claro."}. É terminantemente proibido alucinar apostas ou forçar recomendações!
+5. Se houver valor, estruture os dados:
+   - Identifique os times (Ex: "Salford City v Walsall").
+   - Extraia "matchOdds1x2" se houver.
+   - Extraia o "teamStats" (Média de Gols, Cantos a Favor, Cartões e Remates/Shots). Se não achar Remates, assuma 10.0.
+   - Na chave "viablePicks", extraia linhas apenas dos mercados que apresentarem EV+, respeitando o Range Operacional.
 
 TEXTO BRUTO:
 """
 ${textData}
 """
 
-Retorne APENAS JSON válido, seguindo esta exata estrutura de chaves:
-{"matches":[{"matchName":"","matchOdds1x2":{"home":2.0,"draw":3.0,"away":3.0},"teamStats":{"home":{"goals":1.5,"corners":5.0,"shots":10.0},"away":{"goals":1.0,"corners":4.0,"shots":8.0}},"viablePicks":[{"market":"","prob":80,"sampleSize":10,"extractedOdd":1.80}]}]}`;
+Se houver valor, retorne APENAS JSON válido, seguindo esta exata estrutura:
+{"matches":[{"matchName":"","matchOdds1x2":{"home":2.0,"draw":3.0,"away":3.0},"teamStats":{"home":{"goals":1.5,"corners":5.0,"shots":10.0},"away":{"goals":1.0,"corners":4.0,"shots":8.0}},"viablePicks":[{"market":"","prob":80,"sampleSize":10,"extractedOdd":1.80}]}]}
+Se não houver valor, retorne APENAS: {"NO_BET": true, "reason": "Motivo da rejeição."}`;
 
     let textResult = "";
     try {
@@ -218,6 +226,11 @@ Retorne APENAS JSON válido, seguindo esta exata estrutura de chaves:
         const jsonMatch = textResult.match(/\{[\s\S]*\}|\[[\s\S]*\]/);
         if (jsonMatch) textResult = jsonMatch[0];
         const parsedData = JSON.parse(textResult);
+        
+        if (parsedData.NO_BET) {
+            return res.status(200).json({ NO_BET: true, reason: parsedData.reason });
+        }
+        
         if (Array.isArray(parsedData)) finalValidJson = { matches: parsedData };
         else if (parsedData && Array.isArray(parsedData.matches)) finalValidJson = parsedData;
         else if (parsedData && parsedData.matchName) finalValidJson = { matches: [parsedData] };
@@ -499,7 +512,9 @@ Retorne APENAS JSON válido, seguindo esta exata estrutura de chaves:
     opportunities = Array.from(uniqueOps.values()).sort((a, b) => b.score - a.score);
     const topOpportunities = opportunities.slice(0, 3);
 
-    if (topOpportunities.length === 0) throw new Error(`NO BET: O Game Script não ofereceu Valor Esperado (EV+) realista no range de Odd @1.55 - @2.50.`);
+    if (topOpportunities.length === 0) {
+        return res.status(200).json({ NO_BET: true, reason: "NO BET: O Game Script não encontrou Valor Esperado (EV+) realista no range de Odds operacional. O mercado parece bem ajustado." });
+    }
 
     const bestOpp = topOpportunities[0];
     const finalSelections = bestOpp.legs.map((l:any) => ({
