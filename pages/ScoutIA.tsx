@@ -81,6 +81,15 @@ const ScoutIA: React.FC = () => {
   const AVAILABLE_MARKETS = ['Match Odds (1X2 & Dupla Chance)', 'Gols (Over/Under HT/FT)', 'Escanteios (Over/Under HT/FT)', 'Escanteios (Primeiros 10 Min)', 'Cartões & Faltas (Over/Under)', 'Ambas Marcam (BTTS Sim/Não)'];
   const [builderMarkets, setBuilderMarkets] = useState<string[]>([...AVAILABLE_MARKETS]);
 
+  const MARKET_TYPE_MAPPING: Record<string, string[]> = {
+    'Match Odds (1X2 & Dupla Chance)': ['MATCH_ODDS_HOME', 'MATCH_ODDS_AWAY', 'MATCH_ODDS_DRAW', 'DOUBLE_CHANCE'],
+    'Gols (Over/Under HT/FT)': ['GOALS_OVER', 'GOALS_UNDER'],
+    'Escanteios (Over/Under HT/FT)': ['CORNERS_OVER', 'CORNERS_UNDER'],
+    'Escanteios (Primeiros 10 Min)': ['CORNERS_10_MIN'],
+    'Cartões & Faltas (Over/Under)': ['CARDS_OVER', 'CARDS_UNDER'],
+    'Ambas Marcam (BTTS Sim/Não)': ['BTTS_YES', 'BTTS_NO']
+  };
+
   const dataHelperText = React.useMemo(() => {
       let msg = "";
       if (builderMarkets.some(m => m.includes('Cartões'))) msg += "⚠️ Para cartões, é obrigatório colar estatísticas de faltas e histórico do árbitro. ";
@@ -189,12 +198,14 @@ const ScoutIA: React.FC = () => {
       setUserOdd('');
 
       try {
+          const allowedMarketTypes = builderMarkets.flatMap(m => MARKET_TYPE_MAPPING[m] || []);
+
           const response = await fetch('/api/vision-builder', {
               method: 'POST', headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ 
                   textData: scoutTextData, 
                   email: userEmail,
-                  markets: builderMarkets
+                  allowedMarketTypes
               })
           });
 
@@ -202,39 +213,42 @@ const ScoutIA: React.FC = () => {
           if (!response.ok) throw new Error(data.error || 'Falha no processamento NLP.');
           
           if (data && data.NO_BET) {
-              setScoutBuilderResult(data);
+              setScoutBuilderResult({ type: 'NO_BET_REAL', ...data });
               handleIncrementScan();
               setToast({ type: 'success', message: 'Análise Quantitativa Finalizada.' });
               return;
           }
 
           if (data && Array.isArray(data.selections)) {
-              // Filtro de Sanitização (Double Check) Anti-Alucinação via Keyword Matching Normalizado
-              const safeSelections = data.selections.filter((sel: any) => {
-                  if (!sel.marketCategory) return false;
-                  const cat = sel.marketCategory.toLowerCase();
-                  const marketName = (sel.market || '').toLowerCase();
-
-                  // Sempre libera se for Bet Builder Combinado
-                  if (cat.includes('builder') || cat.includes('combinado')) return true;
-
-                  // Verifica se a categoria enviada pela IA bate com as palavras-chave dos botões selecionados
-                  return builderMarkets.some(uiMarket => {
-                      const ui = uiMarket.toLowerCase();
-                      if (ui.includes('gols') && (cat.includes('gols') || cat.includes('over') || cat.includes('under') || marketName.includes('gols'))) return true;
-                      if (ui.includes('escanteios (over') && (cat.includes('escanteio') || cat.includes('canto') || marketName.includes('escanteio')) && !cat.includes('10 min')) return true;
-                      if (ui.includes('10 min') && (cat.includes('10 min') || marketName.includes('10 min'))) return true;
-                      if (ui.includes('cartões') && (cat.includes('cartão') || cat.includes('cartoes') || cat.includes('falta') || marketName.includes('cartão'))) return true;
-                      if (ui.includes('ambas') && (cat.includes('ambas') || cat.includes('btts') || marketName.includes('btts') || marketName.includes('ambas'))) return true;
-                      if (ui.includes('match odds') && (cat.includes('match') || cat.includes('1x2') || cat.includes('dupla') || cat.includes('vence') || marketName.includes('vence'))) return true;
-                      return false;
-                  });
+              console.log({
+                  backendSelections: data.selections,
+                  allowedMarketTypes
               });
 
+              // Filtro de Sanitização (Double Check) via TIPOS ESTRUTURADOS
+              const safeSelections = data.selections.filter((sel: any) => {
+                  if (!sel.marketType) {
+                      console.warn("Erro de categorização do motor: marketType ausente", sel);
+                      return true; // FALLBACK SEGURO: Se a IA esquecer, não mascara como NO BET, deixa passar para o QA ver a string. (Ou podemos dropar com log). O usuário pediu para não converter para NO BET.
+                  }
+                  
+                  // Se o backend enviar um combo que contenha múltiplos tipos
+                  if (Array.isArray(sel.marketType)) {
+                      return sel.marketType.every((t: string) => allowedMarketTypes.includes(t));
+                  }
+
+                  return allowedMarketTypes.includes(sel.marketType);
+              });
+
+              const rejectedSelections = data.selections.filter((sel: any) => !safeSelections.includes(sel));
+              if (rejectedSelections.length > 0) {
+                  console.log({ rejectedSelections });
+              }
+
               if (safeSelections.length === 0) {
-                  setScoutBuilderResult({ NO_BET: true, reason: 'Coleira de IA Ativada: Nenhuma aposta +EV encontrada DENTRO dos mercados que você permitiu. A IA tentou alucinar fora do escopo e foi bloqueada.' });
+                  setScoutBuilderResult({ type: 'SANITIZATION_ERROR', NO_BET: true, reason: 'Erro de Sanitização: As apostas sugeridas estão fora dos Market Types permitidos.' });
                   handleIncrementScan();
-                  setToast({ type: 'success', message: 'Análise Concluída (Fora de Escopo).' });
+                  setToast({ type: 'error', message: 'Análise bloqueada no filtro de sanitização estrutural.' });
                   return;
               }
 

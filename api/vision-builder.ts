@@ -155,7 +155,7 @@ export default async function handler(req: any, res: any) {
     const origin = req.headers.origin || req.headers.referer || '';
     if (process.env.NODE_ENV === 'production' && (!origin || !origin.includes('bettrackerpro.com.br'))) return res.status(403).json({ error: 'Acesso negado.' });
 
-    const { textData, email, markets } = req.body; 
+    const { textData, email, allowedMarketTypes } = req.body; 
     
     const geminiKey = process.env.GEMINI_API_KEY;
     const openaiKey = process.env.OPENAI_API_KEY;
@@ -177,19 +177,19 @@ export default async function handler(req: any, res: any) {
     let finalValidJson = null; 
 
     const prompt = `Atue como um Analista Quantitativo Institucional e Extrator de Dados Pinnacle. Leia o texto colado e estruture estritamente em JSON.
-[MERCADOS_PERMITIDOS]: ${markets ? JSON.stringify(markets) : 'Todos'}.
+[ALLOWED_MARKET_TYPES] (ENUMS Permitidos): ${allowedMarketTypes ? JSON.stringify(allowedMarketTypes) : 'Todos'}.
 
 Regras Vitais e Absolutas (Omni-Market EV-First):
-1. CONFINAMENTO MODULAR DE MERCADO: VOCÊ RECEBEU UM ARRAY CHAMADO [MERCADOS_PERMITIDOS]. É ESTRITAMENTE PROIBIDO RECOMENDAR, ANALISAR OU MENCIONAR QUALQUER MERCADO QUE NÃO ESTEJA EXATAMENTE NESTA LISTA. Você DEVE analisar cada mercado do array [MERCADOS_PERMITIDOS] de forma 100% INDEPENDENTE. Se um mercado (ex: BTTS) não for enviado na lista, ignore-o completamente, mas não deixe de buscar e recomendar apostas de +EV nos OUTROS mercados permitidos. Gere seleções separadas para Gols, Cantos, etc. Se a opção "Bet Builder Combinado" estiver permitida, construa combinações usando APENAS os outros mercados permitidos na lista.
-2. Alvo Principal: Encontrar o maior EV+ real e probabilidade de Green, APENAS dentro dos mercados permitidos.
+1. CONFINAMENTO DE ENUMS: VOCÊ RECEBEU UM ARRAY [ALLOWED_MARKET_TYPES]. É ESTRITAMENTE PROIBIDO RECOMENDAR, ANALISAR OU MENCIONAR QUALQUER MERCADO CUJO ENUM NÃO ESTEJA EXATAMENTE NESTA LISTA. Você DEVE analisar cada mercado do array de forma 100% INDEPENDENTE. Se um tipo não for enviado, ignore-o completamente.
+2. Alvo Principal: Encontrar o maior EV+ real e probabilidade de Green.
 3. Range Operacional: Focar em extrair mercados com odds justas entre @1.40 e @2.00.
-4. Viés Neutro: Avalie com a mesma força mercados de Under, BTTS Não e Empates. O valor pode estar contra a intuição.
-5. Kill Switch (Regra de Aborto): Se o texto colado não contiver dados suficientes para embasar matematicamente uma aposta, ou se NENHUM mercado tiver EV+ claro, VOCÊ DEVE RETORNAR ESTRITAMENTE: {"NO_BET": true, "reason": "Faltam dados críticos (ex: xG, cantos) ou não há valor (+EV) claro."}. É terminantemente proibido alucinar apostas ou forçar recomendações!
-6. Se houver valor, estruture os dados:
-   - Identifique os times (Ex: "Salford City v Walsall").
-   - Extraia "matchOdds1x2" se houver.
-   - Extraia o "teamStats" (Média de Gols, Cantos a Favor, Cartões e Remates/Shots). Se não achar Remates, assuma 10.0.
-   - Na chave "viablePicks", extraia linhas apenas dos mercados que apresentarem EV+, respeitando o Range Operacional. Para cada pick, VOCÊ DEVE retornar "marketCategory" contendo a exata string do array [MERCADOS_PERMITIDOS] que autorizou essa recomendação.
+4. Viés Neutro: Avalie com a mesma força mercados de Under, BTTS Não e Empates.
+5. Kill Switch (Regra de Aborto): Se não houver valor ou os dados forem insuficientes, retorne ESTRITAMENTE: {"NO_BET": true, "reason": "Faltam dados ou não há valor (+EV)."}. É terminantemente proibido alucinar apostas ou forçar recomendações!
+6. Estruturação Rigorosa de marketType:
+   - Identifique os times.
+   - Extraia "teamStats".
+   - Na chave "viablePicks", extraia linhas apresentando EV+.
+   - IMPORTANTE: Para cada pick, VOCÊ DEVE retornar "marketType" EXATAMENTE como um dos enums da lista [ALLOWED_MARKET_TYPES]. (Exemplo: "GOALS_OVER", "CORNERS_UNDER", "BTTS_NO").
 
 TEXTO BRUTO:
 """
@@ -197,7 +197,7 @@ ${textData}
 """
 
 Se houver valor, retorne APENAS JSON válido, seguindo esta exata estrutura:
-{"matches":[{"matchName":"","matchOdds1x2":{"home":2.0,"draw":3.0,"away":3.0},"teamStats":{"home":{"goals":1.5,"corners":5.0,"shots":10.0},"away":{"goals":1.0,"corners":4.0,"shots":8.0}},"viablePicks":[{"market":"","marketCategory":"","prob":80,"sampleSize":10,"extractedOdd":1.80}]}]}
+{"matches":[{"matchName":"","matchOdds1x2":{"home":2.0,"draw":3.0,"away":3.0},"teamStats":{"home":{"goals":1.5,"corners":5.0,"shots":10.0},"away":{"goals":1.0,"corners":4.0,"shots":8.0}},"viablePicks":[{"market":"Mais de 2.5 Gols","marketType":"GOALS_OVER","prob":80,"sampleSize":10,"extractedOdd":1.80}]}]}
 Se não houver valor, retorne APENAS: {"NO_BET": true, "reason": "Motivo da rejeição."}`;
 
     let textResult = "";
@@ -409,7 +409,7 @@ Se não houver valor, retorne APENAS: {"NO_BET": true, "reason": "Motivo da reje
             if (finalOdd > 2.50 || finalOdd < 1.10) continue; 
 
             allProcessedLegs.push({
-                match: match.matchName, market: pick.market, marketCategory: pick.marketCategory, normHash: mkt.norm.hash,
+                match: match.matchName, market: pick.market, marketType: pick.marketType, normHash: mkt.norm.hash,
                 mktType: mkt.norm.type, mktTarget: mkt.norm.target, 
                 rawProb: rawProb, extractedOdd: finalOdd, confidence: 1.0, samplePenalty: 1.0 
             });
@@ -472,7 +472,8 @@ Se não houver valor, retorne APENAS: {"NO_BET": true, "reason": "Motivo da reje
 
             if (combOdd >= BUILDER_MIN && combOdd <= BUILDER_MAX && edge >= EDGE_MIN) {
                 const score = edge * entropyWeight(combProb) * (isSameGame ? 2.5 : 1.0);
-                opportunities.push({ type: `Smart Builder: ${detectedGameScript}`, legs: [l1, l2], prob: combProb, odd: combOdd, ev, edge, score });
+                const comboMarketTypes = [l1.marketType, l2.marketType].filter(Boolean);
+                opportunities.push({ type: `Smart Builder: ${detectedGameScript}`, legs: [l1, l2], marketType: comboMarketTypes, prob: combProb, odd: combOdd, ev, edge, score });
             }
         }
     }
@@ -495,7 +496,8 @@ Se não houver valor, retorne APENAS: {"NO_BET": true, "reason": "Motivo da reje
 
                 if (combOdd >= BUILDER_MIN && combOdd <= BUILDER_MAX && edge >= EDGE_MIN) {
                     const score = edge * entropyWeight(combProb) * 3.0;
-                    opportunities.push({ type: `Super Builder: ${detectedGameScript}`, legs: [l1,l2,l3], prob: combProb, odd: combOdd, ev: (combProb * combOdd) - 1, edge, score });
+                    const comboMarketTypes = [l1.marketType, l2.marketType, l3.marketType].filter(Boolean);
+                    opportunities.push({ type: `Super Builder: ${detectedGameScript}`, legs: [l1,l2,l3], marketType: comboMarketTypes, prob: combProb, odd: combOdd, ev: (combProb * combOdd) - 1, edge, score });
                 }
             }
         }
@@ -519,7 +521,7 @@ Se não houver valor, retorne APENAS: {"NO_BET": true, "reason": "Motivo da reje
 
     const bestOpp = topOpportunities[0];
     const finalSelections = bestOpp.legs.map((l:any) => ({
-        match: l.match, market: l.market, marketCategory: l.marketCategory, prob: Math.round(l.rawProb * 100), extractedOdd: l.extractedOdd
+        match: l.match, market: l.market, marketType: l.marketType, prob: Math.round(l.rawProb * 100), extractedOdd: l.extractedOdd
     }));
 
     const combinedProb = Math.round(bestOpp.prob * 100);
