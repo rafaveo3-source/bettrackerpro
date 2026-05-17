@@ -177,18 +177,19 @@ export default async function handler(req: any, res: any) {
     let finalValidJson = null; 
 
     const prompt = `Atue como um Analista Quantitativo Institucional e Extrator de Dados Pinnacle. Leia o texto colado e estruture estritamente em JSON.
-Mercados Selecionados pelo Usuário: ${markets ? markets.join(', ') : 'Todos'}.
+[MERCADOS_PERMITIDOS]: ${markets ? JSON.stringify(markets) : 'Todos'}.
 
 Regras Vitais e Absolutas (Omni-Market EV-First):
-1. Alvo Principal: Encontrar o maior EV+ real e probabilidade de Green.
-2. Range Operacional: Focar em extrair mercados com odds justas entre @1.40 e @2.00.
-3. Viés Neutro: Avalie com a mesma força mercados de Under, BTTS Não e Empates. O valor pode estar contra a intuição.
-4. Kill Switch (Regra de Aborto): Se o texto colado não contiver dados suficientes para embasar matematicamente uma aposta, ou se NENHUM mercado tiver EV+ claro, VOCÊ DEVE RETORNAR ESTRITAMENTE: {"NO_BET": true, "reason": "Faltam dados críticos (ex: xG, cantos) ou não há valor (+EV) claro."}. É terminantemente proibido alucinar apostas ou forçar recomendações!
-5. Se houver valor, estruture os dados:
+1. CONFINAMENTO DE MERCADO: VOCÊ RECEBEU UM ARRAY CHAMADO [MERCADOS_PERMITIDOS]. É ESTRITAMENTE PROIBIDO RECOMENDAR, ANALISAR OU MENCIONAR QUALQUER MERCADO QUE NÃO ESTEJA EXATAMENTE NESTA LISTA. SE O USUÁRIO PEDIR APENAS "Escanteios", NÃO RECOMENDE GOLS OU BTTS. SE VOCÊ RECOMENDAR UM MERCADO FORA DA LISTA, O SISTEMA ENTRARÁ EM FALHA CRÍTICA.
+2. Alvo Principal: Encontrar o maior EV+ real e probabilidade de Green, APENAS dentro dos mercados permitidos.
+3. Range Operacional: Focar em extrair mercados com odds justas entre @1.40 e @2.00.
+4. Viés Neutro: Avalie com a mesma força mercados de Under, BTTS Não e Empates. O valor pode estar contra a intuição.
+5. Kill Switch (Regra de Aborto): Se o texto colado não contiver dados suficientes para embasar matematicamente uma aposta, ou se NENHUM mercado tiver EV+ claro, VOCÊ DEVE RETORNAR ESTRITAMENTE: {"NO_BET": true, "reason": "Faltam dados críticos (ex: xG, cantos) ou não há valor (+EV) claro."}. É terminantemente proibido alucinar apostas ou forçar recomendações!
+6. Se houver valor, estruture os dados:
    - Identifique os times (Ex: "Salford City v Walsall").
    - Extraia "matchOdds1x2" se houver.
    - Extraia o "teamStats" (Média de Gols, Cantos a Favor, Cartões e Remates/Shots). Se não achar Remates, assuma 10.0.
-   - Na chave "viablePicks", extraia linhas apenas dos mercados que apresentarem EV+, respeitando o Range Operacional.
+   - Na chave "viablePicks", extraia linhas apenas dos mercados que apresentarem EV+, respeitando o Range Operacional. Para cada pick, VOCÊ DEVE retornar "marketCategory" contendo a exata string do array [MERCADOS_PERMITIDOS] que autorizou essa recomendação.
 
 TEXTO BRUTO:
 """
@@ -196,7 +197,7 @@ ${textData}
 """
 
 Se houver valor, retorne APENAS JSON válido, seguindo esta exata estrutura:
-{"matches":[{"matchName":"","matchOdds1x2":{"home":2.0,"draw":3.0,"away":3.0},"teamStats":{"home":{"goals":1.5,"corners":5.0,"shots":10.0},"away":{"goals":1.0,"corners":4.0,"shots":8.0}},"viablePicks":[{"market":"","prob":80,"sampleSize":10,"extractedOdd":1.80}]}]}
+{"matches":[{"matchName":"","matchOdds1x2":{"home":2.0,"draw":3.0,"away":3.0},"teamStats":{"home":{"goals":1.5,"corners":5.0,"shots":10.0},"away":{"goals":1.0,"corners":4.0,"shots":8.0}},"viablePicks":[{"market":"","marketCategory":"","prob":80,"sampleSize":10,"extractedOdd":1.80}]}]}
 Se não houver valor, retorne APENAS: {"NO_BET": true, "reason": "Motivo da rejeição."}`;
 
     let textResult = "";
@@ -408,7 +409,7 @@ Se não houver valor, retorne APENAS: {"NO_BET": true, "reason": "Motivo da reje
             if (finalOdd > 2.50 || finalOdd < 1.10) continue; 
 
             allProcessedLegs.push({
-                match: match.matchName, market: pick.market, normHash: mkt.norm.hash,
+                match: match.matchName, market: pick.market, marketCategory: pick.marketCategory, normHash: mkt.norm.hash,
                 mktType: mkt.norm.type, mktTarget: mkt.norm.target, 
                 rawProb: rawProb, extractedOdd: finalOdd, confidence: 1.0, samplePenalty: 1.0 
             });
@@ -518,7 +519,7 @@ Se não houver valor, retorne APENAS: {"NO_BET": true, "reason": "Motivo da reje
 
     const bestOpp = topOpportunities[0];
     const finalSelections = bestOpp.legs.map((l:any) => ({
-        match: l.match, market: l.market, prob: Math.round(l.rawProb * 100), extractedOdd: l.extractedOdd
+        match: l.match, market: l.market, marketCategory: l.marketCategory, prob: Math.round(l.rawProb * 100), extractedOdd: l.extractedOdd
     }));
 
     const combinedProb = Math.round(bestOpp.prob * 100);

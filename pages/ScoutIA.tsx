@@ -209,6 +209,24 @@ const ScoutIA: React.FC = () => {
           }
 
           if (data && Array.isArray(data.selections)) {
+              // Filtro de Sanitização (Double Check) Anti-Alucinação
+              const safeSelections = data.selections.filter((sel: any) => 
+                  builderMarkets.some(m => 
+                      (sel.marketCategory && m === sel.marketCategory) || 
+                      (sel.market && typeof sel.market === 'string' && typeof m === 'string' && 
+                       (sel.market.toLowerCase().includes(m.toLowerCase().split(' ')[0]) || m.toLowerCase().includes(sel.market.toLowerCase().split(' ')[0])))
+                  )
+              );
+
+              if (safeSelections.length === 0) {
+                  setScoutBuilderResult({ NO_BET: true, reason: 'Coleira de IA Ativada: Nenhuma aposta +EV encontrada DENTRO dos mercados que você permitiu. A IA tentou alucinar fora do escopo e foi bloqueada.' });
+                  handleIncrementScan();
+                  setToast({ type: 'success', message: 'Análise Concluída (Fora de Escopo).' });
+                  return;
+              }
+
+              data.selections = safeSelections;
+
               setScoutBuilderResult(data);
               handleIncrementScan();
               setToast({ type: 'success', message: 'Game Script Quantitativo Gerado!' });
