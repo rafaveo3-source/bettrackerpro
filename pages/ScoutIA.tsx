@@ -209,10 +209,27 @@ const ScoutIA: React.FC = () => {
           }
 
           if (data && Array.isArray(data.selections)) {
-              // Filtro de Sanitização (Double Check) Anti-Alucinação Refinado
-              const safeSelections = data.selections.filter((sel: any) => 
-                  builderMarkets.includes(sel.marketCategory) || sel.marketCategory === 'Bet Builder Combinado'
-              );
+              // Filtro de Sanitização (Double Check) Anti-Alucinação via Keyword Matching Normalizado
+              const safeSelections = data.selections.filter((sel: any) => {
+                  if (!sel.marketCategory) return false;
+                  const cat = sel.marketCategory.toLowerCase();
+                  const marketName = (sel.market || '').toLowerCase();
+
+                  // Sempre libera se for Bet Builder Combinado
+                  if (cat.includes('builder') || cat.includes('combinado')) return true;
+
+                  // Verifica se a categoria enviada pela IA bate com as palavras-chave dos botões selecionados
+                  return builderMarkets.some(uiMarket => {
+                      const ui = uiMarket.toLowerCase();
+                      if (ui.includes('gols') && (cat.includes('gols') || cat.includes('over') || cat.includes('under') || marketName.includes('gols'))) return true;
+                      if (ui.includes('escanteios (over') && (cat.includes('escanteio') || cat.includes('canto') || marketName.includes('escanteio')) && !cat.includes('10 min')) return true;
+                      if (ui.includes('10 min') && (cat.includes('10 min') || marketName.includes('10 min'))) return true;
+                      if (ui.includes('cartões') && (cat.includes('cartão') || cat.includes('cartoes') || cat.includes('falta') || marketName.includes('cartão'))) return true;
+                      if (ui.includes('ambas') && (cat.includes('ambas') || cat.includes('btts') || marketName.includes('btts') || marketName.includes('ambas'))) return true;
+                      if (ui.includes('match odds') && (cat.includes('match') || cat.includes('1x2') || cat.includes('dupla') || cat.includes('vence') || marketName.includes('vence'))) return true;
+                      return false;
+                  });
+              });
 
               if (safeSelections.length === 0) {
                   setScoutBuilderResult({ NO_BET: true, reason: 'Coleira de IA Ativada: Nenhuma aposta +EV encontrada DENTRO dos mercados que você permitiu. A IA tentou alucinar fora do escopo e foi bloqueada.' });
