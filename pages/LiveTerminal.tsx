@@ -245,8 +245,20 @@ const LiveTerminal: React.FC = () => {
     const isTrap = trapScore > 60;
     const noBet = trapScore > 80;
 
+    // 4.5 MARKET REGIME ENGINE
+    let regimeType = 'balanced';
+    if (Math.abs(scoreDiff) >= 2 || (scoreDiff > 0 && inputs.minute > 75 && totalPPM < 0.8)) {
+        regimeType = 'kill_state';
+    } else if ((inputs.apH > 60 && inputs.sotH < 2) || (inputs.apA > 60 && inputs.sotA < 2)) {
+        regimeType = 'sterile_pressure';
+    } else if (inputs.minute > 75 && (inputs.isKnockout || scoreDiff <= 0) && (totalPPM > 1.2)) {
+        regimeType = 'blitz_final';
+    } else if (inputs.gamePace === 'chaotic' && inputs.sotH >= 3 && inputs.sotA >= 3) {
+        regimeType = 'chaos_match';
+    }
+
     // Kill-State (Morte Térmica da Partida)
-    const isKillState = trapScore > 65 || (totalPPM < 0.7 && inputs.minute > 70);
+    const isKillState = regimeType === 'kill_state' || trapScore > 65 || (totalPPM < 0.7 && inputs.minute > 70);
     if (isKillState) {
         timeDecay = 0.3; // Decay super agressivo para punir Overs
     }
@@ -349,7 +361,16 @@ const LiveTerminal: React.FC = () => {
 
     const probHScores = inputs.scoreH > 0 ? 1 : (1 - Math.exp(-lambdaGoalTotalH));
     const probAScores = inputs.scoreA > 0 ? 1 : (1 - Math.exp(-lambdaGoalTotalA));
-    const bttsProb = Math.min(0.97, probHScores * probAScores * ((inputs.scoreH === 0 && inputs.scoreA === 0) ? 0.92 : 0.97));
+    let baseBtts = probHScores * probAScores * ((inputs.scoreH === 0 && inputs.scoreA === 0) ? 0.92 : 0.97);
+    
+    // BTTS Unilateral Pressure Engine
+    if (inputs.scoreH === 0 || inputs.scoreA === 0) {
+        if ((inputs.apH > 60 && inputs.sotH >= 4 && inputs.apA < 20 && inputs.sotA <= 1) || 
+            (inputs.apA > 60 && inputs.sotA >= 4 && inputs.apH < 20 && inputs.sotH <= 1)) {
+            baseBtts *= 0.4; // Despenca a chance de ambas marcam se a pressão for unilateral
+        }
+    }
+    const bttsProb = Math.min(0.97, baseBtts);
 
     // 7. SYSTEM STABILITY SCORE
     let stabilityScore = 100 - trapScore;
@@ -373,48 +394,73 @@ const LiveTerminal: React.FC = () => {
         finalReason = "MERCADO CARO (Sem Valor Matemático): Nenhuma linha operacional real do Ladder possui EV >= +3%. A casa esmagou a Odd.";
     }
 
-    // 8. COMBOS EV+ CORRELACIONADOS (Entradas Diretas)
-    const combos = [];
+    // 8. MARKET ORCHESTRATION ENGINE (Eligibility & Priority Score)
+    const combosRaw = [];
+    const stabilityModifier = (100 - trapScore) / 100; // 0 a 1
+
     if (!finalNoBet) {
+        // Market Eligibility
+        const allowOverGoals = !['kill_state', 'sterile_pressure'].includes(regimeType);
+        const allowOverCorners = !['kill_state'].includes(regimeType);
+        
+        // Match Odds (Home / Away)
         if (inputs.sotA - inputs.sotH >= 3 && qualModA > 1.2) {
             const oddAWin = probAwayWinFT > 0 ? 1 / probAwayWinFT : 99;
+            const fit = regimeType === 'sterile_pressure' ? 0.7 : 1.2;
             if (oddAWin >= 1.50) {
-                combos.push({ title: "Vitória Seca do Visitante", prob: probAwayWinFT, odd: calcFairOdd(probAwayWinFT), type: 'match' });
-            } else {
+                combosRaw.push({ title: "Vitória Seca do Visitante", prob: probAwayWinFT, evBase: evGoal ?? 0, fit, type: 'match', confText: 'Confiança Moderada (Match Odds)' });
+            } else if (allowOverGoals) {
                 const reqG = bestGoalLine;
                 const pCombo = probAwayWinFT * poissonOver(lambdaGoalTotal, reqG) * 0.95;
-                combos.push({ title: `Vitória Visitante + Over ${currentGoals + bestGoalLine - 0.5} Gols`, prob: pCombo, odd: calcFairOdd(pCombo), type: 'match' });
+                combosRaw.push({ title: `Vitória Visitante + Over ${currentGoals + bestGoalLine - 0.5} Gols`, prob: pCombo, evBase: evGoal ?? 0, fit: 1.5, type: 'match', confText: 'Confiança Alta (Transição Letal)' });
             }
         } else if (inputs.sotH - inputs.sotA >= 3 && qualModH > 1.2) {
             const oddHWin = probHomeWinFT > 0 ? 1 / probHomeWinFT : 99;
+            const fit = regimeType === 'sterile_pressure' ? 0.7 : 1.2;
             if (oddHWin >= 1.50) {
-                combos.push({ title: "Vitória Seca do Mandante", prob: probHomeWinFT, odd: calcFairOdd(probHomeWinFT), type: 'match' });
-            } else {
+                combosRaw.push({ title: "Vitória Seca do Mandante", prob: probHomeWinFT, evBase: evGoal ?? 0, fit, type: 'match', confText: 'Confiança Moderada (Match Odds)' });
+            } else if (allowOverGoals) {
                 const reqG = bestGoalLine;
                 const pCombo = probHomeWinFT * poissonOver(lambdaGoalTotal, reqG) * 0.95;
-                combos.push({ title: `Vitória Mandante + Over ${currentGoals + bestGoalLine - 0.5} Gols`, prob: pCombo, odd: calcFairOdd(pCombo), type: 'match' });
+                combosRaw.push({ title: `Vitória Mandante + Over ${currentGoals + bestGoalLine - 0.5} Gols`, prob: pCombo, evBase: evGoal ?? 0, fit: 1.5, type: 'match', confText: 'Confiança Alta (Transição Letal)' });
             }
-        } else if (isKillState || inputs.gamePace === 'slow') {
+        }
+        
+        // Under Goals (Force if Kill State or Slow)
+        if (regimeType === 'kill_state' || inputs.gamePace === 'slow') {
             let underLimit = 0;
             let probUnderGoal = poissonUnder(lambdaGoalTotal, underLimit);
             while (probUnderGoal > 0.55 && underLimit < (lambdaGoalTotal + 1.5) && underLimit < 5) {
                 underLimit++;
                 probUnderGoal = poissonUnder(lambdaGoalTotal, underLimit);
             }
-            combos.push({ title: `Entrar para Under ${currentGoals + underLimit + 0.5} Gols`, prob: probUnderGoal, odd: calcFairOdd(probUnderGoal), type: 'goal' });
-        } else if (inputs.gamePace === 'chaotic' && lambdaCornerTotal > 2.0) {
+            combosRaw.push({ title: `Entrar para Under ${currentGoals + underLimit + 0.5} Gols`, prob: probUnderGoal, evBase: (evGoal !== null ? -evGoal : 5), fit: 1.8, type: 'goal', confText: 'Confiança Máxima (Jogo Congelado)' });
+        }
+        
+        // Over Corners (Blitz / Chaotic)
+        if (allowOverCorners && (regimeType === 'blitz_final' || (inputs.gamePace === 'chaotic' && lambdaCornerTotal > 2.0))) {
             const pOverCorner = poissonOver(lambdaCornerTotal, bestCornerLine);
-            combos.push({ title: `Entrar para Over ${currentCorners + bestCornerLine - 0.5} Cantos`, prob: pOverCorner, odd: calcFairOdd(pOverCorner), type: 'corner' });
-        } else if (lambdaGoalTotal > 0.8 && lambdaCornerTotal > 1.5) {
+            combosRaw.push({ title: `Entrar para Over ${currentCorners + bestCornerLine - 0.5} Cantos`, prob: pOverCorner, evBase: evCorner ?? 0, fit: regimeType === 'blitz_final' ? 2.0 : 1.5, type: 'corner', confText: 'Confiança Máxima (Abafa Massivo)' });
+        }
+        
+        // Standard Over Goals/Corners
+        if (allowOverGoals && lambdaGoalTotal > 0.8 && lambdaCornerTotal > 1.5) {
             const pGoal = poissonOver(lambdaGoalTotal, bestGoalLine);
             const pCorner = poissonOver(lambdaCornerTotal, bestCornerLine);
             const pCombo = pGoal * pCorner * 0.95; 
-            combos.push({ title: `Entrar para Over ${currentGoals + bestGoalLine - 0.5} Gols + Over ${currentCorners + bestCornerLine - 0.5} Cantos`, prob: pCombo, odd: calcFairOdd(pCombo), type: 'match' });
-        } else if (lambdaGoalTotal > 0.85) {
+            combosRaw.push({ title: `Entrar para Over ${currentGoals + bestGoalLine - 0.5} Gols + Over ${currentCorners + bestCornerLine - 0.5} Cantos`, prob: pCombo, evBase: Math.max(evGoal ?? 0, evCorner ?? 0), fit: regimeType === 'chaos_match' ? 1.8 : 1.0, type: 'match', confText: regimeType === 'chaos_match' ? 'Confiança Alta (Trocação Franca)' : 'Confiança Moderada' });
+        } else if (allowOverGoals && lambdaGoalTotal > 0.85) {
             const pGoal = poissonOver(lambdaGoalTotal, bestGoalLine);
-            combos.push({ title: `Entrar para Over ${currentGoals + bestGoalLine - 0.5} Gols`, prob: pGoal, odd: calcFairOdd(pGoal), type: 'goal' });
+            combosRaw.push({ title: `Entrar para Over ${currentGoals + bestGoalLine - 0.5} Gols`, prob: pGoal, evBase: evGoal ?? 0, fit: 1.1, type: 'goal', confText: 'Confiança Moderada' });
         }
     }
+
+    // Market Priority Score Ranking
+    const combos = combosRaw.map(c => {
+        const baseEV = c.evBase > 0 ? c.evBase : (c.prob > 0.55 ? 5 : 1);
+        const marketScore = baseEV * c.fit * stabilityModifier;
+        return { ...c, odd: calcFairOdd(c.prob), marketScore };
+    }).sort((a, b) => b.marketScore - a.marketScore).slice(0, 3);
 
     // 9. DIAGNÓSTICO DO SCRIPT
     let script = "";
@@ -682,6 +728,7 @@ const LiveTerminal: React.FC = () => {
                                       <div className="flex-1 min-w-0">
                                           <p className="text-xs font-bold text-slate-900 dark:text-white leading-snug">{combo.title}</p>
                                           <p className="text-[9px] font-bold uppercase tracking-widest text-slate-400 mt-1">Win Rate Estimado: <span className="text-amber-600 dark:text-amber-500">{(combo.prob * 100).toFixed(1)}%</span></p>
+                                          {combo.confText && <p className="text-[8px] font-bold uppercase tracking-widest text-indigo-500 mt-0.5">{combo.confText}</p>}
                                       </div>
                                       <div className="text-right shrink-0">
                                           <p className="text-[8px] font-bold uppercase tracking-widest text-slate-500 mb-0.5">Odd Justa</p>
