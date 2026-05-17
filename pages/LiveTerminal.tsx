@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useDeferredValue } from 'react';
 import { 
-    Clock, Target, Flag, TrendingUp, ShieldAlert, BarChart3, Eye, 
+    Clock, Target, Flag, TrendingUp, TrendingDown, ShieldAlert, BarChart3, Eye, 
     CheckCircle2, AlertTriangle, Crown, ChevronRight, Zap, 
     ShieldCheck, Goal, Layers, RectangleHorizontal, Info,
     Crosshair, Flame, Ban, BrainCircuit, Activity, Save, Database
@@ -109,6 +109,7 @@ const LiveTerminal: React.FC = () => {
   
   const [gamePace, setGamePace] = useState<'slow' | 'normal' | 'chaotic'>('normal');
   const [gameDominance, setGameDominance] = useState<'home' | 'balanced' | 'away'>('balanced');
+  const [leagueProfile, setLeagueProfile] = useState<'padrão' | 'under' | 'over'>('padrão');
 
   const [oddGoal, setOddGoal] = useState<string>('');
   const [oddCorner, setOddCorner] = useState<string>('');
@@ -128,7 +129,7 @@ const LiveTerminal: React.FC = () => {
       setOddGoal(''); setOddCorner('');
   };
 
-  const deferredInput = useDeferredValue({ minute, scoreH, scoreA, cornersH, cornersA, cardsH, cardsA, apH, apA, sotH, sotA, isFavLosing, isKnockout, hasRedCard, recentEvent, gamePace, gameDominance, oddGoal, oddCorner });
+  const deferredInput = useDeferredValue({ minute, scoreH, scoreA, cornersH, cornersA, cardsH, cardsA, apH, apA, sotH, sotA, isFavLosing, isKnockout, hasRedCard, recentEvent, gamePace, gameDominance, leagueProfile, oddGoal, oddCorner });
 
   // ==========================================
   // O CÉREBRO PREDITIVO (INFERENTIAL ENGINE)
@@ -218,8 +219,14 @@ const LiveTerminal: React.FC = () => {
 
     // Late Goal Bias (Viés de Fim de Jogo)
     let timeDecay = 1.0;
-    if (inputs.minute > 75) {
-        timeDecay = (inputs.isKnockout || inputs.isFavLosing) ? 1.8 : 1.2;
+    if (inputs.minute > 70) {
+        if (inputs.leagueProfile === 'under') {
+            timeDecay = 0.5; // Decay severo, matam o jogo
+        } else if (inputs.leagueProfile === 'over') {
+            timeDecay = (inputs.isKnockout || inputs.isFavLosing) ? 2.2 : 1.5; // Aceleração explosiva
+        } else {
+            timeDecay = (inputs.isKnockout || inputs.isFavLosing) ? 1.8 : 1.2;
+        }
     }
 
     // 4. TRAP SCORE (SIGMOIDE CONTÍNUO)
@@ -430,8 +437,18 @@ const LiveTerminal: React.FC = () => {
     else if (totalPPM >= 1.0) momentumLvl = { ppm: totalPPM, level: 'Intenso', color: 'text-indigo-500' };
     else if (totalPPM >= 0.6) momentumLvl = { ppm: totalPPM, level: 'Moderado', color: 'text-amber-500' };
 
+    let isMarketResistant = false;
+    if (inputs.oddGoal && parseFloat(inputs.oddGoal) > 1) {
+        const realOdd = parseFloat(inputs.oddGoal);
+        const fairOdd = probGoal1 > 0 ? 1 / probGoal1 : 99;
+        if (realOdd > fairOdd * 1.30 && totalPPM >= 1.0) {
+            isMarketResistant = true;
+        }
+    }
+
     return { 
         closed: false, isAnomaly: false, noBet: finalNoBet, isTrap, script, confLevel, confColor, combos, bestTiming, trapScore,
+        isMarketResistant,
         totals: { goals: expGoalsFT, corners: expCornersFT, cards: expCardsFT },
         ev: { goal: evGoal, corner: evCorner },
         lines: {
@@ -545,6 +562,19 @@ const LiveTerminal: React.FC = () => {
                     <div className="text-center sm:text-left text-white">
                         <h3 className="text-xl font-black uppercase tracking-widest mb-1">NO BET (Entrada Bloqueada)</h3>
                         <p className="text-red-100 font-medium leading-relaxed">{engine.script}</p>
+                    </div>
+                </motion.div>
+            )}
+        </AnimatePresence>
+
+        {/* 🚨 MARKET RESISTANCE ALERT 🚨 */}
+        <AnimatePresence>
+            {!engine.closed && !engine.isAnomaly && !engine.noBet && engine.isMarketResistant && (
+                <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} className="bg-purple-600 border border-purple-500 rounded-2xl p-6 shadow-[0_0_40px_rgba(147,51,234,0.2)] mb-8 flex flex-col sm:flex-row items-center gap-6">
+                    <div className="bg-white/20 p-4 rounded-full shrink-0"><TrendingDown size={32} className="text-white"/></div>
+                    <div className="text-center sm:text-left text-white">
+                        <h3 className="text-xl font-black uppercase tracking-widest mb-1">Mercado Resistente</h3>
+                        <p className="text-purple-100 font-medium leading-relaxed">A casa não acompanhou a pressão intensa em campo (Odd @{oddGoal} exigida vs Justa @{(1/engine.lines.goals[0].prob).toFixed(2)}). Risco de desinformação, lesão não registrada ou VAR oculto. Cautela.</p>
                     </div>
                 </motion.div>
             )}
@@ -786,21 +816,29 @@ const LiveTerminal: React.FC = () => {
           </div>
 
           {/* SENSORES TÁTICOS (UX DE ELITE) */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-10 border-b border-slate-100 dark:border-[#2C2C2E] pb-8">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-10 border-b border-slate-100 dark:border-[#2C2C2E] pb-8">
               <div>
                   <label className="text-[10px] uppercase font-bold tracking-widest text-slate-500 dark:text-[#8E8E93] mb-3 block">Ritmo Atual da Partida</label>
                   <div className="flex gap-2">
-                      <SensorButton label="Lento / Amarrado" active={gamePace === 'slow'} onClick={() => setGamePace('slow')} color="bg-slate-800 text-white dark:bg-slate-200 dark:text-slate-900 border-slate-800 dark:border-slate-200" />
-                      <SensorButton label="Normal / Padrão" active={gamePace === 'normal'} onClick={() => setGamePace('normal')} color="bg-indigo-600 text-white border-indigo-600" />
-                      <SensorButton label="Frenético / Lá e Cá" active={gamePace === 'chaotic'} onClick={() => setGamePace('chaotic')} color="bg-emerald-600 text-white border-emerald-600" />
+                      <SensorButton label="Lento" active={gamePace === 'slow'} onClick={() => setGamePace('slow')} color="bg-slate-800 text-white dark:bg-slate-200 dark:text-slate-900 border-slate-800 dark:border-slate-200" />
+                      <SensorButton label="Normal" active={gamePace === 'normal'} onClick={() => setGamePace('normal')} color="bg-indigo-600 text-white border-indigo-600" />
+                      <SensorButton label="Frenético" active={gamePace === 'chaotic'} onClick={() => setGamePace('chaotic')} color="bg-emerald-600 text-white border-emerald-600" />
                   </div>
               </div>
               <div>
                   <label className="text-[10px] uppercase font-bold tracking-widest text-slate-500 dark:text-[#8E8E93] mb-3 block">Balanço de Domínio</label>
                   <div className="flex gap-2">
-                      <SensorButton label="Pressão Casa" active={gameDominance === 'home'} onClick={() => setGameDominance('home')} color="bg-indigo-600 text-white border-indigo-600" />
-                      <SensorButton label="Parelho / Neutro" active={gameDominance === 'balanced'} onClick={() => setGameDominance('balanced')} color="bg-slate-800 text-white dark:bg-slate-200 dark:text-slate-900 border-slate-800 dark:border-slate-200" />
-                      <SensorButton label="Pressão Fora" active={gameDominance === 'away'} onClick={() => setGameDominance('away')} color="bg-emerald-600 text-white border-emerald-600" />
+                      <SensorButton label="Casa" active={gameDominance === 'home'} onClick={() => setGameDominance('home')} color="bg-indigo-600 text-white border-indigo-600" />
+                      <SensorButton label="Neutro" active={gameDominance === 'balanced'} onClick={() => setGameDominance('balanced')} color="bg-slate-800 text-white dark:bg-slate-200 dark:text-slate-900 border-slate-800 dark:border-slate-200" />
+                      <SensorButton label="Fora" active={gameDominance === 'away'} onClick={() => setGameDominance('away')} color="bg-emerald-600 text-white border-emerald-600" />
+                  </div>
+              </div>
+              <div>
+                  <label className="text-[10px] uppercase font-bold tracking-widest text-slate-500 dark:text-[#8E8E93] mb-3 block">Perfil da Liga</label>
+                  <div className="flex gap-2">
+                      <SensorButton label="Under" active={leagueProfile === 'under'} onClick={() => setLeagueProfile('under')} color="bg-slate-800 text-white dark:bg-slate-200 dark:text-slate-900 border-slate-800 dark:border-slate-200" />
+                      <SensorButton label="Padrão" active={leagueProfile === 'padrão'} onClick={() => setLeagueProfile('padrão')} color="bg-indigo-600 text-white border-indigo-600" />
+                      <SensorButton label="Over" active={leagueProfile === 'over'} onClick={() => setLeagueProfile('over')} color="bg-emerald-600 text-white border-emerald-600" />
                   </div>
               </div>
           </div>
